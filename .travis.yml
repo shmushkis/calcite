@@ -25,6 +25,7 @@ branches:
   only:
     - master
     - javadoc
+    - calcite-296
 script:
   mvn test site
 git:
