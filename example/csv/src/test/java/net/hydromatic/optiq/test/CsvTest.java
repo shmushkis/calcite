@@ -97,7 +97,7 @@ public class CsvTest {
         + "}");
 
     Connection connection =
-        DriverManager.getConnection("jdbc:optiq:", info);
+        DriverManager.getConnection("jdbc:calcite:", info);
     // must print "directory ... not found" to stdout, but not fail
     ResultSet tables =
         connection.getMetaData().getTables(null, null, null, null);
@@ -115,6 +115,10 @@ public class CsvTest {
 
   @Test public void testSelectSingleProject() throws SQLException {
     checkSql("smart", "select name from EMPS");
+  }
+
+  @Test public void testSelectSingleProject2() throws SQLException {
+    checkSql("smart", "select name from COMPRESSED_EMPS");
   }
 
   @Test public void testCustomTable() throws SQLException {
@@ -199,7 +203,7 @@ public class CsvTest {
     try {
       Properties info = new Properties();
       info.put("model", "target/test-classes/" + model + ".json");
-      connection = DriverManager.getConnection("jdbc:optiq:", info);
+      connection = DriverManager.getConnection("jdbc:calcite:", info);
       statement = connection.createStatement();
       final ResultSet resultSet =
           statement.executeQuery(
@@ -271,7 +275,7 @@ public class CsvTest {
     Properties info = new Properties();
     info.put("model", "target/test-classes/bug.json");
 
-    Connection connection = DriverManager.getConnection("jdbc:optiq:", info);
+    Connection connection = DriverManager.getConnection("jdbc:calcite:", info);
 
     try {
       ResultSet res = connection.getMetaData().getColumns(null, null,
