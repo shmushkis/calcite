@@ -4,12 +4,12 @@
   <parent>
     <groupId>org.apache.calcite</groupId>
     <artifactId>calcite-example</artifactId>
-    <version>0.9.2-incubating-SNAPSHOT</version>
+    <version>1.0.0-incubating-SNAPSHOT</version>
   </parent>
 
   <artifactId>calcite-example-csv</artifactId>
   <packaging>jar</packaging>
-  <version>0.9.2-incubating-SNAPSHOT</version>
+  <version>1.0.0-incubating-SNAPSHOT</version>
   <name>Calcite Example CSV</name>
   <description>An example Calcite provider that reads CSV files</description>
 

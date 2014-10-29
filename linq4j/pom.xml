@@ -3,12 +3,12 @@
   <parent>
     <groupId>org.apache.calcite</groupId>
     <artifactId>calcite</artifactId>
-    <version>0.9.2-incubating-SNAPSHOT</version>
+    <version>1.0.0-incubating-SNAPSHOT</version>
   </parent>
 
   <artifactId>calcite-linq4j</artifactId>
   <packaging>jar</packaging>
-  <version>0.9.2-incubating-SNAPSHOT</version>
+  <version>1.0.0-incubating-SNAPSHOT</version>
   <name>Calcite Linq4j</name>
   <description>Calcite APIs for LINQ (Language-Integrated Query) in Java</description>
 
