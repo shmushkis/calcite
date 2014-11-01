@@ -18,6 +18,9 @@ package org.eigenbase.test;
 
 import java.util.List;
 
+import org.eigenbase.rel.JoinRelBase;
+import org.eigenbase.rel.JoinRelType;
+import org.eigenbase.rel.RelFactories;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.rel.TableModificationRel;
 import org.eigenbase.rel.metadata.CachingRelMetadataProvider;
@@ -64,6 +67,7 @@ import org.eigenbase.relopt.hep.HepProgram;
 import org.eigenbase.relopt.hep.HepProgramBuilder;
 import org.eigenbase.reltype.RelDataType;
 import org.eigenbase.reltype.RelDataTypeFactory;
+import org.eigenbase.rex.RexNode;
 import org.eigenbase.sql.SqlNode;
 import org.eigenbase.sql.type.SqlTypeName;
 import org.eigenbase.sql.validate.SqlValidator;
@@ -224,6 +228,46 @@ public class RelOptRulesTest extends RelOptTestBase {
         + "  select dept.name as c1, count(*) as c2\n"
         + "  from dept where dept.name > 'b' group by dept.name) dept1\n"
         + "where dept1.c1 > 'c' and (dept1.c2 > 30 or dept1.c1 < 'z')");
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-448">[CALCITE-448],
+   * PushFilterIntoJoinRule creates filters containing invalid
+   * RexInputRef</a>. */
+  @Ignore("CALCITE-448")
+  @Test public void testPushFilterPastProject() {
+    final HepProgram preProgram =
+        HepProgram.builder()
+            .addRuleInstance(MergeProjectRule.INSTANCE)
+            .build();
+    final PushFilterPastJoinRule.Predicate predicate =
+        new PushFilterPastJoinRule.Predicate() {
+          public boolean apply(JoinRelBase join, JoinRelType joinType,
+              RexNode exp) {
+            return joinType != JoinRelType.INNER;
+          }
+        };
+    final PushFilterPastJoinRule join =
+        new PushFilterPastJoinRule.PushDownJoinConditionRule(
+            RelFactories.DEFAULT_FILTER_FACTORY,
+            RelFactories.DEFAULT_PROJECT_FACTORY, predicate);
+    final PushFilterPastJoinRule filterOnJoin =
+        new PushFilterPastJoinRule.PushFilterIntoJoinRule(true,
+            RelFactories.DEFAULT_FILTER_FACTORY,
+            RelFactories.DEFAULT_PROJECT_FACTORY, predicate);
+    final HepProgram program =
+        HepProgram.builder()
+            .addGroupBegin()
+            .addRuleInstance(PushFilterPastProjectRule.INSTANCE)
+            .addRuleInstance(join)
+            .addRuleInstance(filterOnJoin)
+            .addGroupEnd()
+            .build();
+    checkPlanning(tester, preProgram, new HepPlanner(program),
+        "select a.name\n"
+        + "from dept a\n"
+        + "left join dept b on b.deptno > 10\n"
+        + "right join dept c on b.deptno > 10\n");
   }
 
   @Test public void testSemiJoinRule() {

@@ -23,6 +23,9 @@ import org.eigenbase.reltype.*;
 import org.eigenbase.sql.fun.*;
 import org.eigenbase.util.*;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
+
 /**
  * Workspace for constructing a {@link RexProgram}.
  *
@@ -301,6 +304,9 @@ public class RexProgramBuilder {
   private RexLocalRef registerInternal(RexNode expr, boolean force) {
     RexLocalRef ref;
     Pair<String, String> key = null;
+    if (false) {
+      expr = simplify(expr);
+    }
     if (expr instanceof RexLocalRef) {
       ref = (RexLocalRef) expr;
     } else {
@@ -333,6 +339,27 @@ public class RexProgramBuilder {
         return ref;
       }
     }
+  }
+
+  /** Simplifies AND(x, x) into x, and similar. */
+  private static RexNode simplify(RexNode node) {
+    switch (node.getKind()) {
+    case AND:
+    case OR:
+      // Convert:
+      //   AND(x, x) into x
+      //   OR(x, y, x) into OR(x, y)
+      final RexCall call = (RexCall) node;
+      if (!Util.isDistinct(call.getOperands())) {
+        final List<RexNode> list2 =
+            ImmutableList.copyOf(Sets.newLinkedHashSet(call.getOperands()));
+        if (list2.size() == 1) {
+          return list2.get(0);
+        }
+        return new RexCall(call.getType(), call.getOperator(), list2);
+      }
+    }
+    return node;
   }
 
   /**

@@ -31,18 +31,32 @@ import com.google.common.collect.Sets;
  * within a join node into the join node and/or its children nodes.
  */
 public abstract class PushFilterPastJoinRule extends RelOptRule {
+  /** Predicate that always returns true. With this predicate, every filter
+   * will be pushed into the ON clause. */
+  public static final Predicate TRUE_PREDICATE =
+      new Predicate() {
+        public boolean apply(JoinRelBase join, JoinRelType joinType,
+            RexNode exp) {
+          return true;
+        }
+      };
+
+  /** Rule that pushes predicates from a Filter into the Join below them. */
   public static final PushFilterPastJoinRule FILTER_ON_JOIN =
-      new PushFilterIntoJoinRule(true);
+      new PushFilterIntoJoinRule(true, RelFactories.DEFAULT_FILTER_FACTORY,
+          RelFactories.DEFAULT_PROJECT_FACTORY, TRUE_PREDICATE);
 
   /** Dumber version of {@link #FILTER_ON_JOIN}. Not intended for production
    * use, but keeps some tests working for which {@code FILTER_ON_JOIN} is too
    * smart. */
   public static final PushFilterPastJoinRule DUMB_FILTER_ON_JOIN =
-      new PushFilterIntoJoinRule(false);
+      new PushFilterIntoJoinRule(false, RelFactories.DEFAULT_FILTER_FACTORY,
+          RelFactories.DEFAULT_PROJECT_FACTORY, TRUE_PREDICATE);
 
+  /** Rule that pushes predicates in a Join into the inputs to the join. */
   public static final PushFilterPastJoinRule JOIN =
       new PushDownJoinConditionRule(RelFactories.DEFAULT_FILTER_FACTORY,
-          RelFactories.DEFAULT_PROJECT_FACTORY);
+          RelFactories.DEFAULT_PROJECT_FACTORY, TRUE_PREDICATE);
 
   /** Whether to try to strengthen join-type. */
   private final boolean smart;
@@ -50,6 +64,11 @@ public abstract class PushFilterPastJoinRule extends RelOptRule {
   private final RelFactories.FilterFactory filterFactory;
 
   private final RelFactories.ProjectFactory projectFactory;
+
+  /** Predicate that returns whether a filter is valid in the ON clause of a
+   * join for this particular kind of join. If not, Calcite will push it back to
+   * above the join. */
+  private final Predicate predicate;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -60,10 +79,22 @@ public abstract class PushFilterPastJoinRule extends RelOptRule {
   protected PushFilterPastJoinRule(RelOptRuleOperand operand, String id,
       boolean smart, RelFactories.FilterFactory filterFactory,
       RelFactories.ProjectFactory projectFactory) {
+    this(operand, id, smart, filterFactory, projectFactory, TRUE_PREDICATE);
+  }
+
+  /**
+   * Creates a PushFilterPastJoinRule with an explicit root operand and
+   * factories.
+   */
+  protected PushFilterPastJoinRule(RelOptRuleOperand operand, String id,
+      boolean smart, RelFactories.FilterFactory filterFactory,
+      RelFactories.ProjectFactory projectFactory,
+      Predicate predicate) {
     super(operand, "PushFilterRule: " + id);
     this.smart = smart;
     this.filterFactory = filterFactory;
     this.projectFactory = projectFactory;
+    this.predicate = predicate;
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -225,45 +256,29 @@ public abstract class PushFilterPastJoinRule extends RelOptRule {
    * @param aboveFilters Filter above Join
    * @param joinFilters Filters in join condition
    * @param join Join
-   *
-   * @deprecated Use {@link #validateJoinFilters(java.util.List, java.util.List, org.eigenbase.rel.JoinRelBase, org.eigenbase.rel.JoinRelType)};
-   * very short-term; will be removed before
-   * {@link org.eigenbase.util.Bug#upgrade(String) calcite-0.9.2}.
-   */
-  protected void validateJoinFilters(List<RexNode> aboveFilters,
-      List<RexNode> joinFilters, JoinRelBase join) {
-    validateJoinFilters(aboveFilters, joinFilters, join, join.getJoinType());
-  }
-
-  /**
-   * Validates that target execution framework can satisfy join filters.
-   *
-   * <p>If the join filter cannot be satisfied (for example, if it is
-   * {@code l.c1 > r.c2} and the join only supports equi-join), removes the
-   * filter from {@code joinFilters} and adds it to {@code aboveFilters}.
-   *
-   * <p>The default implementation does nothing; i.e. the join can handle all
-   * conditions.
-   *
-   * @param aboveFilters Filter above Join
-   * @param joinFilters Filters in join condition
-   * @param join Join
    * @param joinType JoinRelType could be different from type in Join due to
    * outer join simplification.
    */
   protected void validateJoinFilters(List<RexNode> aboveFilters,
       List<RexNode> joinFilters, JoinRelBase join, JoinRelType joinType) {
-    return;
+    final Iterator<RexNode> filterIter = joinFilters.iterator();
+    while (filterIter.hasNext()) {
+      RexNode exp = filterIter.next();
+      if (!predicate.apply(join, joinType, exp)) {
+        aboveFilters.add(exp);
+        filterIter.remove();
+      }
+    }
   }
 
   /** Rule that pushes parts of the join condition to its inputs. */
   public static class PushDownJoinConditionRule
       extends PushFilterPastJoinRule {
     public PushDownJoinConditionRule(RelFactories.FilterFactory filterFactory,
-        RelFactories.ProjectFactory projectFactory) {
+        RelFactories.ProjectFactory projectFactory, Predicate predicate) {
       super(RelOptRule.operand(JoinRelBase.class, RelOptRule.any()),
-          "PushFilterPastJoinRule:no-filter",
-          true, filterFactory, projectFactory);
+          "PushFilterPastJoinRule:no-filter", true, filterFactory,
+          projectFactory, predicate);
     }
 
     @Override
@@ -276,19 +291,15 @@ public abstract class PushFilterPastJoinRule extends RelOptRule {
   /** Rule that tries to push filter expressions into a join
    * condition and into the inputs of the join. */
   public static class PushFilterIntoJoinRule extends PushFilterPastJoinRule {
-    public PushFilterIntoJoinRule(boolean smart) {
-      this(smart, RelFactories.DEFAULT_FILTER_FACTORY,
-          RelFactories.DEFAULT_PROJECT_FACTORY);
-    }
-
     public PushFilterIntoJoinRule(boolean smart,
         RelFactories.FilterFactory filterFactory,
-        RelFactories.ProjectFactory projectFactory) {
+        RelFactories.ProjectFactory projectFactory,
+        Predicate predicate) {
       super(
-          RelOptRule.operand(FilterRelBase.class,
+          operand(FilterRelBase.class,
               RelOptRule.operand(JoinRelBase.class, RelOptRule.any())),
-          "PushFilterPastJoinRule:filter",
-          smart, filterFactory, projectFactory);
+          "PushFilterPastJoinRule:filter", smart, filterFactory, projectFactory,
+          predicate);
     }
 
     @Override
@@ -297,6 +308,13 @@ public abstract class PushFilterPastJoinRule extends RelOptRule {
       JoinRelBase join = call.rel(1);
       perform(call, filter, join);
     }
+  }
+
+  /** Predicate that returns whether a filter is valid in the ON clause of a
+   * join for this particular kind of join. If not, Calcite will push it back to
+   * above the join. */
+  public interface Predicate {
+    boolean apply(JoinRelBase join, JoinRelType joinType, RexNode exp);
   }
 }
 
