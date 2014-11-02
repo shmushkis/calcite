@@ -302,12 +302,12 @@ public class RexProgramBuilder {
    *              sub-expression exists.
    */
   private RexLocalRef registerInternal(RexNode expr, boolean force) {
+    expr = simplify(expr);
+
     RexLocalRef ref;
-    Pair<String, String> key = null;
-    if (false) {
-      expr = simplify(expr);
-    }
+    final Pair<String, String> key;
     if (expr instanceof RexLocalRef) {
+      key = null;
       ref = (RexLocalRef) expr;
     } else {
       key = RexUtil.makeKey(expr);
@@ -330,7 +330,7 @@ public class RexProgramBuilder {
       }
     }
 
-    while (true) {
+    for (;;) {
       int index = ref.index;
       final RexNode expr2 = exprList.get(index);
       if (expr2 instanceof RexLocalRef) {

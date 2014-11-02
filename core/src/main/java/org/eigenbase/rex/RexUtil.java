@@ -30,10 +30,7 @@ import org.eigenbase.util.mapping.*;
 import net.hydromatic.linq4j.function.*;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.collect.*;
 
 /**
  * Utility methods concerning row-expressions.
@@ -612,9 +609,14 @@ public class RexUtil {
    * <p>Treats null nodes as literal TRUE (i.e. ignores them). */
   public static ImmutableList<RexNode> flattenAnd(
       Iterable<? extends RexNode> nodes) {
+    if (nodes instanceof Collection && ((Collection) nodes).isEmpty()) {
+      // Optimize common case
+      return ImmutableList.of();
+    }
     final ImmutableList.Builder<RexNode> builder = ImmutableList.builder();
+    final Set<String> digests = Sets.newHashSet(); // to eliminate duplicates
     for (RexNode node : nodes) {
-      if (node != null) {
+      if (node != null && digests.add(node.digest)) {
         addAnd(builder, node);
       }
     }
@@ -661,9 +663,16 @@ public class RexUtil {
   /** Flattens a list of OR nodes. */
   public static ImmutableList<RexNode> flattenOr(
       Iterable<? extends RexNode> nodes) {
+    if (nodes instanceof Collection && ((Collection) nodes).isEmpty()) {
+      // Optimize common case
+      return ImmutableList.of();
+    }
     final ImmutableList.Builder<RexNode> builder = ImmutableList.builder();
+    final Set<String> digests = Sets.newHashSet(); // to eliminate duplicates
     for (RexNode node : nodes) {
-      addOr(builder, node);
+      if (digests.add(node.digest)) {
+        addOr(builder, node);
+      }
     }
     return builder.build();
   }

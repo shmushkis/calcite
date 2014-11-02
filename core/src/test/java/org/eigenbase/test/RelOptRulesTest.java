@@ -35,6 +35,7 @@ import org.eigenbase.rel.rules.ExtractJoinFilterRule;
 import org.eigenbase.rel.rules.FilterAggregateTransposeRule;
 import org.eigenbase.rel.rules.FilterToCalcRule;
 import org.eigenbase.rel.rules.MergeCalcRule;
+import org.eigenbase.rel.rules.MergeFilterRule;
 import org.eigenbase.rel.rules.MergeProjectRule;
 import org.eigenbase.rel.rules.ProjectToCalcRule;
 import org.eigenbase.rel.rules.PullConstantsThroughAggregatesRule;
@@ -435,6 +436,40 @@ public class RelOptRulesTest extends RelOptTestBase {
         + " from emp e inner join dept d"
         + " on e.deptno=d.deptno"
         + " where d.name='Propane'");
+  }
+
+  /** Tests that filters are combined if they are identical. */
+  @Test public void testMergeFilter() throws Exception {
+    HepProgram program = new HepProgramBuilder()
+        .addRuleInstance(PushFilterPastProjectRule.INSTANCE)
+        .addRuleInstance(MergeFilterRule.INSTANCE)
+        .build();
+
+    checkPlanning(program,
+        "select name from (\n"
+            + "  select *\n"
+            + "  from dept\n"
+            + "  where deptno = 10)\n"
+            + "where deptno = 10\n");
+  }
+
+  /** Tests that a filters is combined are combined if they are identical,
+   * even if one of them originates in an ON clause of a JOIN. */
+  @Test public void testMergeJoinFilter() throws Exception {
+    HepProgram program = new HepProgramBuilder()
+        .addRuleInstance(PushFilterPastProjectRule.INSTANCE)
+        .addRuleInstance(MergeFilterRule.INSTANCE)
+        .addRuleInstance(PushFilterPastJoinRule.FILTER_ON_JOIN)
+        .build();
+
+    checkPlanning(program,
+        "select * from (\n"
+            + "  select d.deptno, e.ename\n"
+            + "  from emp as e\n"
+            + "  join dept as d\n"
+            + "  on e.deptno = d.deptno\n"
+            + "  and d.deptno = 10)\n"
+            + "where deptno = 10\n");
   }
 
   @Ignore("cycles")
