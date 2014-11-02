@@ -104,20 +104,29 @@ public class JavaRules {
         }
         newInputs.add(input);
       }
+      final RelOptCluster cluster = join.getCluster();
+      final RelTraitSet traitSet =
+          join.getTraitSet().replace(EnumerableConvention.INSTANCE);
       final RelNode left = newInputs.get(0);
       final RelNode right = newInputs.get(1);
       final JoinInfo info = JoinInfo.of(left, right, join.getCondition());
       if (!info.isEqui() && join.getJoinType() != JoinRelType.INNER) {
         // EnumerableJoinRel only supports equi-join. We can put a filter on top
         // if it is an inner join.
-        return null;
+        try {
+          return new EnumerableThetaJoinRel(cluster, traitSet, left, right,
+              join.getCondition(), join.getJoinType(),
+              join.getVariablesStopped());
+        } catch (InvalidRelException e) {
+          LOGGER.fine(e.toString());
+          return null;
+        }
       }
-      final RelOptCluster cluster = join.getCluster();
       RelNode newRel;
       try {
         newRel = new EnumerableJoinRel(
             cluster,
-            join.getTraitSet().replace(EnumerableConvention.INSTANCE),
+            traitSet,
             left,
             right,
             info.getEquiCondition(left, right, cluster.getRexBuilder()),
@@ -313,6 +322,144 @@ public class JavaRules {
           Function2.class,
           physType.record(expressions),
           parameters);
+    }
+  }
+
+  /** Implementation of {@link org.eigenbase.rel.JoinRel} in
+   * {@link EnumerableConvention enumerable calling convention}. */
+  public static class EnumerableThetaJoinRel
+      extends JoinRelBase
+      implements EnumerableRel {
+    protected EnumerableThetaJoinRel(
+        RelOptCluster cluster,
+        RelTraitSet traits,
+        RelNode left,
+        RelNode right,
+        RexNode condition,
+        JoinRelType joinType,
+        Set<String> variablesStopped)
+        throws InvalidRelException {
+      super(cluster, traits, left, right, condition, joinType,
+          variablesStopped);
+    }
+
+    @Override public EnumerableThetaJoinRel copy(RelTraitSet traitSet,
+        RexNode condition, RelNode left, RelNode right, JoinRelType joinType,
+        boolean semiJoinDone) {
+      try {
+        return new EnumerableThetaJoinRel(getCluster(), traitSet, left, right,
+            condition, joinType,
+            variablesStopped);
+      } catch (InvalidRelException e) {
+        // Semantic error not possible. Must be a bug. Convert to
+        // internal error.
+        throw new AssertionError(e);
+      }
+    }
+
+    @Override public RelOptCost computeSelfCost(RelOptPlanner planner) {
+      double rowCount = RelMetadataQuery.getRowCount(this);
+
+      // Joins can be flipped, and for many algorithms, both versions are viable
+      // and have the same cost. To make the results stable between versions of
+      // the planner, make one of the versions slightly more expensive.
+      switch (joinType) {
+      case RIGHT:
+        rowCount = addEpsilon(rowCount);
+        break;
+      default:
+        if (left.getId() > right.getId()) {
+          rowCount = addEpsilon(rowCount);
+        }
+      }
+
+      final double rightRowCount = right.getRows();
+      final double leftRowCount = left.getRows();
+      if (Double.isInfinite(leftRowCount)) {
+        rowCount = leftRowCount;
+      }
+      if (Double.isInfinite(rightRowCount)) {
+        rowCount = rightRowCount;
+      }
+      return planner.getCostFactory().makeCost(rowCount, 0, 0);
+    }
+
+    private double addEpsilon(double d) {
+      assert d >= 0d;
+      final double d0 = d;
+      if (d < 10) {
+        // For small d, adding 1 would change the value significantly.
+        d *= 1.001d;
+        if (d != d0) {
+          return d;
+        }
+      }
+      // For medium d, add 1. Keeps integral values integral.
+      ++d;
+      if (d != d0) {
+        return d;
+      }
+      // For large d, adding 1 might not change the value. Add .1%.
+      // If d is NaN, this still will probably not change the value. That's OK.
+      d *= 1.001d;
+      return d;
+    }
+
+    public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
+      BlockBuilder builder = new BlockBuilder();
+      final Result leftResult =
+          implementor.visitChild(this, 0, (EnumerableRel) left, pref);
+      Expression leftExpression =
+          builder.append(
+              "left", leftResult.block);
+      final Result rightResult =
+          implementor.visitChild(this, 1, (EnumerableRel) right, pref);
+      Expression rightExpression =
+          builder.append(
+              "right", rightResult.block);
+      final PhysType physType =
+          PhysTypeImpl.of(
+              implementor.getTypeFactory(), getRowType(), pref.preferArray());
+      return implementor.result(
+          physType,
+          builder.append(
+              Expressions.call(
+                  BuiltinMethod.THETA_JOIN.method,
+                  leftExpression,
+                  rightExpression,
+                  predicate(implementor, builder, leftResult.physType,
+                      rightResult.physType, condition),
+                  Expressions.constant(null),
+                  Expressions.constant(joinType.generatesNullsOnLeft()),
+                  Expressions.constant(joinType.generatesNullsOnRight())))
+              .toBlock());
+    }
+
+    Expression predicate(EnumerableRelImplementor implementor,
+        BlockBuilder builder, PhysType leftPhysType, PhysType rightPhysType,
+        RexNode condition) {
+      final ParameterExpression left_ =
+          Expressions.parameter(leftPhysType.getJavaRowType(), "left");
+      final ParameterExpression right_ =
+          Expressions.parameter(rightPhysType.getJavaRowType(), "right");
+      final RexProgramBuilder program =
+          new RexProgramBuilder(
+              implementor.getTypeFactory().builder()
+                  .addAll(left.getRowType().getFieldList())
+                  .addAll(right.getRowType().getFieldList())
+                  .build(),
+              getCluster().getRexBuilder());
+      program.addCondition(condition);
+      Expression condition2 =
+          RexToLixTranslator.translateCondition(
+              program.getProgram(),
+              implementor.getTypeFactory(),
+              builder,
+              new RexToLixTranslator.InputGetterImpl(
+                  ImmutableList.of(
+                      Pair.of((Expression) left_, leftPhysType),
+                      Pair.of((Expression) right_, rightPhysType))));
+      return Expressions.lambda(Predicate2.class, condition2, left_, right_);
     }
   }
 

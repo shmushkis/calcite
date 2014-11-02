@@ -75,6 +75,8 @@ public enum BuiltinMethod {
   SLICE0(Enumerables.class, "slice0", Enumerable.class),
   SEMI_JOIN(Enumerables.class, "semiJoin", Enumerable.class, Enumerable.class,
       Function1.class, Function1.class),
+  THETA_JOIN(Enumerables.class, "thetaJoin", Enumerable.class, Enumerable.class,
+      Predicate2.class, Function2.class, boolean.class, boolean.class),
   SELECT(ExtendedEnumerable.class, "select", Function1.class),
   SELECT2(ExtendedEnumerable.class, "select", Function2.class),
   SELECT_MANY(ExtendedEnumerable.class, "selectMany", Function1.class),

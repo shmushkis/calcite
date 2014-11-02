@@ -1525,6 +1525,20 @@ public class JdbcTest {
             + "empid=110; name=Sales; name=Theodore\n");
   }
 
+  @Test public void testThetaJoin() {
+    OptiqAssert.that()
+        .with(OptiqAssert.Config.REGULAR)
+        .query(
+            "select e.\"empid\", d.\"name\", e.\"name\"\n"
+            + "from \"hr\".\"emps\" as e\n"
+            + "left join \"hr\".\"depts\" as d\n"
+            + "on e.\"deptno\" < d.\"deptno\"\n")
+        .returns(
+            "empid=100; name=Sales; name=Bill\n"
+            + "empid=150; name=Sales; name=Sebastian\n"
+            + "empid=110; name=Sales; name=Theodore\n");
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-35">CALCITE-35</a>,
    * "Support parenthesized sub-clause in JOIN". */
