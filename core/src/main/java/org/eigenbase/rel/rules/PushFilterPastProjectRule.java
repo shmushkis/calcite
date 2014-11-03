@@ -18,6 +18,7 @@ package org.eigenbase.rel.rules;
 
 import org.eigenbase.rel.*;
 import org.eigenbase.relopt.*;
+import org.eigenbase.reltype.RelDataTypeFactory;
 import org.eigenbase.rex.*;
 
 /**
@@ -79,6 +80,15 @@ public class PushFilterPastProjectRule extends RelOptRule {
     // convert the filter to one that references the child of the project
     RexNode newCondition =
         RelOptUtil.pushFilterPastProject(filterRel.getCondition(), projRel);
+
+    // Remove cast of BOOLEAN NOT NULL to BOOLEAN or vice versa. Filter accepts
+    // nullable and not-nullable conditions, but a CAST might get in the way of
+    // other rewrites.
+    final RelDataTypeFactory typeFactory =
+        filterRel.getCluster().getTypeFactory();
+    if (RexUtil.isNullabilityCast(typeFactory, newCondition)) {
+      newCondition = ((RexCall) newCondition).getOperands().get(0);
+    }
 
     RelNode newFilterRel =
         filterFactory == null

@@ -2577,8 +2577,9 @@ ProjectRel(NAME=[$1])
         JoinRel(condition=[true], joinType=[inner])
           TableAccessRel(table=[[CATALOG, SALES, DEPT]])
           ProjectRel(DEPTNO=[$0], NAME=[$1], $f2=[>($0, 10)])
-            FilterRel(condition=[AND(>($0, 10), >($0, 10))])
-              TableAccessRel(table=[[CATALOG, SALES, DEPT]])
+            FilterRel(condition=[>($0, 10)])
+              FilterRel(condition=[>($0, 10)])
+                TableAccessRel(table=[[CATALOG, SALES, DEPT]])
     TableAccessRel(table=[[CATALOG, SALES, DEPT]])
 ]]>
         </Resource>
@@ -2586,10 +2587,10 @@ ProjectRel(NAME=[$1])
     <TestCase name="testMergeFilter">
         <Resource name="sql">
             <![CDATA[select name from (
-select *
- from dept
- where deptno = 10)
- where deptno = 10
+  select *
+  from dept
+  where deptno = 10)
+where deptno = 10
 ]]>
         </Resource>
         <Resource name="planBefore">

@@ -55,7 +55,7 @@ public abstract class FilterRelBase extends SingleRel {
     assert RexUtil.isFlat(condition) : condition;
     this.condition = condition;
     // Too expensive for everyday use:
-    // assert isValid(true);
+    assert isValid(true);
   }
 
   /**
@@ -86,6 +86,10 @@ public abstract class FilterRelBase extends SingleRel {
   }
 
   @Override public boolean isValid(boolean fail) {
+    if (RexUtil.isNullabilityCast(getCluster().getTypeFactory(), condition)) {
+      assert !fail : "Cast for just nullability not allowed";
+      return false;
+    }
     final RexChecker checker = new RexChecker(getChild().getRowType(), fail);
     condition.accept(checker);
     if (checker.getFailureCount() > 0) {

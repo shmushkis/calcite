@@ -235,7 +235,6 @@ public class RelOptRulesTest extends RelOptTestBase {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-448">[CALCITE-448],
    * PushFilterIntoJoinRule creates filters containing invalid
    * RexInputRef</a>. */
-  @Ignore("CALCITE-448")
   @Test public void testPushFilterPastProject() {
     final HepProgram preProgram =
         HepProgram.builder()

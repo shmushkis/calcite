@@ -238,7 +238,9 @@ public abstract class PushFilterPastJoinRule extends RelOptRule {
 
     // create a FilterRel on top of the join if needed
     RelNode newRel =
-        RelOptUtil.createFilter(newJoinRel, aboveFilters, filterFactory);
+        RelOptUtil.createFilter(newJoinRel,
+            RexUtil.fixUp(rexBuilder, aboveFilters, newJoinRel.getRowType()),
+            filterFactory);
 
     call.transformTo(newRel);
   }
