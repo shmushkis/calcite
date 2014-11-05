@@ -18,6 +18,6 @@
 /**
  * TPC-DS schema.
  */
-package net.hydromatic.optiq.impl.tpcds;
+package org.apache.calcite.impl.tpcds;
 
 // End package-info.java

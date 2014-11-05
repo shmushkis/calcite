@@ -19,6 +19,6 @@
  * Query provider based on Java in-memory data
  * structures.
  */
-package net.hydromatic.optiq.impl.java;
+package org.apache.calcite.impl.java;
 
 // End package-info.java

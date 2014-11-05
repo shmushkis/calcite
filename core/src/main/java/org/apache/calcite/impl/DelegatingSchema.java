@@ -14,17 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl;
+package org.apache.calcite.impl;
 
-import net.hydromatic.linq4j.expressions.Expression;
-
-import net.hydromatic.optiq.*;
+import org.apache.calcite.Function;
+import org.apache.calcite.Schema;
+import org.apache.calcite.SchemaPlus;
+import org.apache.calcite.Table;
+import org.apache.calcite.linq4j.tree.Expression;
 
 import java.util.Collection;
 import java.util.Set;
 
 /**
- * Implementation of {@link net.hydromatic.optiq.Schema} that delegates to an
+ * Implementation of {@link org.apache.calcite.Schema} that delegates to an
  * underlying schema.
  */
 public class DelegatingSchema implements Schema {
@@ -39,8 +41,7 @@ public class DelegatingSchema implements Schema {
     this.schema = schema;
   }
 
-  @Override
-  public String toString() {
+  @Override public String toString() {
     return "DelegatingSchema(delegate=" + schema + ")";
   }
 

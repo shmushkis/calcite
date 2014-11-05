@@ -14,19 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eigenbase.sql;
+package org.apache.calcite.sql;
 
-import java.sql.*;
-
+import java.sql.DatabaseMetaData;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.regex.*;
+import java.util.List;
+import java.util.TimeZone;
+import java.util.regex.Pattern;
 
 /**
  * <code>SqlDialect</code> encapsulates the differences between dialects of SQL.
  *
  * <p>It is used by classes such as {@link SqlWriter} and
- * {@link org.eigenbase.sql.util.SqlBuilder}.
+ * {@link org.apache.calcite.sql.util.SqlBuilder}.
  */
 public class SqlDialect {
   //~ Static fields/initializers ---------------------------------------------
@@ -414,7 +416,7 @@ public class SqlDialect {
   }
 
   /**
-   * A few utility functions copied from org.eigenbase.util.Util. We have
+   * A few utility functions copied from org.apache.calcite.util.Util. We have
    * copied them because we wish to keep SqlDialect's dependencies to a
    * minimum.
    */

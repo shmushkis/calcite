@@ -14,17 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eigenbase.sql;
+package org.apache.calcite.sql;
 
-import java.util.*;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.runtime.CalciteException;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.validate.SelectScope;
+import org.apache.calcite.sql.validate.SqlValidator;
+import org.apache.calcite.sql.validate.SqlValidatorException;
+import org.apache.calcite.sql.validate.SqlValidatorNamespace;
+import org.apache.calcite.sql.validate.SqlValidatorScope;
+import org.apache.calcite.sql.validate.SqlValidatorUtil;
+import org.apache.calcite.util.Util;
 
-import org.eigenbase.reltype.*;
 import org.eigenbase.resource.Resources;
-import org.eigenbase.sql.fun.*;
-import org.eigenbase.sql.validate.*;
-import org.eigenbase.util.*;
 
-import static org.eigenbase.util.Static.RESOURCE;
+import java.util.List;
+
+import static org.apache.calcite.util.Static.RESOURCE;
 
 /**
  * <code>SqlCallBinding</code> implements {@link SqlOperatorBinding} by
@@ -166,7 +173,7 @@ public class SqlCallBinding extends SqlOperatorBinding {
     return validator.getParentCursor(paramName);
   }
 
-  public EigenbaseException newError(
+  public CalciteException newError(
       Resources.ExInst<SqlValidatorException> e) {
     return validator.newValidationError(call, e);
   }
@@ -176,7 +183,7 @@ public class SqlCallBinding extends SqlOperatorBinding {
    *
    * @return signature exception
    */
-  public EigenbaseException newValidationSignatureError() {
+  public CalciteException newValidationSignatureError() {
     return validator.newValidationError(call,
         RESOURCE.canNotApplyOp2Type(getOperator().getName(),
             call.getCallSignature(validator, scope),
@@ -190,7 +197,7 @@ public class SqlCallBinding extends SqlOperatorBinding {
    * @param ex underlying exception
    * @return wrapped exception
    */
-  public EigenbaseException newValidationError(
+  public CalciteException newValidationError(
       Resources.ExInst<SqlValidatorException> ex) {
     return validator.newValidationError(call, ex);
   }

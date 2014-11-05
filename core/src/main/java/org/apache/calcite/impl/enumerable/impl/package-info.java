@@ -18,6 +18,6 @@
 /**
  * Optiq-specific classes for implementation of regular and window aggregates.
  */
-package net.hydromatic.optiq.rules.java.impl;
+package org.apache.calcite.impl.enumerable.impl;
 
 // End package-info.java

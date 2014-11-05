@@ -18,6 +18,6 @@
 /**
  * Provides utility classes.
  */
-package net.hydromatic.optiq.impl.clone;
+package org.apache.calcite.impl.clone;
 
 // End package-info.java

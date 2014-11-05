@@ -14,9 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.mongodb;
+package org.apache.calcite.impl.mongodb;
 
-import net.hydromatic.optiq.*;
+import org.apache.calcite.Schema;
+import org.apache.calcite.SchemaFactory;
+import org.apache.calcite.SchemaPlus;
 
 import java.util.Map;
 

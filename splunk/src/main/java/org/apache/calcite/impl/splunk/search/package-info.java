@@ -18,6 +18,6 @@
 /**
  * Executes queries via Splunk's REST API.
  */
-package net.hydromatic.optiq.impl.splunk.search;
+package org.apache.calcite.impl.splunk.search;
 
 // End package-info.java

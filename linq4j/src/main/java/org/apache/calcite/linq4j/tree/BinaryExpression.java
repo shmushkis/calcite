@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.linq4j.expressions;
+package org.apache.calcite.linq4j.tree;
 
 import java.lang.reflect.Type;
 
@@ -36,8 +36,7 @@ public class BinaryExpression extends Expression {
     this.primitive = Primitive.of(expression0.getType());
   }
 
-  @Override
-  public Expression accept(Visitor visitor) {
+  @Override public Expression accept(Visitor visitor) {
     visitor = visitor.preVisit(this);
     Expression expression0 = this.expression0.accept(visitor);
     Expression expression1 = this.expression1.accept(visitor);
@@ -161,12 +160,8 @@ public class BinaryExpression extends Expression {
   }
 
   private RuntimeException cannotEvaluate() {
-    return new RuntimeException("cannot evaluate "
-                                + this
-                                + ", nodeType="
-                                + nodeType
-                                + ", primitive="
-                                + primitive);
+    return new RuntimeException("cannot evaluate " + this + ", nodeType="
+      + nodeType + ", primitive=" + primitive);
   }
 
   @Override
@@ -196,8 +191,7 @@ public class BinaryExpression extends Expression {
     return true;
   }
 
-  @Override
-  public int hashCode() {
+  @Override public int hashCode() {
     int result = super.hashCode();
     result = 31 * result + expression0.hashCode();
     result = 31 * result + expression1.hashCode();

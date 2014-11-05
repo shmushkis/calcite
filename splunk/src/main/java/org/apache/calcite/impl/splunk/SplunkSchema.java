@@ -14,15 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.splunk;
+package org.apache.calcite.impl.splunk;
 
-import net.hydromatic.optiq.Table;
-import net.hydromatic.optiq.impl.AbstractSchema;
-import net.hydromatic.optiq.impl.splunk.search.SplunkConnection;
+import org.apache.calcite.Table;
+import org.apache.calcite.impl.AbstractSchema;
+import org.apache.calcite.impl.splunk.search.SplunkConnection;
 
 import com.google.common.collect.ImmutableMap;
 
-import java.util.*;
+import java.util.Map;
 
 /**
  * Splunk schema.

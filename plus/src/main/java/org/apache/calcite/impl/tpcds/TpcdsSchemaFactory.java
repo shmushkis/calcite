@@ -14,13 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.tpcds;
+package org.apache.calcite.impl.tpcds;
 
-import net.hydromatic.optiq.Schema;
-import net.hydromatic.optiq.SchemaFactory;
-import net.hydromatic.optiq.SchemaPlus;
-
-import org.eigenbase.util.Util;
+import org.apache.calcite.Schema;
+import org.apache.calcite.SchemaFactory;
+import org.apache.calcite.SchemaPlus;
+import org.apache.calcite.util.Util;
 
 import java.util.Map;
 

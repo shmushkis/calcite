@@ -14,22 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl;
+package org.apache.calcite.impl;
 
-import net.hydromatic.optiq.*;
-import net.hydromatic.optiq.rules.java.*;
-
-import org.eigenbase.reltype.RelDataType;
-import org.eigenbase.reltype.RelDataTypeFactory;
+import org.apache.calcite.ImplementableFunction;
+import org.apache.calcite.ScalarFunction;
+import org.apache.calcite.impl.enumerable.CallImplementor;
+import org.apache.calcite.impl.enumerable.NullPolicy;
+import org.apache.calcite.impl.enumerable.ReflectiveCallNotNullImplementor;
+import org.apache.calcite.impl.enumerable.RexImpTable;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 
 import com.google.common.collect.ImmutableMultimap;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 
-import static org.eigenbase.util.Static.*;
+import static org.apache.calcite.util.Static.RESOURCE;
 
 /**
-* Implementation of {@link net.hydromatic.optiq.ScalarFunction}.
+* Implementation of {@link org.apache.calcite.ScalarFunction}.
 */
 public class ScalarFunctionImpl extends ReflectiveFunctionBase implements
     ScalarFunction, ImplementableFunction {
@@ -42,7 +46,7 @@ public class ScalarFunctionImpl extends ReflectiveFunctionBase implements
   }
 
   /**
-   * Creates {@link net.hydromatic.optiq.ScalarFunction} for each method in a
+   * Creates {@link org.apache.calcite.ScalarFunction} for each method in a
    * given class.
    */
   public static ImmutableMultimap<String, ScalarFunction> createAll(
@@ -64,7 +68,7 @@ public class ScalarFunctionImpl extends ReflectiveFunctionBase implements
   }
 
   /**
-   * Creates {@link net.hydromatic.optiq.ScalarFunction} from given class.
+   * Creates {@link org.apache.calcite.ScalarFunction} from given class.
    *
    * <p>If a method of the given name is not found or it does not suit,
    * returns {@code null}.
@@ -82,7 +86,7 @@ public class ScalarFunctionImpl extends ReflectiveFunctionBase implements
   }
 
   /**
-   * Creates {@link net.hydromatic.optiq.ScalarFunction} from given method.
+   * Creates {@link org.apache.calcite.ScalarFunction} from given method.
    * When {@code eval} method does not suit, {@code null} is returned.
    *
    * @param method method that is used to implement the function

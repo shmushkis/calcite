@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.eigenbase.sql;
+package org.apache.calcite.sql;
 
 /**
  * Specification of a SQL sample.
@@ -29,8 +29,8 @@ package org.eigenbase.sql;
  * <p>declares a sample which is created using {@link #createNamed}.</p>
  *
  * <p>A sample is not a {@link SqlNode}. To include it in a parse tree, wrap it
- * as a literal, viz: {@link SqlLiteral#createSample(SqlSampleSpec,
- * SqlParserPos)}.
+ * as a literal, viz:
+ * {@link SqlLiteral#createSample(SqlSampleSpec, org.apache.calcite.sql.parser.SqlParserPos)}.
  */
 public abstract class SqlSampleSpec {
   //~ Constructors -----------------------------------------------------------
@@ -80,6 +80,7 @@ public abstract class SqlSampleSpec {
 
   //~ Inner Classes ----------------------------------------------------------
 
+  /** Sample specification that orders substitution. */
   public static class SqlSubstitutionSampleSpec extends SqlSampleSpec {
     private final String name;
 
@@ -98,6 +99,7 @@ public abstract class SqlSampleSpec {
     }
   }
 
+  /** Sample specification. */
   public static class SqlTableSampleSpec extends SqlSampleSpec {
     private final boolean isBernoulli;
     private final float samplePercentage;

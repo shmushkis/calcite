@@ -18,6 +18,6 @@
 /**
  * Unit tests.
  */
-package net.hydromatic.optiq.test;
+package org.apache.calcite.test;
 
 // End package-info.java

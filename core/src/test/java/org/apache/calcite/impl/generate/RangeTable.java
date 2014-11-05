@@ -14,20 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.generate;
+package org.apache.calcite.impl.generate;
 
-import net.hydromatic.linq4j.Enumerator;
-import net.hydromatic.linq4j.QueryProvider;
-import net.hydromatic.linq4j.Queryable;
-
-import net.hydromatic.optiq.SchemaPlus;
-import net.hydromatic.optiq.TableFactory;
-import net.hydromatic.optiq.impl.AbstractTableQueryable;
-import net.hydromatic.optiq.impl.java.AbstractQueryableTable;
-
-import org.eigenbase.reltype.RelDataType;
-import org.eigenbase.reltype.RelDataTypeFactory;
-import org.eigenbase.sql.type.SqlTypeName;
+import org.apache.calcite.SchemaPlus;
+import org.apache.calcite.TableFactory;
+import org.apache.calcite.impl.AbstractTableQueryable;
+import org.apache.calcite.impl.java.AbstractQueryableTable;
+import org.apache.calcite.linq4j.Enumerator;
+import org.apache.calcite.linq4j.QueryProvider;
+import org.apache.calcite.linq4j.Queryable;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -94,7 +92,7 @@ public class RangeTable extends AbstractQueryableTable {
     };
   }
 
-  /** Implementation of {@link net.hydromatic.optiq.TableFactory} that allows
+  /** Implementation of {@link org.apache.calcite.TableFactory} that allows
    * a {@link RangeTable} to be included as a custom table in a Calcite model
    * file. */
   public static class Factory implements TableFactory<RangeTable> {

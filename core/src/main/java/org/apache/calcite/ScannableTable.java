@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq;
+package org.apache.calcite;
 
-import net.hydromatic.linq4j.Enumerable;
+import org.apache.calcite.linq4j.Enumerable;
 
 /**
  * Table that can be scanned without creating an intermediate relational

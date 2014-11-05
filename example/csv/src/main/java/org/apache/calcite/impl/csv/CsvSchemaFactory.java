@@ -14,10 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.csv;
+package org.apache.calcite.impl.csv;
 
-import net.hydromatic.optiq.*;
-import net.hydromatic.optiq.model.ModelHandler;
+import org.apache.calcite.Schema;
+import org.apache.calcite.SchemaFactory;
+import org.apache.calcite.SchemaPlus;
+import org.apache.calcite.model.ModelHandler;
 
 import java.io.File;
 import java.util.Map;

@@ -8,7 +8,7 @@
     {
       name: 'SALES',
       type: 'custom',
-      factory: 'net.hydromatic.optiq.impl.csv.CsvSchemaFactory',
+      factory: 'org.apache.calcite.impl.csv.CsvSchemaFactory',
       operand: {
         directory: 'sales',
         flavor: "FILTERABLE"

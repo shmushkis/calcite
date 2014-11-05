@@ -18,6 +18,6 @@
 /**
  * Query optimizer rules.
  */
-package net.hydromatic.optiq.rules;
+package org.apache.calcite.rules;
 
 // End package-info.java

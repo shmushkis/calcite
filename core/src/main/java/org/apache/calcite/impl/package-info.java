@@ -18,6 +18,6 @@
 /**
  * Utilities to help implement Calcite's SPIs.
  */
-package net.hydromatic.optiq.impl;
+package org.apache.calcite.impl;
 
 // End package-info.java

@@ -18,6 +18,6 @@
 /**
  * TPC-H schema.
  */
-package net.hydromatic.optiq.impl.tpch;
+package org.apache.calcite.impl.tpch;
 
 // End package-info.java
