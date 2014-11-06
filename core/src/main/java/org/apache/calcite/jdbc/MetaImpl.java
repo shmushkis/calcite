@@ -432,7 +432,7 @@ public class MetaImpl implements Meta {
 
   public Enumerable<MetaColumn> columns(final MetaTable table) {
     final RelDataType rowType =
-        table.optiqTable.getRowType(connection.typeFactory);
+        table.calciteTable.getRowType(connection.typeFactory);
     return Linq4j.asEnumerable(rowType.getFieldList())
         .select(
             new Function1<RelDataTypeField, MetaColumn>() {
@@ -733,7 +733,7 @@ public class MetaImpl implements Meta {
 
   /** Metadata describing a table. */
   public static class MetaTable implements Named {
-    private final Table optiqTable;
+    private final Table calciteTable;
     public final String tableCat;
     public final String tableSchem;
     public final String tableName;
@@ -745,14 +745,14 @@ public class MetaImpl implements Meta {
     public final String selfReferencingColName = null;
     public final String refGeneration = null;
 
-    public MetaTable(Table optiqTable, String tableCat, String tableSchem,
+    public MetaTable(Table calciteTable, String tableCat, String tableSchem,
         String tableName) {
-      this.optiqTable = optiqTable;
-      assert optiqTable != null;
+      this.calciteTable = calciteTable;
+      assert calciteTable != null;
       this.tableCat = tableCat;
       this.tableSchem = tableSchem;
       this.tableName = tableName;
-      this.tableType = optiqTable.getJdbcTableType().name();
+      this.tableType = calciteTable.getJdbcTableType().name();
     }
 
     public String getName() {

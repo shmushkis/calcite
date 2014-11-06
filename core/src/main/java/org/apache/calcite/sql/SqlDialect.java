@@ -43,12 +43,12 @@ public class SqlDialect {
 
   /**
    * A dialect useful for generating SQL which can be parsed by the
-   * Eigenbase parser, in particular quoting literals and identifiers. If you
+   * Calcite parser, in particular quoting literals and identifiers. If you
    * want a dialect that knows the full capabilities of the database, create
    * one from a connection.
    */
-  public static final SqlDialect EIGENBASE =
-      DatabaseProduct.LUCIDDB.getDialect();
+  public static final SqlDialect CALCITE =
+      DatabaseProduct.CALCITE.getDialect();
 
   //~ Instance fields --------------------------------------------------------
 
@@ -475,6 +475,7 @@ public class SqlDialect {
    */
   public enum DatabaseProduct {
     ACCESS("Access", "\""),
+    CALCITE("Apache Calcite", "\""),
     MSSQL("Microsoft SQL Server", "["),
     MYSQL("MySQL", "`"),
     ORACLE("Oracle", "\""),
@@ -485,7 +486,6 @@ public class SqlDialect {
     INFORMIX("Informix", null),
     INGRES("Ingres", null),
     LUCIDDB("LucidDB", "\""),
-    OPTIQ("Apache Calcite", "\""),
     INTERBASE("Interbase", null),
     PHOENIX("Phoenix", "\""),
     POSTGRESQL("PostgreSQL", "\""),

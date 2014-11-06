@@ -99,16 +99,16 @@ public class MultiJdbcSchemaJoinTest {
     c1.close();
 
     // Make a Calcite schema with both a jdbc schema and a non-jdbc schema
-    Connection optiqConn = DriverManager.getConnection("jdbc:calcite:");
+    Connection connection = DriverManager.getConnection("jdbc:calcite:");
     CalciteConnection calciteConnection =
-        optiqConn.unwrap(CalciteConnection.class);
+        connection.unwrap(CalciteConnection.class);
     SchemaPlus rootSchema = calciteConnection.getRootSchema();
     rootSchema.add("DB",
         JdbcSchema.create(rootSchema, "DB",
             JdbcSchema.dataSource(db, "org.hsqldb.jdbcDriver", "", ""),
             null, null));
     rootSchema.add("hr", new ReflectiveSchema(new JdbcTest.HrSchema()));
-    return optiqConn;
+    return connection;
   }
 
   @Test public void testJdbcWithEnumerableJoin() throws SQLException {
@@ -144,10 +144,10 @@ public class MultiJdbcSchemaJoinTest {
     assertThat(runQuery(setup(), query), equalTo(expected));
   }
 
-  private Set<Integer> runQuery(Connection optiqConn, String query)
+  private Set<Integer> runQuery(Connection calciteConnection, String query)
       throws SQLException {
     // Print out the plan
-    Statement stmt = optiqConn.createStatement();
+    Statement stmt = calciteConnection.createStatement();
     try {
       ResultSet rs;
       if (CalcitePrepareImpl.DEBUG) {

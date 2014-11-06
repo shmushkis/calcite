@@ -208,7 +208,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
   /**
    * Set of select expressions used as cursor definitions. In standard SQL,
-   * only the top-level SELECT is a cursor; Eigenbase extends this with
+   * only the top-level SELECT is a cursor; Calcite extends this with
    * cursors as inputs to table functions.
    */
   private final Set<SqlNode> cursorSet = Sets.newIdentityHashSet();

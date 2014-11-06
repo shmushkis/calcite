@@ -34,7 +34,7 @@ abstract class CalcitePreparedStatement
     extends AvaticaPreparedStatement
     implements CalciteServerStatement {
   /**
-   * Creates an OptiqPreparedStatement.
+   * Creates a CalcitePreparedStatement.
    *
    * @param connection Connection
    * @param prepareResult Result of preparing statement

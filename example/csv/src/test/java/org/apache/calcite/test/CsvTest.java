@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Properties;
 
 /**
- * Unit test of the Optiq adapter for CSV.
+ * Unit test of the Calcite adapter for CSV.
  */
 public class CsvTest {
   private void close(Connection connection, Statement statement) {

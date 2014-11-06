@@ -22,7 +22,7 @@ import org.apache.calcite.avatica.DriverVersion;
  * Version information for Calcite JDBC Driver for Splunk.
  */
 class SplunkDriverVersion extends DriverVersion {
-  /** Creates an OptiqDriverVersion. */
+  /** Creates a SplunkDriverVersion. */
   SplunkDriverVersion() {
     super(
         "Calcite JDBC Driver for Splunk",

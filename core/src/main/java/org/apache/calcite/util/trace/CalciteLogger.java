@@ -37,12 +37,12 @@ import java.util.logging.Logger;
  * <p>Usage: replace:
  *
  * <blockquote><code>static final Logger tracer =
- * EigenbaseTracer.getMyTracer();</code></blockquote>
+ * CalciteTracer.getMyTracer();</code></blockquote>
  *
  * <p>by:
  *
  * <blockquote><code>static final CalciteLogger tracer =
- *     new CalciteLogger(EigenbaseTracer.getMyTracer());</code></blockquote>
+ *     new CalciteLogger(CalciteTrace.getMyTracer());</code></blockquote>
  */
 public class CalciteLogger {
   //~ Instance fields --------------------------------------------------------

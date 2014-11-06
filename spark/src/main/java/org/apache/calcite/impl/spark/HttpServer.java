@@ -122,7 +122,7 @@ class HttpServer {
   }
 
   private static String findLocalIpAddress() throws IOException {
-    String defaultIpOverride = System.getenv("OPTIQ_LOCAL_IP");
+    String defaultIpOverride = System.getenv("CALCITE_LOCAL_IP");
     if (defaultIpOverride != null) {
       return defaultIpOverride;
     } else {
@@ -145,7 +145,7 @@ class HttpServer {
                   + addr.getHostAddress() + " instead (on interface "
                   + ni.getName() + ")");
               logWarning(
-                  "Set OPTIQ_LOCAL_IP if you need to bind to another address");
+                  "Set CALCITE_LOCAL_IP if you need to bind to another address");
               return addr.getHostAddress();
             }
           }
@@ -154,7 +154,8 @@ class HttpServer {
             "Your hostname, " + InetAddress.getLocalHost().getHostName()
             + " resolves to a loopback address: " + address.getHostAddress()
             + ", but we couldn't find any external IP address!");
-        logWarning("Set OPTIQ_LOCAL_IP if you need to bind to another address");
+        logWarning(
+            "Set CALCITE_LOCAL_IP if you need to bind to another address");
       }
       return address.getHostAddress();
     }

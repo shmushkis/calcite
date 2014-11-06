@@ -5531,9 +5531,9 @@ public class SqlParserTest {
     SqlSetOption opt = (SqlSetOption) node;
     assertThat(opt.getScope(), equalTo("SYSTEM"));
     assertThat(opt.getName(), equalTo("SCHEMA"));
-    SqlPrettyWriter writer = new SqlPrettyWriter(SqlDialect.EIGENBASE);
+    SqlPrettyWriter writer = new SqlPrettyWriter(SqlDialect.CALCITE);
     assertThat(writer.format(opt.getValue()), equalTo("TRUE"));
-    writer = new SqlPrettyWriter(SqlDialect.EIGENBASE);
+    writer = new SqlPrettyWriter(SqlDialect.CALCITE);
     assertThat(writer.format(opt),
         equalTo("ALTER SYSTEM SET \"SCHEMA\" = TRUE"));
 
@@ -5681,12 +5681,12 @@ public class SqlParserTest {
       // Unparse again in Eigenbase dialect (which we can parse), and
       // minimal parentheses.
       final String sql1 =
-          sqlNode.toSqlString(SqlDialect.EIGENBASE, false).getSql();
+          sqlNode.toSqlString(SqlDialect.CALCITE, false).getSql();
 
       // Parse and unparse again.
       SqlNode sqlNode2 = parseStmtAndHandleEx(sql1);
       final String sql2 =
-          sqlNode2.toSqlString(SqlDialect.EIGENBASE, false).getSql();
+          sqlNode2.toSqlString(SqlDialect.CALCITE, false).getSql();
 
       // Should be the same as we started with.
       assertEquals(sql1, sql2);
@@ -5708,12 +5708,12 @@ public class SqlParserTest {
       // Unparse again in Eigenbase dialect (which we can parse), and
       // minimal parentheses.
       final String sql1 =
-          sqlNode.toSqlString(SqlDialect.EIGENBASE, false).getSql();
+          sqlNode.toSqlString(SqlDialect.CALCITE, false).getSql();
 
       // Parse and unparse again.
       SqlNode sqlNode2 = parseExpressionAndHandleEx(sql1);
       final String sql2 =
-          sqlNode2.toSqlString(SqlDialect.EIGENBASE, false).getSql();
+          sqlNode2.toSqlString(SqlDialect.CALCITE, false).getSql();
 
       // Should be the same as we started with.
       assertEquals(sql1, sql2);

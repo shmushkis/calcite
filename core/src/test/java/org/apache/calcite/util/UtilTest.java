@@ -515,7 +515,7 @@ public class UtilTest {
    * Tests SQL builders.
    */
   @Test public void testSqlBuilder() {
-    final SqlBuilder buf = new SqlBuilder(SqlDialect.EIGENBASE);
+    final SqlBuilder buf = new SqlBuilder(SqlDialect.CALCITE);
     assertEquals(0, buf.length());
     buf.append("select ");
     assertEquals("select ", buf.getSql());
@@ -528,7 +528,7 @@ public class UtilTest {
     assertEquals("select \"x\", \"y\".\"a b\"", buf.getSql());
 
     final SqlString sqlString = buf.toSqlString();
-    assertEquals(SqlDialect.EIGENBASE, sqlString.getDialect());
+    assertEquals(SqlDialect.CALCITE, sqlString.getDialect());
     assertEquals(buf.getSql(), sqlString.getSql());
 
     assertTrue(buf.getSql().length() > 0);

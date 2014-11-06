@@ -29,7 +29,7 @@ package org.apache.calcite.util;
  * <pre>Statement stmt = connection.createStatement();
  * int rowCount = stmt.execute(
  *     "INSERT INTO FemaleEmps SELECT * FROM Emps WHERE gender = 'F'");
- * if (Bug.OPTIQ123_FIXED) {
+ * if (Bug.CALCITE_123_FIXED) {
  *    assertEquals(rowCount, 5);
  * }</pre>
  * </blockquote>

@@ -201,7 +201,7 @@ public final class FunctionExpression<F extends Function<?>>
   }
 
   private String getAbstractMethodName() {
-    if (type.toString().contains("OptiqFlatMapFunction")) {
+    if (type.toString().contains("CalciteFlatMapFunction")) {
       return "call"; // FIXME
     }
     return "apply";

@@ -246,7 +246,7 @@ public class Lattice {
     if (usedNodes.isEmpty()) {
       usedNodes.add(nodes.get(0));
     }
-    final SqlDialect dialect = SqlDialect.DatabaseProduct.OPTIQ.getDialect();
+    final SqlDialect dialect = SqlDialect.DatabaseProduct.CALCITE.getDialect();
     final StringBuilder buf = new StringBuilder("SELECT ");
     final StringBuilder groupBuf = new StringBuilder("\nGROUP BY ");
     int k = 0;

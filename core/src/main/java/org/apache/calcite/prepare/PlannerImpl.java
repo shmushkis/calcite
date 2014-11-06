@@ -230,7 +230,7 @@ public class PlannerImpl implements Planner {
     }
   }
 
-  // OptiqCatalogReader is stateless; no need to store one
+  // CalciteCatalogReader is stateless; no need to store one
   private CalciteCatalogReader createCatalogReader() {
     SchemaPlus rootSchema = rootSchema(defaultSchema);
     return new CalciteCatalogReader(

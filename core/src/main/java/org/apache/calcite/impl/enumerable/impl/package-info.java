@@ -16,7 +16,7 @@
  */
 
 /**
- * Optiq-specific classes for implementation of regular and window aggregates.
+ * Calcite-specific classes for implementation of regular and window aggregates.
  */
 package org.apache.calcite.impl.enumerable.impl;
 

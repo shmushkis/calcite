@@ -22,7 +22,7 @@ import java.util.logging.Logger;
 
 // NOTE:  This class gets compiled independently of everything else so that
 // resource generation can use reflection.  That means it must have no
-// dependencies on other Eigenbase/Farrago code.
+// dependencies on other Calcite code.
 
 /**
  * Exception thrown while validating a SQL statement.

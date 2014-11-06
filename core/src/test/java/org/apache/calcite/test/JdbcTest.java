@@ -1753,21 +1753,21 @@ public class JdbcTest {
             + "  ]\n"
             + "}");
 
-    Connection optiqConnection = DriverManager.getConnection(
+    Connection calciteConnection = DriverManager.getConnection(
       "jdbc:calcite:", info);
 
-    Statement optiqStatement = optiqConnection.createStatement();
-    ResultSet rs = optiqStatement.executeQuery(
+    Statement calciteStatement = calciteConnection.createStatement();
+    ResultSet rs = calciteStatement.executeQuery(
       "SELECT ID, VALS FROM ARR_TABLE");
     assertTrue(rs.next());
     assertEquals(1, rs.getInt(1));
     Array array = rs.getArray(2);
     assertNotNull(array);
-    assertArrayEquals(new int[] {1, 2, 3}, (int[]) array.getArray());
+    assertArrayEquals(new int[]{1, 2, 3}, (int[]) array.getArray());
     assertFalse(rs.next());
     rs.close();
 
-    rs = optiqStatement.executeQuery(
+    rs = calciteStatement.executeQuery(
         "SELECT ID, CARDINALITY(VALS), VALS[2] FROM ARR_TABLE");
     assertTrue(rs.next());
     assertEquals(1, rs.getInt(1));
@@ -1776,7 +1776,7 @@ public class JdbcTest {
     assertFalse(rs.next());
     rs.close();
 
-    rs = optiqStatement.executeQuery(
+    rs = calciteStatement.executeQuery(
         "SELECT * FROM ARR_TABLE2");
     final ResultSetMetaData metaData = rs.getMetaData();
     assertThat(metaData.getColumnTypeName(1), equalTo("INTEGER"));
@@ -1788,7 +1788,7 @@ public class JdbcTest {
     assertThat(rs.getArray(3), notNullValue());
     assertFalse(rs.next());
 
-    optiqConnection.close();
+    calciteConnection.close();
   }
 
   /** Tests the {@code CARDINALITY} function applied to an array column. */

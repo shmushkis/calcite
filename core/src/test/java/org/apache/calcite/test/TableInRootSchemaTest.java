@@ -56,7 +56,7 @@ public class TableInRootSchemaTest {
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-85">[CALCITE-85]
    * Adding a table to the root schema causes breakage in
-   * OptiqPrepareImpl</a>. */
+   * CalcitePrepareImpl</a>. */
   @Test public void testAddingTableInRootSchema() throws Exception {
     Connection connection = DriverManager.getConnection("jdbc:calcite:");
     CalciteConnection calciteConnection =

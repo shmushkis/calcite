@@ -168,7 +168,7 @@ public class CalciteAssert {
         }
       };
 
-  /** Creates an instance of {@code OptiqAssert} with the regular
+  /** Creates an instance of {@code CalciteAssert} with the regular
    * configuration. */
   public static AssertThat that() {
     return new AssertThat(Config.REGULAR);

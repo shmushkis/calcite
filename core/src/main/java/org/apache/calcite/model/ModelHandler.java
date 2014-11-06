@@ -211,8 +211,8 @@ public class ModelHandler {
       final Schema schema =
           schemaFactory.create(
               parentSchema, jsonSchema.name, operandMap(jsonSchema.operand));
-      final SchemaPlus optiqSchema = parentSchema.add(jsonSchema.name, schema);
-      populateSchema(jsonSchema, optiqSchema);
+      final SchemaPlus schemaPlus = parentSchema.add(jsonSchema.name, schema);
+      populateSchema(jsonSchema, schemaPlus);
     } catch (Exception e) {
       throw new RuntimeException("Error instantiating " + jsonSchema, e);
     }
@@ -249,8 +249,8 @@ public class ModelHandler {
     JdbcSchema schema =
         JdbcSchema.create(parentSchema, jsonSchema.name, dataSource,
             jsonSchema.jdbcCatalog, jsonSchema.jdbcSchema);
-    final SchemaPlus optiqSchema = parentSchema.add(jsonSchema.name, schema);
-    populateSchema(jsonSchema, optiqSchema);
+    final SchemaPlus schemaPlus = parentSchema.add(jsonSchema.name, schema);
+    populateSchema(jsonSchema, schemaPlus);
   }
 
   public void visit(JsonMaterialization jsonMaterialization) {

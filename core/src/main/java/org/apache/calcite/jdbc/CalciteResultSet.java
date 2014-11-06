@@ -47,7 +47,7 @@ public class CalciteResultSet extends AvaticaResultSet {
 
   @Override protected CalciteResultSet execute() throws SQLException {
     // Call driver's callback. It is permitted to throw a RuntimeException.
-    CalciteConnectionImpl connection = getOptiqConnection();
+    CalciteConnectionImpl connection = getCalciteConnection();
     final boolean autoTemp = connection.config().autoTemp();
     Handler.ResultSink resultSink = null;
     if (autoTemp) {
@@ -95,7 +95,7 @@ public class CalciteResultSet extends AvaticaResultSet {
   }
 
   // do not make public
-  CalciteConnectionImpl getOptiqConnection() {
+  CalciteConnectionImpl getCalciteConnection() {
     return (CalciteConnectionImpl) statement.getConnection();
   }
 }

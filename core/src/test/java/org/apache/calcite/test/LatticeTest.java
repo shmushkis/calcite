@@ -241,7 +241,7 @@ public class LatticeTest {
         .returnsCount(69203);
 
     // Ideally the counter would stay at 2. It increments to 3 because
-    // OptiqAssert.AssertQuery creates a new schema for every request,
+    // CalciteAssert.AssertQuery creates a new schema for every request,
     // and therefore cannot re-use lattices or materializations from the
     // previous request.
     assertThat(counter.intValue(), equalTo(3));

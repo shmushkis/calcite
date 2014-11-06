@@ -310,7 +310,7 @@ public class CalciteSchema {
   }
 
   public static CalciteSchema from(SchemaPlus plus) {
-    return ((SchemaPlusImpl) plus).optiqSchema();
+    return ((SchemaPlusImpl) plus).calciteSchema();
   }
 
   /** Returns the default path resolving functions from this schema.
@@ -571,9 +571,10 @@ public class CalciteSchema {
     public abstract TableEntry getStarTable();
   }
 
-  /** Implementation of {@link SchemaPlus} based on an {@code OptiqSchema}. */
+  /** Implementation of {@link SchemaPlus} based on a
+   * {@link org.apache.calcite.jdbc.CalciteSchema}. */
   private class SchemaPlusImpl implements SchemaPlus {
-    public CalciteSchema optiqSchema() {
+    CalciteSchema calciteSchema() {
       return CalciteSchema.this;
     }
 
@@ -751,7 +752,7 @@ public class CalciteSchema {
     /** Creates a new value. */
     T build();
 
-    /** Called when OptiqSchema caching is enabled or disabled. */
+    /** Called when CalciteSchema caching is enabled or disabled. */
     void enable(long now, boolean enabled);
   }
 

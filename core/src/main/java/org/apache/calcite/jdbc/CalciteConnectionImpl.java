@@ -86,7 +86,7 @@ abstract class CalciteConnectionImpl
   static final Trojan TROJAN = createTrojan();
 
   /**
-   * Creates an OptiqConnectionImpl.
+   * Creates a CalciteConnectionImpl.
    *
    * <p>Not public; method is called only from the driver.</p>
    *
@@ -191,7 +191,7 @@ abstract class CalciteConnectionImpl
     }
   }
 
-  // OptiqConnection methods
+  // CalciteConnection methods
 
   public SchemaPlus getRootSchema() {
     return rootSchema.plus();
