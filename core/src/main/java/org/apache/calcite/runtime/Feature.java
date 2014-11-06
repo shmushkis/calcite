@@ -16,8 +16,6 @@
  */
 package org.apache.calcite.runtime;
 
-import org.eigenbase.resource.Resources;
-
 import java.lang.reflect.Method;
 import java.util.Locale;
 

@@ -32,6 +32,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
 import org.apache.calcite.runtime.CalciteException;
+import org.apache.calcite.runtime.Resources;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.SqlUtil;
@@ -43,8 +44,6 @@ import org.apache.calcite.util.IntList;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
-
-import org.eigenbase.resource.Resources;
 
 import java.util.AbstractList;
 import java.util.BitSet;

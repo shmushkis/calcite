@@ -18,7 +18,7 @@ package org.apache.calcite.util;
 
 import org.apache.calcite.runtime.CalciteResource;
 
-import org.eigenbase.resource.Resources;
+import org.apache.calcite.runtime.Resources;
 
 /**
  * Definitions of objects to be statically imported.

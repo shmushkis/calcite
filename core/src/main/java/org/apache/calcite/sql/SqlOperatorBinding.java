@@ -19,9 +19,8 @@ package org.apache.calcite.sql;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.runtime.CalciteException;
+import org.apache.calcite.runtime.Resources;
 import org.apache.calcite.sql.validate.SqlValidatorException;
-
-import org.eigenbase.resource.Resources;
 
 import java.util.AbstractList;
 import java.util.List;

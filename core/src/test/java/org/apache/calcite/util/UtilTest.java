@@ -18,6 +18,7 @@ package org.apache.calcite.util;
 
 import org.apache.calcite.linq4j.function.Function1;
 import org.apache.calcite.runtime.FlatLists;
+import org.apache.calcite.runtime.Resources;
 import org.apache.calcite.runtime.Spaces;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.util.SqlBuilder;
@@ -31,7 +32,6 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import org.eigenbase.resource.Resources;
 import org.junit.BeforeClass;
 import org.junit.Test;
 

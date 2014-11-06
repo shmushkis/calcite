@@ -95,7 +95,7 @@ limitations under the License.
               <goal>generate-sources</goal>
             </goals>
             <configuration>
-              <packageName>org.eigenbase.resource</packageName>
+              <packageName>org.apache.calcite.runtime</packageName>
             </configuration>
           </execution>
         </executions>
