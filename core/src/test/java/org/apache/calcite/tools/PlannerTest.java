@@ -16,17 +16,16 @@
  */
 package org.apache.calcite.tools;
 
-import org.apache.calcite.SchemaPlus;
+import org.apache.calcite.adapter.enumerable.EnumerableConvention;
+import org.apache.calcite.adapter.enumerable.EnumerableProject;
+import org.apache.calcite.adapter.enumerable.EnumerableRules;
+import org.apache.calcite.adapter.enumerable.EnumerableTableScan;
+import org.apache.calcite.adapter.java.ReflectiveSchema;
+import org.apache.calcite.adapter.jdbc.JdbcConvention;
+import org.apache.calcite.adapter.jdbc.JdbcImplementor;
+import org.apache.calcite.adapter.jdbc.JdbcRel;
+import org.apache.calcite.adapter.jdbc.JdbcRules;
 import org.apache.calcite.config.Lex;
-import org.apache.calcite.impl.enumerable.EnumerableConvention;
-import org.apache.calcite.impl.enumerable.EnumerableProject;
-import org.apache.calcite.impl.enumerable.EnumerableRules;
-import org.apache.calcite.impl.enumerable.EnumerableTableScan;
-import org.apache.calcite.impl.java.ReflectiveSchema;
-import org.apache.calcite.impl.jdbc.JdbcConvention;
-import org.apache.calcite.impl.jdbc.JdbcImplementor;
-import org.apache.calcite.impl.jdbc.JdbcRel;
-import org.apache.calcite.impl.jdbc.JdbcRules;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -46,6 +45,7 @@ import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.SortRemoveRule;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
@@ -445,7 +445,7 @@ public class PlannerTest {
   /** Unit test that calls {@link Planner#transform} twice,
    * with different rule sets, with different conventions.
    *
-   * <p>{@link org.apache.calcite.impl.jdbc.JdbcConvention} is different
+   * <p>{@link org.apache.calcite.adapter.jdbc.JdbcConvention} is different
    * from the typical convention in that it is not a singleton. Switching to
    * a different instance causes problems unless planner state is wiped clean
    * between calls to {@link Planner#transform}. */
@@ -740,8 +740,8 @@ public class PlannerTest {
 
   /**
    * Rule to convert a
-   * {@link org.apache.calcite.impl.enumerable.EnumerableProject} to an
-   * {@link org.apache.calcite.impl.jdbc.JdbcRules.JdbcProject}.
+   * {@link org.apache.calcite.adapter.enumerable.EnumerableProject} to an
+   * {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcProject}.
    */
   private class MockJdbcProjectRule extends ConverterRule {
     private MockJdbcProjectRule(JdbcConvention out) {
@@ -765,7 +765,7 @@ public class PlannerTest {
 
   /**
    * Rule to convert a
-   * {@link org.apache.calcite.impl.enumerable.EnumerableTableScan} to an
+   * {@link org.apache.calcite.adapter.enumerable.EnumerableTableScan} to an
    * {@link MockJdbcTableScan}.
    */
   private class MockJdbcTableRule extends ConverterRule {

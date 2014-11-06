@@ -16,9 +16,9 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.impl.java.ReflectiveSchema;
+import org.apache.calcite.adapter.java.ReflectiveSchema;
 import org.apache.calcite.jdbc.CalciteConnection;
+import org.apache.calcite.schema.SchemaPlus;
 
 import org.junit.Before;
 import org.junit.Test;

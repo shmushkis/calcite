@@ -14,18 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
-import org.apache.calcite.ModifiableTable;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.logical.LogicalTableModify;
+import org.apache.calcite.schema.ModifiableTable;
 
-/**
-* Created by jhyde on 10/27/14.
-*/
+/** Planner rule that converts a
+ * {@link org.apache.calcite.rel.logical.LogicalTableModify}
+ * relational expression
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableTableModifyRule extends ConverterRule {
   EnumerableTableModifyRule() {
     super(LogicalTableModify.class, Convention.NONE,

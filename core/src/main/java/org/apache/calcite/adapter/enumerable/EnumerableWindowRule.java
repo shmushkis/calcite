@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelTraitSet;
@@ -24,7 +24,7 @@ import org.apache.calcite.rel.logical.LogicalWindow;
 
 /**
  * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalAggregate} to
- * an {@link org.apache.calcite.impl.enumerable.EnumerableAggregate}.
+ * an {@link org.apache.calcite.adapter.enumerable.EnumerableAggregate}.
  */
 class EnumerableWindowRule extends ConverterRule {
   EnumerableWindowRule() {

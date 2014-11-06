@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.tree.Expression;
 
@@ -23,9 +23,9 @@ import java.util.List;
 
 /**
  * The base implementation of strict window aggregate function.
- * @see org.apache.calcite.impl.enumerable.RexImpTable.FirstLastValueImplementor
- * @see org.apache.calcite.impl.enumerable.RexImpTable.RankImplementor
- * @see org.apache.calcite.impl.enumerable.RexImpTable.RowNumberImplementor
+ * @see org.apache.calcite.adapter.enumerable.RexImpTable.FirstLastValueImplementor
+ * @see org.apache.calcite.adapter.enumerable.RexImpTable.RankImplementor
+ * @see org.apache.calcite.adapter.enumerable.RexImpTable.RowNumberImplementor
  */
 public abstract class StrictWinAggImplementor extends StrictAggImplementor
     implements WinAggImplementor {

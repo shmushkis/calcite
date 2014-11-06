@@ -16,11 +16,7 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.impl.AbstractSchema;
-import org.apache.calcite.impl.TableMacroImpl;
-import org.apache.calcite.impl.ViewTable;
-import org.apache.calcite.impl.java.ReflectiveSchema;
+import org.apache.calcite.adapter.java.ReflectiveSchema;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
@@ -32,6 +28,10 @@ import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.linq4j.tree.ParameterExpression;
 import org.apache.calcite.linq4j.tree.Primitive;
 import org.apache.calcite.linq4j.tree.Types;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.calcite.schema.impl.TableMacroImpl;
+import org.apache.calcite.schema.impl.ViewTable;
 import org.apache.calcite.util.DateTimeUtil;
 
 import org.junit.Ignore;

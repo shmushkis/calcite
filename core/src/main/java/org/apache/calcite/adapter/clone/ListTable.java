@@ -14,12 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.clone;
+package org.apache.calcite.adapter.clone;
 
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Statistic;
-import org.apache.calcite.Statistics;
-import org.apache.calcite.impl.java.AbstractQueryableTable;
+import org.apache.calcite.adapter.java.AbstractQueryableTable;
 import org.apache.calcite.linq4j.AbstractQueryable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
@@ -29,6 +26,9 @@ import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelProtoDataType;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Statistic;
+import org.apache.calcite.schema.Statistics;
 
 import java.lang.reflect.Type;
 import java.util.BitSet;

@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.jdbc;
 
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.AvaticaConnection;
 import org.apache.calcite.avatica.BuiltInConnectionProperty;
 import org.apache.calcite.avatica.ConnectionProperty;
@@ -24,7 +25,6 @@ import org.apache.calcite.avatica.Handler;
 import org.apache.calcite.avatica.HandlerImpl;
 import org.apache.calcite.avatica.UnregisteredDriver;
 import org.apache.calcite.config.CalciteConnectionProperty;
-import org.apache.calcite.impl.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.function.Function0;
 import org.apache.calcite.model.ModelHandler;
 

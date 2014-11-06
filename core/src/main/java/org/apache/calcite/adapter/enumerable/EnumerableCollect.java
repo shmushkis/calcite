@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
@@ -26,7 +26,7 @@ import org.apache.calcite.rel.core.Collect;
 import org.apache.calcite.util.BuiltInMethod;
 
 /** Implementation of {@link org.apache.calcite.rel.core.Collect} in
- * {@link org.apache.calcite.impl.enumerable.EnumerableConvention enumerable calling convention}. */
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableCollect extends Collect implements EnumerableRel {
   public EnumerableCollect(RelOptCluster cluster, RelTraitSet traitSet,
       RelNode child, String fieldName) {
@@ -50,7 +50,7 @@ public class EnumerableCollect extends Collect implements EnumerableRel {
             getRowType(),
             result.format);
 
-    // final Enumerable<Employee> child = <<child impl>>;
+    // final Enumerable<Employee> child = <<child adapter>>;
     // final List<Employee> list = child.toList();
     Expression child_ =
         builder.append(

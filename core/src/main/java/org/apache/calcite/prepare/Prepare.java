@@ -17,8 +17,7 @@
 package org.apache.calcite.prepare;
 
 import org.apache.calcite.DataContext;
-import org.apache.calcite.impl.StarTable;
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.plan.Convention;
@@ -38,6 +37,7 @@ import org.apache.calcite.rex.RexExecutorImpl;
 import org.apache.calcite.runtime.Bindable;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.runtime.Typed;
+import org.apache.calcite.schema.impl.StarTable;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlKind;

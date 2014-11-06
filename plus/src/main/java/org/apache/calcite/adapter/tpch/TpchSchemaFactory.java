@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.tpch;
+package org.apache.calcite.adapter.tpch;
 
-import org.apache.calcite.Schema;
-import org.apache.calcite.SchemaFactory;
-import org.apache.calcite.SchemaPlus;
+import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.SchemaFactory;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.util.Util;
 
 import java.util.Map;

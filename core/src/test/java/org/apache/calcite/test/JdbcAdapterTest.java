@@ -19,7 +19,7 @@ package org.apache.calcite.test;
 import org.junit.Test;
 
 /**
- * Tests for the {@code org.apache.calcite.impl.jdbc} package.
+ * Tests for the {@code org.apache.calcite.adapter.jdbc} package.
  */
 public class JdbcAdapterTest {
   @Test public void testUnionPlan() {

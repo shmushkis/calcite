@@ -14,21 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.tpcds;
+package org.apache.calcite.adapter.tpcds;
 
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Statistic;
-import org.apache.calcite.Statistics;
-import org.apache.calcite.Table;
-import org.apache.calcite.impl.AbstractSchema;
-import org.apache.calcite.impl.AbstractTableQueryable;
-import org.apache.calcite.impl.java.AbstractQueryableTable;
+import org.apache.calcite.adapter.java.AbstractQueryableTable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Statistic;
+import org.apache.calcite.schema.Statistics;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.calcite.schema.impl.AbstractTableQueryable;
 import org.apache.calcite.util.Bug;
 
 import com.google.common.collect.ImmutableMap;

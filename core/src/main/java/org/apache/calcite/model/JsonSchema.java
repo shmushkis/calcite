@@ -60,7 +60,7 @@ public abstract class JsonSchema {
    * (see {@link org.apache.calcite.config.Lex#caseSensitive}).
    * However, it also leads to the problem of cache staleness.
    * A particular schema implementation can override the
-   * {@link org.apache.calcite.Schema#contentsHaveChangedSince(long, long)}
+   * {@link org.apache.calcite.schema.Schema#contentsHaveChangedSince(long, long)}
    * method to tell Calcite when it should consider its cache to be out of
    * date.</p>
    *

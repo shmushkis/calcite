@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.tree.Expression;
 
@@ -35,7 +35,7 @@ public interface AggResetContext extends NestedBlockBuilder {
    * @return accumulator variables that should be reset or empty list when no
    *   accumulator variables are used by the aggregate implementation.
    *
-   * @see AggImplementor#getStateType(org.apache.calcite.impl.enumerable.AggContext)
+   * @see AggImplementor#getStateType(org.apache.calcite.adapter.enumerable.AggContext)
    */
   List<Expression> accumulator();
 }

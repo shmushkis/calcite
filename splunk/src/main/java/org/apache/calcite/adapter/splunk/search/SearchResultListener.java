@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.splunk.search;
+package org.apache.calcite.adapter.splunk.search;
 
 /**
  * Called each time a search returns a record.

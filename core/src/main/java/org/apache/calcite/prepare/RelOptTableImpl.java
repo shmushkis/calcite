@@ -16,16 +16,9 @@
  */
 package org.apache.calcite.prepare;
 
-import org.apache.calcite.FilterableTable;
-import org.apache.calcite.ProjectableFilterableTable;
-import org.apache.calcite.QueryableTable;
-import org.apache.calcite.ScannableTable;
-import org.apache.calcite.Schemas;
-import org.apache.calcite.Table;
-import org.apache.calcite.TranslatableTable;
-import org.apache.calcite.impl.enumerable.EnumerableConvention;
-import org.apache.calcite.impl.enumerable.EnumerableInterpreter;
-import org.apache.calcite.impl.enumerable.EnumerableTableScan;
+import org.apache.calcite.adapter.enumerable.EnumerableConvention;
+import org.apache.calcite.adapter.enumerable.EnumerableInterpreter;
+import org.apache.calcite.adapter.enumerable.EnumerableTableScan;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.plan.RelOptCluster;
@@ -33,6 +26,13 @@ import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.schema.FilterableTable;
+import org.apache.calcite.schema.ProjectableFilterableTable;
+import org.apache.calcite.schema.QueryableTable;
+import org.apache.calcite.schema.ScannableTable;
+import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.SqlAccessType;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
 import org.apache.calcite.util.Util;

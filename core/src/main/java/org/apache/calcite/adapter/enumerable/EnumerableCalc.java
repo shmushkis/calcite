@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.BlockStatement;
@@ -43,12 +43,12 @@ import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 
-import static org.apache.calcite.impl.enumerable.EnumUtils.BRIDGE_METHODS;
-import static org.apache.calcite.impl.enumerable.EnumUtils.NO_EXPRS;
-import static org.apache.calcite.impl.enumerable.EnumUtils.NO_PARAMS;
+import static org.apache.calcite.adapter.enumerable.EnumUtils.BRIDGE_METHODS;
+import static org.apache.calcite.adapter.enumerable.EnumUtils.NO_EXPRS;
+import static org.apache.calcite.adapter.enumerable.EnumUtils.NO_PARAMS;
 
 /** Implementation of {@link org.apache.calcite.rel.core.Calc} in
- * {@link org.apache.calcite.impl.enumerable.EnumerableConvention enumerable calling convention}. */
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableCalc extends Calc implements EnumerableRel {
   public EnumerableCalc(
       RelOptCluster cluster,
@@ -81,7 +81,7 @@ public class EnumerableCalc extends Calc implements EnumerableRel {
         PhysTypeImpl.of(
             typeFactory, getRowType(), pref.prefer(result.format));
 
-    // final Enumerable<Employee> inputEnumerable = <<child impl>>;
+    // final Enumerable<Employee> inputEnumerable = <<child adapter>>;
     // return new Enumerable<IntString>() {
     //     Enumerator<IntString> enumerator() {
     //         return new Enumerator<IntString>() {

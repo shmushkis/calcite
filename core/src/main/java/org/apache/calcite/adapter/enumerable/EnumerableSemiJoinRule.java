@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.rel.InvalidRelException;
@@ -25,9 +25,9 @@ import org.apache.calcite.rel.core.SemiJoin;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
-* Created by jhyde on 10/27/14.
-*/
+/** Planner rule that converts a
+ * {@link org.apache.calcite.rel.core.SemiJoin} relational expression
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 class EnumerableSemiJoinRule extends ConverterRule {
   EnumerableSemiJoinRule() {
     super(SemiJoin.class, Convention.NONE, EnumerableConvention.INSTANCE,

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.rex.RexCall;
@@ -23,11 +23,11 @@ import java.util.List;
 
 /**
  * Simplified version of
- * {@link org.apache.calcite.impl.enumerable.CallImplementor}
+ * {@link org.apache.calcite.adapter.enumerable.CallImplementor}
  * that does not know about null semantics.
  *
- * @see org.apache.calcite.impl.enumerable.RexImpTable
- * @see org.apache.calcite.impl.enumerable.CallImplementor
+ * @see org.apache.calcite.adapter.enumerable.RexImpTable
+ * @see org.apache.calcite.adapter.enumerable.CallImplementor
  */
 public interface NotNullImplementor {
   /**

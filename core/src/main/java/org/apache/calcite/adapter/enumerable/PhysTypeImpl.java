@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.function.Function1;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
@@ -47,8 +47,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import static org.apache.calcite.impl.enumerable.EnumUtils.javaRowClass;
-import static org.apache.calcite.impl.enumerable.EnumUtils.overridingMethodDecl;
+import static org.apache.calcite.adapter.enumerable.EnumUtils.javaRowClass;
+import static org.apache.calcite.adapter.enumerable.EnumUtils.overridingMethodDecl;
 
 /** Implementation of {@link PhysType}. */
 public class PhysTypeImpl implements PhysType {

@@ -14,15 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.spark;
+package org.apache.calcite.adapter.spark;
 
-import org.apache.calcite.impl.enumerable.EnumerableConvention;
-import org.apache.calcite.impl.enumerable.JavaRowFormat;
-import org.apache.calcite.impl.enumerable.PhysType;
-import org.apache.calcite.impl.enumerable.PhysTypeImpl;
-import org.apache.calcite.impl.enumerable.RexImpTable;
-import org.apache.calcite.impl.enumerable.RexToLixTranslator;
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.enumerable.EnumerableConvention;
+import org.apache.calcite.adapter.enumerable.JavaRowFormat;
+import org.apache.calcite.adapter.enumerable.PhysType;
+import org.apache.calcite.adapter.enumerable.PhysTypeImpl;
+import org.apache.calcite.adapter.enumerable.RexImpTable;
+import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.BlockStatement;
 import org.apache.calcite.linq4j.tree.Expression;
@@ -211,7 +211,7 @@ public abstract class SparkRules {
 
   /**
    * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalCalc} to an
-   * {@link org.apache.calcite.impl.spark.SparkRules.SparkCalc}.
+   * {@link org.apache.calcite.adapter.spark.SparkRules.SparkCalc}.
    */
   private static class SparkCalcRule
       extends ConverterRule {
@@ -308,7 +308,7 @@ public abstract class SparkRules {
           PhysTypeImpl.of(
               typeFactory, getRowType(), JavaRowFormat.CUSTOM);
 
-      // final RDD<Employee> inputRdd = <<child impl>>;
+      // final RDD<Employee> inputRdd = <<child adapter>>;
       // return inputRdd.flatMap(
       //   new FlatMapFunction<Employee, X>() {
       //          public List<X> call(Employee e) {

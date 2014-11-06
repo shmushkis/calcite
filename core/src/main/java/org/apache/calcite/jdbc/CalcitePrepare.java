@@ -17,12 +17,12 @@
 package org.apache.calcite.jdbc;
 
 import org.apache.calcite.DataContext;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.AvaticaParameter;
 import org.apache.calcite.avatica.AvaticaPrepareResult;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Cursor;
 import org.apache.calcite.config.CalciteConnectionConfig;
-import org.apache.calcite.impl.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.EnumerableDefaults;
 import org.apache.calcite.linq4j.Enumerator;
@@ -138,7 +138,7 @@ public interface CalcitePrepare {
     private static SparkHandler createHandler() {
       try {
         final Class<?> clazz =
-            Class.forName("org.apache.calcite.impl.spark.SparkHandlerImpl");
+            Class.forName("org.apache.calcite.adapter.spark.SparkHandlerImpl");
         Method method = clazz.getMethod("instance");
         return (CalcitePrepare.SparkHandler) method.invoke(null);
       } catch (ClassNotFoundException e) {

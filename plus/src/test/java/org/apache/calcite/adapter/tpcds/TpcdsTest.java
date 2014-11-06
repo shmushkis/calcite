@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.tpcds;
+package org.apache.calcite.adapter.tpcds;
 
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.runtime.Hook;
@@ -35,7 +35,7 @@ import org.junit.Test;
 import java.util.List;
 import java.util.Random;
 
-/** Unit test for {@link org.apache.calcite.impl.tpcds.TpcdsSchema}.
+/** Unit test for {@link org.apache.calcite.adapter.tpcds.TpcdsSchema}.
  *
  * <p>Only runs if {@code -Dcalcite.test.slow=true} is specified on the
  * command-line.
@@ -62,7 +62,7 @@ public class TpcdsTest {
     return "     {\n"
         + "       type: 'custom',\n"
         + "       name: '" + name + "',\n"
-        + "       factory: 'org.apache.calcite.impl.tpcds.TpcdsSchemaFactory',\n"
+        + "       factory: 'org.apache.calcite.adapter.tpcds.TpcdsSchemaFactory',\n"
         + "       operand: {\n"
         + "         columnPrefix: true,\n"
         + "         scale: " + scaleFactor + "\n"

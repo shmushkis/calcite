@@ -16,12 +16,9 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.TranslatableTable;
-import org.apache.calcite.impl.AbstractTableQueryable;
-import org.apache.calcite.impl.enumerable.EnumerableConvention;
-import org.apache.calcite.impl.enumerable.EnumerableTableScan;
-import org.apache.calcite.impl.java.AbstractQueryableTable;
+import org.apache.calcite.adapter.enumerable.EnumerableConvention;
+import org.apache.calcite.adapter.enumerable.EnumerableTableScan;
+import org.apache.calcite.adapter.java.AbstractQueryableTable;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
@@ -31,6 +28,9 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.TranslatableTable;
+import org.apache.calcite.schema.impl.AbstractTableQueryable;
 import org.apache.calcite.util.Pair;
 
 import com.google.common.collect.ImmutableMultiset;

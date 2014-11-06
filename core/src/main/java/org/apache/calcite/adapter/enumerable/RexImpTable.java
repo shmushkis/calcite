@@ -14,12 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
-import org.apache.calcite.Function;
-import org.apache.calcite.ImplementableAggFunction;
-import org.apache.calcite.ImplementableFunction;
-import org.apache.calcite.impl.AggregateFunctionImpl;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.BlockStatement;
@@ -39,6 +35,10 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.runtime.SqlFunctions;
+import org.apache.calcite.schema.Function;
+import org.apache.calcite.schema.ImplementableAggFunction;
+import org.apache.calcite.schema.ImplementableFunction;
+import org.apache.calcite.schema.impl.AggregateFunctionImpl;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlBinaryOperator;
 import org.apache.calcite.sql.SqlOperator;

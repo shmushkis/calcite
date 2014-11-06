@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite;
+package org.apache.calcite.schema;
 
 import org.apache.calcite.linq4j.tree.Expression;
 
@@ -113,7 +113,7 @@ public interface Schema {
    * caching is enabled, Calcite will re-build caches.
    *
    * <p>The default implementation in
-   * {@link org.apache.calcite.impl.AbstractSchema} always returns
+   * {@link org.apache.calcite.schema.impl.AbstractSchema} always returns
    * {@code false}.</p>
    *
    * <p>To control whether Calcite caches the contents of a schema, use the

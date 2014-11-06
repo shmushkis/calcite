@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
@@ -29,7 +29,7 @@ import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.Pair;
 
 /** Implementation of {@link org.apache.calcite.rel.core.Sort} in
- * {@link org.apache.calcite.impl.enumerable.EnumerableConvention enumerable calling convention}. */
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableSort extends Sort implements EnumerableRel {
   public EnumerableSort(RelOptCluster cluster, RelTraitSet traitSet,
       RelNode child, RelCollation collation, RexNode offset, RexNode fetch) {

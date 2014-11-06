@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.splunk;
+package org.apache.calcite.adapter.splunk;
 
-import org.apache.calcite.impl.splunk.search.SplunkConnection;
-import org.apache.calcite.impl.splunk.util.StringUtils;
+import org.apache.calcite.adapter.splunk.search.SplunkConnection;
+import org.apache.calcite.adapter.splunk.util.StringUtils;
 import org.apache.calcite.linq4j.AbstractEnumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;

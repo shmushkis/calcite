@@ -14,21 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.java;
+package org.apache.calcite.adapter.java;
 
-import org.apache.calcite.Function;
-import org.apache.calcite.Schema;
-import org.apache.calcite.SchemaFactory;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Schemas;
-import org.apache.calcite.Statistic;
-import org.apache.calcite.Statistics;
-import org.apache.calcite.Table;
-import org.apache.calcite.TableMacro;
-import org.apache.calcite.TranslatableTable;
-import org.apache.calcite.impl.AbstractSchema;
-import org.apache.calcite.impl.AbstractTableQueryable;
-import org.apache.calcite.impl.ReflectiveFunctionBase;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
@@ -40,6 +27,19 @@ import org.apache.calcite.linq4j.tree.Primitive;
 import org.apache.calcite.linq4j.tree.Types;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.Function;
+import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.SchemaFactory;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.Statistic;
+import org.apache.calcite.schema.Statistics;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.TableMacro;
+import org.apache.calcite.schema.TranslatableTable;
+import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.calcite.schema.impl.AbstractTableQueryable;
+import org.apache.calcite.schema.impl.ReflectiveFunctionBase;
 import org.apache.calcite.util.BuiltInMethod;
 
 import com.google.common.collect.ImmutableMap;
@@ -54,8 +54,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Implementation of {@link org.apache.calcite.Schema} that exposes the public
- * fields and methods in a Java object.
+ * Implementation of {@link org.apache.calcite.schema.Schema} that exposes the
+ * public fields and methods in a Java object.
  */
 public class ReflectiveSchema
     extends AbstractSchema {
@@ -220,7 +220,7 @@ public class ReflectiveSchema
    *     {
    *       name: "foodmart",
    *       type: "custom",
-   *       factory: "org.apache.calcite.impl.java.ReflectiveSchema$Factory",
+   *       factory: "org.apache.calcite.adapter.java.ReflectiveSchema$Factory",
    *       operand: {
    *         class: "com.acme.FoodMart",
    *         staticMethod: "instance"

@@ -16,9 +16,6 @@
  */
 package org.apache.calcite.prepare;
 
-import org.apache.calcite.QueryableTable;
-import org.apache.calcite.TranslatableTable;
-import org.apache.calcite.impl.AbstractTableQueryable;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Grouping;
@@ -48,6 +45,9 @@ import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.QueryableTable;
+import org.apache.calcite.schema.TranslatableTable;
+import org.apache.calcite.schema.impl.AbstractTableQueryable;
 
 import java.math.BigDecimal;
 import java.util.Comparator;

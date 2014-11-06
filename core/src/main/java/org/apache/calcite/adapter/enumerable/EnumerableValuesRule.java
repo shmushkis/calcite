@@ -14,16 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.logical.LogicalValues;
 
-/**
-* Created by jhyde on 10/27/14.
-*/
+/** Planner rule that converts a
+ * {@link org.apache.calcite.rel.logical.LogicalValues}
+ * relational expression
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableValuesRule extends ConverterRule {
   EnumerableValuesRule() {
     super(LogicalValues.class, Convention.NONE, EnumerableConvention.INSTANCE,

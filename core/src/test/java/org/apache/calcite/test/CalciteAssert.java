@@ -17,13 +17,10 @@
 package org.apache.calcite.test;
 
 import org.apache.calcite.DataContext;
-import org.apache.calcite.SchemaPlus;
+import org.apache.calcite.adapter.clone.CloneSchema;
+import org.apache.calcite.adapter.java.ReflectiveSchema;
+import org.apache.calcite.adapter.jdbc.JdbcSchema;
 import org.apache.calcite.config.CalciteConnectionProperty;
-import org.apache.calcite.impl.AbstractSchema;
-import org.apache.calcite.impl.ViewTable;
-import org.apache.calcite.impl.clone.CloneSchema;
-import org.apache.calcite.impl.java.ReflectiveSchema;
-import org.apache.calcite.impl.jdbc.JdbcSchema;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.MetaImpl;
@@ -31,6 +28,9 @@ import org.apache.calcite.materialize.Lattice;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.runtime.Hook;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.calcite.schema.impl.ViewTable;
 import org.apache.calcite.util.JsonBuilder;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;

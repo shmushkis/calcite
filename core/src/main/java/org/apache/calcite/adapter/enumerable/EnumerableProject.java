@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
@@ -26,7 +26,7 @@ import org.apache.calcite.rex.RexNode;
 import java.util.List;
 
 /** Implementation of {@link org.apache.calcite.rel.core.Project} in
- * {@link org.apache.calcite.impl.enumerable.EnumerableConvention enumerable calling convention}. */
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableProject extends Project implements EnumerableRel {
   public EnumerableProject(
       RelOptCluster cluster,

@@ -27,10 +27,9 @@
  * ({@link org.apache.calcite.rex.RexNode}).</p>
  *
  * <p>After the relational expression has been optimized, a
- *     {@link org.apache.calcite.impl.enumerable.JavaRelImplementor} converts it
- *     into to a plan. If the plan is a Java
- *     parse tree, row-expressions are translated into equivalent Java
- *     expressions.</p>
+ * {@link org.apache.calcite.adapter.enumerable.JavaRelImplementor} converts it
+ * into to a plan. If the plan is a Java parse tree, row-expressions are
+ * translated into equivalent Java expressions.</p>
  *
  * <h2>Expressions</h2>
  *

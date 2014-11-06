@@ -16,11 +16,7 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Schemas;
-import org.apache.calcite.impl.AbstractSchema;
-import org.apache.calcite.impl.AbstractTableQueryable;
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
@@ -29,6 +25,10 @@ import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.calcite.schema.impl.AbstractTableQueryable;
 
 import org.junit.Ignore;
 import org.junit.Test;

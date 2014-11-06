@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.tree.Expression;
 
@@ -25,10 +25,10 @@ import java.util.List;
  * Implements an aggregate function by generating expressions to
  * initialize, add to, and get a result from, an accumulator.
  *
- * @see org.apache.calcite.impl.enumerable.StrictAggImplementor
- * @see org.apache.calcite.impl.enumerable.StrictWinAggImplementor
- * @see org.apache.calcite.impl.enumerable.RexImpTable.CountImplementor
- * @see org.apache.calcite.impl.enumerable.RexImpTable.SumImplementor
+ * @see org.apache.calcite.adapter.enumerable.StrictAggImplementor
+ * @see org.apache.calcite.adapter.enumerable.StrictWinAggImplementor
+ * @see org.apache.calcite.adapter.enumerable.RexImpTable.CountImplementor
+ * @see org.apache.calcite.adapter.enumerable.RexImpTable.SumImplementor
  */
 public interface AggImplementor {
   /**

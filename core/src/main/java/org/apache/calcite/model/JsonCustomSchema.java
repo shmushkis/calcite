@@ -25,7 +25,7 @@ import java.util.Map;
  */
 public class JsonCustomSchema extends JsonMapSchema {
   /** Name of the factory class for this schema. Must implement interface
-   * {@link org.apache.calcite.SchemaFactory} and have a public default
+   * {@link org.apache.calcite.schema.SchemaFactory} and have a public default
    * constructor. */
   public String factory;
 

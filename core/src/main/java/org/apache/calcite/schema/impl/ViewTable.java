@@ -14,16 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl;
+package org.apache.calcite.schema.impl;
 
-import org.apache.calcite.FunctionParameter;
-import org.apache.calcite.Schema;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Schemas;
-import org.apache.calcite.TableMacro;
-import org.apache.calcite.TranslatableTable;
-import org.apache.calcite.impl.java.AbstractQueryableTable;
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.java.AbstractQueryableTable;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.QueryProvider;
@@ -35,6 +29,12 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeImpl;
 import org.apache.calcite.rel.type.RelProtoDataType;
+import org.apache.calcite.schema.FunctionParameter;
+import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.TableMacro;
+import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
@@ -42,8 +42,6 @@ import com.google.common.collect.ImmutableList;
 import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
-
-import static org.apache.calcite.impl.MaterializedViewTable.MATERIALIZATION_CONNECTION;
 
 /**
  * Table whose contents are defined using an SQL statement.
@@ -131,8 +129,8 @@ public class ViewTable
 
     public TranslatableTable apply(List<Object> arguments) {
       CalcitePrepare.ParseResult parsed =
-          Schemas.parse(MATERIALIZATION_CONNECTION, schema, schemaPath,
-              viewSql);
+          Schemas.parse(MaterializedViewTable.MATERIALIZATION_CONNECTION,
+              schema, schemaPath, viewSql);
       final List<String> schemaPath1 =
           schemaPath != null ? schemaPath : schema.path(null);
       final JavaTypeFactory typeFactory = (JavaTypeFactory) parsed.typeFactory;

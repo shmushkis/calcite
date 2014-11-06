@@ -16,8 +16,7 @@
  */
 package org.apache.calcite.plan;
 
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.impl.java.ReflectiveSchema;
+import org.apache.calcite.adapter.java.ReflectiveSchema;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.externalize.RelJsonReader;
@@ -27,6 +26,7 @@ import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;

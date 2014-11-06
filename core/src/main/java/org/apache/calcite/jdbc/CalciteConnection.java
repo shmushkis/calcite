@@ -16,10 +16,10 @@
  */
 package org.apache.calcite.jdbc;
 
-import org.apache.calcite.SchemaPlus;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.CalciteConnectionConfig;
-import org.apache.calcite.impl.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.QueryProvider;
+import org.apache.calcite.schema.SchemaPlus;
 
 import java.sql.Connection;
 import java.sql.SQLException;

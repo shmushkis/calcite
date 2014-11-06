@@ -14,12 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable.impl;
+package org.apache.calcite.adapter.enumerable.impl;
 
-import org.apache.calcite.impl.enumerable.RexToLixTranslator;
-import org.apache.calcite.impl.enumerable.WinAggAddContext;
-import org.apache.calcite.impl.enumerable.WinAggFrameResultContext;
-import org.apache.calcite.impl.enumerable.WinAggImplementor;
+import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
+import org.apache.calcite.adapter.enumerable.WinAggAddContext;
+import org.apache.calcite.adapter.enumerable.WinAggFrameResultContext;
+import org.apache.calcite.adapter.enumerable.WinAggImplementor;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
@@ -30,7 +30,7 @@ import java.util.List;
 
 /**
  * Implementation of
- * {@link org.apache.calcite.impl.enumerable.WinAggAddContext}.
+ * {@link org.apache.calcite.adapter.enumerable.WinAggAddContext}.
  */
 public abstract class WinAggAddContextImpl extends WinAggResultContextImpl
     implements WinAggAddContext {

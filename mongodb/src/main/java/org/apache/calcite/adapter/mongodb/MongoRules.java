@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.mongodb;
+package org.apache.calcite.adapter.mongodb;
 
-import org.apache.calcite.impl.enumerable.RexImpTable;
-import org.apache.calcite.impl.enumerable.RexToLixTranslator;
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.enumerable.RexImpTable;
+import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTrait;

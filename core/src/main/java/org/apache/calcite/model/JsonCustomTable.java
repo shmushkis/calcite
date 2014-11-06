@@ -25,7 +25,7 @@ import java.util.Map;
  */
 public class JsonCustomTable extends JsonTable {
   /** Name of the factory class for this table. Must implement interface
-   * {@link org.apache.calcite.TableFactory} and have a public default
+   * {@link org.apache.calcite.schema.TableFactory} and have a public default
    * constructor. */
   public String factory;
 

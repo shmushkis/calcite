@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
-import org.apache.calcite.impl.enumerable.impl.AggAddContextImpl;
-import org.apache.calcite.impl.enumerable.impl.AggResultContextImpl;
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.enumerable.impl.AggAddContextImpl;
+import org.apache.calcite.adapter.enumerable.impl.AggResultContextImpl;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.function.Function0;
 import org.apache.calcite.linq4j.function.Function1;
 import org.apache.calcite.linq4j.function.Function2;
@@ -53,7 +53,7 @@ import java.util.Collections;
 import java.util.List;
 
 /** Implementation of {@link org.apache.calcite.rel.core.Aggregate} in
- * {@link org.apache.calcite.impl.enumerable.EnumerableConvention enumerable calling convention}. */
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableAggregate extends Aggregate
     implements EnumerableRel {
   private static final List<SqlAggFunction> SUPPORTED_AGGREGATIONS =
@@ -114,7 +114,7 @@ public class EnumerableAggregate extends Aggregate
         PhysTypeImpl.of(
             typeFactory, getRowType(), pref.preferCustom());
 
-    // final Enumerable<Employee> child = <<child impl>>;
+    // final Enumerable<Employee> child = <<child adapter>>;
     // Function1<Employee, Integer> keySelector =
     //     new Function1<Employee, Integer>() {
     //         public Integer apply(Employee a0) {
@@ -157,7 +157,7 @@ public class EnumerableAggregate extends Aggregate
     // with a slightly different resultSelector; or if there are no aggregate
     // functions
     //
-    // final Enumerable<Employee> child = <<child impl>>;
+    // final Enumerable<Employee> child = <<child adapter>>;
     // Function1<Employee, Integer> keySelector =
     //     new Function1<Employee, Integer>() {
     //         public Integer apply(Employee a0) {

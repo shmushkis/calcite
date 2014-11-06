@@ -14,20 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl;
+package org.apache.calcite.schema.impl;
 
-import org.apache.calcite.Function;
-import org.apache.calcite.Schema;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Table;
 import org.apache.calcite.linq4j.tree.Expression;
+import org.apache.calcite.schema.Function;
+import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Table;
 
 import java.util.Collection;
 import java.util.Set;
 
 /**
- * Implementation of {@link org.apache.calcite.Schema} that delegates to an
- * underlying schema.
+ * Implementation of {@link org.apache.calcite.schema.Schema} that delegates to
+ * an underlying schema.
  */
 public class DelegatingSchema implements Schema {
   protected final Schema schema;

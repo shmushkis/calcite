@@ -14,14 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.spark;
+package org.apache.calcite.adapter.spark;
 
-import org.apache.calcite.impl.enumerable.EnumerableRel;
-import org.apache.calcite.impl.enumerable.EnumerableRelImplementor;
-import org.apache.calcite.impl.enumerable.JavaRowFormat;
-import org.apache.calcite.impl.enumerable.PhysType;
-import org.apache.calcite.impl.enumerable.PhysTypeImpl;
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.enumerable.EnumerableRel;
+import org.apache.calcite.adapter.enumerable.EnumerableRelImplementor;
+import org.apache.calcite.adapter.enumerable.JavaRowFormat;
+import org.apache.calcite.adapter.enumerable.PhysType;
+import org.apache.calcite.adapter.enumerable.PhysTypeImpl;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.BlockStatement;
 import org.apache.calcite.linq4j.tree.Expression;
@@ -38,8 +38,8 @@ import java.util.List;
 
 /**
  * Relational expression that converts input of
- * {@link org.apache.calcite.impl.spark.SparkRel#CONVENTION Spark convention}
- * into {@link org.apache.calcite.impl.enumerable.EnumerableConvention}.
+ * {@link org.apache.calcite.adapter.spark.SparkRel#CONVENTION Spark convention}
+ * into {@link org.apache.calcite.adapter.enumerable.EnumerableConvention}.
  *
  * <p>Concretely, this means calling the
  * {@link org.apache.spark.api.java.JavaRDD#collect()} method of an RDD
@@ -89,7 +89,7 @@ public class SparkToEnumerableConverter
   }
 
   /** Implementation of
-   * {@link org.apache.calcite.impl.spark.SparkRel.Implementor}. */
+   * {@link org.apache.calcite.adapter.spark.SparkRel.Implementor}. */
   private static class SparkImplementorImpl extends SparkRel.Implementor {
     private final EnumerableRelImplementor implementor;
 

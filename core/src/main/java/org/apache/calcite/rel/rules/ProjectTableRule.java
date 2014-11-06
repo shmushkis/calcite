@@ -16,9 +16,8 @@
  */
 package org.apache.calcite.rel.rules;
 
-import org.apache.calcite.ProjectableFilterableTable;
-import org.apache.calcite.impl.enumerable.EnumerableInterpreter;
-import org.apache.calcite.impl.enumerable.EnumerableRel;
+import org.apache.calcite.adapter.enumerable.EnumerableInterpreter;
+import org.apache.calcite.adapter.enumerable.EnumerableRel;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
@@ -34,6 +33,7 @@ import org.apache.calcite.rex.RexLocalRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.schema.ProjectableFilterableTable;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
@@ -42,7 +42,7 @@ import java.util.List;
 
 /**
  * Planner rule that pushes a project into a scan of a
- * {@link org.apache.calcite.ProjectableFilterableTable}.
+ * {@link org.apache.calcite.schema.ProjectableFilterableTable}.
  *
  * @see org.apache.calcite.rel.rules.FilterTableRule
  */

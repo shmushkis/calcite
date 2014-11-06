@@ -17,10 +17,8 @@
 package org.apache.calcite.rel.rules;
 
 import org.apache.calcite.DataContext;
-import org.apache.calcite.FilterableTable;
-import org.apache.calcite.ProjectableFilterableTable;
-import org.apache.calcite.impl.enumerable.EnumerableInterpreter;
-import org.apache.calcite.impl.enumerable.EnumerableRel;
+import org.apache.calcite.adapter.enumerable.EnumerableInterpreter;
+import org.apache.calcite.adapter.enumerable.EnumerableRel;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
@@ -30,6 +28,8 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.FilterableTable;
+import org.apache.calcite.schema.ProjectableFilterableTable;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
@@ -41,7 +41,7 @@ import static org.apache.calcite.util.Static.RESOURCE;
 
 /**
  * Planner rule that pushes a filter into a scan of a {@link FilterableTable}
- * or {@link org.apache.calcite.ProjectableFilterableTable}.
+ * or {@link org.apache.calcite.schema.ProjectableFilterableTable}.
  */
 public class FilterTableRule extends RelOptRule {
   private static final Predicate<TableScan> PREDICATE =

@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.splunk.search;
+package org.apache.calcite.adapter.splunk.search;
 
-import org.apache.calcite.impl.splunk.util.HttpUtils;
-import org.apache.calcite.impl.splunk.util.StringUtils;
+import org.apache.calcite.adapter.splunk.util.HttpUtils;
+import org.apache.calcite.adapter.splunk.util.StringUtils;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
 
@@ -41,8 +41,8 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.apache.calcite.impl.splunk.util.HttpUtils.appendURLEncodedArgs;
-import static org.apache.calcite.impl.splunk.util.HttpUtils.post;
+import static org.apache.calcite.adapter.splunk.util.HttpUtils.appendURLEncodedArgs;
+import static org.apache.calcite.adapter.splunk.util.HttpUtils.post;
 
 /**
  * Implementation of {@link SplunkConnection} based on Splunk's REST API.

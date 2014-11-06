@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.rel.externalize;
 
-import org.apache.calcite.Schema;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptSchema;
@@ -29,6 +28,7 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.Schema;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.util.BitSets;
 import org.apache.calcite.util.Pair;

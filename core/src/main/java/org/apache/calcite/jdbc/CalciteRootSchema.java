@@ -16,7 +16,7 @@
  */
 package org.apache.calcite.jdbc;
 
-import org.apache.calcite.Schema;
+import org.apache.calcite.schema.Schema;
 
 /**
  * Root schema.

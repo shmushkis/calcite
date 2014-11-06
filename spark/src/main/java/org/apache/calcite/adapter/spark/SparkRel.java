@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.spark;
+package org.apache.calcite.adapter.spark;
 
-import org.apache.calcite.impl.enumerable.JavaRelImplementor;
-import org.apache.calcite.impl.enumerable.PhysType;
+import org.apache.calcite.adapter.enumerable.JavaRelImplementor;
+import org.apache.calcite.adapter.enumerable.PhysType;
 import org.apache.calcite.linq4j.tree.BlockStatement;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.rel.RelNode;

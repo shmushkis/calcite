@@ -14,17 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite;
+package org.apache.calcite.schema;
 
-import org.apache.calcite.impl.enumerable.AggImplementor;
+import org.apache.calcite.adapter.enumerable.AggImplementor;
 
 /**
  * Function that can be translated to java code.
  *
- * @see org.apache.calcite.impl.enumerable.AggImplementor
- * @see org.apache.calcite.impl.enumerable.WinAggImplementor
- * @see org.apache.calcite.impl.enumerable.StrictAggImplementor
- * @see org.apache.calcite.impl.enumerable.StrictWinAggImplementor
+ * @see org.apache.calcite.adapter.enumerable.AggImplementor
+ * @see org.apache.calcite.adapter.enumerable.WinAggImplementor
+ * @see org.apache.calcite.adapter.enumerable.StrictAggImplementor
+ * @see org.apache.calcite.adapter.enumerable.StrictWinAggImplementor
  */
 public interface ImplementableAggFunction extends AggregateFunction {
   /**

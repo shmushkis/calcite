@@ -14,12 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
-import org.apache.calcite.impl.enumerable.impl.WinAggAddContextImpl;
-import org.apache.calcite.impl.enumerable.impl.WinAggResetContextImpl;
-import org.apache.calcite.impl.enumerable.impl.WinAggResultContextImpl;
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.enumerable.impl.WinAggAddContextImpl;
+import org.apache.calcite.adapter.enumerable.impl.WinAggResetContextImpl;
+import org.apache.calcite.adapter.enumerable.impl.WinAggResultContextImpl;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.tree.BinaryExpression;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.BlockStatement;
@@ -62,7 +62,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /** Implementation of {@link org.apache.calcite.rel.core.Window} in
- * {@link org.apache.calcite.impl.enumerable.EnumerableConvention enumerable calling convention}. */
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableWindow extends Window implements EnumerableRel {
   /** Creates an EnumerableWindowRel. */
   EnumerableWindow(RelOptCluster cluster, RelTraitSet traits, RelNode child,

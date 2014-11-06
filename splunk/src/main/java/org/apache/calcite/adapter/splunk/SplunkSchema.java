@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.splunk;
+package org.apache.calcite.adapter.splunk;
 
-import org.apache.calcite.Table;
-import org.apache.calcite.impl.AbstractSchema;
-import org.apache.calcite.impl.splunk.search.SplunkConnection;
+import org.apache.calcite.adapter.splunk.search.SplunkConnection;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.AbstractSchema;
 
 import com.google.common.collect.ImmutableMap;
 

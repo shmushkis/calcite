@@ -16,7 +16,7 @@
  */
 package org.apache.calcite.runtime;
 
-import org.apache.calcite.impl.interpreter.Row;
+import org.apache.calcite.interpreter.Row;
 import org.apache.calcite.linq4j.AbstractEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;

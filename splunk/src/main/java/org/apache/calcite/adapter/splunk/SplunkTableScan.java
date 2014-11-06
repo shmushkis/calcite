@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.splunk;
+package org.apache.calcite.adapter.splunk;
 
-import org.apache.calcite.impl.enumerable.EnumerableConvention;
-import org.apache.calcite.impl.enumerable.EnumerableRel;
-import org.apache.calcite.impl.enumerable.EnumerableRelImplementor;
-import org.apache.calcite.impl.enumerable.PhysType;
-import org.apache.calcite.impl.enumerable.PhysTypeImpl;
+import org.apache.calcite.adapter.enumerable.EnumerableConvention;
+import org.apache.calcite.adapter.enumerable.EnumerableRel;
+import org.apache.calcite.adapter.enumerable.EnumerableRelImplementor;
+import org.apache.calcite.adapter.enumerable.PhysType;
+import org.apache.calcite.adapter.enumerable.PhysTypeImpl;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;

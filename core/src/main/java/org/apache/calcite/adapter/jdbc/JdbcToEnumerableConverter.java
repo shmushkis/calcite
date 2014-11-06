@@ -14,15 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.jdbc;
+package org.apache.calcite.adapter.jdbc;
 
-import org.apache.calcite.Schemas;
-import org.apache.calcite.impl.enumerable.EnumerableRel;
-import org.apache.calcite.impl.enumerable.EnumerableRelImplementor;
-import org.apache.calcite.impl.enumerable.JavaRowFormat;
-import org.apache.calcite.impl.enumerable.PhysType;
-import org.apache.calcite.impl.enumerable.PhysTypeImpl;
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.enumerable.EnumerableRel;
+import org.apache.calcite.adapter.enumerable.EnumerableRelImplementor;
+import org.apache.calcite.adapter.enumerable.JavaRowFormat;
+import org.apache.calcite.adapter.enumerable.PhysType;
+import org.apache.calcite.adapter.enumerable.PhysTypeImpl;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
@@ -40,6 +39,7 @@ import org.apache.calcite.rel.convert.ConverterImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.runtime.SqlFunctions;
+import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.BuiltInMethod;

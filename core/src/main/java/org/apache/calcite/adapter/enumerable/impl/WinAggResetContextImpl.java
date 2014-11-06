@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable.impl;
+package org.apache.calcite.adapter.enumerable.impl;
 
-import org.apache.calcite.impl.enumerable.WinAggResetContext;
+import org.apache.calcite.adapter.enumerable.WinAggResetContext;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
 
@@ -24,7 +24,7 @@ import java.util.List;
 
 /**
  * Implementation of
- * {@link org.apache.calcite.impl.enumerable.WinAggResetContext}.
+ * {@link org.apache.calcite.adapter.enumerable.WinAggResetContext}.
  */
 public class WinAggResetContextImpl extends AggResetContextImpl
     implements WinAggResetContext {

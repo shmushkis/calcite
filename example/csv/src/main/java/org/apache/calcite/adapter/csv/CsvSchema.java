@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.csv;
+package org.apache.calcite.adapter.csv;
 
-import org.apache.calcite.Table;
-import org.apache.calcite.impl.AbstractSchema;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.AbstractSchema;
 
 import com.google.common.collect.ImmutableMap;
 

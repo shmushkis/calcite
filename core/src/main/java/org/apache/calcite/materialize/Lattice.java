@@ -16,10 +16,6 @@
  */
 package org.apache.calcite.materialize;
 
-import org.apache.calcite.Schemas;
-import org.apache.calcite.Table;
-import org.apache.calcite.impl.MaterializedViewTable;
-import org.apache.calcite.impl.StarTable;
 import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.plan.RelOptUtil;
@@ -34,6 +30,10 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.runtime.Utilities;
+import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.MaterializedViewTable;
+import org.apache.calcite.schema.impl.StarTable;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlJoin;

@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 /**
  * Marker interface to allow
- * {@link org.apache.calcite.impl.enumerable.AggImplementor}
+ * {@link org.apache.calcite.adapter.enumerable.AggImplementor}
  * to tell if it is used in regular or windowed context.
  */
 public interface WinAggContext extends AggContext {

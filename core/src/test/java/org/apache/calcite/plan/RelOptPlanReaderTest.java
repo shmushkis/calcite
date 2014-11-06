@@ -16,7 +16,7 @@
  */
 package org.apache.calcite.plan;
 
-import org.apache.calcite.impl.jdbc.JdbcRules;
+import org.apache.calcite.adapter.jdbc.JdbcRules;
 import org.apache.calcite.rel.AbstractRelNode;
 import org.apache.calcite.rel.externalize.RelJson;
 import org.apache.calcite.rel.logical.LogicalProject;
@@ -42,7 +42,7 @@ public class RelOptPlanReaderTest {
     assertThat(relJson.typeNameToClass("LogicalProject"),
         sameInstance((Class) LogicalProject.class));
 
-    // in org.apache.calcite.impl.jdbc.JdbcRules outer class
+    // in org.apache.calcite.adapter.jdbc.JdbcRules outer class
     assertThat(relJson.classToTypeName(JdbcRules.JdbcProject.class),
         is("JdbcProjectRel"));
     assertThat(relJson.typeNameToClass("JdbcProjectRel"),

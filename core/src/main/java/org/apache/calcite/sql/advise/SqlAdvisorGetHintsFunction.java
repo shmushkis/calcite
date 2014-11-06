@@ -17,15 +17,11 @@
 package org.apache.calcite.sql.advise;
 
 import org.apache.calcite.DataContext;
-import org.apache.calcite.FunctionParameter;
-import org.apache.calcite.ImplementableFunction;
-import org.apache.calcite.TableFunction;
-import org.apache.calcite.impl.ReflectiveFunctionBase;
-import org.apache.calcite.impl.enumerable.CallImplementor;
-import org.apache.calcite.impl.enumerable.NotNullImplementor;
-import org.apache.calcite.impl.enumerable.NullPolicy;
-import org.apache.calcite.impl.enumerable.RexImpTable;
-import org.apache.calcite.impl.enumerable.RexToLixTranslator;
+import org.apache.calcite.adapter.enumerable.CallImplementor;
+import org.apache.calcite.adapter.enumerable.NotNullImplementor;
+import org.apache.calcite.adapter.enumerable.NullPolicy;
+import org.apache.calcite.adapter.enumerable.RexImpTable;
+import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.linq4j.tree.Expression;
@@ -34,6 +30,10 @@ import org.apache.calcite.linq4j.tree.Types;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.schema.FunctionParameter;
+import org.apache.calcite.schema.ImplementableFunction;
+import org.apache.calcite.schema.TableFunction;
+import org.apache.calcite.schema.impl.ReflectiveFunctionBase;
 import org.apache.calcite.sql.validate.SqlMoniker;
 import org.apache.calcite.util.BuiltInMethod;
 

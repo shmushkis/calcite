@@ -14,15 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.splunk;
+package org.apache.calcite.adapter.splunk;
 
-import org.apache.calcite.SchemaPlus;
+import org.apache.calcite.adapter.splunk.search.SearchResultListener;
+import org.apache.calcite.adapter.splunk.search.SplunkConnection;
+import org.apache.calcite.adapter.splunk.search.SplunkConnectionImpl;
 import org.apache.calcite.avatica.DriverVersion;
-import org.apache.calcite.impl.splunk.search.SearchResultListener;
-import org.apache.calcite.impl.splunk.search.SplunkConnection;
-import org.apache.calcite.impl.splunk.search.SplunkConnectionImpl;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.linq4j.Enumerator;
+import org.apache.calcite.schema.SchemaPlus;
 
 import java.net.URL;
 import java.sql.Connection;

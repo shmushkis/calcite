@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
@@ -36,7 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Implementation of {@link org.apache.calcite.rel.core.Values} in
- * {@link org.apache.calcite.impl.enumerable.EnumerableConvention enumerable calling convention}. */
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableValues extends Values implements EnumerableRel {
   EnumerableValues(RelOptCluster cluster, RelDataType rowType,
       List<List<RexLiteral>> tuples, RelTraitSet traitSet) {

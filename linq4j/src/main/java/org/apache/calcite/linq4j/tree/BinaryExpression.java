@@ -164,8 +164,7 @@ public class BinaryExpression extends Expression {
       + nodeType + ", primitive=" + primitive);
   }
 
-  @Override
-  public boolean equals(Object o) {
+  @Override public boolean equals(Object o) {
     if (this == o) {
       return true;
     }

@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
@@ -32,9 +32,8 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Set;
 
-/**
-* Created by jhyde on 10/28/14.
-*/
+/** Implementation of {@link org.apache.calcite.rel.core.TableFunctionScan} in
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableTableFunctionScan extends TableFunctionScan
     implements EnumerableRel {
 

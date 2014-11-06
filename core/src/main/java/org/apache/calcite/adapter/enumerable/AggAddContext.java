@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.rex.RexNode;
@@ -23,7 +23,7 @@ import java.util.List;
 
 /**
  * Information for a call to
- * {@link org.apache.calcite.impl.enumerable.AggImplementor#implementAdd(AggContext, AggAddContext)}.
+ * {@link org.apache.calcite.adapter.enumerable.AggImplementor#implementAdd(AggContext, AggAddContext)}.
  *
  * <p>Typically, the aggregation implementation will use {@link #arguments()}
  * or {@link #rexArguments()} to update aggregate value.
@@ -48,7 +48,7 @@ public interface AggAddContext extends AggResultContext {
 
   /**
    * Returns a
-   * {@link org.apache.calcite.impl.enumerable.RexToLixTranslator}
+   * {@link org.apache.calcite.adapter.enumerable.RexToLixTranslator}
    * suitable to transform the arguments.
    */
   RexToLixTranslator rowTranslator();

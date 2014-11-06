@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.tree.BlockStatement;
 import org.apache.calcite.plan.RelOptCluster;
@@ -30,7 +30,7 @@ import java.util.List;
 
 /**
  * A relational expression of one of the
- * {@link org.apache.calcite.impl.enumerable.EnumerableConvention} calling
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention} calling
  * conventions.
  */
 public interface EnumerableRel

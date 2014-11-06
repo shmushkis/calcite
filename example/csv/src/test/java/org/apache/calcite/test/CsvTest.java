@@ -93,7 +93,7 @@ public class CsvTest {
             + "     {\n"
             + "       type: 'custom',\n"
             + "       name: 'bad',\n"
-            + "       factory: 'org.apache.calcite.impl.csv.CsvSchemaFactory',\n"
+            + "       factory: 'org.apache.calcite.adapter.csv.CsvSchemaFactory',\n"
             + "       operand: {\n"
             + "         directory: '/does/not/exist'\n"
             + "       }\n"

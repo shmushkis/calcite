@@ -14,12 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.csv;
+package org.apache.calcite.adapter.csv;
 
-import org.apache.calcite.QueryableTable;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Schemas;
-import org.apache.calcite.TranslatableTable;
 import org.apache.calcite.linq4j.AbstractEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
@@ -29,6 +25,10 @@ import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelProtoDataType;
+import org.apache.calcite.schema.QueryableTable;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.TranslatableTable;
 
 import java.io.File;
 import java.lang.reflect.Type;

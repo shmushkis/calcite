@@ -16,26 +16,26 @@
  */
 package org.apache.calcite.model;
 
-import org.apache.calcite.AggregateFunction;
-import org.apache.calcite.ScalarFunction;
-import org.apache.calcite.Schema;
-import org.apache.calcite.SchemaFactory;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Table;
-import org.apache.calcite.TableFactory;
-import org.apache.calcite.TableFunction;
-import org.apache.calcite.TableMacro;
-import org.apache.calcite.impl.AbstractSchema;
-import org.apache.calcite.impl.AggregateFunctionImpl;
-import org.apache.calcite.impl.MaterializedViewTable;
-import org.apache.calcite.impl.ScalarFunctionImpl;
-import org.apache.calcite.impl.TableFunctionImpl;
-import org.apache.calcite.impl.TableMacroImpl;
-import org.apache.calcite.impl.ViewTable;
-import org.apache.calcite.impl.jdbc.JdbcSchema;
+import org.apache.calcite.adapter.jdbc.JdbcSchema;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.materialize.Lattice;
+import org.apache.calcite.schema.AggregateFunction;
+import org.apache.calcite.schema.ScalarFunction;
+import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.SchemaFactory;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.TableFactory;
+import org.apache.calcite.schema.TableFunction;
+import org.apache.calcite.schema.TableMacro;
+import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.calcite.schema.impl.AggregateFunctionImpl;
+import org.apache.calcite.schema.impl.MaterializedViewTable;
+import org.apache.calcite.schema.impl.ScalarFunctionImpl;
+import org.apache.calcite.schema.impl.TableFunctionImpl;
+import org.apache.calcite.schema.impl.TableMacroImpl;
+import org.apache.calcite.schema.impl.ViewTable;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 

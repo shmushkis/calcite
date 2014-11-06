@@ -14,16 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.spark;
+package org.apache.calcite.adapter.spark;
 
-import org.apache.calcite.impl.enumerable.JavaRowFormat;
-import org.apache.calcite.impl.enumerable.PhysType;
-import org.apache.calcite.impl.enumerable.PhysTypeImpl;
-import org.apache.calcite.impl.java.JavaTypeFactory;
-import org.apache.calcite.impl.jdbc.JdbcConvention;
-import org.apache.calcite.impl.jdbc.JdbcImplementor;
-import org.apache.calcite.impl.jdbc.JdbcRel;
-import org.apache.calcite.impl.jdbc.JdbcSchema;
+import org.apache.calcite.adapter.enumerable.JavaRowFormat;
+import org.apache.calcite.adapter.enumerable.PhysType;
+import org.apache.calcite.adapter.enumerable.PhysTypeImpl;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.adapter.jdbc.JdbcConvention;
+import org.apache.calcite.adapter.jdbc.JdbcImplementor;
+import org.apache.calcite.adapter.jdbc.JdbcRel;
+import org.apache.calcite.adapter.jdbc.JdbcSchema;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;

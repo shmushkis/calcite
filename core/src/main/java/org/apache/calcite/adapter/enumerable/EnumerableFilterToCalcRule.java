@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
@@ -28,7 +28,7 @@ import org.apache.calcite.rex.RexProgramBuilder;
 import com.google.common.collect.ImmutableList;
 
 /** Variant of {@link org.apache.calcite.rel.rules.FilterToCalcRule} for
- * {@link org.apache.calcite.impl.enumerable.EnumerableConvention enumerable calling convention}. */
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableFilterToCalcRule extends RelOptRule {
   EnumerableFilterToCalcRule() {
     super(operand(EnumerableFilter.class, any()));

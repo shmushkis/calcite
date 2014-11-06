@@ -14,10 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.interpreter;
+package org.apache.calcite.interpreter;
 
-import org.apache.calcite.FilterableTable;
-import org.apache.calcite.ProjectableFilterableTable;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
@@ -31,6 +29,8 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.rules.FilterTableRule;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.FilterableTable;
+import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.mapping.Mappings;
@@ -43,7 +43,7 @@ import com.google.common.collect.ImmutableList;
  */
 public class Nodes {
   /** Extension to
-   * {@link org.apache.calcite.impl.interpreter.Interpreter.Compiler}
+   * {@link org.apache.calcite.interpreter.Interpreter.Compiler}
    * that knows how to handle the core logical
    * {@link org.apache.calcite.rel.RelNode}s. */
   public static class CoreCompiler extends Interpreter.Compiler {

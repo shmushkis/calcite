@@ -16,10 +16,11 @@
  */
 package org.apache.calcite;
 
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.linq4j.tree.ParameterExpression;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.advise.SqlAdvisor;
 
 import com.google.common.base.CaseFormat;

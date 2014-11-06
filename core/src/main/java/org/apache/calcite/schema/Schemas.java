@@ -14,12 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite;
+package org.apache.calcite.schema;
 
+import org.apache.calcite.DataContext;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.config.CalciteConnectionProperty;
-import org.apache.calcite.impl.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.jdbc.CalciteRootSchema;
@@ -153,7 +154,7 @@ public final class Schemas {
   }
 
   /** Converts a schema expression to a given type by calling the
-   * {@link org.apache.calcite.SchemaPlus#unwrap(Class)} method. */
+   * {@link SchemaPlus#unwrap(Class)} method. */
   public static Expression unwrap(Expression call, Class type) {
     return Expressions.convert_(
         Expressions.call(call, BuiltInMethod.SCHEMA_PLUS_UNWRAP.method,

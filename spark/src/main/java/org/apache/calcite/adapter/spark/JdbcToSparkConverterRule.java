@@ -14,17 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.spark;
+package org.apache.calcite.adapter.spark;
 
-import org.apache.calcite.impl.jdbc.JdbcConvention;
+import org.apache.calcite.adapter.jdbc.JdbcConvention;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 
 /**
  * Rule to convert a relational expression from
- * {@link org.apache.calcite.impl.jdbc.JdbcConvention} to
- * {@link org.apache.calcite.impl.spark.SparkRel#CONVENTION Spark convention}.
+ * {@link org.apache.calcite.adapter.jdbc.JdbcConvention} to
+ * {@link org.apache.calcite.adapter.spark.SparkRel#CONVENTION Spark convention}.
  */
 public class JdbcToSparkConverterRule extends ConverterRule {
   JdbcToSparkConverterRule(JdbcConvention out) {

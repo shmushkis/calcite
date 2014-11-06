@@ -16,12 +16,12 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Schemas;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.linq4j.function.Predicate1;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.linq4j.tree.ParameterExpression;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.util.Util;
 
 import org.junit.Test;

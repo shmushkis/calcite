@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite;
+package org.apache.calcite.schema;
 
 import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.rel.type.RelDataType;
@@ -71,7 +71,7 @@ public interface Member {
    * {@link org.apache.calcite.linq4j.Queryable}.
    *
    * @param schemaInstance Object that is an instance of the containing
-   *                       {@link org.apache.calcite.Schema}
+   *                       {@link Schema}
    * @param arguments List of arguments to the call; must match
    *                  {@link #getParameters() parameters} in number and type
    *

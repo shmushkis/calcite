@@ -14,16 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl;
+package org.apache.calcite.schema.impl;
 
-import org.apache.calcite.ImplementableFunction;
-import org.apache.calcite.ScalarFunction;
-import org.apache.calcite.impl.enumerable.CallImplementor;
-import org.apache.calcite.impl.enumerable.NullPolicy;
-import org.apache.calcite.impl.enumerable.ReflectiveCallNotNullImplementor;
-import org.apache.calcite.impl.enumerable.RexImpTable;
+import org.apache.calcite.adapter.enumerable.CallImplementor;
+import org.apache.calcite.adapter.enumerable.NullPolicy;
+import org.apache.calcite.adapter.enumerable.ReflectiveCallNotNullImplementor;
+import org.apache.calcite.adapter.enumerable.RexImpTable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.ImplementableFunction;
+import org.apache.calcite.schema.ScalarFunction;
 
 import com.google.common.collect.ImmutableMultimap;
 
@@ -33,7 +33,7 @@ import java.lang.reflect.Modifier;
 import static org.apache.calcite.util.Static.RESOURCE;
 
 /**
-* Implementation of {@link org.apache.calcite.ScalarFunction}.
+* Implementation of {@link org.apache.calcite.schema.ScalarFunction}.
 */
 public class ScalarFunctionImpl extends ReflectiveFunctionBase implements
     ScalarFunction, ImplementableFunction {
@@ -46,8 +46,8 @@ public class ScalarFunctionImpl extends ReflectiveFunctionBase implements
   }
 
   /**
-   * Creates {@link org.apache.calcite.ScalarFunction} for each method in a
-   * given class.
+   * Creates {@link org.apache.calcite.schema.ScalarFunction} for each method in
+   * a given class.
    */
   public static ImmutableMultimap<String, ScalarFunction> createAll(
       Class<?> clazz) {
@@ -58,7 +58,7 @@ public class ScalarFunctionImpl extends ReflectiveFunctionBase implements
         continue;
       }
       if (!Modifier.isStatic(method.getModifiers())
-          && !ScalarFunctionImpl.classHasPublicZeroArgsConstructor(clazz)) {
+          && !classHasPublicZeroArgsConstructor(clazz)) {
         continue;
       }
       final ScalarFunction function = create(method);
@@ -68,7 +68,7 @@ public class ScalarFunctionImpl extends ReflectiveFunctionBase implements
   }
 
   /**
-   * Creates {@link org.apache.calcite.ScalarFunction} from given class.
+   * Creates {@link org.apache.calcite.schema.ScalarFunction} from given class.
    *
    * <p>If a method of the given name is not found or it does not suit,
    * returns {@code null}.
@@ -86,7 +86,7 @@ public class ScalarFunctionImpl extends ReflectiveFunctionBase implements
   }
 
   /**
-   * Creates {@link org.apache.calcite.ScalarFunction} from given method.
+   * Creates {@link org.apache.calcite.schema.ScalarFunction} from given method.
    * When {@code eval} method does not suit, {@code null} is returned.
    *
    * @param method method that is used to implement the function

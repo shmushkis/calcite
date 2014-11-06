@@ -16,8 +16,6 @@
  */
 package org.apache.calcite.plan;
 
-import org.apache.calcite.Table;
-import org.apache.calcite.impl.StarTable;
 import org.apache.calcite.prepare.CalcitePrepareImpl;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelShuttleImpl;
@@ -35,6 +33,8 @@ import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.StarTable;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
@@ -76,7 +76,7 @@ public class RelOptMaterialization {
 
   /**
    * Converts a relational expression to one that uses a
-   * {@link org.apache.calcite.impl.StarTable}.
+   * {@link org.apache.calcite.schema.impl.StarTable}.
    * The relational expression is already in leaf-join-form, per
    * {@link #toLeafJoinForm(org.apache.calcite.rel.RelNode)}.
    */

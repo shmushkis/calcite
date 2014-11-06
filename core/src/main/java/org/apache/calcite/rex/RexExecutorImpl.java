@@ -17,9 +17,9 @@
 package org.apache.calcite.rex;
 
 import org.apache.calcite.DataContext;
-import org.apache.calcite.impl.enumerable.RexToLixTranslator;
-import org.apache.calcite.impl.enumerable.RexToLixTranslator.InputGetter;
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
+import org.apache.calcite.adapter.enumerable.RexToLixTranslator.InputGetter;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
@@ -128,7 +128,7 @@ public class RexExecutorImpl implements RelOptPlanner.Executor {
 
   /**
    * Implementation of
-   * {@link org.apache.calcite.impl.enumerable.RexToLixTranslator.InputGetter}
+   * {@link org.apache.calcite.adapter.enumerable.RexToLixTranslator.InputGetter}
    * that reads the values of input fields by calling
    * <code>{@link org.apache.calcite.DataContext#get}("inputRecord")</code>.
    */

@@ -14,12 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl;
+package org.apache.calcite.schema.impl;
 
-import org.apache.calcite.Function;
-import org.apache.calcite.FunctionParameter;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.Function;
+import org.apache.calcite.schema.FunctionParameter;
 
 import com.google.common.collect.ImmutableList;
 

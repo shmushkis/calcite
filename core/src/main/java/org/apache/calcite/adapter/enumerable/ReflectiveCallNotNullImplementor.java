@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
@@ -27,7 +27,7 @@ import java.util.List;
 
 /**
  * Implementation of
- * {@link org.apache.calcite.impl.enumerable.NotNullImplementor}
+ * {@link org.apache.calcite.adapter.enumerable.NotNullImplementor}
  * that calls a given {@link java.lang.reflect.Method}.
  *
  * <p>When method is not static, a new instance of the required class is

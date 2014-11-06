@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.BlockStatement;
@@ -35,8 +35,8 @@ import java.util.Map;
 
 /**
  * The base implementation of strict aggregate function.
- * @see org.apache.calcite.impl.enumerable.RexImpTable.CountImplementor
- * @see org.apache.calcite.impl.enumerable.RexImpTable.SumImplementor
+ * @see org.apache.calcite.adapter.enumerable.RexImpTable.CountImplementor
+ * @see org.apache.calcite.adapter.enumerable.RexImpTable.SumImplementor
  */
 public abstract class StrictAggImplementor implements AggImplementor {
   private boolean needTrackEmptySet;

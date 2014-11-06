@@ -14,17 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.generate;
+package org.apache.calcite.adapter.generate;
 
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.TableFactory;
-import org.apache.calcite.impl.AbstractTableQueryable;
-import org.apache.calcite.impl.java.AbstractQueryableTable;
+import org.apache.calcite.adapter.java.AbstractQueryableTable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.TableFactory;
+import org.apache.calcite.schema.impl.AbstractTableQueryable;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 import java.util.Map;
@@ -92,9 +92,9 @@ public class RangeTable extends AbstractQueryableTable {
     };
   }
 
-  /** Implementation of {@link org.apache.calcite.TableFactory} that allows
-   * a {@link RangeTable} to be included as a custom table in a Calcite model
-   * file. */
+  /** Implementation of {@link org.apache.calcite.schema.TableFactory} that
+   * allows a {@link RangeTable} to be included as a custom table in a Calcite
+   * model file. */
   public static class Factory implements TableFactory<RangeTable> {
     public RangeTable create(
         SchemaPlus schema,

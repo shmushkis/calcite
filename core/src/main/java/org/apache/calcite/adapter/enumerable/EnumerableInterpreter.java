@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
-import org.apache.calcite.impl.interpreter.Interpreter;
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.interpreter.Interpreter;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
@@ -35,8 +35,8 @@ import java.util.List;
  *
  * <p>Although quite a few kinds of {@link org.apache.calcite.rel.RelNode} can
  * be interpreted, this is only created by default for
- * {@link org.apache.calcite.FilterableTable} and
- * {@link org.apache.calcite.ProjectableFilterableTable}.
+ * {@link org.apache.calcite.schema.FilterableTable} and
+ * {@link org.apache.calcite.schema.ProjectableFilterableTable}.
  */
 public class EnumerableInterpreter extends SingleRel
     implements EnumerableRel {

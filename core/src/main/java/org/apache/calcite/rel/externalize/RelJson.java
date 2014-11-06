@@ -68,8 +68,8 @@ public class RelJson {
           "org.apache.calcite.rel.",
           "org.apache.calcite.rel.core.",
           "org.apache.calcite.rel.logical.",
-          "org.apache.calcite.impl.jdbc.",
-          "org.apache.calcite.impl.jdbc.JdbcRules$");
+          "org.apache.calcite.adapter.jdbc.",
+          "org.apache.calcite.adapter.jdbc.JdbcRules$");
 
   public RelJson(JsonBuilder jsonBuilder) {
     this.jsonBuilder = jsonBuilder;

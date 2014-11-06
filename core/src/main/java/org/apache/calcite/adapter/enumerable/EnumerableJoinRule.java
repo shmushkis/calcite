@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
@@ -28,9 +28,9 @@ import org.apache.calcite.rel.logical.LogicalJoin;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
-* Created by jhyde on 10/27/14.
-*/
+/** Planner rule that converts a
+ * {@link org.apache.calcite.rel.logical.LogicalJoin} relational expression
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 class EnumerableJoinRule extends ConverterRule {
   EnumerableJoinRule() {
     super(

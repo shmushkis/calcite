@@ -18,6 +18,6 @@
 /**
  * Query provider based on a JDBC data source.
  */
-package org.apache.calcite.impl.jdbc;
+package org.apache.calcite.adapter.jdbc;
 
 // End package-info.java

@@ -22,7 +22,7 @@ import java.sql.SQLException;
 
 /**
  * Tests for using Calcite with Spark as an internal engine, as implemented by
- * the {@link org.apache.calcite.impl.spark} package.
+ * the {@link org.apache.calcite.adapter.spark} package.
  */
 public class SparkAdapterTest {
   /**

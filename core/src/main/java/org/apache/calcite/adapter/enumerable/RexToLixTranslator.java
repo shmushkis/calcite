@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.DataContext;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.ByteString;
-import org.apache.calcite.impl.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.ConstantExpression;
 import org.apache.calcite.linq4j.tree.Expression;
@@ -477,7 +477,7 @@ public class RexToLixTranslator {
   /** Translates a literal.
    *
    * @throws AlwaysNull if literal is null but {@code nullAs} is
-   * {@link org.apache.calcite.impl.enumerable.RexImpTable.NullAs#NOT_POSSIBLE}.
+   * {@link org.apache.calcite.adapter.enumerable.RexImpTable.NullAs#NOT_POSSIBLE}.
    */
   public static Expression translateLiteral(
       RexLiteral literal,
@@ -577,7 +577,7 @@ public class RexToLixTranslator {
    * This might be suboptimal in terms of additional box-unbox when you use
    * the translation later.
    * If you know the java class that will be used to store the results, use
-   * {@link org.apache.calcite.impl.enumerable.RexToLixTranslator#translateList(java.util.List, java.util.List)}
+   * {@link org.apache.calcite.adapter.enumerable.RexToLixTranslator#translateList(java.util.List, java.util.List)}
    * version.
    *
    * @param operandList list of RexNodes to translate

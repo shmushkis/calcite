@@ -16,11 +16,8 @@
  */
 package org.apache.calcite.prepare;
 
-import org.apache.calcite.Schemas;
-import org.apache.calcite.Table;
-import org.apache.calcite.impl.StarTable;
-import org.apache.calcite.impl.enumerable.EnumerableConvention;
-import org.apache.calcite.impl.enumerable.EnumerableRel;
+import org.apache.calcite.adapter.enumerable.EnumerableConvention;
+import org.apache.calcite.adapter.enumerable.EnumerableRel;
 import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.plan.RelOptMaterialization;
@@ -41,6 +38,9 @@ import org.apache.calcite.rel.logical.LogicalMinus;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.StarTable;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -111,7 +111,7 @@ class CalciteMaterializer extends CalcitePrepareImpl.CalcitePreparingStmt {
   }
 
   /** Converts a relational expression to use a
-   * {@link org.apache.calcite.impl.StarTable} defined in {@code schema}.
+   * {@link org.apache.calcite.schema.impl.StarTable} defined in {@code schema}.
    * Uses the first star table that fits. */
   private Iterable<Callback> useStar(CalciteSchema schema, RelNode queryRel) {
     List<CalciteSchema.TableEntry> starTables =

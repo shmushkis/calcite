@@ -14,9 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.jdbc;
+package org.apache.calcite.adapter.jdbc;
 
-import org.apache.calcite.ModifiableTable;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.linq4j.tree.Expression;
@@ -68,6 +67,7 @@ import org.apache.calcite.rex.RexLocalRef;
 import org.apache.calcite.rex.RexMultisetUtil;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexProgram;
+import org.apache.calcite.schema.ModifiableTable;
 import org.apache.calcite.sql.JoinConditionType;
 import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlCall;
@@ -337,7 +337,7 @@ public class JdbcRules {
 
   /**
    * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalCalc} to an
-   * {@link org.apache.calcite.impl.jdbc.JdbcRules.JdbcCalc}.
+   * {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcCalc}.
    */
   private static class JdbcCalcRule extends JdbcConverterRule {
     private JdbcCalcRule(JdbcConvention out) {
@@ -428,7 +428,7 @@ public class JdbcRules {
 
   /**
    * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalProject} to
-   * an {@link org.apache.calcite.impl.jdbc.JdbcRules.JdbcProject}.
+   * an {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcProject}.
    */
   private static class JdbcProjectRule extends JdbcConverterRule {
     private JdbcProjectRule(JdbcConvention out) {
@@ -491,7 +491,7 @@ public class JdbcRules {
 
   /**
    * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalFilter} to
-   * an {@link org.apache.calcite.impl.jdbc.JdbcRules.JdbcFilter}.
+   * an {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcFilter}.
    */
   private static class JdbcFilterRule extends JdbcConverterRule {
     private JdbcFilterRule(JdbcConvention out) {
@@ -538,7 +538,7 @@ public class JdbcRules {
 
   /**
    * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalAggregate}
-   * to a {@link org.apache.calcite.impl.jdbc.JdbcRules.JdbcAggregate}.
+   * to a {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcAggregate}.
    */
   private static class JdbcAggregateRule extends JdbcConverterRule {
     private JdbcAggregateRule(JdbcConvention out) {
@@ -612,7 +612,7 @@ public class JdbcRules {
 
   /**
    * Rule to convert a {@link org.apache.calcite.rel.core.Sort} to an
-   * {@link org.apache.calcite.impl.jdbc.JdbcRules.JdbcSort}.
+   * {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcSort}.
    */
   private static class JdbcSortRule extends JdbcConverterRule {
     private JdbcSortRule(JdbcConvention out) {
@@ -681,7 +681,7 @@ public class JdbcRules {
 
   /**
    * Rule to convert an {@link org.apache.calcite.rel.logical.LogicalUnion} to a
-   * {@link org.apache.calcite.impl.jdbc.JdbcRules.JdbcUnion}.
+   * {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcUnion}.
    */
   private static class JdbcUnionRule extends JdbcConverterRule {
     private JdbcUnionRule(JdbcConvention out) {
@@ -726,7 +726,7 @@ public class JdbcRules {
 
   /**
    * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalIntersect}
-   * to a {@link org.apache.calcite.impl.jdbc.JdbcRules.JdbcIntersect}.
+   * to a {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcIntersect}.
    */
   private static class JdbcIntersectRule extends JdbcConverterRule {
     private JdbcIntersectRule(JdbcConvention out) {
@@ -774,7 +774,7 @@ public class JdbcRules {
 
   /**
    * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalMinus} to a
-   * {@link org.apache.calcite.impl.jdbc.JdbcRules.JdbcMinus}.
+   * {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcMinus}.
    */
   private static class JdbcMinusRule extends JdbcConverterRule {
     private JdbcMinusRule(JdbcConvention out) {

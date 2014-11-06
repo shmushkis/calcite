@@ -14,15 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl;
+package org.apache.calcite.schema.impl;
 
-import org.apache.calcite.QueryableTable;
-import org.apache.calcite.SchemaPlus;
 import org.apache.calcite.linq4j.AbstractQueryable;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.linq4j.tree.Expression;
+import org.apache.calcite.schema.QueryableTable;
+import org.apache.calcite.schema.SchemaPlus;
 
 import java.lang.reflect.Type;
 import java.util.Iterator;
@@ -32,7 +32,7 @@ import java.util.Iterator;
  * {@link QueryableTable}.
  *
  * <p>Not to be confused with
- * {@link org.apache.calcite.impl.java.AbstractQueryableTable}.</p>
+ * {@link org.apache.calcite.adapter.java.AbstractQueryableTable}.</p>
  *
  * @param <T> element type
  */

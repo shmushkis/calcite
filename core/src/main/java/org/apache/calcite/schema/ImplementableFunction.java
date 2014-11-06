@@ -14,15 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite;
+package org.apache.calcite.schema;
 
-import org.apache.calcite.impl.enumerable.CallImplementor;
+import org.apache.calcite.adapter.enumerable.CallImplementor;
 
 /**
  * Function that can be translated to java code.
  *
- * @see org.apache.calcite.ScalarFunction
- * @see org.apache.calcite.TableFunction
+ * @see ScalarFunction
+ * @see TableFunction
  */
 public interface ImplementableFunction extends Function {
   /**

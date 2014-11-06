@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.interpreter;
+package org.apache.calcite.interpreter;
 
 import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.AbstractEnumerable;
@@ -278,7 +278,7 @@ public class Interpreter extends AbstractEnumerable<Object[]> {
 
   /**
    * Walks over a tree of {@link org.apache.calcite.rel.RelNode} and, for each,
-   * creates a {@link org.apache.calcite.impl.interpreter.Node} that can be
+   * creates a {@link org.apache.calcite.interpreter.Node} that can be
    * executed in the interpreter.
    *
    * <p>The compiler looks for methods of the form "visit(XxxRel)".

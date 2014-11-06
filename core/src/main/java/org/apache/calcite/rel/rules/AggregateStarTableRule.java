@@ -16,8 +16,6 @@
  */
 package org.apache.calcite.rel.rules;
 
-import org.apache.calcite.Table;
-import org.apache.calcite.impl.StarTable;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.materialize.Lattice;
 import org.apache.calcite.materialize.TileKey;
@@ -36,6 +34,8 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.StarTable;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.util.BitSets;
 import org.apache.calcite.util.Pair;
@@ -49,7 +49,7 @@ import java.util.List;
 
 /**
  * Planner rule that matches an {@link org.apache.calcite.rel.core.Aggregate} on
- * top of a {@link org.apache.calcite.impl.StarTable.StarTableScan}.
+ * top of a {@link org.apache.calcite.schema.impl.StarTable.StarTableScan}.
  *
  * <p>This pattern indicates that an aggregate table may exist. The rule asks
  * the star table for an aggregate table at the required level of aggregation.

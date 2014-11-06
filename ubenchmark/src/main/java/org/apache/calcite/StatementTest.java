@@ -16,8 +16,9 @@
  */
 package org.apache.calcite;
 
-import org.apache.calcite.impl.java.ReflectiveSchema;
+import org.apache.calcite.adapter.java.ReflectiveSchema;
 import org.apache.calcite.jdbc.CalciteConnection;
+import org.apache.calcite.schema.SchemaPlus;
 
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.GenerateMicroBenchmark;

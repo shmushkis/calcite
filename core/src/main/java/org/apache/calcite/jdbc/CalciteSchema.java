@@ -16,16 +16,16 @@
  */
 package org.apache.calcite.jdbc;
 
-import org.apache.calcite.Function;
-import org.apache.calcite.Schema;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Table;
-import org.apache.calcite.TableMacro;
-import org.apache.calcite.impl.MaterializedViewTable;
-import org.apache.calcite.impl.StarTable;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.materialize.Lattice;
+import org.apache.calcite.schema.Function;
+import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.TableMacro;
+import org.apache.calcite.schema.impl.MaterializedViewTable;
+import org.apache.calcite.schema.impl.StarTable;
 import org.apache.calcite.util.Compatible;
 import org.apache.calcite.util.Pair;
 
@@ -331,8 +331,8 @@ public class CalciteSchema {
   }
 
   /** Returns a collection of sub-schemas, both explicit (defined using
-   * {@link #add(String, org.apache.calcite.Schema)}) and implicit
-   * (defined using {@link org.apache.calcite.Schema#getSubSchemaNames()}
+   * {@link #add(String, org.apache.calcite.schema.Schema)}) and implicit
+   * (defined using {@link org.apache.calcite.schema.Schema#getSubSchemaNames()}
    * and {@link Schema#getSubSchema(String)}). */
   public NavigableMap<String, CalciteSchema> getSubSchemaMap() {
     // Build a map of implicit sub-schemas first, then explicit sub-schemas.
@@ -659,7 +659,7 @@ public class CalciteSchema {
       CalciteSchema.this.add(name, table);
     }
 
-    public void add(String name, org.apache.calcite.Function function) {
+    public void add(String name, Function function) {
       CalciteSchema.this.add(name, function);
     }
 

@@ -16,7 +16,7 @@
  */
 package org.apache.calcite.prepare;
 
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlOperatorTable;

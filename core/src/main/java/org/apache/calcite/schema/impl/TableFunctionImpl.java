@@ -14,23 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl;
+package org.apache.calcite.schema.impl;
 
 import org.apache.calcite.DataContext;
-import org.apache.calcite.ImplementableFunction;
-import org.apache.calcite.QueryableTable;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.TableFunction;
-import org.apache.calcite.impl.enumerable.CallImplementor;
-import org.apache.calcite.impl.enumerable.NullPolicy;
-import org.apache.calcite.impl.enumerable.ReflectiveCallNotNullImplementor;
-import org.apache.calcite.impl.enumerable.RexImpTable;
-import org.apache.calcite.impl.enumerable.RexToLixTranslator;
+import org.apache.calcite.adapter.enumerable.CallImplementor;
+import org.apache.calcite.adapter.enumerable.NullPolicy;
+import org.apache.calcite.adapter.enumerable.ReflectiveCallNotNullImplementor;
+import org.apache.calcite.adapter.enumerable.RexImpTable;
+import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.schema.ImplementableFunction;
+import org.apache.calcite.schema.QueryableTable;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.TableFunction;
 import org.apache.calcite.util.BuiltInMethod;
 
 import java.lang.reflect.InvocationTargetException;
@@ -43,7 +43,7 @@ import java.util.List;
 import static org.apache.calcite.util.Static.RESOURCE;
 
 /**
- * Implementation of {@link org.apache.calcite.TableFunction} based on a
+ * Implementation of {@link org.apache.calcite.schema.TableFunction} based on a
  * method.
 */
 public class TableFunctionImpl extends ReflectiveFunctionBase implements

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.spark;
+package org.apache.calcite.adapter.spark;
 
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;

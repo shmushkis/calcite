@@ -17,8 +17,7 @@
 package org.apache.calcite.jdbc;
 
 import org.apache.calcite.DataContext;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Schemas;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.AvaticaConnection;
 import org.apache.calcite.avatica.AvaticaFactory;
 import org.apache.calcite.avatica.AvaticaParameter;
@@ -30,8 +29,6 @@ import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.UnregisteredDriver;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
-import org.apache.calcite.impl.AbstractSchema;
-import org.apache.calcite.impl.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.BaseQueryable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.QueryProvider;
@@ -44,6 +41,9 @@ import org.apache.calcite.materialize.MaterializationService;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.runtime.Hook;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.server.CalciteServer;
 import org.apache.calcite.server.CalciteServerStatement;
 import org.apache.calcite.sql.advise.SqlAdvisor;

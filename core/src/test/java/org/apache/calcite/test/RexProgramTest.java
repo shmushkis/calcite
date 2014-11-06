@@ -16,7 +16,7 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.Strong;
 import org.apache.calcite.rel.type.RelDataType;

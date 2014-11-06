@@ -51,7 +51,7 @@
  * which it returns its results. Some examples:</p>
  *
  * <ul>
- *     <li>{@link org.apache.calcite.impl.jdbc.JdbcConvention} is a fairly
+ *     <li>{@link org.apache.calcite.adapter.jdbc.JdbcConvention} is a fairly
  *         conventional convention; the results are rows from a
  *         {@link java.sql.ResultSet JDBC result set}.
  *     </li>
@@ -60,7 +60,7 @@
  *         expression cannot be implemented; typically there are rules which can
  *         transform it to equivalent, implementable expressions.
  *     </li>
- *     <li>{@link org.apache.calcite.impl.enumerable.EnumerableConvention}
+ *     <li>{@link org.apache.calcite.adapter.enumerable.EnumerableConvention}
  *         implements the expression by
  *         generating Java code. The code places the current row in a Java
  *         variable, then

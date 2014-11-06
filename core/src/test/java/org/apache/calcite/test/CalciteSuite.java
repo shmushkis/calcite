@@ -16,7 +16,7 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.impl.clone.ArrayTableTest;
+import org.apache.calcite.adapter.clone.ArrayTableTest;
 import org.apache.calcite.plan.RelOptUtilTest;
 import org.apache.calcite.plan.RelWriterTest;
 import org.apache.calcite.plan.volcano.VolcanoPlannerTest;

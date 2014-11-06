@@ -14,20 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.jdbc;
+package org.apache.calcite.adapter.jdbc;
 
-import org.apache.calcite.Function;
-import org.apache.calcite.Schema;
-import org.apache.calcite.SchemaFactory;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Schemas;
-import org.apache.calcite.Table;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeImpl;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelProtoDataType;
+import org.apache.calcite.schema.Function;
+import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.SchemaFactory;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -372,7 +372,7 @@ public class JdbcSchema implements Schema {
   }
 
   /** Schema factory that creates a
-   * {@link org.apache.calcite.impl.jdbc.JdbcSchema}.
+   * {@link org.apache.calcite.adapter.jdbc.JdbcSchema}.
    * This allows you to create a jdbc schema inside a model.json file.
    *
    * <pre>{@code
@@ -383,7 +383,7 @@ public class JdbcSchema implements Schema {
    *     {
    *       name: 'FOODMART_CLONE',
    *       type: 'custom',
-   *       factory: 'org.apache.calcite.impl.jdbc.JdbcSchema$Factory',
+   *       factory: 'org.apache.calcite.adapter.jdbc.JdbcSchema$Factory',
    *       operand: {
    *         jdbcDriver: 'com.mysql.jdbc.Driver',
    *         jdbcUrl: 'jdbc:mysql://localhost/foodmart',

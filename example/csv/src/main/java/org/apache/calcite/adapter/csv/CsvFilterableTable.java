@@ -14,10 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.csv;
+package org.apache.calcite.adapter.csv;
 
 import org.apache.calcite.DataContext;
-import org.apache.calcite.FilterableTable;
 import org.apache.calcite.linq4j.AbstractEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
@@ -26,6 +25,7 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.FilterableTable;
 import org.apache.calcite.sql.SqlKind;
 
 import java.io.File;

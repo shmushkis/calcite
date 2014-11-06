@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.spark;
+package org.apache.calcite.adapter.spark;
 
 import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.Enumerable;

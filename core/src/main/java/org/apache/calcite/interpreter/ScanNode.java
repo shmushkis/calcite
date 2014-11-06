@@ -14,15 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.interpreter;
+package org.apache.calcite.interpreter;
 
 import org.apache.calcite.DataContext;
-import org.apache.calcite.FilterableTable;
-import org.apache.calcite.ProjectableFilterableTable;
-import org.apache.calcite.QueryableTable;
-import org.apache.calcite.ScannableTable;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Schemas;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Queryable;
@@ -31,6 +25,12 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.runtime.Enumerables;
+import org.apache.calcite.schema.FilterableTable;
+import org.apache.calcite.schema.ProjectableFilterableTable;
+import org.apache.calcite.schema.QueryableTable;
+import org.apache.calcite.schema.ScannableTable;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Util;
 

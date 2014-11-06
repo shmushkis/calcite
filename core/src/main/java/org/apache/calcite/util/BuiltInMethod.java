@@ -17,16 +17,9 @@
 package org.apache.calcite.util;
 
 import org.apache.calcite.DataContext;
-import org.apache.calcite.FilterableTable;
-import org.apache.calcite.ModifiableTable;
-import org.apache.calcite.QueryableTable;
-import org.apache.calcite.ScannableTable;
-import org.apache.calcite.Schema;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Schemas;
-import org.apache.calcite.impl.interpreter.Row;
-import org.apache.calcite.impl.java.ReflectiveSchema;
-import org.apache.calcite.impl.jdbc.JdbcSchema;
+import org.apache.calcite.adapter.java.ReflectiveSchema;
+import org.apache.calcite.adapter.jdbc.JdbcSchema;
+import org.apache.calcite.interpreter.Row;
 import org.apache.calcite.linq4j.AbstractEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
@@ -54,6 +47,13 @@ import org.apache.calcite.runtime.ResultSetEnumerable;
 import org.apache.calcite.runtime.SortedMultiMap;
 import org.apache.calcite.runtime.SqlFunctions;
 import org.apache.calcite.runtime.Typed;
+import org.apache.calcite.schema.FilterableTable;
+import org.apache.calcite.schema.ModifiableTable;
+import org.apache.calcite.schema.QueryableTable;
+import org.apache.calcite.schema.ScannableTable;
+import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.sql.SqlExplainLevel;
 
 import com.google.common.collect.ImmutableMap;

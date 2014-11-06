@@ -26,8 +26,8 @@
  *
  * <p>There are standard implementations of schema and table, but the user can
  * provide their own by implementing the
- * {@link org.apache.calcite.SchemaFactory}
- * or {@link org.apache.calcite.TableFactory}
+ * {@link org.apache.calcite.schema.SchemaFactory}
+ * or {@link org.apache.calcite.schema.TableFactory}
  * interfaces and including a custom schema in the model.</p>
  *
  * <p>There are several examples of schemas in the

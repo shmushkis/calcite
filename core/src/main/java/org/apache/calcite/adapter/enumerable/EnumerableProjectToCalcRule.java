@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
@@ -26,7 +26,7 @@ import org.apache.calcite.rex.RexProgram;
 import com.google.common.collect.ImmutableList;
 
 /** Variant of {@link org.apache.calcite.rel.rules.ProjectToCalcRule} for
- * {@link org.apache.calcite.impl.enumerable.EnumerableConvention enumerable calling convention}. */
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableProjectToCalcRule extends RelOptRule {
   EnumerableProjectToCalcRule() {
     super(operand(EnumerableProject.class, any()));

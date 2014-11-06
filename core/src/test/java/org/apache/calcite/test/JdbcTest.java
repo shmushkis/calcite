@@ -16,34 +16,18 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.ModifiableTable;
-import org.apache.calcite.QueryableTable;
-import org.apache.calcite.Schema;
-import org.apache.calcite.SchemaFactory;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Table;
-import org.apache.calcite.TableFactory;
-import org.apache.calcite.TableFunction;
-import org.apache.calcite.TableMacro;
-import org.apache.calcite.TranslatableTable;
+import org.apache.calcite.adapter.clone.CloneSchema;
+import org.apache.calcite.adapter.generate.RangeTable;
+import org.apache.calcite.adapter.java.AbstractQueryableTable;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.adapter.java.ReflectiveSchema;
+import org.apache.calcite.adapter.jdbc.JdbcConvention;
+import org.apache.calcite.adapter.jdbc.JdbcSchema;
 import org.apache.calcite.avatica.AvaticaConnection;
 import org.apache.calcite.avatica.AvaticaStatement;
 import org.apache.calcite.avatica.Handler;
 import org.apache.calcite.avatica.HandlerImpl;
 import org.apache.calcite.avatica.Meta;
-import org.apache.calcite.impl.AbstractSchema;
-import org.apache.calcite.impl.AbstractTable;
-import org.apache.calcite.impl.AbstractTableQueryable;
-import org.apache.calcite.impl.TableFunctionImpl;
-import org.apache.calcite.impl.TableMacroImpl;
-import org.apache.calcite.impl.ViewTable;
-import org.apache.calcite.impl.clone.CloneSchema;
-import org.apache.calcite.impl.generate.RangeTable;
-import org.apache.calcite.impl.java.AbstractQueryableTable;
-import org.apache.calcite.impl.java.JavaTypeFactory;
-import org.apache.calcite.impl.java.ReflectiveSchema;
-import org.apache.calcite.impl.jdbc.JdbcConvention;
-import org.apache.calcite.impl.jdbc.JdbcSchema;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.Driver;
@@ -71,6 +55,22 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.runtime.SqlFunctions;
+import org.apache.calcite.schema.ModifiableTable;
+import org.apache.calcite.schema.QueryableTable;
+import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.SchemaFactory;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.TableFactory;
+import org.apache.calcite.schema.TableFunction;
+import org.apache.calcite.schema.TableMacro;
+import org.apache.calcite.schema.TranslatableTable;
+import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.calcite.schema.impl.AbstractTableQueryable;
+import org.apache.calcite.schema.impl.TableFunctionImpl;
+import org.apache.calcite.schema.impl.TableMacroImpl;
+import org.apache.calcite.schema.impl.ViewTable;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.advise.SqlAdvisorGetHintsFunction;
@@ -274,7 +274,7 @@ public class JdbcTest {
     } catch (SQLException e) {
       assertThat(e.getMessage(),
           containsString("Wrong arguments for table function 'public static "
-              + "org.apache.calcite.QueryableTable "
+              + "org.apache.calcite.schema.QueryableTable "
               + "org.apache.calcite.test.JdbcTest"
               + ".multiplicationTable(int,int,java.lang.Integer)'"
               + " call. Expected '[int, int, class"
@@ -430,7 +430,7 @@ public class JdbcTest {
    *
    * <p>The function ({@link #view(String)} has a return type
    * {@link Table} and the actual returned value implements
-   * {@link org.apache.calcite.TranslatableTable}.
+   * {@link org.apache.calcite.schema.TranslatableTable}.
    */
   @Test public void testTableMacro()
       throws SQLException, ClassNotFoundException {
@@ -1965,7 +1965,7 @@ public class JdbcTest {
   /** Makes sure that a projection introduced by a call to
    * {@link org.apache.calcite.rel.rules.JoinCommuteRule} does not
    * manifest as an
-   * {@link org.apache.calcite.impl.enumerable.EnumerableCalc} in the
+   * {@link org.apache.calcite.adapter.enumerable.EnumerableCalc} in the
    * plan.
    *
    * <p>Test case for (not yet fixed)
@@ -3190,7 +3190,7 @@ public class JdbcTest {
 
   /**
    * Tests that window aggregates work when computed over non-nullable
-   * {@link org.apache.calcite.impl.enumerable.JavaRowFormat#SCALAR} inputs.
+   * {@link org.apache.calcite.adapter.enumerable.JavaRowFormat#SCALAR} inputs.
    * Window aggregates use temporary buffers, thus need to check if
    * primitives are properly boxed and un-boxed.
    */

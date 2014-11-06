@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.rex.RexNode;
@@ -29,7 +29,7 @@ import java.util.Map;
  * Allows to build nested code blocks with tracking of current context and the
  * nullability of particular {@link org.apache.calcite.rex.RexNode} expressions.
  *
- * @see org.apache.calcite.impl.enumerable.StrictAggImplementor#implementAdd(AggContext, AggAddContext)
+ * @see org.apache.calcite.adapter.enumerable.StrictAggImplementor#implementAdd(AggContext, AggAddContext)
  */
 public class NestedBlockBuilderImpl implements NestedBlockBuilder {
   private final List<BlockBuilder> blocks = new ArrayList<BlockBuilder>();

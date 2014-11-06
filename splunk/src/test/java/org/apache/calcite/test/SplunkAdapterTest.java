@@ -58,7 +58,7 @@ public class SplunkAdapterTest {
 
   private void loadDriverClass() {
     try {
-      Class.forName("org.apache.calcite.impl.splunk.SplunkDriver");
+      Class.forName("org.apache.calcite.adapter.splunk.SplunkDriver");
     } catch (ClassNotFoundException e) {
       throw new RuntimeException("driver not found", e);
     }

@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite;
+package org.apache.calcite.schema;
 
+import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.rex.RexNode;
 
@@ -29,8 +30,8 @@ import java.util.List;
  * <p>If you wish to write a table that can apply projects but not filters,
  * simply decline all filters.</p>
  *
- * @see org.apache.calcite.ScannableTable
- * @see org.apache.calcite.FilterableTable
+ * @see ScannableTable
+ * @see FilterableTable
  */
 public interface ProjectableFilterableTable extends Table {
   /** Returns an enumerable over the rows in this Table.

@@ -14,23 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.clone;
+package org.apache.calcite.adapter.clone;
 
-import org.apache.calcite.QueryableTable;
-import org.apache.calcite.Schema;
-import org.apache.calcite.SchemaFactory;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Schemas;
-import org.apache.calcite.Table;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.adapter.jdbc.JdbcSchema;
 import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.impl.AbstractSchema;
-import org.apache.calcite.impl.java.JavaTypeFactory;
-import org.apache.calcite.impl.jdbc.JdbcSchema;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.rel.type.RelProtoDataType;
+import org.apache.calcite.schema.QueryableTable;
+import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.SchemaFactory;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.AbstractSchema;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -40,7 +40,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.calcite.impl.MaterializedViewTable.MATERIALIZATION_CONNECTION;
+import static org.apache.calcite.schema.impl.MaterializedViewTable.MATERIALIZATION_CONNECTION;
 
 /**
  * Schema that contains in-memory copies of tables from a JDBC schema.
@@ -117,7 +117,7 @@ public class CloneSchema extends AbstractSchema {
   }
 
   /** Schema factory that creates a
-   * {@link org.apache.calcite.impl.clone.CloneSchema}.
+   * {@link org.apache.calcite.adapter.clone.CloneSchema}.
    * This allows you to create a clone schema inside a model.json file.
    *
    * <pre>{@code
@@ -128,7 +128,7 @@ public class CloneSchema extends AbstractSchema {
    *     {
    *       name: 'FOODMART_CLONE',
    *       type: 'custom',
-   *       factory: 'org.apache.calcite.impl.clone.CloneSchema$Factory',
+   *       factory: 'org.apache.calcite.adapter.clone.CloneSchema$Factory',
    *       operand: {
    *         jdbcDriver: 'com.mysql.jdbc.Driver',
    *         jdbcUrl: 'jdbc:mysql://localhost/foodmart',

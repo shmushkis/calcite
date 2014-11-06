@@ -16,8 +16,12 @@
  */
 
 /**
- * Utilities for RPC to Splunk.
+ * Schema SPI.
+ *
+ * <p>The interfaces in this package define the objects used by the
+ * SQL validator to validate SQL abstract syntax trees and resolve
+ * identifiers to objects.
  */
-package org.apache.calcite.adapter.splunk.util;
+package org.apache.calcite.schema;
 
 // End package-info.java

@@ -57,9 +57,9 @@ import java.util.Set;
  *
  * <p>For each calling-convention, there is a corresponding sub-interface of
  * RelNode. For example,
- * {@code org.apache.calcite.impl.enumerable.EnumerableRel}
+ * {@code org.apache.calcite.adapter.enumerable.EnumerableRel}
  * has operations to manage the conversion to a graph of
- * {@code org.apache.calcite.impl.enumerable.EnumerableConvention}
+ * {@code org.apache.calcite.adapter.enumerable.EnumerableConvention}
  * calling-convention, and it interacts with a
  * {@code EnumerableRelImplementor}.</p>
  *

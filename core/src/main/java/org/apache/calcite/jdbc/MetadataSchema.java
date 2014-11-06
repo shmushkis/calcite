@@ -16,12 +16,12 @@
  */
 package org.apache.calcite.jdbc;
 
-import org.apache.calcite.Schema;
-import org.apache.calcite.Table;
-import org.apache.calcite.impl.AbstractSchema;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.function.Function1;
+import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.AbstractSchema;
 
 import com.google.common.collect.ImmutableMap;
 

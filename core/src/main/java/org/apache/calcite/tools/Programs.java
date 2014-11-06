@@ -16,7 +16,7 @@
  */
 package org.apache.calcite.tools;
 
-import org.apache.calcite.impl.enumerable.EnumerableRules;
+import org.apache.calcite.adapter.enumerable.EnumerableRules;
 import org.apache.calcite.plan.RelOptCostImpl;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;

@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.Schemas;
 import org.apache.calcite.plan.AbstractRelOptPlanner;
 import org.apache.calcite.plan.RelOptCostImpl;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -26,6 +25,7 @@ import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.RexExecutorImpl;
+import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.util.Pair;
 
 import java.util.ArrayList;

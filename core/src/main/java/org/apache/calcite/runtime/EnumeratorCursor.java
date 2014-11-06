@@ -24,7 +24,7 @@ import org.apache.calcite.linq4j.Enumerator;
  * returns a record for each row. The returned record is cached to avoid
  * multiple computations of current row.
  * For instance,
- * {@link org.apache.calcite.impl.enumerable.EnumerableCalc}
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableCalc}
  * computes result just in {@code current()} method, thus it makes sense to
  * cache the result and make it available for all the accessors.
  *

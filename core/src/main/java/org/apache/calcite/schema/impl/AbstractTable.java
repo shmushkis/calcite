@@ -14,12 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl;
+package org.apache.calcite.schema.impl;
 
-import org.apache.calcite.Schema;
-import org.apache.calcite.Statistic;
-import org.apache.calcite.Statistics;
-import org.apache.calcite.Table;
+import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.Statistic;
+import org.apache.calcite.schema.Statistics;
+import org.apache.calcite.schema.Table;
 
 /**
  * Abstract base class for implementing {@link Table}.

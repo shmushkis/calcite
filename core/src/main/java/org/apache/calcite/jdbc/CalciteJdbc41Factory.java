@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.jdbc;
 
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.AvaticaConnection;
 import org.apache.calcite.avatica.AvaticaDatabaseMetaData;
 import org.apache.calcite.avatica.AvaticaFactory;
@@ -25,7 +26,6 @@ import org.apache.calcite.avatica.AvaticaResultSetMetaData;
 import org.apache.calcite.avatica.AvaticaStatement;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.UnregisteredDriver;
-import org.apache.calcite.impl.java.JavaTypeFactory;
 
 import java.io.InputStream;
 import java.io.Reader;

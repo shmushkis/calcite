@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.function.Function2;
@@ -44,7 +44,7 @@ import java.util.List;
 import java.util.Set;
 
 /** Implementation of {@link org.apache.calcite.rel.core.Join} in
- * {@link org.apache.calcite.impl.enumerable.EnumerableConvention enumerable calling convention}. */
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableJoin extends EquiJoin implements EnumerableRel {
   EnumerableJoin(
       RelOptCluster cluster,

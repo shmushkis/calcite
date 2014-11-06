@@ -16,11 +16,7 @@
  */
 package org.apache.calcite.sql.validate;
 
-import org.apache.calcite.Function;
-import org.apache.calcite.FunctionParameter;
-import org.apache.calcite.TableMacro;
-import org.apache.calcite.TranslatableTable;
-import org.apache.calcite.impl.enumerable.RexToLixTranslator;
+import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
@@ -29,6 +25,10 @@ import org.apache.calcite.linq4j.tree.ParameterExpression;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeFactoryImpl;
+import org.apache.calcite.schema.Function;
+import org.apache.calcite.schema.FunctionParameter;
+import org.apache.calcite.schema.TableMacro;
+import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;

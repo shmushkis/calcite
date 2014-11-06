@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.spark;
+package org.apache.calcite.adapter.spark;
 
-import org.apache.calcite.impl.enumerable.EnumerableRules;
+import org.apache.calcite.adapter.enumerable.EnumerableRules;
 import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.linq4j.tree.ClassDeclaration;
 import org.apache.calcite.plan.RelOptPlanner;

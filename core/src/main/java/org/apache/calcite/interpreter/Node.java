@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.interpreter;
+package org.apache.calcite.interpreter;
 
 /**
  * Relational expression that can be executed using an interpreter.

@@ -14,15 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl;
+package org.apache.calcite.schema.impl;
 
-import org.apache.calcite.AggregateFunction;
-import org.apache.calcite.FunctionParameter;
-import org.apache.calcite.ImplementableAggFunction;
-import org.apache.calcite.impl.enumerable.AggImplementor;
-import org.apache.calcite.impl.enumerable.RexImpTable;
+import org.apache.calcite.adapter.enumerable.AggImplementor;
+import org.apache.calcite.adapter.enumerable.RexImpTable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.AggregateFunction;
+import org.apache.calcite.schema.FunctionParameter;
+import org.apache.calcite.schema.ImplementableAggFunction;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;

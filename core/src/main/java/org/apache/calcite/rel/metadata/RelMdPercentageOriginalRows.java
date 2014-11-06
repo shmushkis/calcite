@@ -16,7 +16,7 @@
  */
 package org.apache.calcite.rel.metadata;
 
-import org.apache.calcite.impl.enumerable.EnumerableInterpreter;
+import org.apache.calcite.adapter.enumerable.EnumerableInterpreter;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;

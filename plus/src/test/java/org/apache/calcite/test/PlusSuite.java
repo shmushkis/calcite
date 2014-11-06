@@ -16,8 +16,8 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.impl.tpcds.TpcdsTest;
-import org.apache.calcite.impl.tpch.TpchTest;
+import org.apache.calcite.adapter.tpcds.TpcdsTest;
+import org.apache.calcite.adapter.tpch.TpchTest;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;

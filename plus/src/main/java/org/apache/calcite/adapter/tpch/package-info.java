@@ -18,6 +18,6 @@
 /**
  * TPC-H schema.
  */
-package org.apache.calcite.impl.tpch;
+package org.apache.calcite.adapter.tpch;
 
 // End package-info.java

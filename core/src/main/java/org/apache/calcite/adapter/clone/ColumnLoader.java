@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.clone;
+package org.apache.calcite.adapter.clone;
 
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.impl.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.function.Function1;

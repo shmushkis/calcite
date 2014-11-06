@@ -16,10 +16,10 @@
  */
 package org.apache.calcite.sql.validate;
 
-import org.apache.calcite.AggregateFunction;
-import org.apache.calcite.FunctionParameter;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.AggregateFunction;
+import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.rel.RelNode;
@@ -26,9 +26,9 @@ import com.google.common.collect.ImmutableList;
 
 import java.util.List;
 
-/**
-* Created by jhyde on 10/27/14.
-*/
+/** Planner rule that converts an {@link org.apache.calcite.rel.core.Empty}
+ * relational expression
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableEmptyRule extends ConverterRule {
   EnumerableEmptyRule() {
     super(Empty.class, Convention.NONE, EnumerableConvention.INSTANCE,

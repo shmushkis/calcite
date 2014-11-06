@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.tpch;
+package org.apache.calcite.adapter.tpch;
 
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
@@ -33,7 +33,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
 
-/** Unit test for {@link TpchSchema}.
+/** Unit test for {@link org.apache.calcite.adapter.tpch.TpchSchema}.
  *
  * <p>Because the TPC-H data generator takes time and memory to instantiate,
  * tests that read data (that is, most tests) only run
@@ -50,7 +50,7 @@ public class TpchTest {
     return "     {\n"
         + "       type: 'custom',\n"
         + "       name: '" + name + "',\n"
-        + "       factory: 'org.apache.calcite.tpch.TpchSchemaFactory',\n"
+        + "       factory: 'org.apache.calcite.adapter.tpch.TpchSchemaFactory',\n"
         + "       operand: {\n"
         + "         columnPrefix: true,\n"
         + "         scale: " + scaleFactor + "\n"

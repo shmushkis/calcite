@@ -39,7 +39,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 
 /**
- * Tests for the {@code org.apache.calcite.impl.mongodb} package.
+ * Tests for the {@code org.apache.calcite.adapter.mongodb} package.
  *
  * <p>Before calling this test, you need to populate MongoDB with the "zips"
  * data set (as described in HOWTO.md)
@@ -60,7 +60,7 @@ public class MongoAdapterTest {
   public static final String MONGO_FOODMART_SCHEMA = "     {\n"
       + "       type: 'custom',\n"
       + "       name: '_foodmart',\n"
-      + "       factory: 'org.apache.calcite.impl.mongodb.MongoSchemaFactory',\n"
+      + "       factory: 'org.apache.calcite.adapter.mongodb.MongoSchemaFactory',\n"
       + "       operand: {\n"
       + "         host: 'localhost',\n"
       + "         database: 'foodmart'\n"
@@ -701,7 +701,7 @@ public class MongoAdapterTest {
             + "     {\n"
             + "       type: 'custom',\n"
             + "       name: 'test',\n"
-            + "       factory: 'org.apache.calcite.impl.mongodb.MongoSchemaFactory',\n"
+            + "       factory: 'org.apache.calcite.adapter.mongodb.MongoSchemaFactory',\n"
             + "       operand: {\n"
             + "         host: 'localhost',\n"
             + "         database: 'test'\n"

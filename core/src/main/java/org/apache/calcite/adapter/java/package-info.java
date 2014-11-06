@@ -19,6 +19,6 @@
  * Query provider based on Java in-memory data
  * structures.
  */
-package org.apache.calcite.impl.java;
+package org.apache.calcite.adapter.java;
 
 // End package-info.java

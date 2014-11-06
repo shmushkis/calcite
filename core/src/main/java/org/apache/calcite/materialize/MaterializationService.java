@@ -17,12 +17,10 @@
 package org.apache.calcite.materialize;
 
 import org.apache.calcite.DataContext;
-import org.apache.calcite.Schemas;
-import org.apache.calcite.Table;
+import org.apache.calcite.adapter.clone.CloneSchema;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.config.CalciteConnectionProperty;
-import org.apache.calcite.impl.clone.CloneSchema;
-import org.apache.calcite.impl.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.jdbc.CalciteSchema;
@@ -37,6 +35,8 @@ import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeImpl;
 import org.apache.calcite.runtime.Hook;
+import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.Table;
 import org.apache.calcite.util.BitSets;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;

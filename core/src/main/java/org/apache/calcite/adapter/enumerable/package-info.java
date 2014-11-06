@@ -18,6 +18,6 @@
 /**
  * Query optimizer rules for Java calling convention.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 // End package-info.java

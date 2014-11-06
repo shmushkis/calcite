@@ -16,7 +16,7 @@
  */
 package org.apache.calcite.plan.volcano;
 
-import org.apache.calcite.impl.enumerable.EnumerableConvention;
+import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptCluster;

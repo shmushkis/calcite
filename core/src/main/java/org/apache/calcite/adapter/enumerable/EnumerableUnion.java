@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.impl.enumerable;
+package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
@@ -29,7 +29,7 @@ import org.apache.calcite.util.BuiltInMethod;
 import java.util.List;
 
 /** Implementation of {@link org.apache.calcite.rel.core.Union} in
- * {@link org.apache.calcite.impl.enumerable.EnumerableConvention enumerable calling convention}. */
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
 public class EnumerableUnion extends Union implements EnumerableRel {
   public EnumerableUnion(RelOptCluster cluster, RelTraitSet traitSet,
       List<RelNode> inputs, boolean all) {

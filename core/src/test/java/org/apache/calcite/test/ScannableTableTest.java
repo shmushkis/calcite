@@ -17,16 +17,7 @@
 package org.apache.calcite.test;
 
 import org.apache.calcite.DataContext;
-import org.apache.calcite.FilterableTable;
-import org.apache.calcite.ProjectableFilterableTable;
-import org.apache.calcite.ScannableTable;
-import org.apache.calcite.Schema;
-import org.apache.calcite.SchemaPlus;
-import org.apache.calcite.Statistic;
-import org.apache.calcite.Statistics;
-import org.apache.calcite.impl.AbstractSchema;
-import org.apache.calcite.impl.AbstractTable;
-import org.apache.calcite.impl.java.ReflectiveSchema;
+import org.apache.calcite.adapter.java.ReflectiveSchema;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.linq4j.AbstractEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
@@ -37,6 +28,15 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.FilterableTable;
+import org.apache.calcite.schema.ProjectableFilterableTable;
+import org.apache.calcite.schema.ScannableTable;
+import org.apache.calcite.schema.Schema;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Statistic;
+import org.apache.calcite.schema.Statistics;
+import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Bug;
@@ -60,7 +60,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Unit test for {@link org.apache.calcite.ScannableTable}.
+ * Unit test for {@link org.apache.calcite.schema.ScannableTable}.
  */
 public class ScannableTableTest {
   @Test public void testTens() throws SQLException {
@@ -142,8 +142,8 @@ public class ScannableTableTest {
     buf.setLength(0);
   }
 
-  /** A filter on a {@link org.apache.calcite.ProjectableFilterableTable} with
-   * two columns. */
+  /** A filter on a {@link org.apache.calcite.schema.ProjectableFilterableTable}
+   * with two columns. */
   @Test public void testProjectableFilterable2() throws Exception {
     Connection connection =
         DriverManager.getConnection("jdbc:calcite:");
@@ -176,8 +176,8 @@ public class ScannableTableTest {
     buf.setLength(0);
   }
 
-  /** A filter on a {@link org.apache.calcite.ProjectableFilterableTable} with
-   * two columns, and a project in the query. */
+  /** A filter on a {@link org.apache.calcite.schema.ProjectableFilterableTable}
+   * with two columns, and a project in the query. */
   @Test public void testProjectableFilterable2WithProject() throws Exception {
     Connection connection =
         DriverManager.getConnection("jdbc:calcite:");
@@ -200,7 +200,7 @@ public class ScannableTableTest {
   }
 
   /** A filter and project on a
-   * {@link org.apache.calcite.ProjectableFilterableTable}. The table
+   * {@link org.apache.calcite.schema.ProjectableFilterableTable}. The table
    * refuses to execute the filter, so Calcite should add a pull up and
    * transform the filter (projecting the column needed by the filter). */
   @Test public void testPFTableRefusesFilter() throws Exception {

@@ -18,6 +18,6 @@
 /**
  * Provides utility classes.
  */
-package org.apache.calcite.impl.clone;
+package org.apache.calcite.adapter.clone;
 
 // End package-info.java

@@ -16,8 +16,6 @@
  */
 package org.apache.calcite.sql2rel;
 
-import org.apache.calcite.ModifiableTable;
-import org.apache.calcite.TranslatableTable;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
@@ -73,6 +71,8 @@ import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.rex.RexWindowBound;
+import org.apache.calcite.schema.ModifiableTable;
+import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.JoinConditionType;
 import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlAggFunction;

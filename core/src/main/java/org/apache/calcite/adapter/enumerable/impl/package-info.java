@@ -18,6 +18,6 @@
 /**
  * Calcite-specific classes for implementation of regular and window aggregates.
  */
-package org.apache.calcite.impl.enumerable.impl;
+package org.apache.calcite.adapter.enumerable.impl;
 
 // End package-info.java

@@ -16,21 +16,21 @@
  */
 package org.apache.calcite.prepare;
 
-import org.apache.calcite.AggregateFunction;
-import org.apache.calcite.Function;
-import org.apache.calcite.FunctionParameter;
-import org.apache.calcite.ScalarFunction;
-import org.apache.calcite.Schemas;
-import org.apache.calcite.Table;
-import org.apache.calcite.TableFunction;
-import org.apache.calcite.TableMacro;
-import org.apache.calcite.impl.java.JavaTypeFactory;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.schema.AggregateFunction;
+import org.apache.calcite.schema.Function;
+import org.apache.calcite.schema.FunctionParameter;
+import org.apache.calcite.schema.ScalarFunction;
+import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.TableFunction;
+import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlOperator;
