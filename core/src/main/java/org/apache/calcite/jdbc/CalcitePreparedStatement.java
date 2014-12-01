@@ -37,19 +37,17 @@ abstract class CalcitePreparedStatement
    * Creates a CalcitePreparedStatement.
    *
    * @param connection Connection
+   * @param id Statement id
    * @param prepareResult Result of preparing statement
-   *
+   * @param resultSetType Result set type
+   * @param resultSetConcurrency Result set concurrency
+   * @param resultSetHoldability Result set holdability
    * @throws SQLException if database error occurs
    */
-  protected CalcitePreparedStatement(
-      CalciteConnectionImpl connection,
-      AvaticaPrepareResult prepareResult,
-      int resultSetType,
-      int resultSetConcurrency,
-      int resultSetHoldability)
-      throws SQLException {
-    super(
-        connection, prepareResult, resultSetType, resultSetConcurrency,
+  protected CalcitePreparedStatement(CalciteConnectionImpl connection,
+      int id, AvaticaPrepareResult prepareResult, int resultSetType,
+      int resultSetConcurrency, int resultSetHoldability) throws SQLException {
+    super(connection, id, prepareResult, resultSetType, resultSetConcurrency,
         resultSetHoldability);
   }
 

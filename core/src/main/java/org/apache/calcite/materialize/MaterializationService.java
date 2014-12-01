@@ -22,9 +22,9 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteConnection;
+import org.apache.calcite.jdbc.CalciteMetaImpl;
 import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.jdbc.MetaImpl;
 import org.apache.calcite.linq4j.AbstractQueryable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.QueryProvider;
@@ -108,7 +108,7 @@ public class MaterializationService {
     }
 
     final CalciteConnection connection =
-        MetaImpl.connect(schema.root(), null);
+        CalciteMetaImpl.connect(schema.root(), null);
     final Pair<String, Table> pair = schema.getTableBySql(viewSql);
     Table materializedTable = pair == null ? null : pair.right;
     RelDataType rowType = null;

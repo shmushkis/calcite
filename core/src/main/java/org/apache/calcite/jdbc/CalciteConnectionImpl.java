@@ -25,7 +25,6 @@ import org.apache.calcite.avatica.AvaticaPrepareResult;
 import org.apache.calcite.avatica.AvaticaStatement;
 import org.apache.calcite.avatica.Helper;
 import org.apache.calcite.avatica.InternalProperty;
-import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.UnregisteredDriver;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
@@ -119,12 +118,8 @@ abstract class CalciteConnectionImpl
     this.properties.put(InternalProperty.QUOTING, cfg.quoting());
   }
 
-  @Override protected Meta createMeta() {
-    return new MetaImpl(this);
-  }
-
-  MetaImpl meta() {
-    return (MetaImpl) meta;
+  CalciteMetaImpl meta() {
+    return (CalciteMetaImpl) meta;
   }
 
   public CalciteConnectionConfig config() {
@@ -162,12 +157,9 @@ abstract class CalciteConnectionImpl
       AvaticaPrepareResult prepareResult =
           parseQuery(sql, new ContextImpl(this), -1);
       CalcitePreparedStatement statement =
-          (CalcitePreparedStatement) factory.newPreparedStatement(
-              this,
-              prepareResult,
-              resultSetType,
-              resultSetConcurrency,
-              resultSetHoldability);
+          (CalcitePreparedStatement) factory.newPreparedStatement(this,
+              statementCount++, prepareResult, resultSetType,
+              resultSetConcurrency, resultSetHoldability);
       server.addStatement(statement);
       return statement;
     } catch (RuntimeException e) {

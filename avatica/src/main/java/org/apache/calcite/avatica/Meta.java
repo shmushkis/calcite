@@ -16,7 +16,8 @@
  */
 package org.apache.calcite.avatica;
 
-import java.sql.ResultSet;
+import org.apache.calcite.avatica.util.Cursor;
+
 import java.util.List;
 
 /**
@@ -37,119 +38,99 @@ public interface Meta {
 
   String getTimeDateFunctions();
 
-  ResultSet getTables(
-      String catalog,
+  MetaResultSet getTables(String catalog,
       Pat schemaPattern,
       Pat tableNamePattern,
       List<String> typeList);
 
-  ResultSet getColumns(
-      String catalog,
+  MetaResultSet getColumns(String catalog,
       Pat schemaPattern,
       Pat tableNamePattern,
       Pat columnNamePattern);
 
-  ResultSet getSchemas(String catalog, Pat schemaPattern);
+  MetaResultSet getSchemas(String catalog, Pat schemaPattern);
 
-  ResultSet getCatalogs();
+  MetaResultSet getCatalogs();
 
-  ResultSet getTableTypes();
+  MetaResultSet getTableTypes();
 
-  ResultSet getProcedures(
-      String catalog,
+  MetaResultSet getProcedures(String catalog,
       Pat schemaPattern,
       Pat procedureNamePattern);
 
-  ResultSet getProcedureColumns(
-      String catalog,
+  MetaResultSet getProcedureColumns(String catalog,
       Pat schemaPattern,
       Pat procedureNamePattern,
       Pat columnNamePattern);
 
-  ResultSet getColumnPrivileges(
-      String catalog,
+  MetaResultSet getColumnPrivileges(String catalog,
       String schema,
       String table,
       Pat columnNamePattern);
 
-  ResultSet getTablePrivileges(
-      String catalog,
+  MetaResultSet getTablePrivileges(String catalog,
       Pat schemaPattern,
       Pat tableNamePattern);
 
-  ResultSet getBestRowIdentifier(
-      String catalog,
+  MetaResultSet getBestRowIdentifier(String catalog,
       String schema,
       String table,
       int scope,
       boolean nullable);
 
-  ResultSet getVersionColumns(
-      String catalog, String schema, String table);
+  MetaResultSet getVersionColumns(String catalog, String schema, String table);
 
-  ResultSet getPrimaryKeys(
-      String catalog, String schema, String table);
+  MetaResultSet getPrimaryKeys(String catalog, String schema, String table);
 
-  ResultSet getImportedKeys(
-      String catalog, String schema, String table);
+  MetaResultSet getImportedKeys(String catalog, String schema, String table);
 
-  ResultSet getExportedKeys(
-      String catalog, String schema, String table);
+  MetaResultSet getExportedKeys(String catalog, String schema, String table);
 
-  ResultSet getCrossReference(
-      String parentCatalog,
+  MetaResultSet getCrossReference(String parentCatalog,
       String parentSchema,
       String parentTable,
       String foreignCatalog,
       String foreignSchema,
       String foreignTable);
 
-  ResultSet getTypeInfo();
+  MetaResultSet getTypeInfo();
 
-  ResultSet getIndexInfo(
-      String catalog,
+  MetaResultSet getIndexInfo(String catalog,
       String schema,
       String table,
       boolean unique,
       boolean approximate);
 
-  ResultSet getUDTs(
-      String catalog,
+  MetaResultSet getUDTs(String catalog,
       Pat schemaPattern,
       Pat typeNamePattern,
       int[] types);
 
-  ResultSet getSuperTypes(
-      String catalog,
+  MetaResultSet getSuperTypes(String catalog,
       Pat schemaPattern,
       Pat typeNamePattern);
 
-  ResultSet getSuperTables(
-      String catalog,
+  MetaResultSet getSuperTables(String catalog,
       Pat schemaPattern,
       Pat tableNamePattern);
 
-  ResultSet getAttributes(
-      String catalog,
+  MetaResultSet getAttributes(String catalog,
       Pat schemaPattern,
       Pat typeNamePattern,
       Pat attributeNamePattern);
 
-  ResultSet getClientInfoProperties();
+  MetaResultSet getClientInfoProperties();
 
-  ResultSet getFunctions(
-      String catalog,
+  MetaResultSet getFunctions(String catalog,
       Pat schemaPattern,
       Pat functionNamePattern);
 
-  ResultSet getFunctionColumns(
-      String catalog,
+  MetaResultSet getFunctionColumns(String catalog,
       Pat schemaPattern,
       Pat functionNamePattern,
       Pat columnNamePattern);
 
-  ResultSet getPseudoColumns(
-      String catalog,
+  MetaResultSet getPseudoColumns(String catalog,
       Pat schemaPattern,
       Pat tableNamePattern,
       Pat columnNamePattern);
@@ -158,6 +139,9 @@ public interface Meta {
   Cursor createCursor(AvaticaResultSet resultSet);
 
   AvaticaPrepareResult prepare(AvaticaStatement statement, String sql);
+
+  MetaResultSet createResultSet(Iterable elements,
+      MetaImpl.NamedFieldGetter namedFieldGetter);
 
   /** Wrapper to remind API calls that a parameter is a pattern (allows '%' and
    * '_' wildcards, per the JDBC spec) rather than a string to be matched
@@ -171,6 +155,20 @@ public interface Meta {
 
     public static Pat of(String name) {
       return new Pat(name);
+    }
+  }
+
+  /** Meta data from which a result set can be constructed. */
+  class MetaResultSet {
+    public final AvaticaStatement statement;
+    public final boolean ownStatement;
+    public AvaticaPrepareResult prepareResult;
+
+    public MetaResultSet(AvaticaStatement statement, boolean ownStatement,
+        AvaticaPrepareResult prepareResult, Cursor cursor) {
+      this.prepareResult = prepareResult;
+      this.statement = statement;
+      this.ownStatement = ownStatement;
     }
   }
 }

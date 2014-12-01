@@ -38,18 +38,13 @@ public interface AvaticaFactory {
       String url,
       Properties info) throws SQLException;
 
-  AvaticaStatement newStatement(
-      AvaticaConnection connection,
-      int resultSetType,
-      int resultSetConcurrency,
+  AvaticaStatement newStatement(AvaticaConnection connection, int id,
+      int resultSetType, int resultSetConcurrency,
       int resultSetHoldability) throws SQLException;
 
-  AvaticaPreparedStatement newPreparedStatement(
-      AvaticaConnection connection,
-      AvaticaPrepareResult prepareResult,
-      int resultSetType,
-      int resultSetConcurrency,
-      int resultSetHoldability) throws SQLException;
+  AvaticaPreparedStatement newPreparedStatement(AvaticaConnection connection,
+      int id, AvaticaPrepareResult prepareResult, int resultSetType,
+      int resultSetConcurrency, int resultSetHoldability) throws SQLException;
 
   /**
    * Creates a result set. You will then need to call

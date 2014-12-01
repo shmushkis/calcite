@@ -22,8 +22,8 @@ import org.apache.calcite.adapter.java.ReflectiveSchema;
 import org.apache.calcite.adapter.jdbc.JdbcSchema;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteConnection;
+import org.apache.calcite.jdbc.CalciteMetaImpl;
 import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.jdbc.MetaImpl;
 import org.apache.calcite.materialize.Lattice;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
@@ -886,7 +886,8 @@ public class CalciteAssert {
     public <T> AssertThat doWithDataContext(Function<DataContext, T> fn)
         throws Exception {
       CalciteConnection connection = connectionFactory.createConnection();
-      final DataContext dataContext = MetaImpl.createDataContext(connection);
+      final DataContext dataContext = CalciteMetaImpl.createDataContext(
+          connection);
       try {
         T t = fn.apply(dataContext);
         Util.discard(t);

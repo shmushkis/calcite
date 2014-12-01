@@ -29,7 +29,9 @@ import java.util.List;
  */
 public abstract class AvaticaStatement
     implements Statement {
-  protected final AvaticaConnection connection;
+  public final AvaticaConnection connection;
+  /** Statement id; unique within connection. */
+  public final int id;
   protected boolean closed;
 
   /**
@@ -52,16 +54,29 @@ public abstract class AvaticaStatement
   private int fetchDirection;
   protected int maxRowCount;
 
-  protected AvaticaStatement(AvaticaConnection connection,
-      int resultSetType,
-      int resultSetConcurrency,
-      int resultSetHoldability) {
+  /**
+   * Creates an AvaticaStatement.
+   *
+   * @param connection Connection
+   * @param id Statement id
+   * @param resultSetType Result set type
+   * @param resultSetConcurrency Result set concurrency
+   * @param resultSetHoldability Result set holdability
+   */
+  protected AvaticaStatement(AvaticaConnection connection, int id,
+      int resultSetType, int resultSetConcurrency, int resultSetHoldability) {
     assert connection != null;
+    this.id = id;
     this.resultSetType = resultSetType;
     this.resultSetConcurrency = resultSetConcurrency;
     this.resultSetHoldability = resultSetHoldability;
     this.connection = connection;
     this.closed = false;
+  }
+
+  /** Returns the identifier of the statement, unique within its connection. */
+  public int getId() {
+    return id;
   }
 
   // implement Statement

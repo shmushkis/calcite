@@ -214,6 +214,10 @@ public abstract class UnregisteredDriver implements java.sql.Driver {
     }
   }
 
+  public Meta createMeta(AvaticaConnection connection) {
+    return new MetaImpl(connection);
+  }
+
   /** JDBC version. */
   protected enum JdbcVersion {
     /** Unknown JDBC version. */

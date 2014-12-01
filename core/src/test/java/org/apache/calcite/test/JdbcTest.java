@@ -29,9 +29,9 @@ import org.apache.calcite.avatica.Handler;
 import org.apache.calcite.avatica.HandlerImpl;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.jdbc.CalciteConnection;
+import org.apache.calcite.jdbc.CalciteMetaImpl;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.Driver;
-import org.apache.calcite.jdbc.MetaImpl;
 import org.apache.calcite.linq4j.BaseQueryable;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
@@ -123,6 +123,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TimeZone;
+import java.util.regex.Pattern;
 import javax.sql.DataSource;
 
 import static org.hamcrest.CoreMatchers.containsString;
@@ -863,7 +864,7 @@ public class JdbcTest {
   }
 
   /** Unit test for
-   * {@link org.apache.calcite.jdbc.MetaImpl#likeToRegex(org.apache.calcite.avatica.Meta.Pat)}. */
+   * {@link org.apache.calcite.jdbc.CalciteMetaImpl#likeToRegex(org.apache.calcite.avatica.Meta.Pat)}. */
   @Test public void testLikeToRegex() {
     checkLikeToRegex(true, "%", "abc");
     checkLikeToRegex(true, "abc", "abc");
@@ -888,8 +889,8 @@ public class JdbcTest {
   }
 
   private void checkLikeToRegex(boolean b, String pattern, String abc) {
-    assertTrue(
-        b == MetaImpl.likeToRegex(Meta.Pat.of(pattern)).matcher(abc).matches());
+    final Pattern regex = CalciteMetaImpl.likeToRegex(Meta.Pat.of(pattern));
+    assertTrue(b == regex.matcher(abc).matches());
   }
 
   /** Tests driver's implementation of {@link DatabaseMetaData#getColumns}. */

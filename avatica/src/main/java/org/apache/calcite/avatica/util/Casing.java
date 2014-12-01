@@ -14,24 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.avatica;
+package org.apache.calcite.avatica.util;
 
-/** Syntax for quoting identifiers in SQL statements. */
-public enum Quoting {
-  /** Quote identifiers in double-quotes. For example, {@code "my id"}. */
-  DOUBLE_QUOTE("\""),
+/** Policy for converting case of identifiers before storing them.
+ *
+ * <p>A database often has policies for quoted versus unquoted identifiers.
+ * For example, Oracle converts unquoted identifiers to upper-case, but
+ * quoted identifiers are unchanged.</p> */
+public enum Casing {
+  /** The case of identifiers is not changed. */
+  UNCHANGED,
 
-  /** Quote identifiers in back-quotes. For example, {@code `my id`}. */
-  BACK_TICK("`"),
+  /** Identifiers are converted to upper-case. */
+  TO_UPPER,
 
-  /** Quote identifiers in brackets. For example, {@code [my id]}. */
-  BRACKET("[");
-
-  public String string;
-
-  Quoting(String string) {
-    this.string = string;
-  }
+  /** Identifiers are converted to lower-case. */
+  TO_LOWER
 }
 
-// End Quoting.java
+// End Casing.java

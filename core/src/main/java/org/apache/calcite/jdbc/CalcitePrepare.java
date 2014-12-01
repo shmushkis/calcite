@@ -21,7 +21,7 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.AvaticaParameter;
 import org.apache.calcite.avatica.AvaticaPrepareResult;
 import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.avatica.Cursor;
+import org.apache.calcite.avatica.util.Cursor;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.EnumerableDefaults;

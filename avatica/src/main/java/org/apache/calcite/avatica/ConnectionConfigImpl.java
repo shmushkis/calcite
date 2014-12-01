@@ -16,6 +16,9 @@
  */
 package org.apache.calcite.avatica;
 
+import org.apache.calcite.avatica.remote.MockJsonService;
+import org.apache.calcite.avatica.remote.Service;
+
 import java.lang.reflect.Field;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -35,6 +38,11 @@ public class ConnectionConfigImpl implements ConnectionConfig {
 
   public String timeZone() {
     return BuiltInConnectionProperty.TIMEZONE.wrap(properties).getString();
+  }
+
+  public Service.Factory factory() {
+    return BuiltInConnectionProperty.FACTORY.wrap(properties)
+        .getPlugin(Service.Factory.class, new MockJsonService.Factory());
   }
 
   /** Converts a {@link Properties} object containing (name, value)

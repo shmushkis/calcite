@@ -19,7 +19,7 @@ package org.apache.calcite.runtime;
 import org.apache.calcite.linq4j.Enumerator;
 
 /**
- * Implementation of {@link org.apache.calcite.avatica.Cursor} on top of an
+ * Implementation of {@link org.apache.calcite.avatica.util.Cursor} on top of an
  * {@link org.apache.calcite.linq4j.Enumerator} that
  * returns an array of {@link Object} for each row.
  */

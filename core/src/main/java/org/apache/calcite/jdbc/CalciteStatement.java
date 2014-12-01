@@ -28,12 +28,9 @@ import org.apache.calcite.server.CalciteServerStatement;
 public abstract class CalciteStatement
     extends AvaticaStatement
     implements CalciteServerStatement {
-  CalciteStatement(
-      CalciteConnectionImpl connection,
-      int resultSetType,
-      int resultSetConcurrency,
-      int resultSetHoldability) {
-    super(connection, resultSetType, resultSetConcurrency,
+  CalciteStatement(CalciteConnectionImpl connection, int id, int resultSetType,
+      int resultSetConcurrency, int resultSetHoldability) {
+    super(connection, id, resultSetType, resultSetConcurrency,
         resultSetHoldability);
   }
 

@@ -27,6 +27,9 @@ import static org.apache.calcite.avatica.ConnectionConfigImpl.parse;
  * Enumeration of Avatica's built-in connection properties.
  */
 public enum BuiltInConnectionProperty implements ConnectionProperty {
+  /** Factory. */
+  FACTORY("factory", Type.STRING, null),
+
   /** Name of initial schema. */
   SCHEMA("schema", Type.STRING, null),
 

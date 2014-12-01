@@ -16,6 +16,9 @@
  */
 package org.apache.calcite.avatica;
 
+import org.apache.calcite.avatica.util.ArrayImpl;
+import org.apache.calcite.avatica.util.Cursor;
+
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;

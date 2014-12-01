@@ -43,9 +43,10 @@ import java.util.concurrent.Executor;
  * Implementation of JDBC connection
  * for the Avatica framework.
  *
- * <p>Abstract to allow newer versions of JDBC to add methods.</p>
+ * <p>Abstract to allow newer versions of JDBC to add methods.
  */
 public abstract class AvaticaConnection implements Connection {
+  protected int statementCount;
   private boolean autoCommit;
   private boolean closed;
   private boolean readOnly;
@@ -84,13 +85,9 @@ public abstract class AvaticaConnection implements Connection {
     this.factory = factory;
     this.url = url;
     this.info = info;
-    this.meta = createMeta();
+    this.meta = driver.createMeta(this);
     this.metaData = factory.newDatabaseMetaData(this);
     this.holdability = metaData.getResultSetHoldability();
-  }
-
-  protected Meta createMeta() {
-    throw new UnsupportedOperationException();
   }
 
   /** Returns a view onto this connection's configuration properties. Code
@@ -261,7 +258,7 @@ public abstract class AvaticaConnection implements Connection {
       int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
     return factory.newStatement(
-        this, resultSetType, resultSetConcurrency,
+        this, statementCount++, resultSetType, resultSetConcurrency,
         resultSetHoldability);
   }
 

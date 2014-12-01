@@ -21,7 +21,7 @@ import org.apache.calcite.linq4j.Enumerator;
 import java.lang.reflect.Field;
 
 /**
- * Implementation of {@link org.apache.calcite.avatica.Cursor} on top of an
+ * Implementation of {@link org.apache.calcite.avatica.util.Cursor} on top of an
  * {@link org.apache.calcite.linq4j.Enumerator} that
  * returns a record for each row. The record is a synthetic class whose fields
  * are all public.

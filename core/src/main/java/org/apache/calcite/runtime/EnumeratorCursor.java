@@ -16,10 +16,11 @@
  */
 package org.apache.calcite.runtime;
 
+import org.apache.calcite.avatica.util.AbstractCursor;
 import org.apache.calcite.linq4j.Enumerator;
 
 /**
- * Implementation of {@link org.apache.calcite.avatica.Cursor} on top of an
+ * Implementation of {@link org.apache.calcite.avatica.util.Cursor} on top of an
  * {@link org.apache.calcite.linq4j.Enumerator} that
  * returns a record for each row. The returned record is cached to avoid
  * multiple computations of current row.
