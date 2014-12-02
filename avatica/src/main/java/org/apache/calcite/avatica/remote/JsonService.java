@@ -59,9 +59,11 @@ public abstract class JsonService implements Service {
   }
 
   private <T> String encode(T request) throws IOException {
-    w.getBuffer().setLength(0);
+    assert w.getBuffer().length() == 0;
     mapper.writeValue(w, request);
-    return w.toString();
+    final String s = w.toString();
+    w.getBuffer().setLength(0);
+    return s;
   }
 
   protected RuntimeException handle(IOException e) {

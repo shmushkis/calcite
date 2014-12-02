@@ -18,6 +18,9 @@ package org.apache.calcite.avatica;
 
 import org.apache.calcite.avatica.util.Cursor;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 
 /**
@@ -153,7 +156,8 @@ public interface Meta {
       this.s = s;
     }
 
-    public static Pat of(String name) {
+    @JsonCreator
+    public static Pat of(@JsonProperty("s") String name) {
       return new Pat(name);
     }
   }

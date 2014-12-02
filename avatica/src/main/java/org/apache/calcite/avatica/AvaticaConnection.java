@@ -445,9 +445,16 @@ public abstract class AvaticaConnection implements Connection {
     }
 
     /** A means for anyone who has a trojan to call the protected method
-     * {@link org.apache.calcite.avatica.AvaticaStatement#getParameterValues()}. */
+     * {@link org.apache.calcite.avatica.AvaticaStatement#getParameterValues()}.
+     */
     public List<Object> getParameterValues(AvaticaStatement statement) {
       return statement.getParameterValues();
+    }
+
+    /** A means for anyone who has a trojan to get the protected field
+     * {@link org.apache.calcite.avatica.AvaticaConnection#meta}. */
+    public Meta getMeta(AvaticaConnection connection) {
+      return connection.meta;
     }
   }
 }

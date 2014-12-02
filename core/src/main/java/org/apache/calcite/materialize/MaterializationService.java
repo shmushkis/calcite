@@ -123,7 +123,7 @@ public class MaterializationService {
       materializedTable =
           CloneSchema.createCloneTable(typeFactory,
               RelDataTypeImpl.proto(prepareResult.rowType),
-              Functions.adapt(prepareResult.structType.columns,
+              Functions.adapt(prepareResult.columns,
                   new Function1<ColumnMetaData, ColumnMetaData.Rep>() {
                     public ColumnMetaData.Rep apply(ColumnMetaData column) {
                       return column.type.representation;

@@ -38,6 +38,7 @@ public class LocalJsonService extends JsonService {
     try {
       Request request2 = mapper.readValue(request, Request.class);
       Response response2 = request2.accept(service);
+      assert w.getBuffer().length() == 0;
       mapper.writeValue(w, response2);
       final String response = w.toString();
       w.getBuffer().setLength(0);

@@ -41,13 +41,13 @@ public class LocalService implements Service {
 
   public ResultSetResponse apply(CatalogsRequest request) {
     final Meta.MetaResultSet resultSet = meta.getCatalogs();
-    return new ResultSetResponse(resultSet);
+    return ResultSetResponse.create(resultSet);
   }
 
   public ResultSetResponse apply(SchemasRequest request) {
     final Meta.MetaResultSet resultSet = meta.getSchemas(request.catalog,
         request.schemaPattern);
-    return new ResultSetResponse(resultSet);
+    return ResultSetResponse.create(resultSet);
   }
 }
 

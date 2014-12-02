@@ -55,7 +55,8 @@ public class MetaImpl implements Meta {
   protected <E> MetaResultSet createEmptyResultSet(final Class<E> clazz) {
     return createResultSet(Collections.<String, Object>emptyMap(),
         fieldMetaData(clazz),
-        new RecordIteratorCursor<E>(Collections.<E>emptyIterator(), clazz));
+        new RecordIteratorCursor<E>(Collections.<E>emptyList().iterator(),
+            clazz));
   }
 
   protected static ColumnMetaData columnMetaData(String name, int index,

@@ -21,9 +21,12 @@ import org.apache.calcite.avatica.AvaticaParameter;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -72,10 +75,12 @@ public interface Service {
   /** Request for
    * {@link Meta#getSchemas(String, org.apache.calcite.avatica.Meta.Pat)}. */
   class SchemasRequest extends Request {
-    public String catalog;
-    public Meta.Pat schemaPattern;
+    public final String catalog;
+    public final Meta.Pat schemaPattern;
 
-    public SchemasRequest(String catalog, Meta.Pat schemaPattern) {
+    @JsonCreator
+    public SchemasRequest(@JsonProperty("catalog") String catalog,
+        @JsonProperty("schemaPattern") Meta.Pat schemaPattern) {
       this.catalog = catalog;
       this.schemaPattern = schemaPattern;
     }
@@ -87,32 +92,56 @@ public interface Service {
 
   /** Response that contains a result set. */
   class ResultSetResponse extends Response {
-    public int statementId;
-    public boolean ownStatement;
-    public String timeZone;
-    public PrepareResult prepareResult;
-    public List<List<Object>> rows;
+    public final int statementId;
+    public final boolean ownStatement;
+    public final String timeZone;
+    public final PrepareResult prepareResult;
+    public final List<List<Object>> rows;
 
-    public ResultSetResponse() {}
+    @JsonCreator
+    public ResultSetResponse(@JsonProperty("statementId") int statementId,
+        @JsonProperty("ownStatement") boolean ownStatement,
+        @JsonProperty("timeZone") String timeZone,
+        @JsonProperty("prepareResult") PrepareResult prepareResult,
+        @JsonProperty("rows") List<List<Object>> rows) {
+      this.statementId = statementId;
+      this.ownStatement = ownStatement;
+      this.timeZone = timeZone;
+      this.prepareResult = prepareResult;
+      this.rows = rows;
+    }
 
-    public ResultSetResponse(Meta.MetaResultSet resultSet) {
-      this.statementId = resultSet.statement.getId();
-      this.ownStatement = resultSet.ownStatement;
-      this.timeZone = resultSet.statement.connection.getTimeZone().getID();
+    public static ResultSetResponse create(Meta.MetaResultSet resultSet) {
+      return new ResultSetResponse(resultSet.statement.getId(),
+          resultSet.ownStatement,
+          resultSet.statement.connection.getTimeZone().getID(),
+          new PrepareResult(
+              resultSet.prepareResult.getColumnList(),
+              resultSet.prepareResult.getSql(),
+              resultSet.prepareResult.getParameterList(),
+              resultSet.prepareResult.getInternalParameters()),
+          Collections.<List<Object>>emptyList());
     }
   }
 
   /** Result of preparing a statement. */
   class PrepareResult {
-    public List<ColumnMetaData> columns;
-    public String sql;
-    public List<AvaticaParameter> parameters;
-    public Map<String, Object> internalParameters;
-  }
+    public final List<ColumnMetaData> columns;
+    public final String sql;
+    public final List<AvaticaParameter> parameters;
+    public final Map<String, Object> internalParameters;
 
-  /** Parameter metadata. */
-  class Parameter {
-
+    @JsonCreator
+    public PrepareResult(@JsonProperty("columns") List<ColumnMetaData> columns,
+        @JsonProperty("sql") String sql,
+        @JsonProperty("parameters") List<AvaticaParameter> parameters,
+        @JsonProperty("internalParameters") Map<String, Object>
+            internalParameters) {
+      this.columns = columns;
+      this.sql = sql;
+      this.parameters = parameters;
+      this.internalParameters = internalParameters;
+    }
   }
 }
 

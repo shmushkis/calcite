@@ -21,6 +21,7 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.AvaticaParameter;
 import org.apache.calcite.avatica.AvaticaPrepareResult;
 import org.apache.calcite.avatica.ColumnMetaData;
+import org.apache.calcite.avatica.remote.Service;
 import org.apache.calcite.avatica.util.Cursor;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.linq4j.Enumerable;
@@ -42,6 +43,8 @@ import org.apache.calcite.runtime.RecordEnumeratorCursor;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.util.Stacks;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -226,15 +229,12 @@ public interface CalcitePrepare {
   /** The result of preparing a query. It gives the Avatica driver framework
    * the information it needs to create a prepared statement, or to execute a
    * statement directly, without an explicit prepare step. */
-  public static class PrepareResult<T> implements AvaticaPrepareResult {
-    public final String sql; // for debug
-    public final List<AvaticaParameter> parameterList;
-    private final Map<String, Object> internalParameters;
-    public final RelDataType rowType;
-    public final ColumnMetaData.StructType structType;
+  public static class PrepareResult<T> extends Service.PrepareResult
+      implements AvaticaPrepareResult {
+    @JsonIgnore public final RelDataType rowType;
     private final int maxRowCount;
     private final Bindable<T> bindable;
-    public final Class resultClazz;
+    private final Class resultClazz;
 
     public PrepareResult(String sql,
         List<AvaticaParameter> parameterList,
@@ -244,12 +244,8 @@ public interface CalcitePrepare {
         int maxRowCount,
         Bindable<T> bindable,
         Class resultClazz) {
-      super();
-      this.sql = sql;
-      this.parameterList = parameterList;
-      this.internalParameters = internalParameters;
+      super(structType.columns, sql, parameterList, internalParameters);
       this.rowType = rowType;
-      this.structType = structType;
       this.maxRowCount = maxRowCount;
       this.bindable = bindable;
       this.resultClazz = resultClazz;
@@ -258,7 +254,7 @@ public interface CalcitePrepare {
     public Cursor createCursor(DataContext dataContext) {
       Enumerator<?> enumerator = enumerator(dataContext);
       //noinspection unchecked
-      return structType.columns.size() == 1
+      return columns.size() == 1
           ? new ObjectEnumeratorCursor((Enumerator) enumerator)
           : resultClazz != null && !resultClazz.isArray()
           ? new RecordEnumeratorCursor((Enumerator) enumerator, resultClazz)
@@ -266,11 +262,11 @@ public interface CalcitePrepare {
     }
 
     public List<ColumnMetaData> getColumnList() {
-      return structType.columns;
+      return columns;
     }
 
     public List<AvaticaParameter> getParameterList() {
-      return parameterList;
+      return parameters;
     }
 
     public Map<String, Object> getInternalParameters() {

@@ -45,10 +45,11 @@ public class CalciteRemoteDriverTest {
       LocalJsonService.THREAD_SERVICE.set(
           new LocalJsonService(
               new LocalService(
-                  ((CalciteConnectionImpl) connect).foo())));
+                  CalciteConnectionImpl.TROJAN
+                      .getMeta((CalciteConnectionImpl) connect))));
       final Connection connection = DriverManager.getConnection(
           "jdbc:avatica:remote:factory=" + LJS);
-      assertThat(connection.isClosed(), CoreMatchers.is(false));
+      assertThat(connection.isClosed(), is(false));
       final ResultSet resultSet = connection.getMetaData().getSchemas();
       assertFalse(resultSet.next());
       final ResultSetMetaData metaData = resultSet.getMetaData();
@@ -59,6 +60,7 @@ public class CalciteRemoteDriverTest {
       connection.close();
       assertThat(connection.isClosed(), is(true));
     } finally {
+      connect.close();
       LocalJsonService.THREAD_SERVICE.remove();
     }
   }
