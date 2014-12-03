@@ -16,10 +16,7 @@
  */
 package org.apache.calcite.avatica;
 
-import org.apache.calcite.avatica.util.AbstractCursor;
-import org.apache.calcite.avatica.util.Cursor;
-import org.apache.calcite.avatica.util.IteratorCursor;
-import org.apache.calcite.avatica.util.RecordIteratorCursor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -31,7 +28,6 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -54,9 +50,9 @@ public class MetaImpl implements Meta {
    * triggers in Lingual). */
   protected <E> MetaResultSet createEmptyResultSet(final Class<E> clazz) {
     return createResultSet(Collections.<String, Object>emptyMap(),
-        fieldMetaData(clazz),
-        new RecordIteratorCursor<E>(Collections.<E>emptyList().iterator(),
-            clazz));
+        fieldMetaData(clazz).columns,
+        CursorFactory.deduce(fieldMetaData(clazz).columns, null),
+        Collections.emptyList());
   }
 
   protected static ColumnMetaData columnMetaData(String name, int index,
@@ -89,24 +85,16 @@ public class MetaImpl implements Meta {
     return ColumnMetaData.struct(list);
   }
 
-  public MetaResultSet createResultSet(final Iterable iterable,
-      final NamedFieldGetter columnGetter) {
-    //noinspection unchecked
-    return createResultSet(Collections.<String, Object>emptyMap(),
-        columnGetter.structType,
-        columnGetter.cursor(iterable.iterator()));
-  }
-
   protected MetaResultSet createResultSet(
-      Map<String, Object> internalParameters,
-      final ColumnMetaData.StructType structType,
-      final Cursor cursor) {
+      Map<String, Object> internalParameters, List<ColumnMetaData> columns,
+      CursorFactory cursorFactory, Iterable<Object> iterable) {
     try {
       final AvaticaStatement statement = connection.createStatement();
-      return new MetaResultSet(statement, true,
-          new MyAvaticaPrepareResult(internalParameters, structType.columns,
-              cursor),
-          cursor);
+      final SignatureWithIterable signature =
+          new SignatureWithIterable(internalParameters, columns, "",
+              Collections.<AvaticaParameter>emptyList(), cursorFactory,
+              iterable);
+      return new MetaResultSet(statement, true, signature, iterable);
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
@@ -114,7 +102,7 @@ public class MetaImpl implements Meta {
 
   /** An object that has a name. */
   public interface Named {
-    String getName();
+    @JsonIgnore String getName();
   }
 
   /** Metadata describing a column. */
@@ -537,12 +525,12 @@ public class MetaImpl implements Meta {
     return createEmptyResultSet(MetaPseudoColumn.class);
   }
 
-  /** Creates a cursor for a result set. */
-  public Cursor createCursor(AvaticaResultSet resultSet) {
-    return ((PrepareResultWithCursor) resultSet.prepareResult).getCursor();
+  /** Creates an iterable for a result set. */
+  public Iterable<Object> createIterable(AvaticaResultSet resultSet) {
+    return ((WithIterable) resultSet.prepareResult).getIterable();
   }
 
-  public AvaticaPrepareResult prepare(AvaticaStatement statement, String sql) {
+  public Signature prepare(AvaticaStatement statement, String sql) {
     throw new AssertionError(); // TODO:
   }
 
@@ -587,99 +575,27 @@ public class MetaImpl implements Meta {
     }
   }
 
-  /** Accesses fields by name. */
-  protected static class NamedFieldGetter {
-    private final List<Field> fields = new ArrayList<Field>();
-    public final ColumnMetaData.StructType structType;
-
-    public NamedFieldGetter(Class clazz, String... names) {
-      final List<ColumnMetaData> columns = new ArrayList<ColumnMetaData>();
-      init(clazz, names, columns, fields);
-      structType = ColumnMetaData.struct(columns);
-    }
-
-    private static void init(Class clazz, String[] names,
-        List<ColumnMetaData> columns, List<Field> fields) {
-      for (String name : names) {
-        final int index = fields.size();
-        final String fieldName = AvaticaUtils.toCamelCase(name);
-        final Field field;
-        try {
-          field = clazz.getField(fieldName);
-        } catch (NoSuchFieldException e) {
-          throw new RuntimeException(e);
-        }
-        columns.add(columnMetaData(name, index, field.getType()));
-        fields.add(field);
-      }
-    }
-
-    Object get(Object o, int columnIndex) {
-      try {
-        return fields.get(columnIndex).get(o);
-      } catch (IllegalArgumentException e) {
-        throw new RuntimeException(e);
-      } catch (IllegalAccessException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    public Cursor cursor(Iterator<Object> enumerator) {
-      //noinspection unchecked
-      return new IteratorCursor(enumerator) {
-        protected AbstractCursor.Getter createGetter(final int ordinal) {
-          return new AbstractCursor.Getter() {
-            public Object getObject() {
-              return get(current(), ordinal);
-            }
-
-            public boolean wasNull() {
-              return getObject() == null;
-            }
-          };
-        }
-      };
-    }
-  }
-
-
-  /** Prepare result with a cursor. Use this for simple statements
+  /** Prepare result with a iterable. Use this for simple statements
    * that have a canned response and don't need to be executed. */
-  private interface PrepareResultWithCursor extends AvaticaPrepareResult {
-    Cursor getCursor();
+  protected interface WithIterable {
+    Iterable getIterable();
   }
 
-  /** Simple prepare result. */
-  private static class MyAvaticaPrepareResult
-      implements AvaticaPrepareResult, PrepareResultWithCursor {
-    private final Cursor cursor;
-    private final List<ColumnMetaData> columns;
+  /** Prepare result that contains an iterable. */
+  protected static class SignatureWithIterable extends Signature
+      implements WithIterable {
+    private final Iterable iterable;
 
-    private MyAvaticaPrepareResult(Map<String, Object> internalParameters,
-        List<ColumnMetaData> columns,
-        Cursor cursor) {
-      this.cursor = cursor;
-      this.columns = columns;
+    public SignatureWithIterable(Map<String, Object> internalParameters,
+        List<ColumnMetaData> columns, String sql,
+        List<AvaticaParameter> parameters, CursorFactory cursorFactory,
+        Iterable<Object> iterable) {
+      super(columns, sql, parameters, internalParameters, cursorFactory);
+      this.iterable = iterable;
     }
 
-    public List<ColumnMetaData> getColumnList() {
-      return columns;
-    }
-
-    public String getSql() {
-      return "";
-    }
-
-    public List<AvaticaParameter> getParameterList() {
-      return Collections.emptyList();
-    }
-
-    public Map<String, Object> getInternalParameters() {
-      return Collections.emptyMap();
-    }
-
-    public Cursor getCursor() {
-      return cursor;
+    public Iterable getIterable() {
+      return iterable;
     }
   }
 }

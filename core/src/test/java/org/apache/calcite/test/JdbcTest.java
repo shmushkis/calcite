@@ -121,6 +121,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
@@ -1468,7 +1469,20 @@ public class JdbcTest {
         .returns(
             new Function<ResultSet, Void>() {
               public Void apply(ResultSet a0) {
+                // The following behavior is not quite correct. See
+                //   [CALCITE-508] Reading from ResultSet before calling next()
+                //   should throw SQLException not NoSuchElementException
+                // for details.
                 try {
+                  final BigDecimal bigDecimal = a0.getBigDecimal(1);
+                  fail("expected error, got " + bigDecimal);
+                } catch (SQLException e) {
+                  throw new RuntimeException(e);
+                } catch (NoSuchElementException e) {
+                  // ok
+                }
+                try {
+                  assertTrue(a0.next());
                   final BigDecimal bigDecimal = a0.getBigDecimal(1);
                   assertThat(bigDecimal, equalTo(BigDecimal.valueOf(2008)));
                 } catch (SQLException e) {

@@ -43,21 +43,26 @@ public interface AvaticaFactory {
       int resultSetHoldability) throws SQLException;
 
   AvaticaPreparedStatement newPreparedStatement(AvaticaConnection connection,
-      int id, AvaticaPrepareResult prepareResult, int resultSetType,
+      int id, Meta.Signature prepareResult, int resultSetType,
       int resultSetConcurrency, int resultSetHoldability) throws SQLException;
 
   /**
    * Creates a result set. You will then need to call
    * {@link AvaticaResultSet#execute()} on it.
    *
+   * <p>If {@code signature} implements
+   * {@link org.apache.calcite.avatica.MetaImpl.WithIterable} we do not need
+   * to execute; we can use pre-canned data. This mechanism is used for
+   * metadata requests such as {@code getTables}.
+   *
    * @param statement Statement
-   * @param prepareResult Prepared statement
+   * @param signature Prepared statement
    * @param timeZone Time zone
    * @return Result set
    */
   AvaticaResultSet newResultSet(
       AvaticaStatement statement,
-      AvaticaPrepareResult prepareResult,
+      Meta.Signature signature,
       TimeZone timeZone) throws SQLException;
 
   AvaticaDatabaseMetaData newDatabaseMetaData(

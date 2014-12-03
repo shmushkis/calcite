@@ -17,7 +17,6 @@
 package org.apache.calcite.avatica.test;
 
 import org.apache.calcite.avatica.remote.LocalJsonService;
-import org.apache.calcite.avatica.remote.LocalService;
 import org.apache.calcite.avatica.remote.MockJsonService;
 
 import org.junit.Ignore;
@@ -37,7 +36,6 @@ import static org.junit.Assert.assertThat;
  * Unit test for Avatica Remote JDBC driver.
  */
 public class RemoteDriverTest {
-
   public static final String MJS =
       MockJsonService.Factory.class.getName();
 
@@ -52,6 +50,7 @@ public class RemoteDriverTest {
     assertThat(connection.isClosed(), is(true));
   }
 
+  @Ignore
   @Test public void testNoFactory() throws Exception {
     final Connection connection =
         DriverManager.getConnection("jdbc:avatica:remote:");
@@ -81,28 +80,6 @@ public class RemoteDriverTest {
     resultSet.close();
     connection.close();
     assertThat(connection.isClosed(), is(true));
-  }
-
-  @Test public void testCatalogsLocal() throws Exception {
-    try {
-      LocalJsonService.THREAD_SERVICE.set(
-          new LocalJsonService(
-              new LocalService(null)));
-      final Connection connection = DriverManager.getConnection(
-          "jdbc:avatica:remote:factory=" + LJS);
-      assertThat(connection.isClosed(), is(false));
-      final ResultSet resultSet = connection.getMetaData().getSchemas();
-      assertFalse(resultSet.next());
-      final ResultSetMetaData metaData = resultSet.getMetaData();
-      assertEquals(2, metaData.getColumnCount());
-      assertEquals("TABLE_SCHEM", metaData.getColumnName(1));
-      assertEquals("TABLE_CATALOG", metaData.getColumnName(2));
-      resultSet.close();
-      connection.close();
-      assertThat(connection.isClosed(), is(true));
-    } finally {
-      LocalJsonService.THREAD_SERVICE.remove();
-    }
   }
 }
 

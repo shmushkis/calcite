@@ -394,7 +394,7 @@ public abstract class AvaticaConnection implements Connection {
    */
   protected ResultSet executeQueryInternal(
       AvaticaStatement statement,
-      AvaticaPrepareResult prepareResult) throws SQLException {
+      Meta.Signature prepareResult) throws SQLException {
     final TimeZone timeZone = getTimeZone();
 
     // Close the previous open CellSet, if there is one.
@@ -411,8 +411,7 @@ public abstract class AvaticaConnection implements Connection {
       }
 
       statement.openResultSet =
-          factory.newResultSet(
-              statement, prepareResult, timeZone);
+          factory.newResultSet(statement, prepareResult, timeZone);
     }
     // Release the monitor before executing, to give another thread the
     // opportunity to call cancel.

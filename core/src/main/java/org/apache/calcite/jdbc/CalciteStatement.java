@@ -44,7 +44,7 @@ public abstract class CalciteStatement
     return new CalciteConnectionImpl.ContextImpl(getConnection());
   }
 
-  protected <T> CalcitePrepare.PrepareResult<T> prepare(
+  protected <T> CalcitePrepare.CalciteSignature<T> prepare(
       Queryable<T> queryable) {
     final CalcitePrepare prepare = getConnection().prepareFactory.apply();
     return prepare.prepareQueryable(createPrepareContext(), queryable);

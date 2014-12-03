@@ -16,7 +16,7 @@
  */
 package org.apache.calcite.runtime;
 
-import org.apache.calcite.avatica.util.AbstractCursor;
+import org.apache.calcite.avatica.util.PositionedCursor;
 import org.apache.calcite.linq4j.Enumerator;
 
 /**
@@ -31,9 +31,8 @@ import org.apache.calcite.linq4j.Enumerator;
  *
  * @param <T> Element type
  */
-public abstract class EnumeratorCursor<T> extends AbstractCursor {
+public abstract class EnumeratorCursor<T> extends PositionedCursor<T> {
   private final Enumerator<T> enumerator;
-  private T current;
 
   /**
    * Creates a {@code EnumeratorCursor}
@@ -43,26 +42,16 @@ public abstract class EnumeratorCursor<T> extends AbstractCursor {
     this.enumerator = enumerator;
   }
 
+  protected T current() {
+    return enumerator.current();
+  }
+
   public boolean next() {
-    if (enumerator.moveNext()) {
-      current = enumerator.current();
-      return true;
-    }
-    current = null;
-    return false;
+    return enumerator.moveNext();
   }
 
   public void close() {
-    current = null;
     enumerator.close();
-  }
-
-  /**
-   * Returns current row.
-   * @return current row
-   */
-  protected T current() {
-    return current;
   }
 }
 

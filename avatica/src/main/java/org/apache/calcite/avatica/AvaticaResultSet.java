@@ -17,7 +17,12 @@
 package org.apache.calcite.avatica;
 
 import org.apache.calcite.avatica.util.ArrayImpl;
+import org.apache.calcite.avatica.util.ArrayIteratorCursor;
 import org.apache.calcite.avatica.util.Cursor;
+import org.apache.calcite.avatica.util.IteratorCursor;
+import org.apache.calcite.avatica.util.ListIteratorCursor;
+import org.apache.calcite.avatica.util.MapIteratorCursor;
+import org.apache.calcite.avatica.util.RecordIteratorCursor;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -48,7 +53,7 @@ import java.util.TimeZone;
  */
 public class AvaticaResultSet implements ResultSet, ArrayImpl.Factory {
   protected final AvaticaStatement statement;
-  protected final AvaticaPrepareResult prepareResult;
+  protected final Meta.Signature prepareResult;
   protected final List<ColumnMetaData> columnMetaDataList;
   protected final ResultSetMetaData resultSetMetaData;
   protected final Calendar localCalendar;
@@ -67,12 +72,12 @@ public class AvaticaResultSet implements ResultSet, ArrayImpl.Factory {
   private Cursor timeoutCursor;
 
   public AvaticaResultSet(AvaticaStatement statement,
-      AvaticaPrepareResult prepareResult,
+      Meta.Signature prepareResult,
       ResultSetMetaData resultSetMetaData,
       TimeZone timeZone) {
     this.statement = statement;
     this.prepareResult = prepareResult;
-    this.columnMetaDataList = prepareResult.getColumnList();
+    this.columnMetaDataList = prepareResult.columns;
     this.type = statement.resultSetType;
     this.concurrency = statement.resultSetConcurrency;
     this.holdability = statement.resultSetHoldability;
@@ -176,12 +181,51 @@ public class AvaticaResultSet implements ResultSet, ArrayImpl.Factory {
    * @throws SQLException if execute fails for some reason.
    */
   protected AvaticaResultSet execute() throws SQLException {
-    this.cursor = statement.connection.meta.createCursor(this);
+    final Iterable<Object> iterable =
+        statement.connection.meta.createIterable(this);
+    this.cursor = createCursor(prepareResult.cursorFactory, iterable);
     this.accessorList =
         cursor.createAccessors(columnMetaDataList, localCalendar, this);
     this.row = -1;
     this.afterLast = false;
     return this;
+  }
+
+  private static Cursor createCursor(Meta.CursorFactory cursorFactory,
+      Iterable<Object> iterable) {
+    switch (cursorFactory.style) {
+    case OBJECT:
+      return new IteratorCursor<Object>(iterable.iterator()) {
+        protected Getter createGetter(int ordinal) {
+          return new ObjectGetter(ordinal);
+        }
+      };
+    case ARRAY:
+      @SuppressWarnings("unchecked") final Iterable<Object[]> iterable1 =
+          (Iterable<Object[]>) (Iterable) iterable;
+      return new ArrayIteratorCursor(iterable1.iterator());
+    case RECORD:
+      @SuppressWarnings("unchecked") final Class<Object> clazz =
+          cursorFactory.clazz;
+      return new RecordIteratorCursor<Object>(iterable.iterator(), clazz);
+    case RECORD_PROJECTION:
+      @SuppressWarnings("unchecked") final Class<Object> clazz2 =
+          cursorFactory.clazz;
+      return new RecordIteratorCursor<Object>(iterable.iterator(), clazz2,
+          cursorFactory.fields);
+    case LIST:
+      @SuppressWarnings("unchecked") final Iterable<List<Object>> iterable2 =
+          (Iterable<List<Object>>) (Iterable) iterable;
+      return new ListIteratorCursor(iterable2.iterator());
+    case MAP:
+      @SuppressWarnings("unchecked") final Iterable<Map<String, Object>>
+          iterable3 =
+          (Iterable<Map<String, Object>>) (Iterable) iterable;
+      return new MapIteratorCursor(iterable3.iterator(),
+          cursorFactory.fieldNames);
+    default:
+      throw new AssertionError("unknown style: " + cursorFactory.style);
+    }
   }
 
   protected AvaticaResultSet execute2(Cursor cursor,

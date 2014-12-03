@@ -40,9 +40,9 @@ import java.util.TimeZone;
  */
 public class CalciteResultSet extends AvaticaResultSet {
   CalciteResultSet(AvaticaStatement statement,
-      CalcitePrepare.PrepareResult prepareResult,
+      CalcitePrepare.CalciteSignature calciteSignature,
       ResultSetMetaData resultSetMetaData, TimeZone timeZone) {
-    super(statement, prepareResult, resultSetMetaData, timeZone);
+    super(statement, calciteSignature, resultSetMetaData, timeZone);
   }
 
   @Override protected CalciteResultSet execute() throws SQLException {
@@ -66,7 +66,7 @@ public class CalciteResultSet extends AvaticaResultSet {
       Iterable iterable) {
     final CalciteResultSet resultSet =
         new CalciteResultSet(statement,
-            (CalcitePrepare.PrepareResult) prepareResult, resultSetMetaData,
+            (CalcitePrepare.CalciteSignature) prepareResult, resultSetMetaData,
             localCalendar.getTimeZone());
     final Cursor cursor = resultSet.createCursor(elementType, iterable);
     final List<ColumnMetaData> columnMetaDataList;
@@ -90,8 +90,9 @@ public class CalciteResultSet extends AvaticaResultSet {
   }
 
   // do not make public
-  CalcitePrepare.PrepareResult getPrepareResult() {
-    return (CalcitePrepare.PrepareResult) prepareResult;
+  <T> CalcitePrepare.CalciteSignature<T> getPrepareResult() {
+    //noinspection unchecked
+    return (CalcitePrepare.CalciteSignature) prepareResult;
   }
 
   // do not make public

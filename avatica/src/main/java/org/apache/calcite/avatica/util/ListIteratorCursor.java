@@ -16,48 +16,28 @@
  */
 package org.apache.calcite.avatica.util;
 
-import java.lang.reflect.Field;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
 /**
- * Implementation of {@link org.apache.calcite.avatica.util.Cursor} on top of an
+ * Implementation of {@link Cursor} on top of an
  * {@link java.util.Iterator} that
- * returns a record for each row. The record is a synthetic class whose fields
- * are all public.
- *
- * @param <E> Element type
+ * returns a {@link List} for each row.
  */
-public class RecordIteratorCursor<E> extends IteratorCursor<E> {
-  private final List<Field> fields;
+public class ListIteratorCursor extends IteratorCursor<List<Object>> {
 
   /**
-   * Creates a RecordIteratorCursor.
+   * Creates a RecordEnumeratorCursor.
    *
    * @param iterator Iterator
-   * @param clazz Element type
    */
-  public RecordIteratorCursor(Iterator<E> iterator, Class<E> clazz) {
-    this(iterator, clazz, Arrays.asList(clazz.getFields()));
-  }
-
-  /**
-   * Creates a RecordIteratorCursor that projects particular fields.
-   *
-   * @param iterator Iterator
-   * @param clazz Element type
-   * @param fields Fields to project
-   */
-  public RecordIteratorCursor(Iterator<E> iterator, Class<E> clazz,
-      List<Field> fields) {
+  public ListIteratorCursor(Iterator<List<Object>> iterator) {
     super(iterator);
-    this.fields = fields;
   }
 
   protected Getter createGetter(int ordinal) {
-    return new FieldGetter(fields.get(ordinal));
+    return new ListGetter(ordinal);
   }
 }
 
-// End RecordIteratorCursor.java
+// End ListIteratorCursor.java

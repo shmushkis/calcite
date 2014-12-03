@@ -36,7 +36,25 @@ public abstract class JsonService implements Service {
     mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
   }
 
+  /** Derived class should implement this method to transport requests and
+   * responses to and from the peer service. */
   public abstract String apply(String request);
+
+  private <T> T decode(String response, Class<T> valueType) throws IOException {
+    return mapper.readValue(response, valueType);
+  }
+
+  private <T> String encode(T request) throws IOException {
+    assert w.getBuffer().length() == 0;
+    mapper.writeValue(w, request);
+    final String s = w.toString();
+    w.getBuffer().setLength(0);
+    return s;
+  }
+
+  protected RuntimeException handle(IOException e) {
+    return new RuntimeException(e);
+  }
 
   public ResultSetResponse apply(CatalogsRequest request) {
     try {
@@ -54,21 +72,6 @@ public abstract class JsonService implements Service {
     }
   }
 
-  private <T> T decode(String response, Class<T> valueType) throws IOException {
-    return mapper.readValue(response, valueType);
-  }
-
-  private <T> String encode(T request) throws IOException {
-    assert w.getBuffer().length() == 0;
-    mapper.writeValue(w, request);
-    final String s = w.toString();
-    w.getBuffer().setLength(0);
-    return s;
-  }
-
-  protected RuntimeException handle(IOException e) {
-    return new RuntimeException(e);
-  }
 }
 
 // End JsonService.java

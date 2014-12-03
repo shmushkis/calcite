@@ -16,48 +16,35 @@
  */
 package org.apache.calcite.avatica.util;
 
-import java.lang.reflect.Field;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Implementation of {@link org.apache.calcite.avatica.util.Cursor} on top of an
+ * Implementation of {@link Cursor} on top of an
  * {@link java.util.Iterator} that
- * returns a record for each row. The record is a synthetic class whose fields
- * are all public.
+ * returns a {@link Map} for each row.
  *
- * @param <E> Element type
+ * <p>The Map contains (field, value) pairs.
  */
-public class RecordIteratorCursor<E> extends IteratorCursor<E> {
-  private final List<Field> fields;
+public class MapIteratorCursor extends IteratorCursor<Map<String, Object>> {
+  private final List<String> fieldNames;
 
   /**
-   * Creates a RecordIteratorCursor.
+   * Creates a MapIteratorCursor.
    *
    * @param iterator Iterator
-   * @param clazz Element type
+   * @param fieldNames Field names to project
    */
-  public RecordIteratorCursor(Iterator<E> iterator, Class<E> clazz) {
-    this(iterator, clazz, Arrays.asList(clazz.getFields()));
-  }
-
-  /**
-   * Creates a RecordIteratorCursor that projects particular fields.
-   *
-   * @param iterator Iterator
-   * @param clazz Element type
-   * @param fields Fields to project
-   */
-  public RecordIteratorCursor(Iterator<E> iterator, Class<E> clazz,
-      List<Field> fields) {
+  public MapIteratorCursor(Iterator<Map<String, Object>> iterator,
+      List<String> fieldNames) {
     super(iterator);
-    this.fields = fields;
+    this.fieldNames = fieldNames;
   }
 
   protected Getter createGetter(int ordinal) {
-    return new FieldGetter(fields.get(ordinal));
+    return new MapGetter<String>(fieldNames.get(ordinal));
   }
 }
 
-// End RecordIteratorCursor.java
+// End MapIteratorCursor.java

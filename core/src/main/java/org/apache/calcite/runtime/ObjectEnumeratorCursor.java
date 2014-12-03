@@ -16,7 +16,7 @@
  */
 package org.apache.calcite.runtime;
 
-import org.apache.calcite.avatica.util.AbstractCursor;
+import org.apache.calcite.avatica.util.PositionedCursor;
 import org.apache.calcite.linq4j.Enumerator;
 
 /**
@@ -24,7 +24,7 @@ import org.apache.calcite.linq4j.Enumerator;
  * {@link org.apache.calcite.linq4j.Enumerator} that
  * returns an {@link Object} for each row.
  */
-public class ObjectEnumeratorCursor extends AbstractCursor {
+public class ObjectEnumeratorCursor extends PositionedCursor<Object> {
   private final Enumerator<Object> enumerator;
 
   /**
@@ -37,7 +37,11 @@ public class ObjectEnumeratorCursor extends AbstractCursor {
   }
 
   protected Getter createGetter(int ordinal) {
-    return new ObjectEnumeratorGetter(ordinal);
+    return new ObjectGetter(ordinal);
+  }
+
+  protected Object current() {
+    return enumerator.current();
   }
 
   public boolean next() {
@@ -46,21 +50,6 @@ public class ObjectEnumeratorCursor extends AbstractCursor {
 
   public void close() {
     enumerator.close();
-  }
-
-  /** Implementation of {@link Getter} for records that consist of a single
-   * field. Each record is represented as an object, and the value of the sole
-   * field is that object. */
-  class ObjectEnumeratorGetter extends AbstractGetter {
-    public ObjectEnumeratorGetter(int field) {
-      assert field == 0;
-    }
-
-    public Object getObject() {
-      Object o = enumerator.current();
-      wasNull[0] = o == null;
-      return o;
-    }
   }
 }
 

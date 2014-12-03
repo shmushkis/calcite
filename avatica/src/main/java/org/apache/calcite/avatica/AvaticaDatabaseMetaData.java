@@ -624,10 +624,9 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
       String schemaPattern,
       String tableNamePattern,
       String columnNamePattern) throws SQLException {
-    return createResultSet(connection.meta.getColumns(catalog,
-            pat(schemaPattern),
-            pat(tableNamePattern),
-            pat(columnNamePattern)));
+    return createResultSet(
+        connection.meta.getColumns(catalog, pat(schemaPattern),
+            pat(tableNamePattern), pat(columnNamePattern)));
   }
 
   public ResultSet getColumnPrivileges(
@@ -635,9 +634,8 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
       String schema,
       String table,
       String columnNamePattern) throws SQLException {
-    return createResultSet(connection.meta.getColumnPrivileges(catalog,
-            schema,
-            table,
+    return createResultSet(
+        connection.meta.getColumnPrivileges(catalog, schema, table,
             pat(columnNamePattern)));
   }
 
@@ -645,8 +643,8 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
       String catalog,
       String schemaPattern,
       String tableNamePattern) throws SQLException {
-    return createResultSet(connection.meta.getTablePrivileges(catalog,
-            pat(schemaPattern),
+    return createResultSet(
+        connection.meta.getTablePrivileges(catalog, pat(schemaPattern),
             pat(tableNamePattern)));
   }
 
@@ -656,39 +654,33 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
       String table,
       int scope,
       boolean nullable) throws SQLException {
-    return createResultSet(connection.meta.getBestRowIdentifier(catalog,
-            schema,
-            table,
-            scope,
+    return createResultSet(
+        connection.meta.getBestRowIdentifier(catalog, schema, table, scope,
             nullable));
   }
 
   public ResultSet getVersionColumns(
       String catalog, String schema, String table) throws SQLException {
-    return createResultSet(connection.meta.getVersionColumns(catalog,
-        schema,
-        table));
+    return createResultSet(
+        connection.meta.getVersionColumns(catalog, schema, table));
   }
 
   public ResultSet getPrimaryKeys(
       String catalog, String schema, String table) throws SQLException {
-    return createResultSet(connection.meta.getPrimaryKeys(catalog,
-        schema,
-        table));
+    return createResultSet(
+        connection.meta.getPrimaryKeys(catalog, schema, table));
   }
 
   public ResultSet getImportedKeys(
       String catalog, String schema, String table) throws SQLException {
-    return createResultSet(connection.meta.getImportedKeys(catalog,
-        schema,
-        table));
+    return createResultSet(
+        connection.meta.getImportedKeys(catalog, schema, table));
   }
 
   public ResultSet getExportedKeys(
       String catalog, String schema, String table) throws SQLException {
-    return createResultSet(connection.meta.getExportedKeys(catalog,
-        schema,
-        table));
+    return createResultSet(
+        connection.meta.getExportedKeys(catalog, schema, table));
   }
 
   public ResultSet getCrossReference(
@@ -698,12 +690,9 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
       String foreignCatalog,
       String foreignSchema,
       String foreignTable) throws SQLException {
-    return createResultSet(connection.meta.getCrossReference(parentCatalog,
-            parentSchema,
-            parentTable,
-            foreignCatalog,
-            foreignSchema,
-            foreignTable));
+    return createResultSet(
+        connection.meta.getCrossReference(parentCatalog, parentSchema,
+            parentTable, foreignCatalog, foreignSchema, foreignTable));
   }
 
   public ResultSet getTypeInfo() throws SQLException {
@@ -716,10 +705,8 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
       String table,
       boolean unique,
       boolean approximate) throws SQLException {
-    return createResultSet(connection.meta.getIndexInfo(catalog,
-            schema,
-            table,
-            unique,
+    return createResultSet(
+        connection.meta.getIndexInfo(catalog, schema, table, unique,
             approximate));
   }
 
@@ -778,10 +765,9 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
       String schemaPattern,
       String typeNamePattern,
       int[] types) throws SQLException {
-    return createResultSet(connection.meta.getUDTs(catalog,
-            pat(schemaPattern),
-            pat(typeNamePattern),
-            types));
+    return createResultSet(
+        connection.meta.getUDTs(catalog, pat(schemaPattern),
+            pat(typeNamePattern), types));
   }
 
   public Connection getConnection() throws SQLException {
@@ -808,8 +794,8 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
       String catalog,
       String schemaPattern,
       String typeNamePattern) throws SQLException {
-    return createResultSet(connection.meta.getSuperTypes(catalog,
-            pat(schemaPattern),
+    return createResultSet(
+        connection.meta.getSuperTypes(catalog, pat(schemaPattern),
             pat(typeNamePattern)));
   }
 
@@ -817,8 +803,8 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
       String catalog,
       String schemaPattern,
       String tableNamePattern) throws SQLException {
-    return createResultSet(connection.meta.getSuperTables(catalog,
-            pat(schemaPattern),
+    return createResultSet(
+        connection.meta.getSuperTables(catalog, pat(schemaPattern),
             pat(tableNamePattern)));
   }
 
@@ -827,10 +813,9 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
       String schemaPattern,
       String typeNamePattern,
       String attributeNamePattern) throws SQLException {
-    return createResultSet(connection.meta.getAttributes(catalog,
-            pat(schemaPattern),
-            pat(typeNamePattern),
-            pat(attributeNamePattern)));
+    return createResultSet(
+        connection.meta.getAttributes(catalog, pat(schemaPattern),
+            pat(typeNamePattern), pat(attributeNamePattern)));
   }
 
   public boolean supportsResultSetHoldability(int holdability)
@@ -891,8 +876,8 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
       String catalog,
       String schemaPattern,
       String functionNamePattern) throws SQLException {
-    return createResultSet(connection.meta.getFunctions(catalog,
-            pat(schemaPattern),
+    return createResultSet(
+        connection.meta.getFunctions(catalog, pat(schemaPattern),
             pat(functionNamePattern)));
   }
 
@@ -901,10 +886,9 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
       String schemaPattern,
       String functionNamePattern,
       String columnNamePattern) throws SQLException {
-    return createResultSet(connection.meta.getFunctionColumns(catalog,
-            pat(schemaPattern),
-            pat(functionNamePattern),
-            pat(columnNamePattern)));
+    return createResultSet(
+        connection.meta.getFunctionColumns(catalog, pat(schemaPattern),
+            pat(functionNamePattern), pat(columnNamePattern)));
   }
 
   public ResultSet getPseudoColumns(
@@ -912,10 +896,9 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
       String schemaPattern,
       String tableNamePattern,
       String columnNamePattern) throws SQLException {
-    return createResultSet(connection.meta.getPseudoColumns(catalog,
-            pat(schemaPattern),
-            pat(tableNamePattern),
-            pat(columnNamePattern)));
+    return createResultSet(
+        connection.meta.getPseudoColumns(catalog, pat(schemaPattern),
+            pat(tableNamePattern), pat(columnNamePattern)));
   }
 
   public boolean generatedKeyAlwaysReturned() throws SQLException {

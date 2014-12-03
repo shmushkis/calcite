@@ -75,7 +75,7 @@ class AvaticaJdbc41Factory implements AvaticaFactory {
   }
 
   public AvaticaPreparedStatement newPreparedStatement(
-      AvaticaConnection connection, int id, AvaticaPrepareResult prepareResult,
+      AvaticaConnection connection, int id, Meta.Signature prepareResult,
       int resultSetType, int resultSetConcurrency, int resultSetHoldability)
       throws SQLException {
     return new AvaticaJdbc41PreparedStatement(connection, id, prepareResult,
@@ -83,13 +83,11 @@ class AvaticaJdbc41Factory implements AvaticaFactory {
   }
 
   public AvaticaResultSet newResultSet(
-      AvaticaStatement statement,
-      AvaticaPrepareResult prepareResult,
+      AvaticaStatement statement, Meta.Signature signature,
       TimeZone timeZone) {
     final ResultSetMetaData metaData =
-        newResultSetMetaData(statement, prepareResult.getColumnList());
-    return new AvaticaResultSet(
-        statement, prepareResult, metaData, timeZone);
+        newResultSetMetaData(statement, signature.columns);
+    return new AvaticaResultSet(statement, signature, metaData, timeZone);
   }
 
   public AvaticaResultSetMetaData newResultSetMetaData(
@@ -122,9 +120,10 @@ class AvaticaJdbc41Factory implements AvaticaFactory {
   private static class AvaticaJdbc41PreparedStatement
       extends AvaticaPreparedStatement {
     AvaticaJdbc41PreparedStatement(AvaticaConnection connection, int id,
-        AvaticaPrepareResult sql, int resultSetType, int resultSetConcurrency,
-        int resultSetHoldability) throws SQLException {
-      super(connection, id, sql, resultSetType, resultSetConcurrency,
+        Meta.Signature prepareResult, int resultSetType,
+        int resultSetConcurrency, int resultSetHoldability)
+        throws SQLException {
+      super(connection, id, prepareResult, resultSetType, resultSetConcurrency,
           resultSetHoldability);
     }
 

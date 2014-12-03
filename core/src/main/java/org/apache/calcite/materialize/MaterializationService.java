@@ -116,14 +116,14 @@ public class MaterializationService {
       final ImmutableMap<CalciteConnectionProperty, String> map =
           ImmutableMap.of(CalciteConnectionProperty.CREATE_MATERIALIZATIONS,
               "false");
-      final CalcitePrepare.PrepareResult<Object> prepareResult =
+      final CalcitePrepare.CalciteSignature<Object> calciteSignature =
           Schemas.prepare(connection, schema, viewSchemaPath, viewSql, map);
-      rowType = prepareResult.rowType;
+      rowType = calciteSignature.rowType;
       final JavaTypeFactory typeFactory = connection.getTypeFactory();
       materializedTable =
           CloneSchema.createCloneTable(typeFactory,
-              RelDataTypeImpl.proto(prepareResult.rowType),
-              Functions.adapt(prepareResult.columns,
+              RelDataTypeImpl.proto(calciteSignature.rowType),
+              Functions.adapt(calciteSignature.columns,
                   new Function1<ColumnMetaData, ColumnMetaData.Rep>() {
                     public ColumnMetaData.Rep apply(ColumnMetaData column) {
                       return column.type.representation;
@@ -133,7 +133,7 @@ public class MaterializationService {
                 public Enumerator<Object> enumerator() {
                   final DataContext dataContext =
                       Schemas.createDataContext(connection);
-                  return prepareResult.enumerator(dataContext);
+                  return calciteSignature.enumerable(dataContext).enumerator();
                 }
 
                 public Type getElementType() {
@@ -151,7 +151,7 @@ public class MaterializationService {
                 public Iterator<Object> iterator() {
                   final DataContext dataContext =
                       Schemas.createDataContext(connection);
-                  return prepareResult.iterator(dataContext);
+                  return calciteSignature.enumerable(dataContext).iterator();
                 }
               });
     }

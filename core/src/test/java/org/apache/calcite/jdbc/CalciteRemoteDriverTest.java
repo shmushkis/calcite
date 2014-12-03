@@ -20,6 +20,9 @@ import org.apache.calcite.avatica.remote.LocalJsonService;
 import org.apache.calcite.avatica.remote.LocalService;
 import org.apache.calcite.test.CalciteAssert;
 
+import org.hamcrest.CoreMatchers;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -27,10 +30,12 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test for Calcite's remote JDBC driver.
@@ -38,31 +43,61 @@ import static org.junit.Assert.assertThat;
 public class CalciteRemoteDriverTest {
   public static final String LJS =
       LocalJsonService.Factory.class.getName();
+  private Connection connect;
+
+  @Before public void setUp() throws Exception {
+    connect = CalciteAssert.that().connect();
+    LocalJsonService.THREAD_SERVICE.set(
+        new LocalJsonService(
+            new LocalService(
+                CalciteConnectionImpl.TROJAN
+                    .getMeta((CalciteConnectionImpl) connect))));
+  }
+
+  @After public void tearDown() throws Exception {
+    if (connect != null) {
+      connect.close();
+      connect = null;
+    }
+    LocalJsonService.THREAD_SERVICE.remove();
+  }
 
   @Test public void testCatalogsLocal() throws Exception {
-    final Connection connect = CalciteAssert.that().connect();
-    try {
-      LocalJsonService.THREAD_SERVICE.set(
-          new LocalJsonService(
-              new LocalService(
-                  CalciteConnectionImpl.TROJAN
-                      .getMeta((CalciteConnectionImpl) connect))));
-      final Connection connection = DriverManager.getConnection(
-          "jdbc:avatica:remote:factory=" + LJS);
-      assertThat(connection.isClosed(), is(false));
-      final ResultSet resultSet = connection.getMetaData().getSchemas();
-      assertFalse(resultSet.next());
-      final ResultSetMetaData metaData = resultSet.getMetaData();
-      assertEquals(2, metaData.getColumnCount());
-      assertEquals("TABLE_SCHEM", metaData.getColumnName(1));
-      assertEquals("TABLE_CATALOG", metaData.getColumnName(2));
-      resultSet.close();
-      connection.close();
-      assertThat(connection.isClosed(), is(true));
-    } finally {
-      connect.close();
-      LocalJsonService.THREAD_SERVICE.remove();
-    }
+    final Connection connection = DriverManager.getConnection(
+        "jdbc:avatica:remote:factory=" + LJS);
+    assertThat(connection.isClosed(), is(false));
+    final ResultSet resultSet = connection.getMetaData().getCatalogs();
+    final ResultSetMetaData metaData = resultSet.getMetaData();
+    assertEquals(1, metaData.getColumnCount());
+    assertEquals("TABLE_CATALOG", metaData.getColumnName(1));
+    assertTrue(resultSet.next());
+    assertFalse(resultSet.next());
+    resultSet.close();
+    connection.close();
+    assertThat(connection.isClosed(), is(true));
+  }
+
+  @Test public void testSchemasLocal() throws Exception {
+    final Connection connection = DriverManager.getConnection(
+        "jdbc:avatica:remote:factory=" + LJS);
+    assertThat(connection.isClosed(), is(false));
+    final ResultSet resultSet = connection.getMetaData().getSchemas();
+    final ResultSetMetaData metaData = resultSet.getMetaData();
+    assertEquals(2, metaData.getColumnCount());
+    assertEquals("TABLE_SCHEM", metaData.getColumnName(1));
+    assertEquals("TABLE_CATALOG", metaData.getColumnName(2));
+    assertTrue(resultSet.next());
+    assertThat(resultSet.getString(1), equalTo("POST"));
+    assertThat(resultSet.getString(2), CoreMatchers.nullValue());
+    assertTrue(resultSet.next());
+    assertThat(resultSet.getString(1), equalTo("foodmart"));
+    assertThat(resultSet.getString(2), CoreMatchers.nullValue());
+    assertTrue(resultSet.next());
+    assertTrue(resultSet.next());
+    assertFalse(resultSet.next());
+    resultSet.close();
+    connection.close();
+    assertThat(connection.isClosed(), is(true));
   }
 }
 

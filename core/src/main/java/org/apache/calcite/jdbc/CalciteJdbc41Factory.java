@@ -20,11 +20,11 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.AvaticaConnection;
 import org.apache.calcite.avatica.AvaticaDatabaseMetaData;
 import org.apache.calcite.avatica.AvaticaFactory;
-import org.apache.calcite.avatica.AvaticaPrepareResult;
 import org.apache.calcite.avatica.AvaticaPreparedStatement;
 import org.apache.calcite.avatica.AvaticaResultSetMetaData;
 import org.apache.calcite.avatica.AvaticaStatement;
 import org.apache.calcite.avatica.ColumnMetaData;
+import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.UnregisteredDriver;
 
 import java.io.InputStream;
@@ -82,24 +82,24 @@ public class CalciteJdbc41Factory extends CalciteFactory {
   public AvaticaPreparedStatement newPreparedStatement(
       AvaticaConnection connection,
       int id,
-      AvaticaPrepareResult prepareResult,
+      Meta.Signature prepareResult,
       int resultSetType,
       int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
     return new CalciteJdbc41PreparedStatement(
         (CalciteConnectionImpl) connection, id,
-        (CalcitePrepare.PrepareResult) prepareResult, resultSetType,
+        (CalcitePrepare.CalciteSignature) prepareResult, resultSetType,
         resultSetConcurrency, resultSetHoldability);
   }
 
   public CalciteResultSet newResultSet(
       AvaticaStatement statement,
-      AvaticaPrepareResult prepareResult,
+      Meta.Signature signature,
       TimeZone timeZone) {
     final ResultSetMetaData metaData =
-        newResultSetMetaData(statement, prepareResult.getColumnList());
+        newResultSetMetaData(statement, signature.columns);
     return new CalciteResultSet(statement,
-        (CalcitePrepare.PrepareResult) prepareResult, metaData, timeZone);
+        (CalcitePrepare.CalciteSignature) signature, metaData, timeZone);
   }
 
   public ResultSetMetaData newResultSetMetaData(
@@ -131,10 +131,11 @@ public class CalciteJdbc41Factory extends CalciteFactory {
   private static class CalciteJdbc41PreparedStatement
       extends CalcitePreparedStatement {
     CalciteJdbc41PreparedStatement(CalciteConnectionImpl connection, int id,
-        CalcitePrepare.PrepareResult prepareResult, int resultSetType,
+        CalcitePrepare.CalciteSignature calciteSignature, int resultSetType,
         int resultSetConcurrency, int resultSetHoldability)
         throws SQLException {
-      super(connection, id, prepareResult, resultSetType, resultSetConcurrency,
+      super(connection, id,
+          calciteSignature, resultSetType, resultSetConcurrency,
           resultSetHoldability);
     }
 

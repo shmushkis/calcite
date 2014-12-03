@@ -34,23 +34,7 @@ public class ArrayEnumeratorCursor extends EnumeratorCursor<Object[]> {
   }
 
   protected Getter createGetter(int ordinal) {
-    return new ArrayEnumeratorGetter(ordinal);
-  }
-
-  /** Implementation of {@link Getter} that reads from records that are
-   * arrays. */
-  class ArrayEnumeratorGetter extends AbstractGetter {
-    protected final int field;
-
-    public ArrayEnumeratorGetter(int field) {
-      this.field = field;
-    }
-
-    public Object getObject() {
-      Object o = current()[field];
-      wasNull[0] = o == null;
-      return o;
-    }
+    return new ArrayGetter(ordinal);
   }
 }
 

@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.avatica.util;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -27,8 +29,8 @@ import java.util.NoSuchElementException;
  *
  * @param <E> Element type
  */
-public abstract class IteratorCursor<E> extends AbstractCursor {
-  private boolean done = false;
+public abstract class IteratorCursor<E> extends PositionedCursor<E> {
+  private Position position = Position.BEFORE_START;
   private final Iterator<E> iterator;
   private E current = null;
 
@@ -44,28 +46,39 @@ public abstract class IteratorCursor<E> extends AbstractCursor {
   public boolean next() {
     if (iterator.hasNext()) {
       current = iterator.next();
+      position = Position.OK;
       return true;
     }
     current = null;
-    done = true;
+    position = Position.AFTER_END;
     return false;
   }
 
   public void close() {
     current = null;
-    done = true;
+    position = Position.CLOSED;
+    if (iterator instanceof Closeable) {
+      try {
+        ((Closeable) iterator).close();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
-  /**
-   * Returns current row.
-   * @return current row
-   * @throws NoSuchElementException if the iteration has no more elements
-   */
   protected E current() {
-    if (done) {
+    if (position != Position.OK) {
       throw new NoSuchElementException();
     }
     return current;
+  }
+
+  /** Are we positioned on a valid row? */
+  private enum Position {
+    CLOSED,
+    BEFORE_START,
+    OK,
+    AFTER_END
   }
 }
 

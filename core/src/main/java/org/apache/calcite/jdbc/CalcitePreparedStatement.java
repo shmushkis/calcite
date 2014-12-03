@@ -16,8 +16,8 @@
  */
 package org.apache.calcite.jdbc;
 
-import org.apache.calcite.avatica.AvaticaPrepareResult;
 import org.apache.calcite.avatica.AvaticaPreparedStatement;
+import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.server.CalciteServerStatement;
 
 import java.sql.SQLException;
@@ -45,7 +45,7 @@ abstract class CalcitePreparedStatement
    * @throws SQLException if database error occurs
    */
   protected CalcitePreparedStatement(CalciteConnectionImpl connection,
-      int id, AvaticaPrepareResult prepareResult, int resultSetType,
+      int id, Meta.Signature prepareResult, int resultSetType,
       int resultSetConcurrency, int resultSetHoldability) throws SQLException {
     super(connection, id, prepareResult, resultSetType, resultSetConcurrency,
         resultSetHoldability);

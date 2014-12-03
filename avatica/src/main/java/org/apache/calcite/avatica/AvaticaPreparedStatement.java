@@ -46,7 +46,7 @@ import java.util.List;
 public abstract class AvaticaPreparedStatement
     extends AvaticaStatement
     implements PreparedStatement, ParameterMetaData {
-  private final AvaticaPrepareResult prepareResult;
+  private final Meta.Signature prepareResult;
   private final ResultSetMetaData resultSetMetaData;
   protected final Object[] slots;
 
@@ -63,17 +63,16 @@ public abstract class AvaticaPreparedStatement
    */
   protected AvaticaPreparedStatement(AvaticaConnection connection,
       int id,
-      AvaticaPrepareResult prepareResult,
+      Meta.Signature prepareResult,
       int resultSetType,
       int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
     super(connection, id, resultSetType, resultSetConcurrency,
         resultSetHoldability);
     this.prepareResult = prepareResult;
-    this.slots = new Object[prepareResult.getParameterList().size()];
+    this.slots = new Object[prepareResult.parameters.size()];
     this.resultSetMetaData =
-        connection.factory.newResultSetMetaData(
-            this, prepareResult.getColumnList());
+        connection.factory.newResultSetMetaData(this, prepareResult.columns);
   }
 
   @Override protected List<Object> getParameterValues() {
@@ -258,7 +257,7 @@ public abstract class AvaticaPreparedStatement
 
   protected AvaticaParameter getParameter(int param) throws SQLException {
     try {
-      return prepareResult.getParameterList().get(param - 1);
+      return prepareResult.parameters.get(param - 1);
     } catch (IndexOutOfBoundsException e) {
       //noinspection ThrowableResultOfMethodCallIgnored
       throw connection.helper.toSQLException(
@@ -268,7 +267,7 @@ public abstract class AvaticaPreparedStatement
   }
 
   public int getParameterCount() {
-    return prepareResult.getParameterList().size();
+    return prepareResult.parameters.size();
   }
 
   public int isNullable(int param) throws SQLException {

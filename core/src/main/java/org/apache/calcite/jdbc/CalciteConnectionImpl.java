@@ -21,10 +21,10 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.AvaticaConnection;
 import org.apache.calcite.avatica.AvaticaFactory;
 import org.apache.calcite.avatica.AvaticaParameter;
-import org.apache.calcite.avatica.AvaticaPrepareResult;
 import org.apache.calcite.avatica.AvaticaStatement;
 import org.apache.calcite.avatica.Helper;
 import org.apache.calcite.avatica.InternalProperty;
+import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.UnregisteredDriver;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
@@ -154,7 +154,7 @@ abstract class CalciteConnectionImpl
       int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
     try {
-      AvaticaPrepareResult prepareResult =
+      Meta.Signature prepareResult =
           parseQuery(sql, new ContextImpl(this), -1);
       CalcitePreparedStatement statement =
           (CalcitePreparedStatement) factory.newPreparedStatement(this,
@@ -171,7 +171,7 @@ abstract class CalciteConnectionImpl
     }
   }
 
-  <T> CalcitePrepare.PrepareResult<T> parseQuery(String sql,
+  <T> CalcitePrepare.CalciteSignature<T> parseQuery(String sql,
       CalcitePrepare.Context prepareContext, int maxRowCount) {
     CalcitePrepare.Dummy.push(prepareContext);
     try {
@@ -219,11 +219,11 @@ abstract class CalciteConnectionImpl
   public <T> Enumerator<T> executeQuery(Queryable<T> queryable) {
     try {
       CalciteStatement statement = (CalciteStatement) createStatement();
-      CalcitePrepare.PrepareResult<T> enumerable =
+      CalcitePrepare.CalciteSignature<T> enumerable =
           statement.prepare(queryable);
       final DataContext dataContext =
           createDataContext(ImmutableMap.<String, Object>of());
-      return enumerable.enumerator(dataContext);
+      return enumerable.enumerable(dataContext).enumerator();
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }

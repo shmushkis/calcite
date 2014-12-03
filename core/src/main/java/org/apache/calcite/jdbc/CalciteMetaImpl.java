@@ -20,13 +20,11 @@ import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.AbstractQueryableTable;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.AvaticaParameter;
-import org.apache.calcite.avatica.AvaticaPrepareResult;
 import org.apache.calcite.avatica.AvaticaResultSet;
 import org.apache.calcite.avatica.AvaticaStatement;
+import org.apache.calcite.avatica.AvaticaUtils;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.MetaImpl;
-import org.apache.calcite.avatica.util.Cursor;
-import org.apache.calcite.avatica.util.RecordIteratorCursor;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
@@ -55,8 +53,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 
+import java.lang.reflect.Field;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -130,30 +130,55 @@ public class CalciteMetaImpl extends MetaImpl {
     return Pattern.compile(buf.toString());
   }
 
+  private <E> MetaResultSet createResultSet(Enumerable<E> enumerable,
+      Class clazz, String... names) {
+    final List<ColumnMetaData> columns = new ArrayList<ColumnMetaData>();
+    final List<Field> fields = new ArrayList<Field>();
+    final List<String> fieldNames = new ArrayList<String>();
+    for (String name : names) {
+      final int index = fields.size();
+      final String fieldName = AvaticaUtils.toCamelCase(name);
+      final Field field;
+      try {
+        field = clazz.getField(fieldName);
+      } catch (NoSuchFieldException e) {
+        throw new RuntimeException(e);
+      }
+      columns.add(columnMetaData(name, index, field.getType()));
+      fields.add(field);
+      fieldNames.add(fieldName);
+    }
+    //noinspection unchecked
+    final Iterable<Object> iterable = (Iterable<Object>) (Iterable) enumerable;
+    return createResultSet(Collections.<String, Object>emptyMap(),
+        columns, CursorFactory.record(clazz, fields, fieldNames),
+        iterable);
+  }
+
   @Override protected <E> MetaResultSet
   createEmptyResultSet(final Class<E> clazz) {
-    return createResultSet(Collections.<String, Object>emptyMap(),
-        fieldMetaData(clazz),
-        new RecordIteratorCursor<E>(Collections.<E>emptyList().iterator(),
-            clazz));
+    final List<ColumnMetaData> columns = fieldMetaData(clazz).columns;
+    final CursorFactory cursorFactory = CursorFactory.deduce(columns, clazz);
+    return createResultSet(Collections.<String, Object>emptyMap(), columns,
+        cursorFactory, Collections.emptyList());
   }
 
   protected MetaResultSet createResultSet(
-      final Map<String, Object> internalParameters,
-      final ColumnMetaData.StructType structType,
-      final Cursor cursor) {
+      Map<String, Object> internalParameters, List<ColumnMetaData> columns,
+      CursorFactory cursorFactory, final Iterable<Object> iterable) {
     try {
       final CalciteConnectionImpl connection = getConnection();
       final AvaticaStatement statement = connection.createStatement();
-      final CalcitePrepare.PrepareResult<Object> prepareResult =
-          new CalcitePrepare.PrepareResult<Object>("",
+      final CalcitePrepare.CalciteSignature<Object> signature =
+          new CalcitePrepare.CalciteSignature<Object>("",
               ImmutableList.<AvaticaParameter>of(), internalParameters, null,
-              structType, -1, null, Object.class) {
-            @Override public Cursor createCursor(DataContext dataContext) {
-              return cursor;
+              columns, cursorFactory, -1, null) {
+            @Override public Enumerable<Object> enumerable(
+                DataContext dataContext) {
+              return Linq4j.asEnumerable(iterable);
             }
           };
-      return new MetaResultSet(statement, true, prepareResult, cursor);
+      return new MetaResultSet(statement, true, signature, iterable);
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
@@ -207,17 +232,17 @@ public class CalciteMetaImpl extends MetaImpl {
                   }
                 })
             .where(typeFilter),
-        new NamedFieldGetter(MetaTable.class,
-            "TABLE_CAT",
-            "TABLE_SCHEM",
-            "TABLE_NAME",
-            "TABLE_TYPE",
-            "REMARKS",
-            "TYPE_CAT",
-            "TYPE_SCHEM",
-            "TYPE_NAME",
-            "SELF_REFERENCING_COL_NAME",
-            "REF_GENERATION"));
+        MetaTable.class,
+        "TABLE_CAT",
+        "TABLE_SCHEM",
+        "TABLE_NAME",
+        "TABLE_TYPE",
+        "REMARKS",
+        "TYPE_CAT",
+        "TYPE_SCHEM",
+        "TYPE_NAME",
+        "SELF_REFERENCING_COL_NAME",
+        "REF_GENERATION");
   }
 
   public MetaResultSet getColumns(String catalog,
@@ -243,31 +268,30 @@ public class CalciteMetaImpl extends MetaImpl {
                   }
                 })
             .where(columnMatcher),
-        new NamedFieldGetter(
-            MetaColumn.class,
-            "TABLE_CAT",
-            "TABLE_SCHEM",
-            "TABLE_NAME",
-            "COLUMN_NAME",
-            "DATA_TYPE",
-            "TYPE_NAME",
-            "COLUMN_SIZE",
-            "BUFFER_LENGTH",
-            "DECIMAL_DIGITS",
-            "NUM_PREC_RADIX",
-            "NULLABLE",
-            "REMARKS",
-            "COLUMN_DEF",
-            "SQL_DATA_TYPE",
-            "SQL_DATETIME_SUB",
-            "CHAR_OCTET_LENGTH",
-            "ORDINAL_POSITION",
-            "IS_NULLABLE",
-            "SCOPE_CATALOG",
-            "SCOPE_TABLE",
-            "SOURCE_DATA_TYPE",
-            "IS_AUTOINCREMENT",
-            "IS_GENERATEDCOLUMN"));
+        MetaColumn.class,
+        "TABLE_CAT",
+        "TABLE_SCHEM",
+        "TABLE_NAME",
+        "COLUMN_NAME",
+        "DATA_TYPE",
+        "TYPE_NAME",
+        "COLUMN_SIZE",
+        "BUFFER_LENGTH",
+        "DECIMAL_DIGITS",
+        "NUM_PREC_RADIX",
+        "NULLABLE",
+        "REMARKS",
+        "COLUMN_DEF",
+        "SQL_DATA_TYPE",
+        "SQL_DATETIME_SUB",
+        "CHAR_OCTET_LENGTH",
+        "ORDINAL_POSITION",
+        "IS_NULLABLE",
+        "SCOPE_CATALOG",
+        "SCOPE_TABLE",
+        "SOURCE_DATA_TYPE",
+        "IS_AUTOINCREMENT",
+        "IS_GENERATEDCOLUMN");
   }
 
   Enumerable<MetaCatalog> catalogs() {
@@ -394,27 +418,27 @@ public class CalciteMetaImpl extends MetaImpl {
   public MetaResultSet getSchemas(String catalog, Pat schemaPattern) {
     final Predicate1<MetaSchema> schemaMatcher = namedMatcher(schemaPattern);
     return createResultSet(schemas(catalog).where(schemaMatcher),
-        new MetaImpl.NamedFieldGetter(MetaImpl.MetaSchema.class,
-            "TABLE_SCHEM",
-            "TABLE_CATALOG"));
+        MetaSchema.class,
+        "TABLE_SCHEM",
+        "TABLE_CATALOG");
   }
 
   public MetaResultSet getCatalogs() {
     return createResultSet(catalogs(),
-        new NamedFieldGetter(
-            MetaCatalog.class,
-            "TABLE_CATALOG"));
+        MetaCatalog.class,
+        "TABLE_CATALOG");
   }
 
   public MetaResultSet getTableTypes() {
     return createResultSet(tableTypes(),
-        new NamedFieldGetter(
-            MetaTableType.class,
-            "TABLE_TYPE"));
+        MetaTableType.class,
+        "TABLE_TYPE");
   }
 
-  public Cursor createCursor(AvaticaResultSet resultSet_) {
+  public Iterable<Object> createIterable(AvaticaResultSet resultSet_) {
     CalciteResultSet resultSet = (CalciteResultSet) resultSet_;
+    final CalcitePrepare.CalciteSignature<Object> calciteSignature =
+        resultSet.getPrepareResult();
     Map<String, Object> map = Maps.newLinkedHashMap();
     final List<Object> parameterValues =
         CalciteConnectionImpl.TROJAN.getParameterValues(
@@ -422,13 +446,12 @@ public class CalciteMetaImpl extends MetaImpl {
     for (Ord<Object> o : Ord.zip(parameterValues)) {
       map.put("?" + o.i, o.e);
     }
-    map.putAll(resultSet.getPrepareResult().getInternalParameters());
+    map.putAll(calciteSignature.internalParameters);
     final DataContext dataContext = getConnection().createDataContext(map);
-    CalcitePrepare.PrepareResult prepareResult = resultSet.getPrepareResult();
-    return prepareResult.createCursor(dataContext);
+    return calciteSignature.enumerable(dataContext);
   }
 
-  public AvaticaPrepareResult prepare(AvaticaStatement statement_, String sql) {
+  public Signature prepare(AvaticaStatement statement_, String sql) {
     CalciteStatement statement = (CalciteStatement) statement_;
     int maxRowCount = statement.getMaxRows();
     return getConnection().parseQuery(sql,

@@ -83,7 +83,7 @@ public abstract class AvaticaStatement
 
   public boolean execute(String sql) throws SQLException {
     try {
-      AvaticaPrepareResult x = connection.meta.prepare(this, sql);
+      Meta.Signature x = connection.meta.prepare(this, sql);
       return executeInternal(x);
     } catch (RuntimeException e) {
       throw connection.helper.createException("while executing SQL: " + sql, e);
@@ -92,7 +92,7 @@ public abstract class AvaticaStatement
 
   public ResultSet executeQuery(String sql) throws SQLException {
     try {
-      AvaticaPrepareResult x = connection.meta.prepare(this, sql);
+      Meta.Signature x = connection.meta.prepare(this, sql);
       return executeQueryInternal(x);
     } catch (RuntimeException e) {
       throw connection.helper.createException(
@@ -352,7 +352,7 @@ public abstract class AvaticaStatement
    * @throws java.sql.SQLException if a database error occurs
    */
   protected boolean executeInternal(
-      AvaticaPrepareResult prepareResult) throws SQLException {
+      Meta.Signature prepareResult) throws SQLException {
     ResultSet resultSet = executeQueryInternal(prepareResult);
     return true;
   }
@@ -365,7 +365,7 @@ public abstract class AvaticaStatement
    * @throws java.sql.SQLException if a database error occurs
    */
   protected ResultSet executeQueryInternal(
-      AvaticaPrepareResult prepareResult) throws SQLException {
+      Meta.Signature prepareResult) throws SQLException {
     return connection.executeQueryInternal(this, prepareResult);
   }
 

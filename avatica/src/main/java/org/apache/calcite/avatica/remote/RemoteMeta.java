@@ -17,16 +17,11 @@
 package org.apache.calcite.avatica.remote;
 
 import org.apache.calcite.avatica.AvaticaConnection;
-import org.apache.calcite.avatica.AvaticaParameter;
-import org.apache.calcite.avatica.AvaticaPrepareResult;
 import org.apache.calcite.avatica.AvaticaStatement;
-import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MetaImpl;
 
 import java.sql.SQLException;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Implementation of {@link Meta} for the remote driver.
@@ -39,33 +34,16 @@ class RemoteMeta extends MetaImpl {
     this.service = service;
   }
 
-  @Override public MetaResultSet getSchemas(String catalog, Pat schemaPattern) {
-    final Service.ResultSetResponse response =
-        service.apply(new Service.SchemasRequest(catalog, schemaPattern));
+  private MetaResultSet toResultSet(Service.ResultSetResponse response) {
     final AvaticaStatement statement = getOrCreateStatement(connection,
         response.statementId);
-    return new MetaResultSet(statement, response.ownStatement,
-        foo(response.prepareResult), null);
-  }
-
-  private AvaticaPrepareResult foo(final Service.PrepareResult prepareResult) {
-    return new AvaticaPrepareResult() {
-      public List<ColumnMetaData> getColumnList() {
-        return prepareResult.columns;
-      }
-
-      public String getSql() {
-        return prepareResult.sql;
-      }
-
-      public List<AvaticaParameter> getParameterList() {
-        return prepareResult.parameters;
-      }
-
-      public Map<String, Object> getInternalParameters() {
-        return prepareResult.internalParameters;
-      }
-    };
+    final Signature signature0 = response.signature;
+    final SignatureWithIterable signature =
+        new SignatureWithIterable(signature0.internalParameters,
+            signature0.columns, signature0.sql, signature0.parameters,
+            response.cursorFactory, response.rows);
+    return new MetaResultSet(statement, response.ownStatement, signature,
+        response.rows);
   }
 
   private AvaticaStatement getOrCreateStatement(AvaticaConnection connection,
@@ -77,6 +55,18 @@ class RemoteMeta extends MetaImpl {
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override public MetaResultSet getCatalogs() {
+    final Service.ResultSetResponse response =
+        service.apply(new Service.CatalogsRequest());
+    return toResultSet(response);
+  }
+
+  @Override public MetaResultSet getSchemas(String catalog, Pat schemaPattern) {
+    final Service.ResultSetResponse response =
+        service.apply(new Service.SchemasRequest(catalog, schemaPattern));
+    return toResultSet(response);
   }
 }
 

@@ -43,7 +43,7 @@ import java.util.logging.Logger;
  * <p>The provider must implement:</p>
  * <ul>
  *   <li>{@link org.apache.calcite.avatica.Meta#prepare(AvaticaStatement, String)}
- *   <li>{@link org.apache.calcite.avatica.Meta#createCursor(AvaticaResultSet)}
+ *   <li>{@link org.apache.calcite.avatica.Meta#createIterable(AvaticaResultSet)}
  * </ul>
  */
 public abstract class UnregisteredDriver implements java.sql.Driver {

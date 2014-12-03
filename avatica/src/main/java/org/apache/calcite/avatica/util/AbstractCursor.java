@@ -219,6 +219,7 @@ public abstract class AbstractCursor implements Cursor {
     protected final Getter getter;
 
     public AccessorImpl(Getter getter) {
+      assert getter != null;
       this.getter = getter;
     }
 
@@ -1099,7 +1100,6 @@ public abstract class AbstractCursor implements Cursor {
       return wasNull[0];
     }
   }
-
 }
 
 // End AbstractCursor.java

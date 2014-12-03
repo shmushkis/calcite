@@ -16,12 +16,14 @@
  */
 package org.apache.calcite.avatica;
 
-import org.apache.calcite.avatica.util.Cursor;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Command handler for getting various metadata. Should be implemented by each
@@ -138,13 +140,10 @@ public interface Meta {
       Pat tableNamePattern,
       Pat columnNamePattern);
 
-  /** Creates a cursor for a result set. */
-  Cursor createCursor(AvaticaResultSet resultSet);
+  /** Creates an iterable for a result set. */
+  Iterable<Object> createIterable(AvaticaResultSet resultSet);
 
-  AvaticaPrepareResult prepare(AvaticaStatement statement, String sql);
-
-  MetaResultSet createResultSet(Iterable elements,
-      MetaImpl.NamedFieldGetter namedFieldGetter);
+  Signature prepare(AvaticaStatement statement, String sql);
 
   /** Wrapper to remind API calls that a parameter is a pattern (allows '%' and
    * '_' wildcards, per the JDBC spec) rather than a string to be matched
@@ -166,13 +165,135 @@ public interface Meta {
   class MetaResultSet {
     public final AvaticaStatement statement;
     public final boolean ownStatement;
-    public AvaticaPrepareResult prepareResult;
+    public final Iterable<Object> iterable;
+    public final Signature prepareResult;
 
     public MetaResultSet(AvaticaStatement statement, boolean ownStatement,
-        AvaticaPrepareResult prepareResult, Cursor cursor) {
+        Signature prepareResult, Iterable<Object> iterable) {
       this.prepareResult = prepareResult;
       this.statement = statement;
       this.ownStatement = ownStatement;
+      this.iterable = iterable;
+    }
+  }
+
+  /** Information necessary to convert an {@link Iterable} into a
+   * {@link org.apache.calcite.avatica.util.Cursor}. */
+  final class CursorFactory {
+    public final Style style;
+    public final Class clazz;
+    @JsonIgnore
+    public final List<Field> fields;
+    public final List<String> fieldNames;
+
+    private CursorFactory(Style style, Class clazz, List<Field> fields,
+        List<String> fieldNames) {
+      assert (fieldNames != null)
+          == (style == Style.RECORD_PROJECTION || style == Style.MAP);
+      assert (fields != null) == (style == Style.RECORD_PROJECTION);
+      this.style = style;
+      this.clazz = clazz;
+      this.fields = fields;
+      this.fieldNames = fieldNames;
+    }
+
+    @JsonCreator
+    public static CursorFactory create(@JsonProperty("style") Style style,
+        @JsonProperty("clazz") Class clazz,
+        @JsonProperty("fieldNames") List<String> fieldNames) {
+      switch (style) {
+      case OBJECT:
+        return OBJECT;
+      case ARRAY:
+        return ARRAY;
+      case LIST:
+        return LIST;
+      case RECORD:
+        return record(clazz);
+      case RECORD_PROJECTION:
+        final List<Field> fields = new ArrayList<Field>();
+        for (String fieldName : fieldNames) {
+          try {
+            fields.add(clazz.getField(fieldName));
+          } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        return new CursorFactory(Style.RECORD_PROJECTION, clazz, fields,
+            fieldNames);
+      case MAP:
+        return map(fieldNames);
+      default:
+        throw new AssertionError("unknown style: " + style);
+      }
+    }
+
+    public static final CursorFactory OBJECT =
+        new CursorFactory(Style.OBJECT, null, null, null);
+
+    public static final CursorFactory ARRAY =
+        new CursorFactory(Style.ARRAY, null, null, null);
+
+    public static final CursorFactory LIST =
+        new CursorFactory(Style.LIST, null, null, null);
+
+    public static CursorFactory record(Class resultClazz) {
+      return new CursorFactory(Style.RECORD, resultClazz, null, null);
+    }
+
+    public static CursorFactory record(Class resultClass, List<Field> fields,
+        List<String> fieldNames) {
+      return new CursorFactory(Style.RECORD_PROJECTION, resultClass, fields,
+          fieldNames);
+    }
+
+    public static CursorFactory map(List<String> fieldNames) {
+      return new CursorFactory(Style.MAP, null, null, fieldNames);
+    }
+
+    public static CursorFactory deduce(List<ColumnMetaData> columns,
+        Class resultClazz) {
+      if (columns.size() == 1) {
+        return OBJECT;
+      } else if (resultClazz != null && !resultClazz.isArray()) {
+        return record(resultClazz);
+      } else {
+        return ARRAY;
+      }
+    }
+
+    /** How logical fields are represented in the objects returned by the
+     * iterator. */
+    enum Style {
+      OBJECT,
+      RECORD,
+      RECORD_PROJECTION,
+      ARRAY,
+      LIST,
+      MAP
+    }
+  }
+
+  /** Result of preparing a statement. */
+  class Signature {
+    public final List<ColumnMetaData> columns;
+    public final String sql;
+    public final List<AvaticaParameter> parameters;
+    public final Map<String, Object> internalParameters;
+    public final CursorFactory cursorFactory;
+
+    @JsonCreator
+    public Signature(@JsonProperty("columns") List<ColumnMetaData> columns,
+        @JsonProperty("sql") String sql,
+        @JsonProperty("parameters") List<AvaticaParameter> parameters,
+        @JsonProperty("internalParameters") Map<String, Object>
+            internalParameters,
+        @JsonProperty("cursorFactory") CursorFactory cursorFactory) {
+      this.columns = columns;
+      this.sql = sql;
+      this.parameters = parameters;
+      this.internalParameters = internalParameters;
+      this.cursorFactory = cursorFactory;
     }
   }
 }

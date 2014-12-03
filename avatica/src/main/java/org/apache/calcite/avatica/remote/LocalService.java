@@ -32,22 +32,37 @@ public class LocalService implements Service {
   }
 
   private static <E> List<E> list(Iterable<E> iterable) {
-    final List<E> list = new ArrayList<E>();
-    for (E e : iterable) {
-      list.add(e);
+    if (iterable instanceof List) {
+      return (List<E>) iterable;
     }
-    return list;
+    final List<E> rowList = new ArrayList<E>();
+    for (E row : iterable) {
+      rowList.add(row);
+    }
+    return rowList;
+  }
+
+  /** Converts a result set (not serializable) into a serializable response. */
+  public static ResultSetResponse toResponse(Meta.MetaResultSet resultSet) {
+    final Meta.CursorFactory cursorFactory =
+        Meta.CursorFactory.map(
+            resultSet.prepareResult.cursorFactory.fieldNames);
+    return new ResultSetResponse(resultSet.statement.getId(),
+        resultSet.ownStatement,
+        resultSet.statement.connection.getTimeZone().getID(),
+        resultSet.prepareResult,
+        cursorFactory, list(resultSet.iterable));
   }
 
   public ResultSetResponse apply(CatalogsRequest request) {
     final Meta.MetaResultSet resultSet = meta.getCatalogs();
-    return ResultSetResponse.create(resultSet);
+    return toResponse(resultSet);
   }
 
   public ResultSetResponse apply(SchemasRequest request) {
-    final Meta.MetaResultSet resultSet = meta.getSchemas(request.catalog,
-        request.schemaPattern);
-    return ResultSetResponse.create(resultSet);
+    final Meta.MetaResultSet resultSet =
+        meta.getSchemas(request.catalog, request.schemaPattern);
+    return toResponse(resultSet);
   }
 }
 
