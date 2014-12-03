@@ -18,11 +18,14 @@ package org.apache.calcite.avatica.remote;
 
 import org.apache.calcite.avatica.AvaticaConnection;
 import org.apache.calcite.avatica.BuiltInConnectionProperty;
+import org.apache.calcite.avatica.ConnectionConfig;
 import org.apache.calcite.avatica.ConnectionProperty;
 import org.apache.calcite.avatica.DriverVersion;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.UnregisteredDriver;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -64,10 +67,19 @@ public class Driver extends UnregisteredDriver {
   }
 
   @Override public Meta createMeta(AvaticaConnection connection) {
-    final Service.Factory metaFactory = connection.config().factory();
+    final ConnectionConfig config = connection.config();
+    final Service.Factory metaFactory = config.factory();
     final Service service;
     if (metaFactory != null) {
       service = metaFactory.create(connection);
+    } else if (config.url() != null) {
+      final URL url;
+      try {
+        url = new URL(config.url());
+      } catch (MalformedURLException e) {
+        throw new RuntimeException(e);
+      }
+      service = new RemoteService(url);
     } else {
       service = new MockJsonService(Collections.<String, String>emptyMap());
     }

@@ -145,6 +145,11 @@ public interface Meta {
 
   Signature prepare(AvaticaStatement statement, String sql);
 
+  /** Factory to create instances of {@link Meta}. */
+  interface Factory {
+    Meta create(List<String> args);
+  }
+
   /** Wrapper to remind API calls that a parameter is a pattern (allows '%' and
    * '_' wildcards, per the JDBC spec) rather than a string to be matched
    * exactly. */
@@ -211,16 +216,7 @@ public interface Meta {
       case RECORD:
         return record(clazz);
       case RECORD_PROJECTION:
-        final List<Field> fields = new ArrayList<Field>();
-        for (String fieldName : fieldNames) {
-          try {
-            fields.add(clazz.getField(fieldName));
-          } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
-          }
-        }
-        return new CursorFactory(Style.RECORD_PROJECTION, clazz, fields,
-            fieldNames);
+        return record(clazz, null, fieldNames);
       case MAP:
         return map(fieldNames);
       default:
@@ -243,6 +239,16 @@ public interface Meta {
 
     public static CursorFactory record(Class resultClass, List<Field> fields,
         List<String> fieldNames) {
+      if (fields == null) {
+        fields = new ArrayList<Field>();
+        for (String fieldName : fieldNames) {
+          try {
+            fields.add(resultClass.getField(fieldName));
+          } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      }
       return new CursorFactory(Style.RECORD_PROJECTION, resultClass, fields,
           fieldNames);
     }

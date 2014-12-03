@@ -72,6 +72,10 @@ public enum AvaticaRemoteConnectionProperty implements ConnectionProperty {
   public PropEnv wrap(Properties properties) {
     return new PropEnv(parse(properties, NAME_TO_PROPS), this);
   }
+
+  public boolean required() {
+    return false;
+  }
 }
 
 // End AvaticaRemoteConnectionProperty.java

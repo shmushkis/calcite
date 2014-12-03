@@ -14,18 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.avatica;
-
-import org.apache.calcite.avatica.remote.Service;
+package org.apache.calcite.avatica.remote;
 
 /**
- * Connection configuration.
+ * API for text request-response calls to an Avatica server.
  */
-public interface ConnectionConfig {
-  String schema();
-  String timeZone();
-  Service.Factory factory();
-  String url();
+public interface Handler {
+  String apply(String request);
 }
 
-// End ConnectionConfig.java
+// End Handler.java

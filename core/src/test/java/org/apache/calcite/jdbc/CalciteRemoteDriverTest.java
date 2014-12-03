@@ -16,8 +16,11 @@
  */
 package org.apache.calcite.jdbc;
 
+import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.LocalJsonService;
 import org.apache.calcite.avatica.remote.LocalService;
+import org.apache.calcite.avatica.server.HttpServer;
+import org.apache.calcite.avatica.server.Main;
 import org.apache.calcite.test.CalciteAssert;
 
 import org.hamcrest.CoreMatchers;
@@ -29,6 +32,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.util.List;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -98,6 +102,34 @@ public class CalciteRemoteDriverTest {
     resultSet.close();
     connection.close();
     assertThat(connection.isClosed(), is(true));
+  }
+
+  @Test public void testRemote() throws Exception {
+    final HttpServer start = Main.start(new String[]{Factory.class.getName()});
+    try {
+      int port = start.getPort();
+      final Connection connection =
+          DriverManager.getConnection(
+              "jdbc:avatica:remote:url=http://localhost:" + port);
+      final ResultSet resultSet = connection.getMetaData().getSchemas();
+      while (resultSet.next()) {
+        System.out.println(resultSet.getString(1));
+      }
+    } finally {
+      start.stop();
+    }
+  }
+
+  /** Creates a {@link Meta} that can see the test databases. */
+  public static class Factory implements Meta.Factory {
+    public Meta create(List<String> args) {
+      try {
+        final Connection connection = CalciteAssert.that().connect();
+        return new CalciteMetaImpl((CalciteConnectionImpl) connection);
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 }
 

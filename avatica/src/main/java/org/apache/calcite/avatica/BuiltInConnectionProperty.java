@@ -28,17 +28,21 @@ import static org.apache.calcite.avatica.ConnectionConfigImpl.parse;
  */
 public enum BuiltInConnectionProperty implements ConnectionProperty {
   /** Factory. */
-  FACTORY("factory", Type.PLUGIN, null),
+  FACTORY("factory", Type.PLUGIN, null, false),
 
   /** Name of initial schema. */
-  SCHEMA("schema", Type.STRING, null),
+  SCHEMA("schema", Type.STRING, null, false),
 
   /** Timezone, for example 'gmt-3'. Default is the JVM's time zone. */
-  TIMEZONE("timezone", Type.STRING, null);
+  TIMEZONE("timezone", Type.STRING, null, false),
+
+  /** Remote URL. */
+  URL("url", Type.STRING, null, false);
 
   private final String camelName;
   private final Type type;
   private final Object defaultValue;
+  private final boolean required;
 
   private static final Map<String, BuiltInConnectionProperty> NAME_TO_PROPS;
 
@@ -50,10 +54,12 @@ public enum BuiltInConnectionProperty implements ConnectionProperty {
     }
   }
 
-  BuiltInConnectionProperty(String camelName, Type type, Object defaultValue) {
+  BuiltInConnectionProperty(String camelName, Type type, Object defaultValue,
+      boolean required) {
     this.camelName = camelName;
     this.type = type;
     this.defaultValue = defaultValue;
+    this.required = required;
     assert defaultValue == null || type.valid(defaultValue);
   }
 
@@ -67,6 +73,10 @@ public enum BuiltInConnectionProperty implements ConnectionProperty {
 
   public Type type() {
     return type;
+  }
+
+  public boolean required() {
+    return required;
   }
 
   public PropEnv wrap(Properties properties) {

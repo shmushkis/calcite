@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.avatica;
 
-import org.apache.calcite.avatica.remote.MockJsonService;
 import org.apache.calcite.avatica.remote.Service;
 
 import java.lang.reflect.Field;
@@ -42,7 +41,11 @@ public class ConnectionConfigImpl implements ConnectionConfig {
 
   public Service.Factory factory() {
     return BuiltInConnectionProperty.FACTORY.wrap(properties)
-        .getPlugin(Service.Factory.class, new MockJsonService.Factory());
+        .getPlugin(Service.Factory.class, null);
+  }
+
+  public String url() {
+    return BuiltInConnectionProperty.URL.wrap(properties).getString();
   }
 
   /** Converts a {@link Properties} object containing (name, value)
@@ -207,6 +210,9 @@ public class ConnectionConfigImpl implements ConnectionConfig {
         if (s == null) {
           if (defaultInstance != null) {
             return defaultInstance;
+          }
+          if (!connectionProperty.required()) {
+            return null;
           }
           throw new RuntimeException("Required property '"
               + connectionProperty.camelName() + "' not specified");
