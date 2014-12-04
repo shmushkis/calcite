@@ -527,7 +527,7 @@ public class MetaImpl implements Meta {
 
   /** Creates an iterable for a result set. */
   public Iterable<Object> createIterable(AvaticaResultSet resultSet) {
-    return ((WithIterable) resultSet.prepareResult).getIterable();
+    return ((WithIterable) resultSet.signature).getIterable();
   }
 
   public Signature prepare(AvaticaStatement statement, String sql) {

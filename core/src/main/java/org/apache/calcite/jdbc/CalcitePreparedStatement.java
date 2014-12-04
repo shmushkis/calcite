@@ -38,16 +38,16 @@ abstract class CalcitePreparedStatement
    *
    * @param connection Connection
    * @param id Statement id
-   * @param prepareResult Result of preparing statement
+   * @param signature Result of preparing statement
    * @param resultSetType Result set type
    * @param resultSetConcurrency Result set concurrency
    * @param resultSetHoldability Result set holdability
    * @throws SQLException if database error occurs
    */
   protected CalcitePreparedStatement(CalciteConnectionImpl connection,
-      int id, Meta.Signature prepareResult, int resultSetType,
+      int id, Meta.Signature signature, int resultSetType,
       int resultSetConcurrency, int resultSetHoldability) throws SQLException {
-    super(connection, id, prepareResult, resultSetType, resultSetConcurrency,
+    super(connection, id, signature, resultSetType, resultSetConcurrency,
         resultSetHoldability);
   }
 

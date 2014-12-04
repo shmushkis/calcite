@@ -345,28 +345,29 @@ public abstract class AvaticaStatement
   }
 
   /**
-   * Executes a parsed statement.
+   * Executes a prepared statement.
    *
-   * @param prepareResult Parsed statement
+   * @param signature Parsed statement
+   *
    * @return as specified by {@link java.sql.Statement#execute(String)}
    * @throws java.sql.SQLException if a database error occurs
    */
-  protected boolean executeInternal(
-      Meta.Signature prepareResult) throws SQLException {
-    ResultSet resultSet = executeQueryInternal(prepareResult);
+  protected boolean executeInternal(Meta.Signature signature)
+      throws SQLException {
+    ResultSet resultSet = executeQueryInternal(signature);
     return true;
   }
 
   /**
-   * Executes a parsed query, closing any previously open result set.
+   * Executes a prepared query, closing any previously open result set.
    *
-   * @param prepareResult Parsed query
+   * @param signature Parsed query
    * @return Result set
    * @throws java.sql.SQLException if a database error occurs
    */
-  protected ResultSet executeQueryInternal(
-      Meta.Signature prepareResult) throws SQLException {
-    return connection.executeQueryInternal(this, prepareResult);
+  protected ResultSet executeQueryInternal(Meta.Signature signature)
+      throws SQLException {
+    return connection.executeQueryInternal(this, signature);
   }
 
   /**

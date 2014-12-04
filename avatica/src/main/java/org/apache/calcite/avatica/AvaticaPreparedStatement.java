@@ -46,7 +46,7 @@ import java.util.List;
 public abstract class AvaticaPreparedStatement
     extends AvaticaStatement
     implements PreparedStatement, ParameterMetaData {
-  private final Meta.Signature prepareResult;
+  private final Meta.Signature signature;
   private final ResultSetMetaData resultSetMetaData;
   protected final Object[] slots;
 
@@ -55,7 +55,7 @@ public abstract class AvaticaPreparedStatement
    *
    * @param connection Connection
    * @param id Statement id
-   * @param prepareResult Result of preparing statement
+   * @param signature Result of preparing statement
    * @param resultSetType Result set type
    * @param resultSetConcurrency Result set concurrency
    * @param resultSetHoldability Result set holdability
@@ -63,16 +63,16 @@ public abstract class AvaticaPreparedStatement
    */
   protected AvaticaPreparedStatement(AvaticaConnection connection,
       int id,
-      Meta.Signature prepareResult,
+      Meta.Signature signature,
       int resultSetType,
       int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
     super(connection, id, resultSetType, resultSetConcurrency,
         resultSetHoldability);
-    this.prepareResult = prepareResult;
-    this.slots = new Object[prepareResult.parameters.size()];
+    this.signature = signature;
+    this.slots = new Object[signature.parameters.size()];
     this.resultSetMetaData =
-        connection.factory.newResultSetMetaData(this, prepareResult.columns);
+        connection.factory.newResultSetMetaData(this, signature);
   }
 
   @Override protected List<Object> getParameterValues() {
@@ -86,7 +86,7 @@ public abstract class AvaticaPreparedStatement
   // implement PreparedStatement
 
   public ResultSet executeQuery() throws SQLException {
-    return getConnection().executeQueryInternal(this, prepareResult);
+    return getConnection().executeQueryInternal(this, signature);
   }
 
   public ParameterMetaData getParameterMetaData() throws SQLException {
@@ -257,7 +257,7 @@ public abstract class AvaticaPreparedStatement
 
   protected AvaticaParameter getParameter(int param) throws SQLException {
     try {
-      return prepareResult.parameters.get(param - 1);
+      return signature.parameters.get(param - 1);
     } catch (IndexOutOfBoundsException e) {
       //noinspection ThrowableResultOfMethodCallIgnored
       throw connection.helper.toSQLException(
@@ -267,7 +267,7 @@ public abstract class AvaticaPreparedStatement
   }
 
   public int getParameterCount() {
-    return prepareResult.parameters.size();
+    return signature.parameters.size();
   }
 
   public int isNullable(int param) throws SQLException {

@@ -75,7 +75,7 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
     try {
       AvaticaResultSet resultSet =
           connection.factory.newResultSet(metaResultSet.statement,
-              metaResultSet.prepareResult,
+              metaResultSet.signature,
               metaResultSet.statement.getConnection().getTimeZone());
       return resultSet.execute();
     } catch (SQLException e) {

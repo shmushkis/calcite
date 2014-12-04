@@ -18,7 +18,6 @@ package org.apache.calcite.avatica;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.Properties;
 import java.util.TimeZone;
 
@@ -43,7 +42,7 @@ public interface AvaticaFactory {
       int resultSetHoldability) throws SQLException;
 
   AvaticaPreparedStatement newPreparedStatement(AvaticaConnection connection,
-      int id, Meta.Signature prepareResult, int resultSetType,
+      int id, Meta.Signature signature, int resultSetType,
       int resultSetConcurrency, int resultSetHoldability) throws SQLException;
 
   /**
@@ -60,17 +59,25 @@ public interface AvaticaFactory {
    * @param timeZone Time zone
    * @return Result set
    */
-  AvaticaResultSet newResultSet(
-      AvaticaStatement statement,
-      Meta.Signature signature,
-      TimeZone timeZone) throws SQLException;
+  AvaticaResultSet newResultSet(AvaticaStatement statement,
+      Meta.Signature signature, TimeZone timeZone) throws SQLException;
 
-  AvaticaDatabaseMetaData newDatabaseMetaData(
-      AvaticaConnection connection);
+  /**
+   * Creates meta data for the database.
+   *
+   * @return Database meta data
+   */
+  AvaticaDatabaseMetaData newDatabaseMetaData(AvaticaConnection connection);
 
-  ResultSetMetaData newResultSetMetaData(
-      AvaticaStatement statement,
-      List<ColumnMetaData> columnMetaDataList) throws SQLException;
+  /**
+   * Creates meta data for a result set.
+   *
+   * @param statement Statement
+   * @param signature Prepared statement
+   * @return Result set meta data
+   */
+  ResultSetMetaData newResultSetMetaData(AvaticaStatement statement,
+      Meta.Signature signature) throws SQLException;
 }
 
 // End AvaticaFactory.java

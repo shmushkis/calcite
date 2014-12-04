@@ -46,11 +46,11 @@ public class LocalService implements Service {
   public static ResultSetResponse toResponse(Meta.MetaResultSet resultSet) {
     final Meta.CursorFactory cursorFactory =
         Meta.CursorFactory.map(
-            resultSet.prepareResult.cursorFactory.fieldNames);
+            resultSet.signature.cursorFactory.fieldNames);
     return new ResultSetResponse(resultSet.statement.getId(),
         resultSet.ownStatement,
         resultSet.statement.connection.getTimeZone().getID(),
-        resultSet.prepareResult,
+        resultSet.signature,
         cursorFactory, list(resultSet.iterable));
   }
 

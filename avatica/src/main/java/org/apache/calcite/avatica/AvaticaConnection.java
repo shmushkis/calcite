@@ -257,9 +257,8 @@ public abstract class AvaticaConnection implements Connection {
       int resultSetType,
       int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
-    return factory.newStatement(
-        this, statementCount++, resultSetType, resultSetConcurrency,
-        resultSetHoldability);
+    return factory.newStatement(this, statementCount++, resultSetType,
+        resultSetConcurrency, resultSetHoldability);
   }
 
   public PreparedStatement prepareStatement(
@@ -313,8 +312,8 @@ public abstract class AvaticaConnection implements Connection {
     throw new UnsupportedOperationException();
   }
 
-  public void setClientInfo(
-      String name, String value) throws SQLClientInfoException {
+  public void setClientInfo(String name, String value)
+      throws SQLClientInfoException {
     throw new UnsupportedOperationException();
   }
 
@@ -331,13 +330,13 @@ public abstract class AvaticaConnection implements Connection {
     throw new UnsupportedOperationException();
   }
 
-  public Array createArrayOf(
-      String typeName, Object[] elements) throws SQLException {
+  public Array createArrayOf(String typeName, Object[] elements)
+      throws SQLException {
     throw new UnsupportedOperationException();
   }
 
-  public Struct createStruct(
-      String typeName, Object[] attributes) throws SQLException {
+  public Struct createStruct(String typeName, Object[] attributes)
+      throws SQLException {
     throw new UnsupportedOperationException();
   }
 
@@ -385,16 +384,15 @@ public abstract class AvaticaConnection implements Connection {
   }
 
   /**
-   * Executes a parsed query, closing any previously open result set.
+   * Executes a prepared query, closing any previously open result set.
    *
    * @param statement     Statement
-   * @param prepareResult Parsed query
+   * @param signature     Prepared query
    * @return Result set
    * @throws java.sql.SQLException if a database error occurs
    */
-  protected ResultSet executeQueryInternal(
-      AvaticaStatement statement,
-      Meta.Signature prepareResult) throws SQLException {
+  protected ResultSet executeQueryInternal(AvaticaStatement statement,
+      Meta.Signature signature) throws SQLException {
     final TimeZone timeZone = getTimeZone();
 
     // Close the previous open CellSet, if there is one.
@@ -411,7 +409,7 @@ public abstract class AvaticaConnection implements Connection {
       }
 
       statement.openResultSet =
-          factory.newResultSet(statement, prepareResult, timeZone);
+          factory.newResultSet(statement, signature, timeZone);
     }
     // Release the monitor before executing, to give another thread the
     // opportunity to call cancel.

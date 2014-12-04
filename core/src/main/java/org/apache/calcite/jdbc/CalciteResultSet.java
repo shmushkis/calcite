@@ -66,7 +66,7 @@ public class CalciteResultSet extends AvaticaResultSet {
       Iterable iterable) {
     final CalciteResultSet resultSet =
         new CalciteResultSet(statement,
-            (CalcitePrepare.CalciteSignature) prepareResult, resultSetMetaData,
+            (CalcitePrepare.CalciteSignature) signature, resultSetMetaData,
             localCalendar.getTimeZone());
     final Cursor cursor = resultSet.createCursor(elementType, iterable);
     final List<ColumnMetaData> columnMetaDataList;
@@ -90,9 +90,9 @@ public class CalciteResultSet extends AvaticaResultSet {
   }
 
   // do not make public
-  <T> CalcitePrepare.CalciteSignature<T> getPrepareResult() {
+  <T> CalcitePrepare.CalciteSignature<T> getSignature() {
     //noinspection unchecked
-    return (CalcitePrepare.CalciteSignature) prepareResult;
+    return (CalcitePrepare.CalciteSignature) signature;
   }
 
   // do not make public

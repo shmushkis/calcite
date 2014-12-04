@@ -154,11 +154,11 @@ abstract class CalciteConnectionImpl
       int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
     try {
-      Meta.Signature prepareResult =
+      Meta.Signature signature =
           parseQuery(sql, new ContextImpl(this), -1);
       CalcitePreparedStatement statement =
           (CalcitePreparedStatement) factory.newPreparedStatement(this,
-              statementCount++, prepareResult, resultSetType,
+              statementCount++, signature, resultSetType,
               resultSetConcurrency, resultSetHoldability);
       server.addStatement(statement);
       return statement;

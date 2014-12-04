@@ -17,7 +17,6 @@
 package org.apache.calcite.test;
 
 import org.apache.calcite.avatica.util.ByteString;
-import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.runtime.SqlFunctions;
 import org.apache.calcite.runtime.Utilities;
@@ -31,10 +30,14 @@ import java.util.List;
 
 import static org.apache.calcite.avatica.util.DateTimeUtils.EPOCH_JULIAN;
 import static org.apache.calcite.avatica.util.DateTimeUtils.dateStringToUnixDate;
+import static org.apache.calcite.avatica.util.DateTimeUtils.digitCount;
 import static org.apache.calcite.avatica.util.DateTimeUtils.intervalDayTimeToString;
 import static org.apache.calcite.avatica.util.DateTimeUtils.intervalYearMonthToString;
+import static org.apache.calcite.avatica.util.DateTimeUtils.timeStringToUnixDate;
 import static org.apache.calcite.avatica.util.DateTimeUtils.timestampStringToUnixDate;
 import static org.apache.calcite.avatica.util.DateTimeUtils.unixDateExtract;
+import static org.apache.calcite.avatica.util.DateTimeUtils.unixDateToString;
+import static org.apache.calcite.avatica.util.DateTimeUtils.unixTimeToString;
 import static org.apache.calcite.avatica.util.DateTimeUtils.unixTimestampToString;
 import static org.apache.calcite.avatica.util.DateTimeUtils.ymdToJulian;
 import static org.apache.calcite.avatica.util.DateTimeUtils.ymdToUnixDate;
@@ -160,22 +163,22 @@ public class SqlFunctionsTest {
     // Verify these using the "date" command. E.g.
     // $ date -u --date="@$(expr 10957 \* 86400)"
     // Sat Jan  1 00:00:00 UTC 2000
-    assertEquals("2000-01-01", DateTimeUtils.unixDateToString(10957));
+    assertEquals("2000-01-01", unixDateToString(10957));
 
-    assertEquals("1970-01-01", DateTimeUtils.unixDateToString(0));
-    assertEquals("1970-01-02", DateTimeUtils.unixDateToString(1));
-    assertEquals("1971-01-01", DateTimeUtils.unixDateToString(365));
-    assertEquals("1972-01-01", DateTimeUtils.unixDateToString(730));
-    assertEquals("1972-02-28", DateTimeUtils.unixDateToString(788));
-    assertEquals("1972-02-29", DateTimeUtils.unixDateToString(789));
-    assertEquals("1972-03-01", DateTimeUtils.unixDateToString(790));
+    assertEquals("1970-01-01", unixDateToString(0));
+    assertEquals("1970-01-02", unixDateToString(1));
+    assertEquals("1971-01-01", unixDateToString(365));
+    assertEquals("1972-01-01", unixDateToString(730));
+    assertEquals("1972-02-28", unixDateToString(788));
+    assertEquals("1972-02-29", unixDateToString(789));
+    assertEquals("1972-03-01", unixDateToString(790));
 
-    assertEquals("1969-01-01", DateTimeUtils.unixDateToString(-365));
-    assertEquals("2000-01-01", DateTimeUtils.unixDateToString(10957));
-    assertEquals("2000-02-28", DateTimeUtils.unixDateToString(11015));
-    assertEquals("2000-02-29", DateTimeUtils.unixDateToString(11016));
-    assertEquals("2000-03-01", DateTimeUtils.unixDateToString(11017));
-    assertEquals("1945-02-24", DateTimeUtils.unixDateToString(-9077));
+    assertEquals("1969-01-01", unixDateToString(-365));
+    assertEquals("2000-01-01", unixDateToString(10957));
+    assertEquals("2000-02-28", unixDateToString(11015));
+    assertEquals("2000-02-29", unixDateToString(11016));
+    assertEquals("2000-03-01", unixDateToString(11017));
+    assertEquals("1945-02-24", unixDateToString(-9077));
   }
 
   @Test public void testYmdToUnixDate() {
@@ -192,7 +195,7 @@ public class SqlFunctionsTest {
   }
 
   private void checkDateString(String s, int d) {
-    assertThat(DateTimeUtils.unixDateToString(d), equalTo(s));
+    assertThat(unixDateToString(d), equalTo(s));
     assertThat(dateStringToUnixDate(s), equalTo(d));
   }
 
@@ -202,8 +205,8 @@ public class SqlFunctionsTest {
   }
 
   private void checkTimeString(String s, int d) {
-    assertThat(DateTimeUtils.unixTimeToString(d), equalTo(s));
-    assertThat(DateTimeUtils.timeStringToUnixDate(s), equalTo(d));
+    assertThat(unixTimeToString(d), equalTo(s));
+    assertThat(timeStringToUnixDate(s), equalTo(d));
   }
 
   @Test public void testTimestampToString() {
@@ -388,13 +391,13 @@ public class SqlFunctionsTest {
   }
 
   @Test public void testEasyLog10() {
-    assertEquals(1, DateTimeUtils.digitCount(0));
-    assertEquals(1, DateTimeUtils.digitCount(1));
-    assertEquals(1, DateTimeUtils.digitCount(9));
-    assertEquals(2, DateTimeUtils.digitCount(10));
-    assertEquals(2, DateTimeUtils.digitCount(11));
-    assertEquals(2, DateTimeUtils.digitCount(99));
-    assertEquals(3, DateTimeUtils.digitCount(100));
+    assertEquals(1, digitCount(0));
+    assertEquals(1, digitCount(1));
+    assertEquals(1, digitCount(9));
+    assertEquals(2, digitCount(10));
+    assertEquals(2, digitCount(11));
+    assertEquals(2, digitCount(99));
+    assertEquals(3, digitCount(100));
   }
 }
 

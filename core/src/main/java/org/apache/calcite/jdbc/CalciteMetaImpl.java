@@ -438,7 +438,7 @@ public class CalciteMetaImpl extends MetaImpl {
   public Iterable<Object> createIterable(AvaticaResultSet resultSet_) {
     CalciteResultSet resultSet = (CalciteResultSet) resultSet_;
     final CalcitePrepare.CalciteSignature<Object> calciteSignature =
-        resultSet.getPrepareResult();
+        resultSet.getSignature();
     Map<String, Object> map = Maps.newLinkedHashMap();
     final List<Object> parameterValues =
         CalciteConnectionImpl.TROJAN.getParameterValues(

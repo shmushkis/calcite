@@ -23,7 +23,6 @@ import org.apache.calcite.avatica.AvaticaFactory;
 import org.apache.calcite.avatica.AvaticaPreparedStatement;
 import org.apache.calcite.avatica.AvaticaResultSetMetaData;
 import org.apache.calcite.avatica.AvaticaStatement;
-import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.UnregisteredDriver;
 
@@ -34,7 +33,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
 import java.sql.SQLXML;
-import java.util.List;
 import java.util.Properties;
 import java.util.TimeZone;
 
@@ -82,31 +80,28 @@ public class CalciteJdbc41Factory extends CalciteFactory {
   public AvaticaPreparedStatement newPreparedStatement(
       AvaticaConnection connection,
       int id,
-      Meta.Signature prepareResult,
+      Meta.Signature signature,
       int resultSetType,
       int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
     return new CalciteJdbc41PreparedStatement(
         (CalciteConnectionImpl) connection, id,
-        (CalcitePrepare.CalciteSignature) prepareResult, resultSetType,
+        (CalcitePrepare.CalciteSignature) signature, resultSetType,
         resultSetConcurrency, resultSetHoldability);
   }
 
-  public CalciteResultSet newResultSet(
-      AvaticaStatement statement,
-      Meta.Signature signature,
-      TimeZone timeZone) {
+  public CalciteResultSet newResultSet(AvaticaStatement statement,
+      Meta.Signature signature, TimeZone timeZone) {
     final ResultSetMetaData metaData =
-        newResultSetMetaData(statement, signature.columns);
+        newResultSetMetaData(statement, signature);
     return new CalciteResultSet(statement,
         (CalcitePrepare.CalciteSignature) signature, metaData, timeZone);
   }
 
-  public ResultSetMetaData newResultSetMetaData(
-      AvaticaStatement statement,
-      List<ColumnMetaData> columnMetaDataList) {
+  public ResultSetMetaData newResultSetMetaData(AvaticaStatement statement,
+      Meta.Signature signature) {
     return new AvaticaResultSetMetaData(
-        statement, null, columnMetaDataList);
+        statement, null, signature);
   }
 
   /** Implementation of connection for JDBC 4.1. */

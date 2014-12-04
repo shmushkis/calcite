@@ -23,7 +23,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
 import java.sql.SQLXML;
-import java.util.List;
 import java.util.Properties;
 import java.util.TimeZone;
 
@@ -75,26 +74,23 @@ class AvaticaJdbc41Factory implements AvaticaFactory {
   }
 
   public AvaticaPreparedStatement newPreparedStatement(
-      AvaticaConnection connection, int id, Meta.Signature prepareResult,
+      AvaticaConnection connection, int id, Meta.Signature signature,
       int resultSetType, int resultSetConcurrency, int resultSetHoldability)
       throws SQLException {
-    return new AvaticaJdbc41PreparedStatement(connection, id, prepareResult,
+    return new AvaticaJdbc41PreparedStatement(connection, id, signature,
         resultSetType, resultSetConcurrency, resultSetHoldability);
   }
 
-  public AvaticaResultSet newResultSet(
-      AvaticaStatement statement, Meta.Signature signature,
-      TimeZone timeZone) {
+  public AvaticaResultSet newResultSet(AvaticaStatement statement,
+      Meta.Signature signature, TimeZone timeZone) {
     final ResultSetMetaData metaData =
-        newResultSetMetaData(statement, signature.columns);
+        newResultSetMetaData(statement, signature);
     return new AvaticaResultSet(statement, signature, metaData, timeZone);
   }
 
   public AvaticaResultSetMetaData newResultSetMetaData(
-      AvaticaStatement statement,
-      List<ColumnMetaData> columnMetaDataList) {
-    return new AvaticaResultSetMetaData(
-        statement, null, columnMetaDataList);
+      AvaticaStatement statement, Meta.Signature signature) {
+    return new AvaticaResultSetMetaData(statement, null, signature);
   }
 
   /** Implementation of Connection for JDBC 4.1. */
@@ -120,10 +116,10 @@ class AvaticaJdbc41Factory implements AvaticaFactory {
   private static class AvaticaJdbc41PreparedStatement
       extends AvaticaPreparedStatement {
     AvaticaJdbc41PreparedStatement(AvaticaConnection connection, int id,
-        Meta.Signature prepareResult, int resultSetType,
+        Meta.Signature signature, int resultSetType,
         int resultSetConcurrency, int resultSetHoldability)
         throws SQLException {
-      super(connection, id, prepareResult, resultSetType, resultSetConcurrency,
+      super(connection, id, signature, resultSetType, resultSetConcurrency,
           resultSetHoldability);
     }
 

@@ -171,11 +171,11 @@ public interface Meta {
     public final AvaticaStatement statement;
     public final boolean ownStatement;
     public final Iterable<Object> iterable;
-    public final Signature prepareResult;
+    public final Signature signature;
 
     public MetaResultSet(AvaticaStatement statement, boolean ownStatement,
-        Signature prepareResult, Iterable<Object> iterable) {
-      this.prepareResult = prepareResult;
+        Signature signature, Iterable<Object> iterable) {
+      this.signature = signature;
       this.statement = statement;
       this.ownStatement = ownStatement;
       this.iterable = iterable;
