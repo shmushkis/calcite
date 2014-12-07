@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.avatica;
 
+import com.google.common.base.Preconditions;
+
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -55,6 +57,7 @@ public abstract class AvaticaConnection implements Connection {
   private int networkTimeout;
   private String catalog;
 
+  public final int id;
   protected final UnregisteredDriver driver;
   protected final AvaticaFactory factory;
   final String url;
@@ -65,6 +68,8 @@ public abstract class AvaticaConnection implements Connection {
   public final Helper helper = Helper.INSTANCE;
   public final Map<InternalProperty, Object> properties =
       new HashMap<InternalProperty, Object>();
+
+  private static int nextId;
 
   /**
    * Creates an AvaticaConnection.
@@ -81,6 +86,7 @@ public abstract class AvaticaConnection implements Connection {
       AvaticaFactory factory,
       String url,
       Properties info) {
+    this.id = nextId++;
     this.driver = driver;
     this.factory = factory;
     this.url = url;
@@ -257,8 +263,8 @@ public abstract class AvaticaConnection implements Connection {
       int resultSetType,
       int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
-    return factory.newStatement(this, statementCount++, resultSetType,
-        resultSetConcurrency, resultSetHoldability);
+    return factory.newStatement(this, null, resultSetType, resultSetConcurrency,
+        resultSetHoldability);
   }
 
   public PreparedStatement prepareStatement(
@@ -420,6 +426,28 @@ public abstract class AvaticaConnection implements Connection {
           "exception while executing query: " + e.getMessage(), e);
     }
     return statement.openResultSet;
+  }
+
+  protected ResultSet createResultSet(Meta.MetaResultSet metaResultSet) {
+    try {
+      final Meta.StatementHandle h =
+          new Meta.StatementHandle(metaResultSet.statementId);
+      final AvaticaStatement statement = lookupStatement(h);
+      AvaticaResultSet resultSet =
+          factory.newResultSet(statement, metaResultSet.signature,
+              getTimeZone());
+      return resultSet.execute();
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /** Creates a statement wrapper around an existing handle. */
+  protected AvaticaStatement lookupStatement(Meta.StatementHandle h)
+      throws SQLException {
+    //noinspection MagicConstant
+    return factory.newStatement(this, Preconditions.checkNotNull(h),
+        ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, holdability);
   }
 
   // do not make public

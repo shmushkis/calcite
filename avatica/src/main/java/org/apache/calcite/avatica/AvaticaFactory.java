@@ -20,6 +20,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Properties;
 import java.util.TimeZone;
+import javax.annotation.Nullable;
 
 /**
  * Factory for JDBC objects.
@@ -37,13 +38,14 @@ public interface AvaticaFactory {
       String url,
       Properties info) throws SQLException;
 
-  AvaticaStatement newStatement(AvaticaConnection connection, int id,
-      int resultSetType, int resultSetConcurrency,
-      int resultSetHoldability) throws SQLException;
+  AvaticaStatement newStatement(AvaticaConnection connection,
+      @Nullable Meta.StatementHandle h, int resultSetType,
+      int resultSetConcurrency, int resultSetHoldability) throws SQLException;
 
   AvaticaPreparedStatement newPreparedStatement(AvaticaConnection connection,
-      int id, Meta.Signature signature, int resultSetType,
-      int resultSetConcurrency, int resultSetHoldability) throws SQLException;
+      @Nullable Meta.StatementHandle h, Meta.Signature signature,
+      int resultSetType, int resultSetConcurrency, int resultSetHoldability)
+      throws SQLException;
 
   /**
    * Creates a result set. You will then need to call

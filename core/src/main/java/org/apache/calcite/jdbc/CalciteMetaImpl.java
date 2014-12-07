@@ -43,6 +43,7 @@ import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractTableQueryable;
+import org.apache.calcite.server.CalciteServerStatement;
 import org.apache.calcite.sql.SqlJdbcFunctionCall;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.util.Util;
@@ -130,6 +131,13 @@ public class CalciteMetaImpl extends MetaImpl {
     return Pattern.compile(buf.toString());
   }
 
+  @Override public StatementHandle createStatement(ConnectionHandle ch) {
+    final StatementHandle h = super.createStatement(ch);
+    final CalciteConnectionImpl calciteConnection = getConnection();
+    calciteConnection.server.addStatement(calciteConnection, h);
+    return h;
+  }
+
   private <E> MetaResultSet createResultSet(Enumerable<E> enumerable,
       Class clazz, String... names) {
     final List<ColumnMetaData> columns = new ArrayList<ColumnMetaData>();
@@ -178,7 +186,7 @@ public class CalciteMetaImpl extends MetaImpl {
               return Linq4j.asEnumerable(iterable);
             }
           };
-      return new MetaResultSet(statement, true, signature, iterable);
+      return new MetaResultSet(statement.getId(), true, signature, iterable);
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
@@ -451,12 +459,11 @@ public class CalciteMetaImpl extends MetaImpl {
     return calciteSignature.enumerable(dataContext);
   }
 
-  public Signature prepare(AvaticaStatement statement_, String sql) {
-    CalciteStatement statement = (CalciteStatement) statement_;
-    int maxRowCount = statement.getMaxRows();
-    return getConnection().parseQuery(sql,
-        statement.createPrepareContext(),
-        maxRowCount <= 0 ? -1 : maxRowCount);
+  public Signature prepare(StatementHandle h, String sql, int maxRowCount) {
+    final CalciteConnectionImpl calciteConnection = getConnection();
+    CalciteServerStatement statement = calciteConnection.server.getStatement(h);
+    return calciteConnection.parseQuery(sql, statement.createPrepareContext(),
+        maxRowCount);
   }
 
   /** A trojan-horse method, subject to change without notice. */

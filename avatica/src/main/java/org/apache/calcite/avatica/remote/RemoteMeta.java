@@ -35,22 +35,26 @@ class RemoteMeta extends MetaImpl {
   }
 
   private MetaResultSet toResultSet(Service.ResultSetResponse response) {
-    final AvaticaStatement statement = getOrCreateStatement(connection,
-        response.statementId);
     final Signature signature0 = response.signature;
     final SignatureWithIterable signature =
         new SignatureWithIterable(signature0.internalParameters,
             signature0.columns, signature0.sql, signature0.parameters,
             response.cursorFactory, response.rows);
-    return new MetaResultSet(statement, response.ownStatement, signature,
-        response.rows);
+    return new MetaResultSet(response.statementId, response.ownStatement,
+        signature, response.rows);
+  }
+
+  @Override public StatementHandle createStatement(ConnectionHandle ch) {
+    final Service.CreateStatementResponse response =
+        service.apply(new Service.CreateStatementRequest(ch.id));
+    return new StatementHandle(response.id);
   }
 
   private AvaticaStatement getOrCreateStatement(AvaticaConnection connection,
       int statementId) {
     try {
       final AvaticaStatement statement = connection.createStatement();
-      assert statement.id == statementId; // FIXME
+      assert statement.handle.id == statementId; // FIXME
       return statement;
     } catch (SQLException e) {
       throw new RuntimeException(e);
@@ -65,8 +69,15 @@ class RemoteMeta extends MetaImpl {
 
   @Override public MetaResultSet getSchemas(String catalog, Pat schemaPattern) {
     final Service.ResultSetResponse response =
-        service.apply(new Service.SchemasRequest(catalog, schemaPattern));
+        service.apply(new Service.SchemasRequest(catalog, schemaPattern.s));
     return toResultSet(response);
+  }
+
+  @Override public Signature prepare(StatementHandle h, String sql,
+      int maxRowCount) {
+    final Service.PrepareResponse response =
+        service.apply(new Service.PrepareRequest(h.id, sql, maxRowCount));
+    return response.signature;
   }
 }
 

@@ -143,7 +143,30 @@ public interface Meta {
   /** Creates an iterable for a result set. */
   Iterable<Object> createIterable(AvaticaResultSet resultSet);
 
-  Signature prepare(AvaticaStatement statement, String sql);
+  /** Prepares a statement.
+   *
+   * @param h Statement handle
+   * @param sql SQL query
+   * @param maxRowCount Negative for no limit (different meaning than JDBC)
+   * @return Signature of prepared statement
+   */
+  Signature prepare(StatementHandle h, String sql, int maxRowCount);
+
+  /** Prepares and executes a statement.
+   *
+   * @param h Statement handle
+   * @param sql SQL query
+   * @param maxRowCount Negative for no limit (different meaning than JDBC)
+   * @return Signature of prepared statement
+   */
+  MetaResultSet prepareAndExecute(StatementHandle h, String sql,
+      int maxRowCount);
+
+  /** Called during the creation of a statement to allocate a new handle.
+   *
+   * @param ch Connection handle
+   */
+  StatementHandle createStatement(ConnectionHandle ch);
 
   /** Factory to create instances of {@link Meta}. */
   interface Factory {
@@ -168,15 +191,15 @@ public interface Meta {
 
   /** Meta data from which a result set can be constructed. */
   class MetaResultSet {
-    public final AvaticaStatement statement;
+    public final int statementId;
     public final boolean ownStatement;
     public final Iterable<Object> iterable;
     public final Signature signature;
 
-    public MetaResultSet(AvaticaStatement statement, boolean ownStatement,
+    public MetaResultSet(int statementId, boolean ownStatement,
         Signature signature, Iterable<Object> iterable) {
       this.signature = signature;
-      this.statement = statement;
+      this.statementId = statementId;
       this.ownStatement = ownStatement;
       this.iterable = iterable;
     }
@@ -300,6 +323,34 @@ public interface Meta {
       this.parameters = parameters;
       this.internalParameters = internalParameters;
       this.cursorFactory = cursorFactory;
+    }
+  }
+
+  /** Connection handle. */
+  class ConnectionHandle {
+    public final int id;
+
+    @Override public String toString() {
+      return Integer.toString(id);
+    }
+
+    @JsonCreator
+    public ConnectionHandle(@JsonProperty("id") int id) {
+      this.id = id;
+    }
+  }
+
+  /** Statement handle. */
+  class StatementHandle {
+    public final int id;
+
+    @Override public String toString() {
+      return Integer.toString(id);
+    }
+
+    @JsonCreator
+    public StatementHandle(@JsonProperty("id") int id) {
+      this.id = id;
     }
   }
 }

@@ -67,17 +67,19 @@ class AvaticaJdbc41Factory implements AvaticaFactory {
     return new AvaticaJdbc41DatabaseMetaData(connection);
   }
 
-  public AvaticaStatement newStatement(AvaticaConnection connection, int id,
-      int resultSetType, int resultSetConcurrency, int resultSetHoldability) {
-    return new AvaticaJdbc41Statement(connection, id, resultSetType,
+  public AvaticaStatement newStatement(AvaticaConnection connection,
+      Meta.StatementHandle h, int resultSetType, int resultSetConcurrency,
+      int resultSetHoldability) {
+    return new AvaticaJdbc41Statement(connection, h, resultSetType,
         resultSetConcurrency, resultSetHoldability);
   }
 
   public AvaticaPreparedStatement newPreparedStatement(
-      AvaticaConnection connection, int id, Meta.Signature signature,
-      int resultSetType, int resultSetConcurrency, int resultSetHoldability)
+      AvaticaConnection connection, Meta.StatementHandle h,
+      Meta.Signature signature, int resultSetType, int resultSetConcurrency,
+      int resultSetHoldability)
       throws SQLException {
-    return new AvaticaJdbc41PreparedStatement(connection, id, signature,
+    return new AvaticaJdbc41PreparedStatement(connection, h, signature,
         resultSetType, resultSetConcurrency, resultSetHoldability);
   }
 
@@ -105,9 +107,10 @@ class AvaticaJdbc41Factory implements AvaticaFactory {
 
   /** Implementation of Statement for JDBC 4.1. */
   private static class AvaticaJdbc41Statement extends AvaticaStatement {
-    public AvaticaJdbc41Statement(AvaticaConnection connection, int id,
-        int resultSetType, int resultSetConcurrency, int resultSetHoldability) {
-      super(connection, id, resultSetType, resultSetConcurrency,
+    public AvaticaJdbc41Statement(AvaticaConnection connection,
+        Meta.StatementHandle h, int resultSetType, int resultSetConcurrency,
+        int resultSetHoldability) {
+      super(connection, h, resultSetType, resultSetConcurrency,
           resultSetHoldability);
     }
   }
@@ -115,11 +118,11 @@ class AvaticaJdbc41Factory implements AvaticaFactory {
   /** Implementation of PreparedStatement for JDBC 4.1. */
   private static class AvaticaJdbc41PreparedStatement
       extends AvaticaPreparedStatement {
-    AvaticaJdbc41PreparedStatement(AvaticaConnection connection, int id,
-        Meta.Signature signature, int resultSetType,
+    AvaticaJdbc41PreparedStatement(AvaticaConnection connection,
+        Meta.StatementHandle h, Meta.Signature signature, int resultSetType,
         int resultSetConcurrency, int resultSetHoldability)
         throws SQLException {
-      super(connection, id, signature, resultSetType, resultSetConcurrency,
+      super(connection, h, signature, resultSetType, resultSetConcurrency,
           resultSetHoldability);
     }
 

@@ -32,6 +32,9 @@ import java.util.List;
 public interface Service {
   ResultSetResponse apply(CatalogsRequest request);
   ResultSetResponse apply(SchemasRequest request);
+  PrepareResponse apply(PrepareRequest request);
+  ResultSetResponse apply(PrepareAndExecuteRequest request);
+  CreateStatementResponse apply(CreateStatementRequest request);
 
   /** Factory that creates a {@code Service}. */
   interface Factory {
@@ -45,7 +48,10 @@ public interface Service {
       defaultImpl = SchemasRequest.class)
   @JsonSubTypes({
       @JsonSubTypes.Type(value = CatalogsRequest.class, name = "getCatalogs"),
-      @JsonSubTypes.Type(value = SchemasRequest.class, name = "getSchemas") })
+      @JsonSubTypes.Type(value = SchemasRequest.class, name = "getSchemas"),
+      @JsonSubTypes.Type(value = PrepareRequest.class, name = "prepare"),
+      @JsonSubTypes.Type(value = CreateStatementRequest.class,
+          name = "createStatement") })
   abstract class Request {
     abstract Response accept(Service service);
   }
@@ -56,7 +62,10 @@ public interface Service {
       property = "response",
       defaultImpl = ResultSetResponse.class)
   @JsonSubTypes({
-      @JsonSubTypes.Type(value = ResultSetResponse.class, name = "resultSet") })
+      @JsonSubTypes.Type(value = ResultSetResponse.class, name = "resultSet"),
+      @JsonSubTypes.Type(value = PrepareResponse.class, name = "prepare"),
+      @JsonSubTypes.Type(value = CreateStatementResponse.class,
+          name = "createStatement") })
   abstract class Response {
   }
 
@@ -72,11 +81,11 @@ public interface Service {
    * {@link Meta#getSchemas(String, org.apache.calcite.avatica.Meta.Pat)}. */
   class SchemasRequest extends Request {
     public final String catalog;
-    public final Meta.Pat schemaPattern;
+    public final String schemaPattern;
 
     @JsonCreator
     public SchemasRequest(@JsonProperty("catalog") String catalog,
-        @JsonProperty("schemaPattern") Meta.Pat schemaPattern) {
+        @JsonProperty("schemaPattern") String schemaPattern) {
       this.catalog = catalog;
       this.schemaPattern = schemaPattern;
     }
@@ -86,11 +95,15 @@ public interface Service {
     }
   }
 
-  /** Response that contains a result set. */
+  /** Response that contains a result set.
+   *
+   * <p>Several types of request, including
+   * {@link org.apache.calcite.avatica.Meta#getCatalogs()} and
+   * {@link org.apache.calcite.avatica.Meta#getSchemas(String, org.apache.calcite.avatica.Meta.Pat)}
+   * return this response. */
   class ResultSetResponse extends Response {
     public final int statementId;
     public final boolean ownStatement;
-    public final String timeZone;
     public final Meta.Signature signature;
     public final Meta.CursorFactory cursorFactory;
     public final List<Object> rows;
@@ -98,16 +111,95 @@ public interface Service {
     @JsonCreator
     public ResultSetResponse(@JsonProperty("statementId") int statementId,
         @JsonProperty("ownStatement") boolean ownStatement,
-        @JsonProperty("timeZone") String timeZone,
         @JsonProperty("signature") Meta.Signature signature,
         @JsonProperty("cursorFactory") Meta.CursorFactory cursorFactory,
         @JsonProperty("rows") List<Object> rows) {
       this.statementId = statementId;
       this.ownStatement = ownStatement;
-      this.timeZone = timeZone;
       this.signature = signature;
       this.cursorFactory = cursorFactory;
       this.rows = rows;
+    }
+  }
+
+  /** Request for
+   * {@link org.apache.calcite.avatica.Meta#prepareAndExecute(org.apache.calcite.avatica.Meta.StatementHandle, String, int)}. */
+  class PrepareAndExecuteRequest extends Request {
+    public final int statementId;
+    public final String sql;
+    public final int maxRowCount;
+
+    @JsonCreator
+    public PrepareAndExecuteRequest(
+        @JsonProperty("statementId") int statementId,
+        @JsonProperty("sql") String sql,
+        @JsonProperty("maxRowCount") int maxRowCount) {
+      this.statementId = statementId;
+      this.sql = sql;
+      this.maxRowCount = maxRowCount;
+    }
+
+    @Override ResultSetResponse accept(Service service) {
+      return service.apply(this);
+    }
+  }
+
+  /** Request for
+   * {@link org.apache.calcite.avatica.Meta#prepare(org.apache.calcite.avatica.Meta.StatementHandle, String, int)}. */
+  class PrepareRequest extends Request {
+    public final int statementId;
+    public final String sql;
+    public final int maxRowCount;
+
+    @JsonCreator
+    public PrepareRequest(@JsonProperty("statementId") int statementId,
+        @JsonProperty("sql") String sql,
+        @JsonProperty("maxRowCount") int maxRowCount) {
+      this.statementId = statementId;
+      this.sql = sql;
+      this.maxRowCount = maxRowCount;
+    }
+
+    @Override PrepareResponse accept(Service service) {
+      return service.apply(this);
+    }
+  }
+
+  /** Response from
+   * {@link org.apache.calcite.avatica.remote.Service.PrepareRequest}. */
+  class PrepareResponse extends Response {
+    public final Meta.Signature signature;
+
+    @JsonCreator
+    public PrepareResponse(
+        @JsonProperty("signature") Meta.Signature signature) {
+      this.signature = signature;
+    }
+  }
+
+  /** Request for
+   * {@link org.apache.calcite.avatica.Meta#createStatement(org.apache.calcite.avatica.Meta.ConnectionHandle)}. */
+  class CreateStatementRequest extends Request {
+    public final int connectionId;
+
+    @JsonCreator
+    public CreateStatementRequest(@JsonProperty("signature") int connectionId) {
+      this.connectionId = connectionId;
+    }
+
+    @Override CreateStatementResponse accept(Service service) {
+      return service.apply(this);
+    }
+  }
+
+  /** Response from
+   * {@link org.apache.calcite.avatica.remote.Service.CreateStatementRequest}. */
+  class CreateStatementResponse extends Response {
+    public final int id;
+
+    @JsonCreator
+    public CreateStatementResponse(@JsonProperty("id") int id) {
+      this.id = id;
     }
   }
 }

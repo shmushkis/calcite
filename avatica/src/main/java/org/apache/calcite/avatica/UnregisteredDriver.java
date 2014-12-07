@@ -42,7 +42,7 @@ import java.util.logging.Logger;
  *
  * <p>The provider must implement:</p>
  * <ul>
- *   <li>{@link org.apache.calcite.avatica.Meta#prepare(AvaticaStatement, String)}
+ *   <li>{@link Meta#prepare(org.apache.calcite.avatica.Meta.StatementHandle, String, int)}
  *   <li>{@link org.apache.calcite.avatica.Meta#createIterable(AvaticaResultSet)}
  * </ul>
  */

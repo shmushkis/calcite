@@ -47,9 +47,8 @@ public class LocalService implements Service {
     final Meta.CursorFactory cursorFactory =
         Meta.CursorFactory.map(
             resultSet.signature.cursorFactory.fieldNames);
-    return new ResultSetResponse(resultSet.statement.getId(),
+    return new ResultSetResponse(resultSet.statementId,
         resultSet.ownStatement,
-        resultSet.statement.connection.getTimeZone().getID(),
         resultSet.signature,
         cursorFactory, list(resultSet.iterable));
   }
@@ -61,8 +60,30 @@ public class LocalService implements Service {
 
   public ResultSetResponse apply(SchemasRequest request) {
     final Meta.MetaResultSet resultSet =
-        meta.getSchemas(request.catalog, request.schemaPattern);
+        meta.getSchemas(request.catalog, Meta.Pat.of(request.schemaPattern));
     return toResponse(resultSet);
+  }
+
+  public PrepareResponse apply(PrepareRequest request) {
+    final Meta.StatementHandle h =
+        new Meta.StatementHandle(request.statementId);
+    final Meta.Signature signature =
+        meta.prepare(h, request.sql, request.maxRowCount);
+    return new PrepareResponse(signature);
+  }
+
+  public ResultSetResponse apply(PrepareAndExecuteRequest request) {
+    final Meta.StatementHandle h =
+        new Meta.StatementHandle(request.statementId);
+    final Meta.MetaResultSet resultSet =
+        meta.prepareAndExecute(h, request.sql, request.maxRowCount);
+    return toResponse(resultSet);
+  }
+
+  public CreateStatementResponse apply(CreateStatementRequest request) {
+    final Meta.StatementHandle h =
+        meta.createStatement(new Meta.ConnectionHandle(request.connectionId));
+    return new CreateStatementResponse(h.id);
   }
 }
 

@@ -23,15 +23,19 @@ import org.apache.calcite.avatica.server.HttpServer;
 import org.apache.calcite.avatica.server.Main;
 import org.apache.calcite.test.CalciteAssert;
 
+import com.google.common.base.Function;
+
 import org.hamcrest.CoreMatchers;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -47,23 +51,64 @@ import static org.junit.Assert.assertTrue;
 public class CalciteRemoteDriverTest {
   public static final String LJS =
       LocalJsonService.Factory.class.getName();
-  private Connection connect;
 
-  @Before public void setUp() throws Exception {
-    connect = CalciteAssert.that().connect();
+  private static final CalciteAssert.ConnectionFactory
+  REMOTE_CONNECTION_FACTORY =
+      new CalciteAssert.ConnectionFactory() {
+        public Connection createConnection() throws Exception {
+          return remoteConnection;
+        }
+      };
+
+  private static final Function<Connection, ResultSet> GET_SCHEMAS =
+      new Function<Connection, ResultSet>() {
+        public ResultSet apply(Connection input) {
+          try {
+            return input.getMetaData().getSchemas();
+          } catch (SQLException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      };
+  private static final Function<Connection, ResultSet> GET_CATALOGS =
+      new Function<Connection, ResultSet>() {
+        public ResultSet apply(Connection input) {
+          try {
+            return input.getMetaData().getCatalogs();
+          } catch (SQLException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      };
+
+  private static Connection localConnection;
+  private static Connection remoteConnection;
+  private static HttpServer start;
+
+  @BeforeClass public static void beforeClass() throws Exception {
+    localConnection = CalciteAssert.that().connect();
+    final Meta meta = CalciteConnectionImpl.TROJAN
+        .getMeta((CalciteConnectionImpl) localConnection);
     LocalJsonService.THREAD_SERVICE.set(
         new LocalJsonService(
-            new LocalService(
-                CalciteConnectionImpl.TROJAN
-                    .getMeta((CalciteConnectionImpl) connect))));
+            new LocalService(meta)));
+
+    start = Main.start(new String[]{Factory.class.getName()});
+    final int port = start.getPort();
+    remoteConnection = DriverManager.getConnection(
+        "jdbc:avatica:remote:url=http://localhost:" + port);
   }
 
-  @After public void tearDown() throws Exception {
-    if (connect != null) {
-      connect.close();
-      connect = null;
+  @AfterClass public static void afterClass() throws Exception {
+    if (localConnection != null) {
+      localConnection.close();
+      localConnection = null;
     }
     LocalJsonService.THREAD_SERVICE.remove();
+
+    if (start != null) {
+      start.stop();
+    }
   }
 
   @Test public void testCatalogsLocal() throws Exception {
@@ -104,20 +149,34 @@ public class CalciteRemoteDriverTest {
     assertThat(connection.isClosed(), is(true));
   }
 
-  @Test public void testRemote() throws Exception {
-    final HttpServer start = Main.start(new String[]{Factory.class.getName()});
-    try {
-      int port = start.getPort();
-      final Connection connection =
-          DriverManager.getConnection(
-              "jdbc:avatica:remote:url=http://localhost:" + port);
-      final ResultSet resultSet = connection.getMetaData().getSchemas();
-      while (resultSet.next()) {
-        System.out.println(resultSet.getString(1));
-      }
-    } finally {
-      start.stop();
+  @Test public void testRemoteCatalogs() throws Exception {
+    CalciteAssert.that().with(REMOTE_CONNECTION_FACTORY)
+        .metaData(GET_CATALOGS)
+        .returns("TABLE_CATALOG=null\n");
+  }
+
+  @Test public void testRemoteSchemas() throws Exception {
+    CalciteAssert.that().with(REMOTE_CONNECTION_FACTORY)
+        .metaData(GET_SCHEMAS)
+        .returns("TABLE_SCHEM=POST; TABLE_CATALOG=null\n"
+            + "TABLE_SCHEM=foodmart; TABLE_CATALOG=null\n"
+            + "TABLE_SCHEM=hr; TABLE_CATALOG=null\n"
+            + "TABLE_SCHEM=metadata; TABLE_CATALOG=null\n");
+  }
+
+  @Test public void testRemoteExecuteQuery() throws Exception {
+    CalciteAssert.that().with(REMOTE_CONNECTION_FACTORY)
+        .query("values (1, 'a')")
+        .returns("xxx");
+  }
+
+  @Test public void testRemoteExecuteQuery2() throws Exception {
+    final Statement statement = remoteConnection.createStatement();
+    final ResultSet resultSet = statement.executeQuery("values (1, 'a')");
+    while (resultSet.next()) {
+      System.out.println(resultSet.getString(1));
     }
+    resultSet.close();
   }
 
   /** Creates a {@link Meta} that can see the test databases. */

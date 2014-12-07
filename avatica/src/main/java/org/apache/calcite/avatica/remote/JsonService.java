@@ -72,6 +72,29 @@ public abstract class JsonService implements Service {
     }
   }
 
+  public PrepareResponse apply(PrepareRequest request) {
+    try {
+      return decode(apply(encode(request)), PrepareResponse.class);
+    } catch (IOException e) {
+      throw handle(e);
+    }
+  }
+
+  public ResultSetResponse apply(PrepareAndExecuteRequest request) {
+    try {
+      return decode(apply(encode(request)), ResultSetResponse.class);
+    } catch (IOException e) {
+      throw handle(e);
+    }
+  }
+
+  public CreateStatementResponse apply(CreateStatementRequest request) {
+    try {
+      return decode(apply(encode(request)), CreateStatementResponse.class);
+    } catch (IOException e) {
+      throw handle(e);
+    }
+  }
 }
 
 // End JsonService.java

@@ -21,7 +21,6 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.AvaticaConnection;
 import org.apache.calcite.avatica.AvaticaFactory;
 import org.apache.calcite.avatica.AvaticaParameter;
-import org.apache.calcite.avatica.AvaticaStatement;
 import org.apache.calcite.avatica.Helper;
 import org.apache.calcite.avatica.InternalProperty;
 import org.apache.calcite.avatica.Meta;
@@ -53,14 +52,14 @@ import org.apache.calcite.sql.validate.SqlValidatorWithHints;
 import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.Holder;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 
 import java.io.Serializable;
 import java.lang.reflect.Type;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -139,16 +138,13 @@ abstract class CalciteConnectionImpl
     }
   }
 
-  @Override public AvaticaStatement createStatement(int resultSetType,
+  @Override public CalciteStatement createStatement(int resultSetType,
       int resultSetConcurrency, int resultSetHoldability) throws SQLException {
-    CalciteStatement statement =
-        (CalciteStatement) super.createStatement(
-            resultSetType, resultSetConcurrency, resultSetHoldability);
-    server.addStatement(statement);
-    return statement;
+    return (CalciteStatement) super.createStatement(resultSetType,
+        resultSetConcurrency, resultSetHoldability);
   }
 
-  @Override public PreparedStatement prepareStatement(
+  @Override public CalcitePreparedStatement prepareStatement(
       String sql,
       int resultSetType,
       int resultSetConcurrency,
@@ -156,12 +152,8 @@ abstract class CalciteConnectionImpl
     try {
       Meta.Signature signature =
           parseQuery(sql, new ContextImpl(this), -1);
-      CalcitePreparedStatement statement =
-          (CalcitePreparedStatement) factory.newPreparedStatement(this,
-              statementCount++, signature, resultSetType,
-              resultSetConcurrency, resultSetHoldability);
-      server.addStatement(statement);
-      return statement;
+      return (CalcitePreparedStatement) factory.newPreparedStatement(this, null,
+          signature, resultSetType, resultSetConcurrency, resultSetHoldability);
     } catch (RuntimeException e) {
       throw Helper.INSTANCE.createException(
           "Error while preparing statement [" + sql + "]", e);
@@ -260,15 +252,20 @@ abstract class CalciteConnectionImpl
 
   /** Implementation of Server. */
   private static class CalciteServerImpl implements CalciteServer {
-    final List<CalciteServerStatement> statementList =
-        new ArrayList<CalciteServerStatement>();
+    final Map<Integer, CalciteServerStatement> statementMap = Maps.newHashMap();
 
-    public void removeStatement(CalciteServerStatement calciteServerStatement) {
-      statementList.add(calciteServerStatement);
+    public void removeStatement(Meta.StatementHandle h) {
+      statementMap.remove(h.id);
     }
 
-    public void addStatement(CalciteServerStatement statement) {
-      statementList.add(statement);
+    public void addStatement(CalciteConnection connection,
+        Meta.StatementHandle h) {
+      final CalciteConnectionImpl c = (CalciteConnectionImpl) connection;
+      statementMap.put(h.id, new CalciteServerStatementImpl(c));
+    }
+
+    public CalciteServerStatement getStatement(Meta.StatementHandle h) {
+      return statementMap.get(h.id);
     }
   }
 
@@ -370,7 +367,7 @@ abstract class CalciteConnectionImpl
     private final CalciteConnectionImpl connection;
 
     public ContextImpl(CalciteConnectionImpl connection) {
-      this.connection = connection;
+      this.connection = Preconditions.checkNotNull(connection);
     }
 
     public JavaTypeFactory getTypeFactory() {
@@ -422,6 +419,23 @@ abstract class CalciteConnectionImpl
     }
   }
 
+  /** Implementation of {@link CalciteServerStatement}. */
+  static class CalciteServerStatementImpl
+      implements CalciteServerStatement {
+    private final CalciteConnectionImpl connection;
+
+    public CalciteServerStatementImpl(CalciteConnectionImpl connection) {
+      this.connection = Preconditions.checkNotNull(connection);
+    }
+
+    public ContextImpl createPrepareContext() {
+      return new ContextImpl(connection);
+    }
+
+    public CalciteConnection getConnection() {
+      return connection;
+    }
+  }
 }
 
 // End CalciteConnectionImpl.java

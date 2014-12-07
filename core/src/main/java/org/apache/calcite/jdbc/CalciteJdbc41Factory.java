@@ -66,26 +66,26 @@ public class CalciteJdbc41Factory extends CalciteFactory {
   }
 
   public CalciteJdbc41Statement newStatement(AvaticaConnection connection,
-      int id,
+      Meta.StatementHandle h,
       int resultSetType,
       int resultSetConcurrency,
       int resultSetHoldability) {
     return new CalciteJdbc41Statement(
         (CalciteConnectionImpl) connection,
-        id,
+        h,
         resultSetType, resultSetConcurrency,
         resultSetHoldability);
   }
 
   public AvaticaPreparedStatement newPreparedStatement(
       AvaticaConnection connection,
-      int id,
+      Meta.StatementHandle h,
       Meta.Signature signature,
       int resultSetType,
       int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
     return new CalciteJdbc41PreparedStatement(
-        (CalciteConnectionImpl) connection, id,
+        (CalciteConnectionImpl) connection, h,
         (CalcitePrepare.CalciteSignature) signature, resultSetType,
         resultSetConcurrency, resultSetHoldability);
   }
@@ -115,9 +115,10 @@ public class CalciteJdbc41Factory extends CalciteFactory {
 
   /** Implementation of statement for JDBC 4.1. */
   private static class CalciteJdbc41Statement extends CalciteStatement {
-    public CalciteJdbc41Statement(CalciteConnectionImpl connection, int id,
-        int resultSetType, int resultSetConcurrency, int resultSetHoldability) {
-      super(connection, id, resultSetType, resultSetConcurrency,
+    public CalciteJdbc41Statement(CalciteConnectionImpl connection,
+        Meta.StatementHandle h, int resultSetType, int resultSetConcurrency,
+        int resultSetHoldability) {
+      super(connection, h, resultSetType, resultSetConcurrency,
           resultSetHoldability);
     }
   }
@@ -125,12 +126,11 @@ public class CalciteJdbc41Factory extends CalciteFactory {
   /** Implementation of prepared statement for JDBC 4.1. */
   private static class CalciteJdbc41PreparedStatement
       extends CalcitePreparedStatement {
-    CalciteJdbc41PreparedStatement(CalciteConnectionImpl connection, int id,
-        CalcitePrepare.CalciteSignature calciteSignature, int resultSetType,
-        int resultSetConcurrency, int resultSetHoldability)
+    CalciteJdbc41PreparedStatement(CalciteConnectionImpl connection,
+        Meta.StatementHandle h, CalcitePrepare.CalciteSignature signature,
+        int resultSetType, int resultSetConcurrency, int resultSetHoldability)
         throws SQLException {
-      super(connection, id,
-          calciteSignature, resultSetType, resultSetConcurrency,
+      super(connection, h, signature, resultSetType, resultSetConcurrency,
           resultSetHoldability);
     }
 

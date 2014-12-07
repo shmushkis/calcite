@@ -54,7 +54,7 @@ public abstract class AvaticaPreparedStatement
    * Creates an AvaticaPreparedStatement.
    *
    * @param connection Connection
-   * @param id Statement id
+   * @param h Statement handle
    * @param signature Result of preparing statement
    * @param resultSetType Result set type
    * @param resultSetConcurrency Result set concurrency
@@ -62,12 +62,12 @@ public abstract class AvaticaPreparedStatement
    * @throws SQLException If fails due to underlying implementation reasons.
    */
   protected AvaticaPreparedStatement(AvaticaConnection connection,
-      int id,
+      Meta.StatementHandle h,
       Meta.Signature signature,
       int resultSetType,
       int resultSetConcurrency,
       int resultSetHoldability) throws SQLException {
-    super(connection, id, resultSetType, resultSetConcurrency,
+    super(connection, h, resultSetType, resultSetConcurrency,
         resultSetHoldability);
     this.signature = signature;
     this.slots = new Object[signature.parameters.size()];

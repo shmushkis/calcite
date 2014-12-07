@@ -395,12 +395,15 @@ public class CalciteAssert {
             + ", limit=" + limit;
     final List<Hook.Closeable> closeableList = Lists.newArrayList();
     try {
-      ((CalciteConnection) connection).getProperties().setProperty(
-          CalciteConnectionProperty.MATERIALIZATIONS_ENABLED.camelName(),
-          Boolean.toString(materializationsEnabled));
-      ((CalciteConnection) connection).getProperties().setProperty(
-          CalciteConnectionProperty.CREATE_MATERIALIZATIONS.camelName(),
-          Boolean.toString(materializationsEnabled));
+      if (connection instanceof CalciteConnection) {
+        CalciteConnection calciteConnection = (CalciteConnection) connection;
+        calciteConnection.getProperties().setProperty(
+            CalciteConnectionProperty.MATERIALIZATIONS_ENABLED.camelName(),
+            Boolean.toString(materializationsEnabled));
+        calciteConnection.getProperties().setProperty(
+            CalciteConnectionProperty.CREATE_MATERIALIZATIONS.camelName(),
+            Boolean.toString(materializationsEnabled));
+      }
       for (Pair<Hook, Function> hook : hooks) {
         closeableList.add(hook.left.addThread(hook.right));
       }
@@ -760,13 +763,12 @@ public class CalciteAssert {
     public AssertThat with(final Map<String, String> map) {
       return new AssertThat(
           new ConnectionFactory() {
-            public CalciteConnection createConnection() throws Exception {
+            public Connection createConnection() throws Exception {
               final Properties info = new Properties();
               for (Map.Entry<String, String> entry : map.entrySet()) {
                 info.setProperty(entry.getKey(), entry.getValue());
               }
-              return (CalciteConnection) DriverManager.getConnection(
-                  "jdbc:calcite:", info);
+              return DriverManager.getConnection("jdbc:calcite:", info);
             }
           });
     }
@@ -793,11 +795,10 @@ public class CalciteAssert {
     public AssertThat withModel(final String model) {
       return new AssertThat(
           new CalciteAssert.ConnectionFactory() {
-            public CalciteConnection createConnection() throws Exception {
+            public Connection createConnection() throws Exception {
               final Properties info = new Properties();
               info.setProperty("model", "inline:" + model);
-              return (CalciteConnection) DriverManager.getConnection(
-                  "jdbc:calcite:", info);
+              return DriverManager.getConnection("jdbc:calcite:", info);
             }
           });
     }
@@ -885,7 +886,8 @@ public class CalciteAssert {
     /** Creates a {@link DataContext} and executes a callback. */
     public <T> AssertThat doWithDataContext(Function<DataContext, T> fn)
         throws Exception {
-      CalciteConnection connection = connectionFactory.createConnection();
+      CalciteConnection connection =
+          (CalciteConnection) connectionFactory.createConnection();
       final DataContext dataContext = CalciteMetaImpl.createDataContext(
           connection);
       try {
@@ -920,11 +922,15 @@ public class CalciteAssert {
         return new AssertThat(new PoolingConnectionFactory(connectionFactory));
       }
     }
+
+    public AssertMetaData metaData(Function<Connection, ResultSet> function) {
+      return new AssertMetaData(connectionFactory, function);
+    }
   }
 
   /** Connection factory. */
   public interface ConnectionFactory {
-    CalciteConnection createConnection() throws Exception;
+    Connection createConnection() throws Exception;
   }
 
   /** Connection factory that uses the same instance of connections. */
@@ -935,7 +941,7 @@ public class CalciteAssert {
       this.factory = factory;
     }
 
-    public CalciteConnection createConnection() throws Exception {
+    public Connection createConnection() throws Exception {
       return Pool.INSTANCE.cache.get(factory);
     }
   }
@@ -944,11 +950,10 @@ public class CalciteAssert {
   private static class Pool {
     private static final Pool INSTANCE = new Pool();
 
-    private final LoadingCache<ConnectionFactory, CalciteConnection> cache =
+    private final LoadingCache<ConnectionFactory, Connection> cache =
         CacheBuilder.newBuilder().build(
-            new CacheLoader<ConnectionFactory, CalciteConnection>() {
-              public CalciteConnection load(ConnectionFactory key)
-                  throws Exception {
+            new CacheLoader<ConnectionFactory, Connection>() {
+              public Connection load(ConnectionFactory key) throws Exception {
                 return key.createConnection();
               }
             });
@@ -973,7 +978,7 @@ public class CalciteAssert {
           && config == ((ConfigConnectionFactory) obj).config;
     }
 
-    public CalciteConnection createConnection() throws Exception {
+    public Connection createConnection() throws Exception {
       switch (config) {
       case REGULAR:
         return getConnection("hr", "foodmart", "post");
@@ -1004,7 +1009,7 @@ public class CalciteAssert {
       this.factory = factory;
     }
 
-    public CalciteConnection createConnection() throws Exception {
+    public Connection createConnection() throws Exception {
       return factory.createConnection();
     }
   }
@@ -1020,8 +1025,8 @@ public class CalciteAssert {
       this.schema = schema;
     }
 
-    @Override public CalciteConnection createConnection() throws Exception {
-      CalciteConnection connection = super.createConnection();
+    @Override public Connection createConnection() throws Exception {
+      Connection connection = super.createConnection();
       connection.setSchema(schema);
       return connection;
     }
@@ -1252,6 +1257,35 @@ public class CalciteAssert {
 
     private <T> void addHook(Hook hook, Function<T, Void> handler) {
       hooks.add(Pair.of(hook, (Function) handler));
+    }
+  }
+
+  /** Fluent interface for building a metadata query to be tested. */
+  public static class AssertMetaData {
+    private final ConnectionFactory connectionFactory;
+    private final Function<Connection, ResultSet> function;
+
+    AssertMetaData(ConnectionFactory connectionFactory,
+        Function<Connection, ResultSet> function) {
+      this.connectionFactory = connectionFactory;
+      this.function = function;
+    }
+
+    public final AssertMetaData returns(Function<ResultSet, Void> checker) {
+      try {
+        Connection c = connectionFactory.createConnection();
+        final ResultSet resultSet = function.apply(c);
+        checker.apply(resultSet);
+        resultSet.close();
+        c.close();
+        return this;
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    public AssertMetaData returns(String expected) {
+      return returns(checkResult(expected));
     }
   }
 

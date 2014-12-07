@@ -45,6 +45,10 @@ public class MetaImpl implements Meta {
     this.connection = connection;
   }
 
+  public StatementHandle createStatement(ConnectionHandle ch) {
+    return new StatementHandle(connection.statementCount++);
+  }
+
   /** Creates an empty result set. Useful for JDBC metadata methods that are
    * not implemented or which query entities that are not supported (e.g.
    * triggers in Lingual). */
@@ -94,7 +98,7 @@ public class MetaImpl implements Meta {
           new SignatureWithIterable(internalParameters, columns, "",
               Collections.<AvaticaParameter>emptyList(), cursorFactory,
               iterable);
-      return new MetaResultSet(statement, true, signature, iterable);
+      return new MetaResultSet(statement.getId(), true, signature, iterable);
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
@@ -530,7 +534,12 @@ public class MetaImpl implements Meta {
     return ((WithIterable) resultSet.signature).getIterable();
   }
 
-  public Signature prepare(AvaticaStatement statement, String sql) {
+  public Signature prepare(StatementHandle h, String sql, int maxRowCount) {
+    throw new AssertionError(); // TODO:
+  }
+
+  public MetaResultSet prepareAndExecute(StatementHandle h, String sql,
+      int maxRowCount) {
     throw new AssertionError(); // TODO:
   }
 
