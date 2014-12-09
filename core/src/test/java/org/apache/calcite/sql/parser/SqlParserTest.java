@@ -1911,6 +1911,41 @@ public class SqlParserTest {
         "(?s).*Encountered \"\\( \\)\" at .*");
   }
 
+  /** Test case for [CALCITE-493]. */
+  @Test public void testTableExtend() {
+    sql("select * from emp extend (x int, y varchar(10) not null)")
+        .ok("SELECT *\n"
+            + "FROM (EXTEND(`EMP`, `X`, INTEGER, `Y`, VARCHAR(10)))");
+    sql("select * from emp extend (x int, y varchar(10) not null) where true")
+        .ok("SELECT *\n"
+            + "FROM (EXTEND(`EMP`, `X`, INTEGER, `Y`, VARCHAR(10)))\n"
+            + "WHERE TRUE");
+    // with table alias
+    sql("select * from emp extend (x int, y varchar(10) not null) as t")
+        .ok("SELECT *\n"
+            + "FROM (EXTEND(`EMP`, `X`, INTEGER, `Y`, VARCHAR(10))) AS `T`");
+    // as previous, without AS
+    sql("select * from emp extend (x int, y varchar(10) not null) t")
+        .ok("SELECT *\n"
+            + "FROM (EXTEND(`EMP`, `X`, INTEGER, `Y`, VARCHAR(10))) AS `T`");
+    // with table alias and column alias list
+    sql("select * from emp extend (x int, y varchar(10) not null) as t(a, b)")
+        .ok("SELECT *\n"
+            + "FROM (EXTEND(`EMP`, `X`, INTEGER, `Y`, VARCHAR(10))) AS `T` (`A`, `B`)");
+    // as previous, without AS
+    sql("select * from emp extend (x int, y varchar(10) not null) t(a, b)")
+        .ok("SELECT *\n"
+            + "FROM (EXTEND(`EMP`, `X`, INTEGER, `Y`, VARCHAR(10))) AS `T` (`A`, `B`)");
+    // omit EXTEND
+    sql("select * from emp (x int, y varchar(10) not null) t(a, b)")
+        .ok("SELECT *\n"
+            + "FROM (EXTEND(`EMP`, `X`, INTEGER, `Y`, VARCHAR(10))) AS `T` (`A`, `B`)");
+    sql("select * from emp (x int, y varchar(10) not null) where x = y")
+        .ok("SELECT *\n"
+            + "FROM (EXTEND(`EMP`, `X`, INTEGER, `Y`, VARCHAR(10)))\n"
+            + "WHERE (`X` = `Y`)");
+  }
+
   @Test public void testExplicitTable() {
     check("table emp", "(TABLE `EMP`)");
 

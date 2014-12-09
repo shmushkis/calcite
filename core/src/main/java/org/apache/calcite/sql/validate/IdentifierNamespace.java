@@ -18,6 +18,7 @@ package org.apache.calcite.sql.validate;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -58,18 +59,24 @@ public class IdentifierNamespace extends AbstractNamespace {
    * Creates an IdentifierNamespace.
    *
    * @param validator     Validator
-   * @param id            Identifier node
+   * @param id            Identifier node (or "identifier EXTEND column-list")
    * @param enclosingNode Enclosing node
    * @param parentScope   Parent scope which this namespace turns to in order to
    *                      resolve objects
    */
-  IdentifierNamespace(SqlValidatorImpl validator, SqlIdentifier id,
+  IdentifierNamespace(SqlValidatorImpl validator, SqlNode id,
       SqlNode enclosingNode, SqlValidatorScope parentScope) {
     super(validator, enclosingNode);
-    this.id = id;
+    switch (id.getKind()) {
+    case EXTEND:
+      final SqlCall call = (SqlCall) id;
+      this.id = (SqlIdentifier) call.getOperandList().get(0);
+      break;
+    default:
+      this.id = (SqlIdentifier) id;
+    }
     this.parentScope = parentScope;
     assert parentScope != null;
-    assert id != null;
   }
 
   //~ Methods ----------------------------------------------------------------

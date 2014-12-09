@@ -60,11 +60,12 @@ public class SqlDataTypeSpec extends SqlNode {
   private final int precision;
   private final String charSetName;
   private final TimeZone timeZone;
+  private boolean nullable;
 
   //~ Constructors -----------------------------------------------------------
 
   /**
-   * Creates a type specification.
+   * Creates a type specification representing a regular, non-collection type.
    */
   public SqlDataTypeSpec(
       final SqlIdentifier typeName,
@@ -73,13 +74,7 @@ public class SqlDataTypeSpec extends SqlNode {
       String charSetName,
       TimeZone timeZone,
       SqlParserPos pos) {
-    super(pos);
-    this.collectionsTypeName = null;
-    this.typeName = typeName;
-    this.scale = scale;
-    this.precision = precision;
-    this.charSetName = charSetName;
-    this.timeZone = timeZone;
+    this(null, typeName, precision, scale, charSetName, timeZone, true, pos);
   }
 
   /**
@@ -92,13 +87,30 @@ public class SqlDataTypeSpec extends SqlNode {
       int scale,
       String charSetName,
       SqlParserPos pos) {
+    this(collectionsTypeName, typeName, precision, scale, charSetName, null,
+        true, pos);
+  }
+
+  /**
+   * Creates a type specification.
+   */
+  public SqlDataTypeSpec(
+      SqlIdentifier collectionsTypeName,
+      SqlIdentifier typeName,
+      int precision,
+      int scale,
+      String charSetName,
+      TimeZone timeZone,
+      boolean nullable,
+      SqlParserPos pos) {
     super(pos);
     this.collectionsTypeName = collectionsTypeName;
     this.typeName = typeName;
-    this.scale = scale;
     this.precision = precision;
+    this.scale = scale;
     this.charSetName = charSetName;
-    this.timeZone = null;
+    this.timeZone = timeZone;
+    this.nullable = nullable;
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -137,6 +149,16 @@ public class SqlDataTypeSpec extends SqlNode {
 
   public TimeZone getTimeZone() {
     return timeZone;
+  }
+
+  /** Returns a copy of this data type specification with a given
+   * nullability. */
+  public SqlDataTypeSpec withNullable(boolean nullable) {
+    if (nullable == this.nullable) {
+      return this;
+    }
+    return new SqlDataTypeSpec(collectionsTypeName, typeName, precision, scale,
+        charSetName, timeZone, nullable, getParserPosition());
   }
 
   /**

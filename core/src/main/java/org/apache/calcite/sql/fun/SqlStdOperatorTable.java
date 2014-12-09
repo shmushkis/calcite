@@ -169,6 +169,10 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlGroupingFunction GROUPING =
       new SqlGroupingFunction();
 
+  /** {@code EXTEND} operator. */
+  public static final SqlInternalOperator EXTEND =
+      new SqlInternalOperator("EXTEND", SqlKind.EXTEND);
+
   /**
    * String concatenation operator, '<code>||</code>'.
    */

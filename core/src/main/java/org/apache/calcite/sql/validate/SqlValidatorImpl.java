@@ -80,6 +80,7 @@ import org.apache.calcite.util.Util;
 import org.apache.calcite.util.trace.CalciteTrace;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -1248,7 +1249,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
    * @return expression for unique identifier, or null to prevent conversion
    */
   protected SqlNode getSelfJoinExprForUpdate(
-      SqlIdentifier table,
+      SqlNode table,
       String alias) {
     return null;
   }
@@ -3889,7 +3890,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
    * Common base class for DML statement namespaces.
    */
   public static class DmlNamespace extends IdentifierNamespace {
-    protected DmlNamespace(SqlValidatorImpl validator, SqlIdentifier id,
+    protected DmlNamespace(SqlValidatorImpl validator, SqlNode id,
         SqlNode enclosingNode, SqlValidatorScope parentScope) {
       super(validator, id, enclosingNode, parentScope);
     }
@@ -3904,8 +3905,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     public InsertNamespace(SqlValidatorImpl validator, SqlInsert node,
         SqlNode enclosingNode, SqlValidatorScope parentScope) {
       super(validator, node.getTargetTable(), enclosingNode, parentScope);
-      this.node = node;
-      assert node != null;
+      this.node = Preconditions.checkNotNull(node);
     }
 
     public SqlInsert getNode() {
@@ -3922,8 +3922,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     public UpdateNamespace(SqlValidatorImpl validator, SqlUpdate node,
         SqlNode enclosingNode, SqlValidatorScope parentScope) {
       super(validator, node.getTargetTable(), enclosingNode, parentScope);
-      this.node = node;
-      assert node != null;
+      this.node = Preconditions.checkNotNull(node);
     }
 
     public SqlUpdate getNode() {
@@ -3940,8 +3939,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     public DeleteNamespace(SqlValidatorImpl validator, SqlDelete node,
         SqlNode enclosingNode, SqlValidatorScope parentScope) {
       super(validator, node.getTargetTable(), enclosingNode, parentScope);
-      this.node = node;
-      assert node != null;
+      this.node = Preconditions.checkNotNull(node);
     }
 
     public SqlDelete getNode() {
@@ -3958,8 +3956,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     public MergeNamespace(SqlValidatorImpl validator, SqlMerge node,
         SqlNode enclosingNode, SqlValidatorScope parentScope) {
       super(validator, node.getTargetTable(), enclosingNode, parentScope);
-      this.node = node;
-      assert node != null;
+      this.node = Preconditions.checkNotNull(node);
     }
 
     public SqlMerge getNode() {
