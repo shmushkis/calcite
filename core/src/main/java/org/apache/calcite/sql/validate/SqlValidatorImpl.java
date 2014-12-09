@@ -1196,9 +1196,8 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
               selfJoinCond,
               condition);
     }
-    SqlIdentifier target =
-        (SqlIdentifier) updateCall.getTargetTable().clone(
-            SqlParserPos.ZERO);
+    SqlNode target =
+        updateCall.getTargetTable().clone(SqlParserPos.ZERO);
 
     // For the source, we need to anonymize the fields, so
     // that for a statement like UPDATE T SET I = I + 1,
@@ -1708,6 +1707,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
    * @param enclosingNode Outermost node for namespace, including decorations
    *                      such as alias and sample clause
    * @param alias         Alias
+   * @param extendList    Definitions of extended columns
    * @param forceNullable Whether to force the type of namespace to be
    *                      nullable because it is in an outer join
    * @return registered node, usually the same as {@code node}
@@ -1718,6 +1718,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       final SqlNode node,
       SqlNode enclosingNode,
       String alias,
+      SqlNodeList extendList,
       boolean forceNullable) {
     final SqlKind kind = node.getKind();
 
@@ -1784,6 +1785,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
               expr,
               enclosingNode,
               alias,
+              extendList,
               forceNullable);
       if (newExpr != expr) {
         call.setOperand(0, newExpr);
@@ -1810,6 +1812,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
               expr,
               enclosingNode,
               alias,
+              extendList,
               forceNullable);
       if (newExpr != expr) {
         call.setOperand(0, newExpr);
@@ -1845,6 +1848,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
               left,
               left,
               null,
+              null,
               forceLeftNullable);
       if (newLeft != left) {
         join.setLeft(newLeft);
@@ -1862,6 +1866,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
               right,
               right,
               null,
+              null,
               forceRightNullable);
       if (newRight != right) {
         join.setRight(newRight);
@@ -1874,9 +1879,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       final SqlIdentifier id = (SqlIdentifier) node;
       final IdentifierNamespace newNs =
           new IdentifierNamespace(
-              this,
-              id,
-              enclosingNode,
+              this, id, extendList, enclosingNode,
               parentScope);
       registerNamespace(usingScope, alias, newNs, forceNullable);
       return newNode;
@@ -1888,6 +1891,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
           ((SqlCall) node).operand(0),
           enclosingNode,
           alias,
+          extendList,
           forceNullable);
 
     case COLLECTION_TABLE:
@@ -1900,6 +1904,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
               operand,
               enclosingNode,
               alias,
+              extendList,
               forceNullable);
       if (newOperand != operand) {
         call.setOperand(0, newOperand);
@@ -1941,6 +1946,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
               operand,
               enclosingNode,
               alias,
+              extendList,
               forceNullable);
       if (newOperand != operand) {
         call.setOperand(0, newOperand);
@@ -1955,6 +1961,16 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       }
 
       return newNode;
+
+    case EXTEND:
+      final SqlCall extend = (SqlCall) node;
+      return registerFrom(parentScope,
+          usingScope,
+          extend.getOperandList().get(0),
+          extend,
+          alias,
+          (SqlNodeList) extend.getOperandList().get(1),
+          forceNullable);
 
     default:
       throw Util.unexpected(kind);
@@ -2091,6 +2107,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
               selectScope,
               from,
               from,
+              null,
               null,
               false);
       if (newFrom != from) {

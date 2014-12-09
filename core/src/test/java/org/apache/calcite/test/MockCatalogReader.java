@@ -68,7 +68,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
 
   public static final Ordering<Iterable<String>>
   CASE_INSENSITIVE_LIST_COMPARATOR =
-      Ordering.<String>from(String.CASE_INSENSITIVE_ORDER).lexicographical();
+      Ordering.from(String.CASE_INSENSITIVE_ORDER).lexicographical();
 
   //~ Instance fields --------------------------------------------------------
 

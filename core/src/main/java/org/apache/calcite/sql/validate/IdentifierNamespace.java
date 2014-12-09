@@ -16,11 +16,16 @@
  */
 package org.apache.calcite.sql.validate;
 
+import com.google.common.collect.Lists;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.Pair;
 
@@ -28,7 +33,9 @@ import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import javax.annotation.Nullable;
 
 import static org.apache.calcite.util.Static.RESOURCE;
 
@@ -41,6 +48,7 @@ public class IdentifierNamespace extends AbstractNamespace {
 
   private final SqlIdentifier id;
   private final SqlValidatorScope parentScope;
+  private final SqlNodeList extendList;
 
   /**
    * The underlying namespace. Often a {@link TableNamespace}.
@@ -60,26 +68,38 @@ public class IdentifierNamespace extends AbstractNamespace {
    *
    * @param validator     Validator
    * @param id            Identifier node (or "identifier EXTEND column-list")
+   * @param extendList    Extension columns, or null
    * @param enclosingNode Enclosing node
    * @param parentScope   Parent scope which this namespace turns to in order to
-   *                      resolve objects
    */
-  IdentifierNamespace(SqlValidatorImpl validator, SqlNode id,
-      SqlNode enclosingNode, SqlValidatorScope parentScope) {
+  IdentifierNamespace(SqlValidatorImpl validator, SqlIdentifier id,
+      @Nullable SqlNodeList extendList, SqlNode enclosingNode,
+      SqlValidatorScope parentScope) {
     super(validator, enclosingNode);
-    switch (id.getKind()) {
-    case EXTEND:
-      final SqlCall call = (SqlCall) id;
-      this.id = (SqlIdentifier) call.getOperandList().get(0);
-      break;
-    default:
-      this.id = (SqlIdentifier) id;
-    }
+    this.id = id;
+    this.extendList = extendList;
     this.parentScope = parentScope;
     assert parentScope != null;
   }
 
+  IdentifierNamespace(SqlValidatorImpl validator, SqlNode node,
+      SqlNode enclosingNode, SqlValidatorScope parentScope) {
+    this(validator, split(node).left, split(node).right, enclosingNode,
+        parentScope);
+  }
+
   //~ Methods ----------------------------------------------------------------
+
+  protected static Pair<SqlIdentifier, SqlNodeList> split(SqlNode node) {
+    switch (node.getKind()) {
+    case EXTEND:
+      final SqlCall call = (SqlCall) node;
+      return Pair.of((SqlIdentifier) call.getOperandList().get(0),
+          (SqlNodeList) call.getOperandList().get(1));
+    default:
+      return Pair.of((SqlIdentifier) node, null);
+    }
+  }
 
   public RelDataType validateImpl() {
     resolvedNamespace = parentScope.getTableNamespace(id.names);
@@ -116,6 +136,24 @@ public class IdentifierNamespace extends AbstractNamespace {
     }
 
     RelDataType rowType = resolvedNamespace.getRowType();
+
+    if (extendList != null) {
+      final List<RelDataTypeField> fields = Lists.newArrayList();
+      final Iterator<SqlNode> extendIterator = extendList.iterator();
+      while (extendIterator.hasNext()) {
+        SqlIdentifier id = (SqlIdentifier) extendIterator.next();
+        SqlDataTypeSpec type = (SqlDataTypeSpec) extendIterator.next();
+        fields.add(
+            new RelDataTypeFieldImpl(id.getSimple(), fields.size(),
+                type.deriveType(validator)));
+      }
+
+      if (!(resolvedNamespace instanceof TableNamespace)) {
+        throw new RuntimeException("cannot convert");
+      }
+      resolvedNamespace = ((TableNamespace) resolvedNamespace).extend(fields);
+      rowType = resolvedNamespace.getRowType();
+    }
 
     // Build a list of monotonic expressions.
     final ImmutableList.Builder<Pair<SqlNode, SqlMonotonicity>> builder =
