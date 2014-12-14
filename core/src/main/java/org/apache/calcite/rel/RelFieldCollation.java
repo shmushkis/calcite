@@ -136,6 +136,14 @@ public class RelFieldCollation {
     return new RelFieldCollation(target, direction, nullDirection);
   }
 
+  /**
+   * Returns a copy of this RelFieldCollation with the field index shifted
+   * {@code offset} to the right.
+   */
+  public RelFieldCollation shift(int offset) {
+    return copy(fieldIndex + offset);
+  }
+
   // implement Object
   public boolean equals(Object obj) {
     if (!(obj instanceof RelFieldCollation)) {

@@ -1462,7 +1462,7 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
     }
 
     // Add the relational expression into the correct set and subset.
-    RelSubset subset2 = asd(rel, set);
+    RelSubset subset2 = addRelToSet(rel, set);
   }
 
   /**
@@ -1536,24 +1536,13 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
     assert set.equivalentSet == null;
 
     // Find the root of set2's equivalence tree.
-    if (set2.equivalentSet != null) {
-      Set<RelSet> seen = new HashSet<RelSet>();
-      while (true) {
-        if (!seen.add(set2)) {
-          throw Util.newInternal("cycle in equivalence tree");
-        }
-        if (set2.equivalentSet == null) {
-          break;
-        } else {
-          set2 = set2.equivalentSet;
-        }
-      }
+    set = equivRoot(set);
+    set2 = equivRoot(set2);
 
-      // Looks like set2 was already marked as equivalent to set. Nothing
-      // to do.
-      if (set2 == set) {
-        return set;
-      }
+    // Looks like set2 was already marked as equivalent to set. Nothing
+    // to do.
+    if (set2 == set) {
+      return set;
     }
 
     // If necessary, swap the sets, so we're always merging the newer set
@@ -1578,6 +1567,33 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
     }
 
     return set;
+  }
+
+  private static RelSet equivRoot(RelSet s) {
+    RelSet p = s; // iterates at twice the rate, to detect cycles
+    while (s.equivalentSet != null) {
+      p = forward2(s, p);
+      s = s.equivalentSet;
+    }
+    return s;
+  }
+
+  /** Moves forward two links, checking for a cycle at each. */
+  private static RelSet forward2(RelSet s, RelSet p) {
+    p = forward1(s, p);
+    p = forward1(s, p);
+    return p;
+  }
+
+  /** Moves forward one link, checking for a cycle. */
+  private static RelSet forward1(RelSet s, RelSet p) {
+    if (p != null) {
+      p = p.equivalentSet;
+      if (p == s) {
+        throw Util.newInternal("cycle in equivalence tree");
+      }
+    }
+    return p;
   }
 
   /**
@@ -1652,8 +1668,12 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
     } else if (equivExp == rel) {
       return getSubset(rel);
     } else {
-      assert equivExp.getTraitSet().equals(traits)
-          && (equivExp.getClass() == rel.getClass());
+      if (!(equivExp.getTraitSet().equals(traits)
+          && (equivExp.getClass() == rel.getClass()))) {
+        assert equivExp.getTraitSet().equals(traits)
+            && (equivExp.getClass() == rel.getClass());
+        throw new AssertionError();
+      }
       assert RelOptUtil.equal(
           "left", equivExp.getRowType(),
           "right", rel.getRowType(),
@@ -1730,7 +1750,7 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
 
     registerCount++;
     final int subsetBeforeCount = set.subsets.size();
-    RelSubset subset = asd(rel, set);
+    RelSubset subset = addRelToSet(rel, set);
 
     final RelNode xx = mapDigestToRel.put(key, rel);
     assert xx == null || xx == rel : rel.getDigest();
@@ -1787,7 +1807,7 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
     return subset;
   }
 
-  private RelSubset asd(RelNode rel, RelSet set) {
+  private RelSubset addRelToSet(RelNode rel, RelSet set) {
     RelSubset subset = set.add(rel);
     mapRel2Subset.put(rel, subset);
 
@@ -1807,7 +1827,7 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
       RelSubset subset) {
     if ((set != subset.set)
         && (set != null)
-        && (subset.set.equivalentSet == null)) {
+        && (set.equivalentSet == null)) {
       LOGGER.finer("Register #" + subset.getId() + " " + subset
           + ", and merge sets");
       merge(set, subset.set);

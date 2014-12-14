@@ -108,6 +108,25 @@ public class RelOptCluster {
     return metadataFactory;
   }
 
+  /** Returns the default trait set for this cluster. */
+  public RelTraitSet traitSet() {
+    return emptyTraitSet;
+  }
+
+  public RelTraitSet traitSetOf(RelTrait trait) {
+    return emptyTraitSet.replace(trait);
+  }
+
+  /**
+   * Returns a trait set with several given traits.
+   *
+   * @param traits Traits
+   *
+   * @deprecated Call instead {@link #traitSet()} followed by a chain of
+   * {@link org.apache.calcite.plan.RelTraitSet#replace(RelTrait)} calls. Will
+   * be removed before {@link org.apache.calcite.util.Bug#upgrade(String) 1.0}
+   */
+  @Deprecated
   public RelTraitSet traitSetOf(RelTrait... traits) {
     RelTraitSet traitSet = emptyTraitSet;
     assert traitSet.size() == planner.getRelTraitDefs().size();

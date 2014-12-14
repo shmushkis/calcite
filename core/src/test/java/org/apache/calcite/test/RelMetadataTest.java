@@ -16,20 +16,36 @@
  */
 package org.apache.calcite.test;
 
+import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelCollations;
+import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
+import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.logical.LogicalSort;
+import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.metadata.CachingRelMetadataProvider;
 import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.metadata.Metadata;
 import org.apache.calcite.rel.metadata.ReflectiveRelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelColumnOrigin;
+import org.apache.calcite.rel.metadata.RelMdCollation;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.util.ImmutableBitSet;
 
 import com.google.common.collect.ImmutableList;
@@ -282,8 +298,7 @@ public class RelMetadataTest extends SqlToRelTestBase {
   }
 
   @Test public void testColumnOriginsDyadicExpression() {
-    checkTwoColumnOrigin(
-        "select name||ename from dept,emp",
+    checkTwoColumnOrigin("select name||ename from dept,emp",
         "DEPT",
         "NAME",
         "EMP",
@@ -347,13 +362,11 @@ public class RelMetadataTest extends SqlToRelTestBase {
   }
 
   @Test public void testColumnOriginsAggReduced() {
-    checkNoColumnOrigin(
-        "select count(deptno),name from dept group by name");
+    checkNoColumnOrigin("select count(deptno),name from dept group by name");
   }
 
   @Test public void testColumnOriginsAggCountNullable() {
-    checkSingleColumnOrigin(
-        "select count(mgr),ename from emp group by ename",
+    checkSingleColumnOrigin("select count(mgr),ename from emp group by ename",
         "EMP",
         "MGR",
         true);
@@ -398,9 +411,7 @@ public class RelMetadataTest extends SqlToRelTestBase {
 
   @Ignore
   @Test public void testRowCountEmp() {
-    checkRowCount(
-        "select * from emp",
-        EMP_SIZE);
+    checkRowCount("select * from emp", EMP_SIZE);
   }
 
   @Ignore
@@ -455,8 +466,7 @@ public class RelMetadataTest extends SqlToRelTestBase {
   }
 
   @Test public void testSelectivityIsNotNullFilter() {
-    checkFilterSelectivity(
-        "select * from emp where mgr is not null",
+    checkFilterSelectivity("select * from emp where mgr is not null",
         DEFAULT_NOTNULL_SELECTIVITY);
   }
 
@@ -547,8 +557,7 @@ public class RelMetadataTest extends SqlToRelTestBase {
     RelNode rel = convertSql("select * from emp where deptno = 10");
     ImmutableBitSet groupKey = ImmutableBitSet.of();
     Double result =
-        RelMetadataQuery.getDistinctRowCount(
-            rel, groupKey, null);
+        RelMetadataQuery.getDistinctRowCount(rel, groupKey, null);
     assertTrue(result == null);
   }
 
@@ -633,6 +642,60 @@ public class RelMetadataTest extends SqlToRelTestBase {
     assertThat(input.metadata(ColType.class).getColType(0),
         equalTo("DEPTNO-agg"));
     assertThat(buf.size(), equalTo(7));
+  }
+
+  /** Unit test for
+   * {@link org.apache.calcite.rel.metadata.RelMdCollation#project}
+   * and other helper functions for deducing collations. */
+  @Test public void testCollation() {
+    final Project rel = (Project) convertSql("select * from emp");
+    final RelOptTable table = rel.getInput().getTable();
+    Frameworks.withPlanner(
+        new Frameworks.PlannerAction<Void>() {
+          public Void apply(RelOptCluster cluster,
+              RelOptSchema relOptSchema,
+              SchemaPlus rootSchema) {
+            checkCollation(cluster, table);
+            return null;
+          }
+        });
+  }
+
+  private void checkCollation(RelOptCluster cluster, RelOptTable empTable) {
+    final RexBuilder rexBuilder = cluster.getRexBuilder();
+    final LogicalTableScan scan = new LogicalTableScan(cluster, empTable);
+
+    List<RelCollation> collations =
+        RelMdCollation.table(scan.getTable());
+    assertThat(collations.size(), equalTo(0));
+
+    // ORDER BY field#0 ASC, field#1 ASC
+    final RelCollation collation =
+        RelCollations.of(new RelFieldCollation(0), new RelFieldCollation(1));
+    collations = RelMdCollation.sort(collation);
+    assertThat(collations.size(), equalTo(1));
+    assertThat(collations.get(0).getFieldCollations().size(), equalTo(2));
+
+    final Sort sort = LogicalSort.create(scan, collation, null, null);
+
+    final List<RexNode> projects =
+        ImmutableList.of(rexBuilder.makeInputRef(sort, 1),
+            rexBuilder.makeLiteral("foo"),
+            rexBuilder.makeInputRef(sort, 0),
+            rexBuilder.makeCall(SqlStdOperatorTable.MINUS,
+                rexBuilder.makeInputRef(sort, 0),
+                rexBuilder.makeInputRef(sort, 3)));
+
+    collations = RelMdCollation.project(sort, projects);
+    assertThat(collations.size(), equalTo(1));
+    assertThat(collations.get(0).getFieldCollations().size(), equalTo(2));
+    assertThat(collations.get(0).getFieldCollations().get(0).getFieldIndex(),
+        equalTo(2));
+    assertThat(collations.get(0).getFieldCollations().get(1).getFieldIndex(),
+        equalTo(0));
+
+    final LogicalProject project = LogicalProject.create(sort, projects,
+        ImmutableList.of("a", "b", "c", "d"));
   }
 
   /** Custom metadata interface. */

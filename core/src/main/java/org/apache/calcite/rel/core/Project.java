@@ -90,12 +90,9 @@ public abstract class Project extends SingleRel {
     assert rowType != null;
     this.exps = ImmutableList.copyOf(exps);
     this.rowType = rowType;
-    final RelCollation collation =
-        traits.getTrait(RelCollationTraitDef.INSTANCE);
-    this.collationList =
-        collation == null
-            ? ImmutableList.<RelCollation>of()
-            : ImmutableList.of(collation);
+    this.collationList = ImmutableList.copyOf(
+        Util.first(traits.getTraits(RelCollationTraitDef.INSTANCE),
+            ImmutableList.<RelCollation>of()));
     assert isValid(true);
   }
 
@@ -193,8 +190,8 @@ public abstract class Project extends SingleRel {
       return false;
     }
     if (!collationList.isEmpty()
-        && collationList.get(0)
-        != traitSet.getTrait(RelCollationTraitDef.INSTANCE)) {
+        && !collationList.equals(
+            traitSet.getTraits(RelCollationTraitDef.INSTANCE))) {
       assert !fail;
       return false;
     }

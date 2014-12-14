@@ -1153,6 +1153,11 @@ public class Util {
     return buf.toString();
   }
 
+  /** Converts a list of strings to a string separated by newlines. */
+  public static String lines(Iterable<String> strings) {
+    return toString(strings, "", "\n", "");
+  }
+
   /**
    * Converts a Java timezone to POSIX format, so that the boost C++ library
    * can instantiate timezone objects.

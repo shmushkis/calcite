@@ -22,7 +22,7 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollationImpl;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.SingleRel;
@@ -112,10 +112,7 @@ public abstract class Calc extends SingleRel {
     if (!program.isNormalized(fail, getCluster().getRexBuilder())) {
       return false;
     }
-    if (!RelCollationImpl.isValid(
-        getRowType(),
-        collationList,
-        fail)) {
+    if (!RelCollations.isValid(getRowType(), collationList, fail)) {
       return false;
     }
     return true;

@@ -18,7 +18,7 @@ package org.apache.calcite.rex;
 
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollationImpl;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.externalize.RelWriterImpl;
@@ -596,7 +596,7 @@ public class RexProgram {
 
       // Success -- all of the source fields of this key are mapped
       // to the output.
-      outputCollations.add(RelCollationImpl.of(fieldCollations));
+      outputCollations.add(RelCollations.of(fieldCollations));
     }
   }
 
@@ -670,7 +670,7 @@ public class RexProgram {
     }
     refCounts = new int[exprs.size()];
     ReferenceCounter refCounter = new ReferenceCounter();
-    apply(refCounter, exprs, null);
+    RexUtil.apply(refCounter, exprs, null);
     if (condition != null) {
       refCounter.visitLocalRef(condition);
     }
@@ -687,17 +687,16 @@ public class RexProgram {
    * @param visitor Visitor
    * @param exprs   Array of expressions
    * @param expr    Single expression, may be null
+   *
+   * @deprecated Use
+   * {@link org.apache.calcite.rex.RexUtil#apply(RexVisitor, java.util.List, RexNode)};
+   * will be removed before {@link org.apache.calcite.util.Bug#upgrade 1.0}
    */
   public static void apply(
       RexVisitor<Void> visitor,
       List<RexNode> exprs,
       RexNode expr) {
-    for (RexNode expr0 : exprs) {
-      expr0.accept(visitor);
-    }
-    if (expr != null) {
-      expr.accept(visitor);
-    }
+    RexUtil.apply(visitor, exprs, expr);
   }
 
   /**
@@ -777,7 +776,7 @@ public class RexProgram {
    */
   public HashSet<String> getCorrelVariableNames() {
     final HashSet<String> paramIdSet = new HashSet<String>();
-    apply(
+    RexUtil.apply(
         new RexVisitorImpl<Void>(true) {
           public Void visitCorrelVariable(
               RexCorrelVariable correlVariable) {

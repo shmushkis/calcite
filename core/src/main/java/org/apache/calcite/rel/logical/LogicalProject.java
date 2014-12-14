@@ -19,14 +19,17 @@ package org.apache.calcite.rel.logical;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelCollationImpl;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelInput;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelShuttle;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.metadata.RelMdCollation;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.util.Pair;
 
 import java.util.List;
 
@@ -52,7 +55,7 @@ public final class LogicalProject extends Project {
       List<String> fieldNames) {
     this(
         cluster,
-        cluster.traitSetOf(RelCollationImpl.EMPTY),
+        cluster.traitSetOf(RelCollations.EMPTY),
         child,
         exps,
         RexUtil.createStructType(
@@ -88,6 +91,23 @@ public final class LogicalProject extends Project {
   }
 
   //~ Methods ----------------------------------------------------------------
+
+  /** Creates a LogicalProject. */
+  public static LogicalProject create(RelNode input,
+      List<? extends RexNode> projects, List<String> fieldNames) {
+    assert projects.size() == fieldNames.size();
+    final RelOptCluster cluster = input.getCluster();
+    final RelDataTypeFactory.FieldInfoBuilder builder =
+        cluster.getTypeFactory().builder();
+    for (Pair<String, ? extends RexNode> p : Pair.zip(fieldNames, projects)) {
+      builder.add(p.left, p.right.getType());
+    }
+    final RelTraitSet traitSet =
+        cluster.traitSet().replace(Convention.NONE)
+            .replace(RelMdCollation.project(input, projects));
+    return new LogicalProject(cluster, traitSet, input, projects,
+        builder.build());
+  }
 
   @Override public LogicalProject copy(RelTraitSet traitSet, RelNode input,
       List<RexNode> exps, RelDataType rowType) {

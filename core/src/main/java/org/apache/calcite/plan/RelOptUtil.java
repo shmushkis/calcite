@@ -18,7 +18,7 @@ package org.apache.calcite.plan;
 
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollationImpl;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelHomogeneousShuttle;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelShuttle;
@@ -2700,7 +2700,7 @@ public abstract class RelOptUtil {
     }
     return new LogicalProject(cluster,
         cluster.traitSetOf(collationList.isEmpty()
-            ? RelCollationImpl.EMPTY
+            ? RelCollations.EMPTY
             : collationList.get(0)),
         child,
         exprs,
@@ -3079,7 +3079,7 @@ public abstract class RelOptUtil {
      */
     public static ImmutableBitSet bits(List<RexNode> exprs, RexNode expr) {
       final InputFinder inputFinder = new InputFinder();
-      RexProgram.apply(inputFinder, exprs, expr);
+      RexUtil.apply(inputFinder, exprs, expr);
       return inputFinder.inputBitSet.build();
     }
 

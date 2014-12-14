@@ -20,7 +20,7 @@ import org.apache.calcite.avatica.util.Spaces;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.prepare.CalcitePrepareImpl;
 import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollationImpl;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.SingleRel;
 import org.apache.calcite.rel.core.Aggregate;
@@ -591,7 +591,7 @@ public class SubstitutionVisitor {
     case PROJECT:
       final MutableProject project = (MutableProject) node;
       return new LogicalProject(node.cluster,
-          node.cluster.traitSetOf(RelCollationImpl.EMPTY),
+          node.cluster.traitSetOf(RelCollations.EMPTY),
           fromMutable(project.input),
           project.projects, project.rowType);
     case FILTER:

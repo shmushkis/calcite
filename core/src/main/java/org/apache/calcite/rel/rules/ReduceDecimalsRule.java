@@ -1218,10 +1218,9 @@ public class ReduceDecimalsRule extends RelOptRule {
     public abstract RelDataType getArgType(RexCall call, int ordinal);
 
     public RexNode expand(RexCall call) {
-      List<RexNode> operands = call.operands;
       ImmutableList.Builder<RexNode> opBuilder = ImmutableList.builder();
 
-      for (Ord<RexNode> operand : Ord.zip(operands)) {
+      for (Ord<RexNode> operand : Ord.zip(call.operands)) {
         RelDataType targetType = getArgType(call, operand.i);
         if (SqlTypeUtil.isDecimal(operand.e.getType())) {
           opBuilder.add(ensureType(targetType, operand.e, true));

@@ -139,10 +139,8 @@ class RelSet {
    */
   public RelSubset add(RelNode rel) {
     assert equivalentSet == null : "adding to a dead set";
-    RelSubset subset =
-        getOrCreateSubset(
-            rel.getCluster(),
-            rel.getTraitSet());
+    final RelTraitSet traitSet = rel.getTraitSet().simplify();
+    final RelSubset subset = getOrCreateSubset(rel.getCluster(), traitSet);
     subset.add(rel);
     return subset;
   }

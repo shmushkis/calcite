@@ -68,9 +68,9 @@ public class JdbcFrontLinqBackTest {
             + "from \"foodmart\".\"sales_fact_1997\" as s\n"
             + "join \"hr\".\"emps\" as e\n"
             + "on e.\"empid\" = s.\"cust_id\"")
-        .returns(""
-            + "cust_id=100; prod_id=10; empid=100; deptno=10; name=Bill; salary=10000.0; commission=1000\n"
-            + "cust_id=150; prod_id=20; empid=150; deptno=10; name=Sebastian; salary=7000.0; commission=null\n");
+        .returnsUnordered(
+            "cust_id=100; prod_id=10; empid=100; deptno=10; name=Bill; salary=10000.0; commission=1000",
+            "cust_id=150; prod_id=20; empid=150; deptno=10; name=Sebastian; salary=7000.0; commission=null");
   }
 
   /**

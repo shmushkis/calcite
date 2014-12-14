@@ -14,31 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.schema;
-
-import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.util.ImmutableBitSet;
-
-import java.util.List;
+package org.apache.calcite.plan;
 
 /**
- * Statistics about a {@link Table}.
+ * Trait for which a given relational expression can have multiple values.
  *
- * <p>Each of the methods may return {@code null} meaning "not known".</p>
- *
- * @see Statistics
+ * <p>The most common example is sorted-ness (collation). The TIME dimension
+ * table might be sorted by [year, month, date] and also by [time_id].
  */
-public interface Statistic {
-  /** Returns the approximate number of rows in the table. */
-  Double getRowCount();
-
-  /** Returns whether the given set of columns is a unique key, or a superset
-   * of a unique key, of the table.
-   */
-  boolean isKey(ImmutableBitSet columns);
-
-  /** Returns the collections of columns on which this table is sorted. */
-  List<RelCollation> getCollations();
+public interface RelMultipleTrait
+    extends RelTrait, Comparable<RelMultipleTrait> {
 }
 
-// End Statistic.java
+// End RelMultipleTrait.java

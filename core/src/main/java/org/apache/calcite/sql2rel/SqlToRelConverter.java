@@ -27,7 +27,7 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollationImpl;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelShuttle;
@@ -602,7 +602,7 @@ public class SqlToRelConverter {
         orderExprList,
         collationList);
     final RelCollation collation =
-        cluster.traitSetOf().canonize(RelCollationImpl.of(collationList));
+        cluster.traitSet().canonize(RelCollations.of(collationList));
 
     if (validator.isAggregate(select)) {
       convertAgg(
@@ -780,7 +780,7 @@ public class SqlToRelConverter {
       bb.setRoot(
           new LogicalProject(
               cluster,
-              cluster.traitSetOf(RelCollationImpl.PRESERVE),
+              cluster.traitSetOf(RelCollations.PRESERVE),
               bb.root,
               exprs,
               cluster.getTypeFactory().createStructType(

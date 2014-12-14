@@ -20,7 +20,7 @@ import org.apache.calcite.adapter.splunk.util.StringUtils;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
-import org.apache.calcite.rel.RelCollationImpl;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
@@ -283,7 +283,7 @@ public class SplunkPushDownRule
         proj.getCluster(),
         proj.getCluster().traitSetOf(
             proj.getCollationList().isEmpty()
-                ? RelCollationImpl.EMPTY
+                ? RelCollations.EMPTY
                 : proj.getCollationList().get(0)),
         rel, proj.getProjects(), proj.getRowType());
   }

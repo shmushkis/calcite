@@ -81,6 +81,25 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
     return traits[index];
   }
 
+  /**
+   * Retrieves a list of traits from the set.
+   *
+   * @param index 0-based index into ordered RelTraitSet
+   * @return the RelTrait
+   * @throws ArrayIndexOutOfBoundsException if index greater than or equal to
+   *                                        {@link #size()} or less than 0.
+   */
+  public <E extends RelMultipleTrait> List<E> getTraits(int index) {
+    final RelTrait trait = traits[index];
+    if (trait instanceof RelCompositeTrait) {
+      //noinspection unchecked
+      return ((RelCompositeTrait<E>) trait).traitList();
+    } else {
+      //noinspection unchecked
+      return ImmutableList.of((E) trait);
+    }
+  }
+
   public RelTrait get(int index) {
     return getTrait(index);
   }
@@ -96,6 +115,25 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
     if (index >= 0) {
       //noinspection unchecked
       return (T) getTrait(index);
+    }
+
+    return null;
+  }
+
+  /**
+   * Retrieves a list of traits of the given type from the set.
+   *
+   * <p>Only valid for traits that support multiple entries. (E.g. collation.)
+   *
+   * @param traitDef the type of RelTrait to retrieve
+   * @return the RelTrait, or null if not found
+   */
+  public <T extends RelMultipleTrait> List<T> getTraits(
+      RelTraitDef<T> traitDef) {
+    int index = findIndex(traitDef);
+    if (index >= 0) {
+      //noinspection unchecked
+      return (List<T>) getTraits(index);
     }
 
     return null;
@@ -144,6 +182,31 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
     return replace(index, trait);
   }
 
+  /** Replaces the trait(s) of a given type with a list of traits of the same
+   * type.
+   *
+   * <p>The list must not be empty, and all traits must be of the same type.
+   */
+  public <T extends RelMultipleTrait> RelTraitSet replace(List<T> traits) {
+    return replace(RelCompositeTrait.of(traits));
+  }
+
+  /** Replaces the trait(s) of a given type with a list of traits of the same
+   * type.
+   *
+   * <p>The list must not be empty, and all traits must be of the same type.
+   */
+  public <T extends RelMultipleTrait> RelTraitSet replace(RelTraitDef<T> def,
+      List<T> traits) {
+    final RelCompositeTrait<T> compositeTrait;
+    if (traits.isEmpty()) {
+      compositeTrait = RelCompositeTrait.empty(def);
+    } else {
+      compositeTrait = RelCompositeTrait.of(traits);
+    }
+    return replace(compositeTrait);
+  }
+
   /**
    * Returns the size of the RelTraitSet.
    *
@@ -164,6 +227,11 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
   public <T extends RelTrait> T canonize(T trait) {
     if (trait == null) {
       return null;
+    }
+
+    if (trait instanceof RelCompositeTrait) {
+      //noinspection unchecked
+      return (T) ((RelCompositeTrait) trait).canonize(trait.getTraitDef());
     }
 
     //noinspection unchecked
@@ -391,6 +459,32 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
       }
     }
     return builder.build();
+  }
+
+  /** Returns whether there are any composite traits in this set. */
+  public boolean allSimple() {
+    for (RelTrait trait : traits) {
+      if (trait instanceof RelCompositeTrait) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Returns a trait set similar to this one but with all composite traits
+   * flattened. */
+  public RelTraitSet simplify() {
+    RelTraitSet x = this;
+    for (int i = 0; i < traits.length; i++) {
+      final RelTrait trait = traits[i];
+      if (trait instanceof RelCompositeTrait) {
+        //noinspection unchecked
+        final RelCompositeTrait<RelMultipleTrait> compositeTrait =
+            (RelCompositeTrait<RelMultipleTrait>) trait;
+        x = x.replace(i, compositeTrait.trait(0));
+      }
+    }
+    return x;
   }
 
   /** Cache of trait sets. */
