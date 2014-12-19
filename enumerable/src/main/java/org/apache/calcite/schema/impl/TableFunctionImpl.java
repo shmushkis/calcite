@@ -46,8 +46,8 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * Implementation of {@link org.apache.calcite.schema.TableFunction} based on a
  * method.
 */
-public class TableFunctionImpl extends ReflectiveFunctionBase implements
-    TableFunction, ImplementableFunction {
+public class TableFunctionImpl extends ReflectiveFunctionBase
+    implements TableFunction, ImplementableFunction {
   private final CallImplementor implementor;
 
   /** Private constructor; use {@link #create}. */

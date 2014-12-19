@@ -38,6 +38,9 @@ limitations under the License.
   <!-- Suppress JavadocPackage in the test packages -->
   <suppress checks="JavadocPackage" files="src[/\\]test[/\\]java[/\\]"/>
 
+  <!-- Suppress JavadocPackage in the enumerable module -->
+  <suppress checks="JavadocPackage" files="enumerable[/\\]src[/\\]test[/\\]java[/\\]"/>
+
   <!-- And likewise in ubenchmark -->
   <suppress checks="JavadocPackage" files="StatementTest.java"/>
 
