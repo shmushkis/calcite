@@ -17,7 +17,6 @@
 package org.apache.calcite.prepare;
 
 import org.apache.calcite.DataContext;
-import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.adapter.enumerable.EnumerableRel;
 import org.apache.calcite.adapter.enumerable.EnumerableRelImplementor;
 import org.apache.calcite.adapter.enumerable.EnumerableRules;
@@ -25,10 +24,11 @@ import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.AvaticaParameter;
 import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.avatica.Helper;
 import org.apache.calcite.avatica.Meta;
-import org.apache.calcite.avatica.util.Spaces;
 import org.apache.calcite.config.CalciteConnectionConfig;
+import org.apache.calcite.interpreter.BindableConvention;
+import org.apache.calcite.interpreter.Interpreters;
+import org.apache.calcite.interpreter.NoneToBindableConverterRule;
 import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.Enumerable;
@@ -39,7 +39,6 @@ import org.apache.calcite.linq4j.function.Function1;
 import org.apache.calcite.linq4j.tree.BinaryExpression;
 import org.apache.calcite.linq4j.tree.BlockStatement;
 import org.apache.calcite.linq4j.tree.Blocks;
-import org.apache.calcite.linq4j.tree.ClassDeclaration;
 import org.apache.calcite.linq4j.tree.ConstantExpression;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
@@ -89,7 +88,6 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.runtime.Bindable;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.runtime.Typed;
-import org.apache.calcite.runtime.Utilities;
 import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.server.CalciteServerStatement;
 import org.apache.calcite.sql.SqlBinaryOperator;
@@ -115,15 +113,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 
-import org.codehaus.commons.compiler.CompileException;
-import org.codehaus.commons.compiler.CompilerFactoryFactory;
-import org.codehaus.commons.compiler.IClassBodyEvaluator;
-import org.codehaus.commons.compiler.ICompilerFactory;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.StringReader;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.sql.DatabaseMetaData;
@@ -166,6 +155,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
 
   private static final List<RelOptRule> DEFAULT_RULES =
       ImmutableList.of(
+          NoneToBindableConverterRule.INSTANCE,
           EnumerableRules.ENUMERABLE_JOIN_RULE,
           EnumerableRules.ENUMERABLE_SEMI_JOIN_RULE,
           EnumerableRules.ENUMERABLE_CORRELATE_RULE,
@@ -257,7 +247,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
             context.getRootSchema(),
             null,
             new HepPlanner(new HepProgramBuilder().build()),
-            EnumerableConvention.INSTANCE);
+            BindableConvention.INSTANCE);
     final SqlToRelConverter converter =
         preparingStmt.getSqlToRelConverter(validator, catalogReader);
     final RelNode relNode = converter.convertQuery(sqlNode1, false, true);
@@ -443,7 +433,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
             context.getRootSchema(),
             prefer,
             planner,
-            EnumerableConvention.INSTANCE);
+            BindableConvention.INSTANCE);
 
     final RelDataType x;
     final Prepare.PreparedResult preparedResult;
@@ -524,6 +514,8 @@ public class CalcitePrepareImpl implements CalcitePrepare {
     if (preparedResult instanceof Typed) {
       resultClazz = (Class) ((Typed) preparedResult).getElementType();
     }
+    //noinspection unchecked
+    final Bindable<T> bindable = preparedResult.getBindable();
     return new CalciteSignature<T>(
         sql,
         parameters,
@@ -532,7 +524,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
         columns,
         Meta.CursorFactory.deduce(columns, resultClazz),
         maxRowCount,
-        preparedResult.getBindable());
+        bindable);
   }
 
   private List<ColumnMetaData> getColumnMetaDataList(
@@ -861,27 +853,9 @@ public class CalcitePrepareImpl implements CalcitePrepare {
         SqlKind sqlKind) {
       RelDataType resultType = rootRel.getRowType();
       boolean isDml = sqlKind.belongsTo(SqlKind.DML);
-      EnumerableRelImplementor relImplementor =
-          getRelImplementor(rootRel.getCluster().getRexBuilder());
-      ClassDeclaration expr =
-          relImplementor.implementRoot((EnumerableRel) rootRel, prefer);
-      String s = Expressions.toString(expr.memberDeclarations, "\n", false);
 
-      if (DEBUG) {
-        debugCode(System.out, s);
-      }
-
-      Hook.JAVA_PLAN.run(s);
-
-      final Bindable bindable;
-      try {
-        bindable = getBindable(expr, s);
-      } catch (Exception e) {
-        throw Helper.INSTANCE.wrap(
-            "Error while compiling generated Java code:\n"
-            + s,
-            e);
-      }
+      final Bindable bindable = Interpreters.bindable(rootRel);
+      assert bindable instanceof Typed;
 
       if (timingTracer != null) {
         timingTracer.traceTime("end codegen");
@@ -910,54 +884,6 @@ public class CalcitePrepareImpl implements CalcitePrepare {
           return ((Typed) bindable).getElementType();
         }
       };
-    }
-
-    /**
-     * Prints the given code with line numbering.
-     */
-    private void debugCode(PrintStream out, String code) {
-      out.println();
-      StringReader sr = new StringReader(code);
-      BufferedReader br = new BufferedReader(sr);
-      try {
-        String line;
-        for (int i = 1; (line = br.readLine()) != null; i++) {
-          out.print("/*");
-          String number = Integer.toString(i);
-          if (number.length() < 4) {
-            Spaces.append(out, 4 - number.length());
-          }
-          out.print(number);
-          out.print(" */ ");
-          out.println(line);
-        }
-      } catch (IOException e) {
-        // not possible
-      }
-    }
-
-    private Bindable getBindable(ClassDeclaration expr,
-        String s) throws CompileException, IOException {
-      if (context.spark().enabled()) {
-        return context.spark().compile(expr, s);
-      }
-      ICompilerFactory compilerFactory;
-      try {
-        compilerFactory = CompilerFactoryFactory.getDefaultCompilerFactory();
-      } catch (Exception e) {
-        throw new IllegalStateException(
-            "Unable to instantiate java compiler", e);
-      }
-      IClassBodyEvaluator cbe = compilerFactory.newClassBodyEvaluator();
-      cbe.setClassName(expr.name);
-      cbe.setExtendedClass(Utilities.class);
-      cbe.setImplementedInterfaces(new Class[]{Bindable.class, Typed.class});
-      cbe.setParentClassLoader(getClass().getClassLoader());
-      if (DEBUG) {
-        // Add line numbers to the generated janino class
-        cbe.setDebuggingInformation(true, true, true);
-      }
-      return (Bindable) cbe.createInstance(new StringReader(s));
     }
   }
 

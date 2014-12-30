@@ -368,6 +368,7 @@ public class Interpreter extends AbstractEnumerable<Object[]> {
     public void rewrite(RelNode r) {
     }
   }
+
 }
 
 // End Interpreter.java

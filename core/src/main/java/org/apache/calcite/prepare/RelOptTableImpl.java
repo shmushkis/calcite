@@ -16,16 +16,13 @@
  */
 package org.apache.calcite.prepare;
 
-import org.apache.calcite.adapter.enumerable.EnumerableConvention;
-import org.apache.calcite.adapter.enumerable.EnumerableInterpreter;
-import org.apache.calcite.adapter.enumerable.EnumerableTableScan;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.tree.Expression;
-import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.ExtensibleTable;
@@ -45,7 +42,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
 
-import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 
@@ -196,34 +192,7 @@ public class RelOptTableImpl implements Prepare.PreparingTable {
     if (table instanceof TranslatableTable) {
       return ((TranslatableTable) table).toRel(context, this);
     }
-    RelOptCluster cluster = context.getCluster();
-    Class elementType = deduceElementType();
-    final RelNode scan = new EnumerableTableScan(cluster,
-        cluster.traitSetOf(EnumerableConvention.INSTANCE), this, elementType);
-    if (table instanceof FilterableTable
-        || table instanceof ProjectableFilterableTable) {
-      return new EnumerableInterpreter(cluster, scan.getTraitSet(),
-          scan, 1d);
-    }
-    return scan;
-  }
-
-  private Class deduceElementType() {
-    if (table instanceof QueryableTable) {
-      final QueryableTable queryableTable = (QueryableTable) table;
-      final Type type = queryableTable.getElementType();
-      if (type instanceof Class) {
-        return (Class) type;
-      } else {
-        return Object[].class;
-      }
-    } else if (table instanceof ScannableTable
-        || table instanceof FilterableTable
-        || table instanceof ProjectableFilterableTable) {
-      return Object[].class;
-    } else {
-      return Object.class;
-    }
+    return new LogicalTableScan(context.getCluster(), this);
   }
 
   public List<RelCollation> getCollationList() {
