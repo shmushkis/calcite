@@ -1544,6 +1544,23 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
       };
 
   /**
+   * The sequence current value function: <code>CURRENT VALUE FOR
+   * sequence</code>
+   */
+  public static final SqlFunction CURRENT_VALUE =
+      new SqlFunction(
+          "CURRENT_VALUE",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.BIGINT,
+          null,
+          OperandTypes.CHARACTER,
+          SqlFunctionCategory.SYSTEM) {
+        public boolean isDeterministic() {
+          return false;
+        }
+      };
+
+  /**
    * The <code>TABLESAMPLE</code> operator.
    *
    * <p>Examples:
