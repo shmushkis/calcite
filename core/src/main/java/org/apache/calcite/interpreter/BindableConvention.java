@@ -21,7 +21,6 @@ import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitDef;
-import org.apache.calcite.runtime.ArrayBindable;
 
 /**
  * Calling convention that returns results as an
@@ -40,7 +39,7 @@ public enum BindableConvention implements Convention {
   }
 
   public Class getInterface() {
-    return ArrayBindable.class;
+    return BindableRel.class;
   }
 
   public String getName() {

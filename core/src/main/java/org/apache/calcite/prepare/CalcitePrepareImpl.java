@@ -17,6 +17,7 @@
 package org.apache.calcite.prepare;
 
 import org.apache.calcite.DataContext;
+import org.apache.calcite.adapter.enumerable.EnumerableBindable;
 import org.apache.calcite.adapter.enumerable.EnumerableRel;
 import org.apache.calcite.adapter.enumerable.EnumerableRelImplementor;
 import org.apache.calcite.adapter.enumerable.EnumerableRules;
@@ -27,6 +28,7 @@ import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.interpreter.BindableConvention;
+import org.apache.calcite.interpreter.Bindables;
 import org.apache.calcite.interpreter.Interpreters;
 import org.apache.calcite.interpreter.NoneToBindableConverterRule;
 import org.apache.calcite.jdbc.CalcitePrepare;
@@ -156,6 +158,8 @@ public class CalcitePrepareImpl implements CalcitePrepare {
   private static final List<RelOptRule> DEFAULT_RULES =
       ImmutableList.of(
           NoneToBindableConverterRule.INSTANCE,
+          EnumerableBindable.EnumerableToBindableConverterRule.INSTANCE,
+          Bindables.BINDABLE_TABLE_RULE,
           EnumerableRules.ENUMERABLE_JOIN_RULE,
           EnumerableRules.ENUMERABLE_SEMI_JOIN_RULE,
           EnumerableRules.ENUMERABLE_CORRELATE_RULE,

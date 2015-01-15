@@ -16,35 +16,16 @@
  */
 package org.apache.calcite.interpreter;
 
-import org.apache.calcite.DataContext;
-import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.runtime.ArrayBindable;
 
 /**
- * Utilities relating to {@link org.apache.calcite.interpreter.Interpreter}
- * and {@link org.apache.calcite.interpreter.InterpretableConvention}.
+ * Relational expression that can implement itself in Bindable
+ * convention.
+ *
+ * @see org.apache.calcite.interpreter.BindableConvention
  */
-public class Interpreters {
-  private Interpreters() {}
-
-  /** Creates a {@link org.apache.calcite.runtime.Bindable} that interprets a
-   * given relational expression. */
-  public static ArrayBindable bindable(final RelNode rel) {
-    if (rel instanceof ArrayBindable) {
-      // E.g. if rel instanceof BindableRel
-      return (ArrayBindable) rel;
-    }
-    return new ArrayBindable() {
-      public Enumerable<Object[]> bind(DataContext dataContext) {
-        return new Interpreter(dataContext, rel);
-      }
-
-      public Class<Object[]> getElementType() {
-        return Object[].class;
-      }
-    };
-  }
+public interface BindableRel extends RelNode, ArrayBindable {
 }
 
-// End Interpreters.java
+// End BindableRel.java

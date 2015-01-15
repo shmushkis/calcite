@@ -24,18 +24,19 @@ import org.apache.calcite.interpreter.Interpreter;
 import org.apache.calcite.interpreter.Node;
 import org.apache.calcite.interpreter.Row;
 import org.apache.calcite.interpreter.Sink;
+import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.tree.ClassDeclaration;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.prepare.CalcitePrepareImpl;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterImpl;
-import org.apache.calcite.runtime.Bindable;
+import org.apache.calcite.runtime.ArrayBindable;
 import org.apache.calcite.runtime.Hook;
-import org.apache.calcite.runtime.Typed;
 import org.apache.calcite.runtime.Utilities;
 
 import org.codehaus.commons.compiler.CompileException;
@@ -47,26 +48,44 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.StringReader;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Relational expression that converts an enumerable input to interpretable
  * calling convention.
+ *
+ * @see EnumerableConvention
+ * @see org.apache.calcite.interpreter.BindableConvention
  */
 public class EnumerableInterpretable extends ConverterImpl
     implements InterpretableRel {
   protected EnumerableInterpretable(RelOptCluster cluster, RelNode input) {
-    super(cluster, ConventionTraitDef.INSTANCE, cluster.traitSetOf(
-        InterpretableConvention.INSTANCE), input);
+    super(cluster, ConventionTraitDef.INSTANCE,
+        cluster.traitSetOf(InterpretableConvention.INSTANCE), input);
+  }
+
+  @Override public EnumerableInterpretable copy(RelTraitSet traitSet,
+      List<RelNode> inputs) {
+    return new EnumerableInterpretable(getCluster(), sole(inputs));
   }
 
   public Node implement(final InterpreterImplementor implementor) {
-    EnumerableRelImplementor relImplementor =
-        new EnumerableRelImplementor(getCluster().getRexBuilder(),
-            implementor.internalParameters);
+    final ArrayBindable bindable = toBindable(implementor.internalParameters,
+        implementor.spark, (EnumerableRel) getInput());
+    final Enumerable<Object[]> enumerable =
+        bindable.bind(implementor.dataContext);
+    return new EnumerableNode(enumerable, implementor.interpreter, this);
+  }
 
-    final EnumerableRel input = (EnumerableRel) getInput();
+  static ArrayBindable toBindable(Map<String, Object> parameters,
+      CalcitePrepare.SparkHandler spark, EnumerableRel rel) {
+    EnumerableRelImplementor relImplementor =
+        new EnumerableRelImplementor(rel.getCluster().getRexBuilder(),
+            parameters);
+
     final ClassDeclaration expr =
-        relImplementor.implementRoot(input, EnumerableRel.Prefer.ARRAY);
+        relImplementor.implementRoot(rel, EnumerableRel.Prefer.ARRAY);
     String s = Expressions.toString(expr.memberDeclarations, "\n", false);
 
     if (CalcitePrepareImpl.DEBUG) {
@@ -75,10 +94,10 @@ public class EnumerableInterpretable extends ConverterImpl
 
     Hook.JAVA_PLAN.run(s);
 
-    final Bindable bindable;
+    final ArrayBindable bindable;
     try {
-      if (implementor.spark.enabled()) {
-        bindable = implementor.spark.compile(expr, s);
+      if (spark != null && spark.enabled()) {
+        bindable = spark.compile(expr, s);
       } else {
         bindable = getBindable(expr, s);
       }
@@ -86,16 +105,13 @@ public class EnumerableInterpretable extends ConverterImpl
       throw Helper.INSTANCE.wrap("Error while compiling generated Java code:\n"
           + s, e);
     }
-    //noinspection unchecked
-    final Enumerable<Object[]> enumerable =
-        bindable.bind(implementor.dataContext);
-    return new EnumerableNode(enumerable, implementor.interpreter, this);
+    return bindable;
   }
 
   /**
    * Prints the given code with line numbering.
    */
-  private void debugCode(PrintStream out, String code) {
+  private static void debugCode(PrintStream out, String code) {
     out.println();
     StringReader sr = new StringReader(code);
     BufferedReader br = new BufferedReader(sr);
@@ -116,7 +132,7 @@ public class EnumerableInterpretable extends ConverterImpl
     }
   }
 
-  private Bindable getBindable(ClassDeclaration expr, String s)
+  static ArrayBindable getBindable(ClassDeclaration expr, String s)
       throws CompileException, IOException {
     ICompilerFactory compilerFactory;
     try {
@@ -128,13 +144,13 @@ public class EnumerableInterpretable extends ConverterImpl
     IClassBodyEvaluator cbe = compilerFactory.newClassBodyEvaluator();
     cbe.setClassName(expr.name);
     cbe.setExtendedClass(Utilities.class);
-    cbe.setImplementedInterfaces(new Class[]{Bindable.class, Typed.class});
-    cbe.setParentClassLoader(getClass().getClassLoader());
+    cbe.setImplementedInterfaces(new Class[]{ArrayBindable.class});
+    cbe.setParentClassLoader(EnumerableInterpretable.class.getClassLoader());
     if (CalcitePrepareImpl.DEBUG) {
       // Add line numbers to the generated janino class
       cbe.setDebuggingInformation(true, true, true);
     }
-    return (Bindable) cbe.createInstance(new StringReader(s));
+    return (ArrayBindable) cbe.createInstance(new StringReader(s));
   }
 
   /** Interpreter node that reads from an {@link Enumerable}.

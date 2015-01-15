@@ -17,11 +17,10 @@
 package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.plan.Convention;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.logical.LogicalFilter;
-import org.apache.calcite.rex.RexMultisetUtil;
-import org.apache.calcite.rex.RexOver;
 
 /**
  * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalFilter} to an
@@ -29,24 +28,15 @@ import org.apache.calcite.rex.RexOver;
  */
 class EnumerableFilterRule extends ConverterRule {
   EnumerableFilterRule() {
-    super(LogicalFilter.class, Convention.NONE, EnumerableConvention.INSTANCE,
-        "EnumerableFilterRule");
+    super(LogicalFilter.class, RelOptUtil.FILTER_PREDICATE, Convention.NONE,
+        EnumerableConvention.INSTANCE, "EnumerableFilterRule");
   }
 
   public RelNode convert(RelNode rel) {
     final LogicalFilter filter = (LogicalFilter) rel;
-
-    if (EnumUtils.B
-        && RexMultisetUtil.containsMultiset(filter.getCondition(), true)
-        || RexOver.containsOver(filter.getCondition())) {
-      return null;
-    }
-
-    return new EnumerableFilter(
-        rel.getCluster(),
+    return new EnumerableFilter(rel.getCluster(),
         rel.getTraitSet().replace(EnumerableConvention.INSTANCE),
-        convert(
-            filter.getInput(),
+        convert(filter.getInput(),
             filter.getInput().getTraitSet()
                 .replace(EnumerableConvention.INSTANCE)),
         filter.getCondition());

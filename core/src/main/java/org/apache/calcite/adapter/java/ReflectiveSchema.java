@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.adapter.java;
 
+import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
@@ -28,6 +29,7 @@ import org.apache.calcite.linq4j.tree.Types;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.Function;
+import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaFactory;
 import org.apache.calcite.schema.SchemaPlus;
@@ -178,7 +180,7 @@ public class ReflectiveSchema
   /** Table that is implemented by reading from a Java object. */
   private static class ReflectiveTable
       extends AbstractQueryableTable
-      implements Table {
+      implements Table, ScannableTable {
     private final Type elementType;
     private final Enumerable enumerable;
 
@@ -194,6 +196,11 @@ public class ReflectiveSchema
 
     public Statistic getStatistic() {
       return Statistics.UNKNOWN;
+    }
+
+    public Enumerable<Object[]> scan(DataContext root) {
+      //noinspection unchecked
+      return (Enumerable) enumerable;
     }
 
     public <T> Queryable<T> asQueryable(QueryProvider queryProvider,
