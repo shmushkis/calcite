@@ -110,7 +110,7 @@ public class JdbcToEnumerableConverter
     default:
       calendar_ = null;
     }
-    if (fieldCount == 1) {
+    if (fieldCount == 1 && false) {
       final ParameterExpression value_ =
           Expressions.parameter(Object.class, builder.newName("value"));
       builder.add(Expressions.declare(Modifier.FINAL, value_, null));

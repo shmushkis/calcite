@@ -17,26 +17,21 @@
 package org.apache.calcite.interpreter;
 
 import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rex.RexNode;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * Interpreter node that implements a
  * {@link org.apache.calcite.rel.logical.LogicalFilter}.
  */
 public class ProjectNode implements Node {
-  private final ImmutableList<Scalar> projects;
+  private final Scalar projects;
   private final Source source;
   private final Sink sink;
   private final Context context;
+  private final int projectCount;
 
   public ProjectNode(Interpreter interpreter, Project rel) {
-    ImmutableList.Builder<Scalar> builder = ImmutableList.builder();
-    for (RexNode node : rel.getProjects()) {
-      builder.add(interpreter.compile(node));
-    }
-    this.projects = builder.build();
+    this.projectCount = rel.getProjects().size();
+    this.projects = interpreter.compile(rel.getProjects(), rel.getInputs());
     this.source = interpreter.source(rel, 0);
     this.sink = interpreter.sink(rel);
     this.context = interpreter.createContext();
@@ -46,11 +41,8 @@ public class ProjectNode implements Node {
     Row row;
     while ((row = source.receive()) != null) {
       context.values = row.getValues();
-      Object[] values = new Object[projects.size()];
-      for (int i = 0; i < projects.size(); i++) {
-        Scalar scalar = projects.get(i);
-        values[i] = scalar.execute(context);
-      }
+      Object[] values = new Object[projectCount];
+      projects.execute(context, values);
       sink.send(new Row(values));
     }
   }

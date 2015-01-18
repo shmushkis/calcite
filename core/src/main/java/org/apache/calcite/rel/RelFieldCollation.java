@@ -74,7 +74,16 @@ public class RelFieldCollation {
   public enum NullDirection {
     FIRST,
     LAST,
-    UNSPECIFIED
+    UNSPECIFIED;
+
+    public int foo() {
+      switch (this) {
+      case FIRST:
+        return 1;
+      default:
+        return -1;
+      }
+    }
   }
 
   //~ Instance fields --------------------------------------------------------

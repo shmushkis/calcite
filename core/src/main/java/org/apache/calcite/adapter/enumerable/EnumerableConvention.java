@@ -29,6 +29,10 @@ import org.apache.calcite.plan.RelTraitDef;
 public enum EnumerableConvention implements Convention {
   INSTANCE;
 
+  /** Cost of an enumerable node versus implementing an equivalent node in a
+   * "typical" calling convention. */
+  public static final double COST_MULTIPLIER = 1.0d;
+
   @Override public String toString() {
     return getName();
   }

@@ -16,12 +16,28 @@
  */
 package org.apache.calcite.interpreter;
 
+import org.apache.calcite.rel.core.Window;
+
 /**
- * Compiled scalar expression.
+ * Interpreter node that implements a
+ * {@link org.apache.calcite.rel.core.Window}.
  */
-public interface Scalar {
-  Object execute(Context context);
-  void execute(Context context, Object[] results);
+public class WindowNode implements Node {
+  private final Source source;
+  private final Sink sink;
+
+  WindowNode(Interpreter interpreter, Window rel) {
+    this.source = interpreter.source(rel, 0);
+    this.sink = interpreter.sink(rel);
+  }
+
+  public void run() throws InterruptedException {
+    Row row;
+    while ((row = source.receive()) != null) {
+      sink.send(row);
+    }
+    sink.end();
+  }
 }
 
-// End Scalar.java
+// End WindowNode.java

@@ -77,10 +77,8 @@ public class PhysTypeImpl implements PhysType {
       JavaTypeFactory typeFactory,
       RelDataType rowType,
       JavaRowFormat format) {
-    final JavaRowFormat format2 = format.optimize(rowType);
-    final Type javaRowClass = format2.javaRowClass(typeFactory, rowType);
-    return new PhysTypeImpl(
-        typeFactory, rowType, javaRowClass, format2);
+    final Type javaRowClass = format.javaRowClass(typeFactory, rowType);
+    return new PhysTypeImpl(typeFactory, rowType, javaRowClass, format);
   }
 
   static PhysType of(

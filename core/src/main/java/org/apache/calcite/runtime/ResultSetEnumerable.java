@@ -60,7 +60,7 @@ public class ResultSetEnumerable<T> extends AbstractEnumerable<T> {
           } catch (SQLException e) {
             throw new RuntimeException(e);
           }
-          if (columnCount == 1) {
+          if (columnCount == 1 && false) {
             return new Function0<Object>() {
               public Object apply() {
                 try {
@@ -232,7 +232,7 @@ public class ResultSetEnumerable<T> extends AbstractEnumerable<T> {
           throw new RuntimeException(e);
         }
         assert columnCount == primitives.length;
-        if (columnCount == 1) {
+        if (columnCount == 1 && false) {
           return new Function0<Object>() {
             public Object apply() {
               try {

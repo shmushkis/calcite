@@ -87,6 +87,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.runtime.ArrayBindable;
 import org.apache.calcite.runtime.Bindable;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.runtime.Typed;
@@ -160,6 +161,13 @@ public class CalcitePrepareImpl implements CalcitePrepare {
           NoneToBindableConverterRule.INSTANCE,
           EnumerableBindable.EnumerableToBindableConverterRule.INSTANCE,
           Bindables.BINDABLE_TABLE_RULE,
+          Bindables.BINDABLE_FILTER_RULE,
+          Bindables.BINDABLE_PROJECT_RULE,
+          Bindables.BINDABLE_SORT_RULE,
+          Bindables.BINDABLE_JOIN_RULE,
+          Bindables.BINDABLE_UNION_RULE,
+          Bindables.BINDABLE_VALUES_RULE,
+          Bindables.BINDABLE_WINDOW_RULE,
           EnumerableRules.ENUMERABLE_JOIN_RULE,
           EnumerableRules.ENUMERABLE_SEMI_JOIN_RULE,
           EnumerableRules.ENUMERABLE_CORRELATE_RULE,
@@ -526,7 +534,9 @@ public class CalcitePrepareImpl implements CalcitePrepare {
         preparingStmt.internalParameters,
         jdbcType,
         columns,
-        Meta.CursorFactory.deduce(columns, resultClazz),
+        bindable instanceof ArrayBindable
+            ? Meta.CursorFactory.ARRAY
+            : Meta.CursorFactory.deduce(columns, resultClazz),
         maxRowCount,
         bindable);
   }
@@ -857,9 +867,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
         SqlKind sqlKind) {
       RelDataType resultType = rootRel.getRowType();
       boolean isDml = sqlKind.belongsTo(SqlKind.DML);
-
-      final Bindable bindable = Interpreters.bindable(rootRel);
-      assert bindable instanceof Typed;
+      final ArrayBindable bindable = Interpreters.bindable(rootRel);
 
       if (timingTracer != null) {
         timingTracer.traceTime("end codegen");

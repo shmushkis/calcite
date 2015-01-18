@@ -19,7 +19,11 @@ package org.apache.calcite.adapter.enumerable;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.interpreter.BindableRel;
+import org.apache.calcite.interpreter.Node;
+import org.apache.calcite.interpreter.Row;
+import org.apache.calcite.interpreter.Sink;
 import org.apache.calcite.linq4j.Enumerable;
+import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
@@ -59,6 +63,20 @@ public class EnumerableBindable extends ConverterImpl implements BindableRel {
     final ArrayBindable bindable = EnumerableInterpretable.toBindable(map,
         null, (EnumerableRel) getInput());
     return bindable.bind(dataContext);
+  }
+
+  public Node implement(final InterpreterImplementor implementor) {
+    return new Node() {
+      public void run() throws InterruptedException {
+        final Sink sink =
+            implementor.relSinks.get(EnumerableBindable.this).get(0);
+        final Enumerable<Object[]> enumerable = bind(implementor.dataContext);
+        final Enumerator<Object[]> enumerator = enumerable.enumerator();
+        while (enumerator.moveNext()) {
+          sink.send(Row.asCopy(enumerator.current()));
+        }
+      }
+    };
   }
 
   /**

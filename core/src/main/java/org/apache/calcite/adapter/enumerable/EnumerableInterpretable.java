@@ -17,7 +17,6 @@
 package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.avatica.Helper;
-import org.apache.calcite.avatica.util.Spaces;
 import org.apache.calcite.interpreter.InterpretableConvention;
 import org.apache.calcite.interpreter.InterpretableRel;
 import org.apache.calcite.interpreter.Interpreter;
@@ -38,15 +37,14 @@ import org.apache.calcite.rel.convert.ConverterImpl;
 import org.apache.calcite.runtime.ArrayBindable;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.runtime.Utilities;
+import org.apache.calcite.util.Util;
 
 import org.codehaus.commons.compiler.CompileException;
 import org.codehaus.commons.compiler.CompilerFactoryFactory;
 import org.codehaus.commons.compiler.IClassBodyEvaluator;
 import org.codehaus.commons.compiler.ICompilerFactory;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.io.StringReader;
 import java.util.List;
 import java.util.Map;
@@ -89,7 +87,7 @@ public class EnumerableInterpretable extends ConverterImpl
     String s = Expressions.toString(expr.memberDeclarations, "\n", false);
 
     if (CalcitePrepareImpl.DEBUG) {
-      debugCode(System.out, s);
+      Util.debugCode(System.out, s);
     }
 
     Hook.JAVA_PLAN.run(s);
@@ -106,30 +104,6 @@ public class EnumerableInterpretable extends ConverterImpl
           + s, e);
     }
     return bindable;
-  }
-
-  /**
-   * Prints the given code with line numbering.
-   */
-  private static void debugCode(PrintStream out, String code) {
-    out.println();
-    StringReader sr = new StringReader(code);
-    BufferedReader br = new BufferedReader(sr);
-    try {
-      String line;
-      for (int i = 1; (line = br.readLine()) != null; i++) {
-        out.print("/*");
-        String number = Integer.toString(i);
-        if (number.length() < 4) {
-          Spaces.append(out, 4 - number.length());
-        }
-        out.print(number);
-        out.print(" */ ");
-        out.println(line);
-      }
-    } catch (IOException e) {
-      // not possible
-    }
   }
 
   static ArrayBindable getBindable(ClassDeclaration expr, String s)

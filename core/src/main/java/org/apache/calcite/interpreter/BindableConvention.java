@@ -34,6 +34,10 @@ import org.apache.calcite.plan.RelTraitDef;
 public enum BindableConvention implements Convention {
   INSTANCE;
 
+  /** Cost of a bindable node versus implementing an equivalent node in a
+   * "typical" calling convention. */
+  public static final double COST_MULTIPLIER = 2.0d;
+
   @Override public String toString() {
     return getName();
   }
