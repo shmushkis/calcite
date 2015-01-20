@@ -22,18 +22,15 @@ import org.apache.calcite.rel.core.Project;
  * Interpreter node that implements a
  * {@link org.apache.calcite.rel.logical.LogicalFilter}.
  */
-public class ProjectNode implements Node {
+public class ProjectNode extends AbstractSingleNode<Project> {
   private final Scalar projects;
-  private final Source source;
-  private final Sink sink;
   private final Context context;
   private final int projectCount;
 
   public ProjectNode(Interpreter interpreter, Project rel) {
+    super(interpreter, rel);
     this.projectCount = rel.getProjects().size();
     this.projects = interpreter.compile(rel.getProjects(), rel.getInputs());
-    this.source = interpreter.source(rel, 0);
-    this.sink = interpreter.sink(rel);
     this.context = interpreter.createContext();
   }
 

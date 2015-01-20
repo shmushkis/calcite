@@ -34,15 +34,9 @@ import java.util.List;
  * Interpreter node that implements a
  * {@link org.apache.calcite.rel.core.Sort}.
  */
-public class SortNode implements Node {
-  private final Source source;
-  private final Sink sink;
-  private final Sort rel;
-
+public class SortNode extends AbstractSingleNode<Sort> {
   public SortNode(Interpreter interpreter, Sort rel) {
-    this.rel = rel;
-    this.source = interpreter.source(rel, 0);
-    this.sink = interpreter.sink(rel);
+    super(interpreter, rel);
   }
 
   public void run() throws InterruptedException {
@@ -104,23 +98,13 @@ public class SortNode implements Node {
   }
 
   private static int compare(Comparable c1, Comparable c2,
-      RelFieldCollation.NullDirection nullDirection) {
+      int nullComparison) {
     if (c1 == c2) {
       return 0;
     } else if (c1 == null) {
-      switch (nullDirection) {
-      case FIRST:
-        return 1;
-      default:
-        return -1;
-      }
+      return nullComparison;
     } else if (c2 == null) {
-      switch (nullDirection) {
-      case FIRST:
-        return -1;
-      default:
-        return 1;
-      }
+      return -nullComparison;
     } else {
       //noinspection unchecked
       return c1.compareTo(c2);
@@ -128,6 +112,7 @@ public class SortNode implements Node {
   }
 
   private Comparator<Row> comparator(final RelFieldCollation fieldCollation) {
+    final int nullComparison = getNullComparison(fieldCollation.nullDirection);
     switch (fieldCollation.direction) {
     case ASCENDING:
       return new Comparator<Row>() {
@@ -135,7 +120,7 @@ public class SortNode implements Node {
           final int x = fieldCollation.getFieldIndex();
           final Comparable c1 = (Comparable) o1.getValues()[x];
           final Comparable c2 = (Comparable) o2.getValues()[x];
-          return SortNode.compare(c1, c2, fieldCollation.nullDirection);
+          return SortNode.compare(c1, c2, nullComparison);
         }
       };
     default:
@@ -144,9 +129,21 @@ public class SortNode implements Node {
           final int x = fieldCollation.getFieldIndex();
           final Comparable c1 = (Comparable) o1.getValues()[x];
           final Comparable c2 = (Comparable) o2.getValues()[x];
-          return SortNode.compare(c2, c1, fieldCollation.nullDirection);
+          return SortNode.compare(c2, c1, -nullComparison);
         }
       };
+    }
+  }
+
+  private int getNullComparison(RelFieldCollation.NullDirection nullDirection) {
+    switch (nullDirection) {
+    case FIRST:
+      return -1;
+    case UNSPECIFIED:
+    case LAST:
+      return 1;
+    default:
+      throw new AssertionError(nullDirection);
     }
   }
 }

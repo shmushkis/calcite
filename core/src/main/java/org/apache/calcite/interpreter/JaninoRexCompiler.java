@@ -23,6 +23,7 @@ import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.linq4j.function.Function1;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
+import org.apache.calcite.linq4j.tree.BlockStatement;
 import org.apache.calcite.linq4j.tree.ClassDeclaration;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
@@ -81,7 +82,6 @@ public class JaninoRexCompiler implements Interpreter.ScalarCompiler {
     final RexProgram program = programBuilder.getProgram();
 
     final BlockBuilder builder = new BlockBuilder();
-    final List<MemberDeclaration> declarations = Lists.newArrayList();
     final ParameterExpression context_ =
         Expressions.parameter(Context.class, "context");
     final ParameterExpression outputValues_ =
@@ -112,32 +112,44 @@ public class JaninoRexCompiler implements Interpreter.ScalarCompiler {
     for (int i = 0; i < list.size(); i++) {
       builder.add(
           Expressions.statement(
-          Expressions.assign(
-              Expressions.arrayIndex(outputValues_, Expressions.constant(i)),
-              list.get(i))));
+              Expressions.assign(
+                  Expressions.arrayIndex(outputValues_,
+                      Expressions.constant(i)),
+                  list.get(i))));
     }
+    return baz(context_, outputValues_, builder.toBlock());
+  }
+
+  /** Given a method that implements {@link Scalar#execute(Context, Object[])},
+   * adds a bridge method that implements {@link Scalar#execute(Context)}, and
+   * compiles. */
+  static Scalar baz(ParameterExpression context_,
+      ParameterExpression outputValues_, BlockStatement block) {
+    final List<MemberDeclaration> declarations = Lists.newArrayList();
+
+    // public void execute(Context, Object[] outputValues)
     declarations.add(
         Expressions.methodDecl(Modifier.PUBLIC, void.class,
             BuiltInMethod.SCALAR_EXECUTE2.method.getName(),
-            ImmutableList.of(context_, outputValues_), builder.toBlock()));
+            ImmutableList.of(context_, outputValues_), block));
 
     // public Object execute(Context)
-    final BlockBuilder builder1 = new BlockBuilder();
-    final Expression values_ = builder1.append("values",
+    final BlockBuilder builder = new BlockBuilder();
+    final Expression values_ = builder.append("values",
         Expressions.newArrayBounds(Object.class, 1,
-            Expressions.constant(nodes.size())));
-    builder1.add(
+            Expressions.constant(1)));
+    builder.add(
         Expressions.statement(
             Expressions.call(
                 Expressions.parameter(Scalar.class, "this"),
                 BuiltInMethod.SCALAR_EXECUTE2.method, context_, values_)));
-    builder1.add(
+    builder.add(
         Expressions.return_(null,
             Expressions.arrayIndex(values_, Expressions.constant(0))));
     declarations.add(
         Expressions.methodDecl(Modifier.PUBLIC, Object.class,
             BuiltInMethod.SCALAR_EXECUTE1.method.getName(),
-            ImmutableList.of(context_), builder1.toBlock()));
+            ImmutableList.of(context_), builder.toBlock()));
 
     final ClassDeclaration classDeclaration =
         Expressions.classDecl(Modifier.PUBLIC, "Buzz", null,

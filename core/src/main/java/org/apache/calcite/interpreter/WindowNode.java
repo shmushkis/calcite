@@ -22,13 +22,9 @@ import org.apache.calcite.rel.core.Window;
  * Interpreter node that implements a
  * {@link org.apache.calcite.rel.core.Window}.
  */
-public class WindowNode implements Node {
-  private final Source source;
-  private final Sink sink;
-
+public class WindowNode extends AbstractSingleNode<Window> {
   WindowNode(Interpreter interpreter, Window rel) {
-    this.source = interpreter.source(rel, 0);
-    this.sink = interpreter.sink(rel);
+    super(interpreter, rel);
   }
 
   public void run() throws InterruptedException {

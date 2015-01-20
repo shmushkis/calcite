@@ -17,6 +17,8 @@
 package org.apache.calcite.interpreter;
 
 import org.apache.calcite.DataContext;
+import org.apache.calcite.adapter.enumerable.AggImplementor;
+import org.apache.calcite.adapter.enumerable.RexImpTable;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
@@ -27,9 +29,12 @@ import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.InvalidRelException;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
+import org.apache.calcite.rel.core.Aggregate;
+import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -39,6 +44,7 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.core.Window;
+import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.logical.LogicalProject;
@@ -49,6 +55,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.ScannableTable;
+import org.apache.calcite.util.ImmutableBitSet;
 
 import com.google.common.collect.ImmutableList;
 
@@ -81,6 +88,9 @@ public class Bindables {
 
   public static final RelOptRule BINDABLE_VALUES_RULE =
       new BindableValuesRule();
+
+  public static final RelOptRule BINDABLE_AGGREGATE_RULE =
+      new BindableAggregateRule();
 
   public static final RelOptRule BINDABLE_WINDOW_RULE =
       new BindableWindowRule();
@@ -419,6 +429,84 @@ public class Bindables {
       return new BindableValues(values.getCluster(), values.getRowType(),
           values.getTuples(),
           values.getTraitSet().replace(BindableConvention.INSTANCE));
+    }
+  }
+
+  /** Implementation of {@link org.apache.calcite.rel.core.Aggregate}
+   * in bindable calling convention. */
+  public static class BindableAggregate extends Aggregate
+      implements BindableRel {
+    public BindableAggregate(
+        RelOptCluster cluster,
+        RelTraitSet traitSet,
+        RelNode child,
+        boolean indicator,
+        ImmutableBitSet groupSet,
+        List<ImmutableBitSet> groupSets,
+        List<AggregateCall> aggCalls)
+        throws InvalidRelException {
+      super(cluster, traitSet, child, indicator, groupSet, groupSets, aggCalls);
+      assert getConvention() instanceof BindableConvention;
+
+      for (AggregateCall aggCall : aggCalls) {
+        if (aggCall.isDistinct()) {
+          throw new InvalidRelException(
+              "distinct aggregation not supported");
+        }
+        AggImplementor implementor2 =
+            RexImpTable.INSTANCE.get(aggCall.getAggregation(), false);
+        if (implementor2 == null) {
+          throw new InvalidRelException(
+              "aggregation " + aggCall.getAggregation() + " not supported");
+        }
+      }
+    }
+
+    @Override public BindableAggregate copy(RelTraitSet traitSet, RelNode input,
+        boolean indicator, ImmutableBitSet groupSet,
+        List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
+      try {
+        return new BindableAggregate(getCluster(), traitSet, input, indicator,
+            groupSet, groupSets, aggCalls);
+      } catch (InvalidRelException e) {
+        // Semantic error not possible. Must be a bug. Convert to
+        // internal error.
+        throw new AssertionError(e);
+      }
+    }
+
+    public Class<Object[]> getElementType() {
+      return Object[].class;
+    }
+
+    public Enumerable<Object[]> bind(DataContext dataContext) {
+      return help(dataContext, this);
+    }
+
+    public Node implement(InterpreterImplementor implementor) {
+      return new AggregateNode(implementor.interpreter, this);
+    }
+  }
+
+  /** Rule that converts an {@link Aggregate} to bindable convention. */
+  private static class BindableAggregateRule extends ConverterRule {
+    BindableAggregateRule() {
+      super(LogicalAggregate.class, Convention.NONE,
+          BindableConvention.INSTANCE, "BindableAggregateRule");
+    }
+
+    public RelNode convert(RelNode rel) {
+      final LogicalAggregate agg = (LogicalAggregate) rel;
+      final RelTraitSet traitSet =
+          agg.getTraitSet().replace(BindableConvention.INSTANCE);
+      try {
+        return new BindableAggregate(rel.getCluster(), traitSet,
+            convert(agg.getInput(), traitSet), agg.indicator, agg.getGroupSet(),
+            agg.getGroupSets(), agg.getAggCallList());
+      } catch (InvalidRelException e) {
+        RelOptPlanner.LOGGER.fine(e.toString());
+        return null;
+      }
     }
   }
 

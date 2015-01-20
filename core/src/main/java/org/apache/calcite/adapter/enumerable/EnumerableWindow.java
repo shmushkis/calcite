@@ -45,6 +45,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.runtime.SortedMultiMap;
+import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
@@ -748,7 +749,7 @@ public class EnumerableWindow extends Window implements EnumerableRel {
     for (final AggImpState agg: aggs) {
       agg.context =
           new WinAggContext() {
-            public org.apache.calcite.sql.SqlAggFunction aggregation() {
+            public SqlAggFunction aggregation() {
               return agg.call.getAggregation();
             }
 

@@ -167,6 +167,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
           Bindables.BINDABLE_JOIN_RULE,
           Bindables.BINDABLE_UNION_RULE,
           Bindables.BINDABLE_VALUES_RULE,
+          Bindables.BINDABLE_AGGREGATE_RULE,
           Bindables.BINDABLE_WINDOW_RULE,
           EnumerableRules.ENUMERABLE_JOIN_RULE,
           EnumerableRules.ENUMERABLE_SEMI_JOIN_RULE,
