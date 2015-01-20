@@ -36,15 +36,18 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.impl.AggregateFunctionImpl;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -106,6 +109,9 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
           return new CountAccumulator(call);
         }
       };
+    } else if (call.getAggregation() == SqlStdOperatorTable.SUM) {
+      return new UdaAccumulatorFactory(
+          AggregateFunctionImpl.create(IntSum.class), call);
     } else {
       final JavaTypeFactory typeFactory =
           (JavaTypeFactory) rel.getCluster().getTypeFactory();
@@ -262,7 +268,7 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
    */
   private class Grouping {
     private final ImmutableBitSet grouping;
-    private final Map<Row, AccumulatorList> accum = Maps.newHashMap();
+    private final Map<Row, AccumulatorList> accumulators = Maps.newHashMap();
 
     private Grouping(ImmutableBitSet grouping) {
       this.grouping = grouping;
@@ -276,19 +282,19 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
       }
       Row key = builder.build();
 
-      if (!accum.containsKey(key)) {
+      if (!accumulators.containsKey(key)) {
         AccumulatorList list = new AccumulatorList();
         for (AccumulatorFactory factory : accumulatorFactories) {
           list.add(factory.get());
         }
-        accum.put(key, list);
+        accumulators.put(key, list);
       }
 
-      accum.get(key).send(row);
+      accumulators.get(key).send(row);
     }
 
     public void end(Sink sink) throws InterruptedException {
-      for (Map.Entry<Row, AccumulatorList> e : accum.entrySet()) {
+      for (Map.Entry<Row, AccumulatorList> e : accumulators.entrySet()) {
         final Row key = e.getKey();
         final AccumulatorList list = e.getValue();
 
@@ -338,6 +344,120 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
   private interface Accumulator {
     void send(Row row);
     Object end();
+  }
+
+  /** Implementation of {@code SUM} over INTEGER values as a user-defined
+   * aggregate. */
+  public static class IntSum {
+    public IntSum() {
+    }
+    public int init() {
+      return 0;
+    }
+    public int add(int accumulator, int v) {
+      return accumulator + v;
+    }
+    public int merge(int accumulator0, int accumulator1) {
+      return accumulator0 + accumulator1;
+    }
+    public int result(int accumulator) {
+      return accumulator;
+    }
+  }
+
+  /** Implementation of {@code SUM} over BIGINT values as a user-defined
+   * aggregate. */
+  public static class LongSum {
+    public LongSum() {
+    }
+    public long init() {
+      return 0L;
+    }
+    public long add(long accumulator, int v) {
+      return accumulator + v;
+    }
+    public long merge(long accumulator0, long accumulator1) {
+      return accumulator0 + accumulator1;
+    }
+    public long result(long accumulator) {
+      return accumulator;
+    }
+  }
+
+  /** Accumulator factory based on a user-defined aggregate function. */
+  private static class UdaAccumulatorFactory implements AccumulatorFactory {
+    public final AggregateFunctionImpl aggFunction;
+    public final int argOrdinal;
+    public final Object instance;
+
+    public UdaAccumulatorFactory(AggregateFunctionImpl aggFunction,
+        AggregateCall call) {
+      this.aggFunction = aggFunction;
+      if (call.getArgList().size() != 1) {
+        throw new UnsupportedOperationException("in current implementation, "
+            + "aggregate must have precisely one argument");
+      }
+      argOrdinal = call.getArgList().get(0);
+      if (aggFunction.isStatic) {
+        instance = null;
+      } else {
+        try {
+          instance = aggFunction.declaringClass.newInstance();
+        } catch (InstantiationException e) {
+          throw Throwables.propagate(e);
+        } catch (IllegalAccessException e) {
+          throw Throwables.propagate(e);
+        }
+      }
+    }
+
+    public Accumulator get() {
+      return new UdaAccumulator(this);
+    }
+  }
+
+  /** Accumulator based upon a user-defined aggregate. */
+  private static class UdaAccumulator implements Accumulator {
+    private final UdaAccumulatorFactory factory;
+    private Object value;
+
+    public UdaAccumulator(UdaAccumulatorFactory factory) {
+      this.factory = factory;
+      try {
+        this.value = factory.aggFunction.initMethod.invoke(factory.instance);
+      } catch (IllegalAccessException e) {
+        throw Throwables.propagate(e);
+      } catch (InvocationTargetException e) {
+        throw Throwables.propagate(e);
+      }
+    }
+
+    public void send(Row row) {
+      final Object[] args = {value, row.getValues()[factory.argOrdinal]};
+      for (int i = 1; i < args.length; i++) {
+        if (args[i] == null) {
+          return; // one of the arguments is null; don't add to the total
+        }
+      }
+      try {
+        value = factory.aggFunction.addMethod.invoke(factory.instance, args);
+      } catch (IllegalAccessException e) {
+        throw Throwables.propagate(e);
+      } catch (InvocationTargetException e) {
+        throw Throwables.propagate(e);
+      }
+    }
+
+    public Object end() {
+      final Object[] args = {value};
+      try {
+        return factory.aggFunction.resultMethod.invoke(factory.instance, args);
+      } catch (IllegalAccessException e) {
+        throw Throwables.propagate(e);
+      } catch (InvocationTargetException e) {
+        throw Throwables.propagate(e);
+      }
+    }
   }
 }
 
