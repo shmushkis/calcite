@@ -13,8 +13,8 @@ Unpack the source distribution `.tar.gz` or `.zip` file,
 then build using maven:
 
 ```bash
-$ tar xvfz calcite-0.9.2-incubating-source.tar.gz
-$ cd calcite-0.9.2-incubating
+$ tar xvfz calcite-1.0.0-incubating-source.tar.gz
+$ cd calcite-1.0.0-incubating
 $ mvn install
 ```
 
@@ -306,7 +306,7 @@ When the dry-run has succeeded, change `install` to `deploy`.
 Before you start:
 * Set up signing keys as described above.
 * Make sure you are using JDK 1.7 (not 1.6 or 1.8).
-* Check that README and README.md have the correct version number.
+* Check that README, README.md and HOWTO.md have the correct version number.
 * Make sure build and tests succeed, including with
   -Dcalcite.test.db={mysql,hsqldb}, -Dcalcite.test.slow=true,
   -Dcalcite.test.mongodb=true, -Dcalcite.test.splunk=true.
