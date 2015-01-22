@@ -34,10 +34,12 @@ script:
   - mvn -Dsurefire.useFile=false test
 git:
   depth: 10000
-sudo: false
 cache:
   directories:
     - $HOME/.m2
+
+# Coverity stuff below this line. Do not merge into master branch.
+sudo: true
 env:
   global:
    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
