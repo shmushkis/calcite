@@ -44,12 +44,12 @@ env:
   global:
    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
    #   via the "travis encrypt" command using the project repo's public key
-   - secure: "CTSHcmXr5qRi6DYtjUrRmEpZ6YxjtdUlriI1Dc5Xit01pP/UodZw2cmrWsOJ6vfmrKFSossSQAa1NQ008ziH9fXjybXczQvehEm/sIysezpsEKgRwvSWg2VVEEOPdnjWV20Cu+skZ7g6uyu7gRz7a99HZaD2/f1U4hgtiqloGIQ="
+   - secure: "B8mTibtsR4bJJSMIAyc+vpacyeEFiGIlICu/MbQ5lz8YuvR3qiKalrfusH/sq3h2Y2yAPctPBbcYa6ZKXZVsAGnsuDvimvYMYt7qD4nKuTHD9BvbkHf1WpuTDJ803aS/Jf9eKtC2Z34DhHn6yWU/qjPZ0xC7E0ox0MTmzh8tUDE="
 addons:
   coverity_scan:
     project:
-      name: "julianhyde/optiq"
-      description: "Build submitted via Travis CI"
+      name: "julianhyde/incubator-calcite"
+      description: "Apache Calcite is a dynamic data management framework"
     notification_email: jhyde@apache.org
     build_command_prepend: "mvn clean"
     build_command:   "mvn -DskipTests=true compile"
