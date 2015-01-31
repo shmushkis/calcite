@@ -20,7 +20,6 @@ import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
-import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.logical.LogicalCalc;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
@@ -44,7 +43,6 @@ import com.google.common.collect.ImmutableList;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -110,13 +108,7 @@ public class ReduceDecimalsRule extends RelOptRule {
             true);
 
     final RexProgram newProgram = programBuilder.getProgram();
-    LogicalCalc newCalc =
-        new LogicalCalc(
-            calc.getCluster(),
-            calc.getTraitSet(),
-            calc.getInput(),
-            newProgram,
-            Collections.<RelCollation>emptyList());
+    LogicalCalc newCalc = LogicalCalc.create(calc.getInput(), newProgram);
     call.transformTo(newCalc);
   }
 

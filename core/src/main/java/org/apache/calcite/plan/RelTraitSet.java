@@ -504,7 +504,10 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
         //noinspection unchecked
         final RelCompositeTrait<RelMultipleTrait> compositeTrait =
             (RelCompositeTrait<RelMultipleTrait>) trait;
-        x = x.replace(i, compositeTrait.trait(0));
+        x = x.replace(i,
+            compositeTrait.size() == 0
+                ?  trait.getTraitDef().getDefault()
+                : compositeTrait.trait(0));
       }
     }
     return x;

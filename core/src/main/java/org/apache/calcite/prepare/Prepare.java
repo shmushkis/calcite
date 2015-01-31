@@ -167,7 +167,7 @@ public abstract class Prepare {
   protected RelTraitSet getDesiredRootTraitSet(RelNode rootRel) {
     // Make sure non-CallingConvention traits, if any, are preserved
     return rootRel.getTraitSet()
-        .replace(resultConvention);
+        .replace(resultConvention).simplify();
   }
 
   /**

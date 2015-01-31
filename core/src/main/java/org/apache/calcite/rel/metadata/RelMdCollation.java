@@ -129,6 +129,9 @@ public class RelMdCollation {
         ImmutableList.builder();
     final List<RelCollation> inputCollations =
         input.getTraitSet().getTraits(RelCollationTraitDef.INSTANCE);
+    if (inputCollations == null || inputCollations.isEmpty()) {
+      return ImmutableList.of();
+    }
     final Multimap<Integer, Integer> targets = LinkedListMultimap.create();
     for (Ord<RexNode> project : Ord.zip(projects)) {
       if (project.e instanceof RexInputRef) {

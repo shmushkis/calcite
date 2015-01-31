@@ -64,11 +64,9 @@ public class EnumerableCalc extends Calc implements EnumerableRel {
     assert !program.containsAggs();
   }
 
-  /** @deprecated Use {@link #create} or
-   * {@link #EnumerableCalc(org.apache.calcite.plan.RelOptCluster, org.apache.calcite.plan.RelTraitSet, org.apache.calcite.rel.RelNode, org.apache.calcite.rex.RexProgram)},
-   * will be removed before
-   * {@link org.apache.calcite.util.Bug#upgrade(String)} calcite-2.0} */
-  public EnumerableCalc(
+  /** @deprecated Use {@link #create} or another constructor */
+   @Deprecated // to be removed before 2.0
+   public EnumerableCalc(
       RelOptCluster cluster,
       RelTraitSet traitSet,
       RelNode input,

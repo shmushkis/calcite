@@ -24,8 +24,6 @@ import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelInput;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
@@ -67,8 +65,6 @@ public abstract class Project extends SingleRel {
 
   protected final ImmutableList<RexNode> exps;
 
-  protected final ImmutableList<RelCollation> collationList;
-
   //~ Constructors -----------------------------------------------------------
 
   /**
@@ -90,9 +86,6 @@ public abstract class Project extends SingleRel {
     assert rowType != null;
     this.exps = ImmutableList.copyOf(exps);
     this.rowType = rowType;
-    this.collationList = ImmutableList.copyOf(
-        Util.first(traits.getTraits(RelCollationTraitDef.INSTANCE),
-            ImmutableList.<RelCollation>of()));
     assert isValid(true);
   }
 
@@ -100,7 +93,9 @@ public abstract class Project extends SingleRel {
    * Creates a Project by parsing serialized output.
    */
   protected Project(RelInput input) {
-    this(input.getCluster(), input.getTraitSet(), input.getInput(),
+    this(input.getCluster(),
+        input.getTraitSet(),
+        input.getInput(),
         input.getExpressionList("exprs"),
         input.getRowType("exprs", "fields"));
   }
@@ -127,10 +122,6 @@ public abstract class Project extends SingleRel {
    */
   public abstract Project copy(RelTraitSet traitSet, RelNode input,
       List<RexNode> exps, RelDataType rowType);
-
-  public List<RelCollation> getCollationList() {
-    return collationList;
-  }
 
   @Override public List<RexNode> getChildExps() {
     return exps;
@@ -182,16 +173,6 @@ public abstract class Project extends SingleRel {
       exp.accept(checker);
     }
     if (checker.getFailureCount() > 0) {
-      assert !fail;
-      return false;
-    }
-    if (collationList == null) {
-      assert !fail;
-      return false;
-    }
-    if (!collationList.isEmpty()
-        && !collationList.equals(
-            traitSet.getTraits(RelCollationTraitDef.INSTANCE))) {
       assert !fail;
       return false;
     }
@@ -271,7 +252,7 @@ public abstract class Project extends SingleRel {
    * Every target has a source field, but
    * a source field may appear as zero, one, or more target fields.
    * Thus you can safely call
-   * {@link Mappings.TargetMapping#getTarget(int)}.
+   * {@link org.apache.calcite.util.mapping.Mappings.TargetMapping#getTarget(int)}.
    *
    * @param inputFieldCount Number of input fields
    * @param projects Project expressions
@@ -280,8 +261,8 @@ public abstract class Project extends SingleRel {
   public static Mappings.TargetMapping getMapping(int inputFieldCount,
       List<RexNode> projects) {
     Mappings.TargetMapping mapping =
-        Mappings.create(MappingType.INVERSE_SURJECTION, inputFieldCount,
-            projects.size());
+        Mappings.create(
+            MappingType.INVERSE_SURJECTION, inputFieldCount, projects.size());
     for (Ord<RexNode> exp : Ord.zip(projects)) {
       if (!(exp.e instanceof RexInputRef)) {
         return null;

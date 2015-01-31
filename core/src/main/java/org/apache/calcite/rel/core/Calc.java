@@ -66,8 +66,7 @@ public abstract class Calc extends SingleRel {
     assert isValid(true);
   }
 
-  /** @deprecated Will be removed before
-   * {@link org.apache.calcite.util.Bug#upgrade(String)} calcite-2.0} */
+  @Deprecated // to be removed before 2.0
   protected Calc(
       RelOptCluster cluster,
       RelTraitSet traits,
@@ -75,6 +74,7 @@ public abstract class Calc extends SingleRel {
       RexProgram program,
       List<RelCollation> collationList) {
     this(cluster, traits, child, program);
+    Util.discard(collationList);
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -99,8 +99,7 @@ public abstract class Calc extends SingleRel {
       RelNode child,
       RexProgram program);
 
-  /** @deprecated Will be removed before
-   * {@link org.apache.calcite.util.Bug#upgrade(String)} calcite-2.0} */
+  @Deprecated // to be removed before 2.0
   public Calc copy(
       RelTraitSet traitSet,
       RelNode child,

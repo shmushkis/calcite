@@ -70,7 +70,6 @@ import org.apache.calcite.util.Util;
 import org.apache.calcite.util.mapping.Mappings;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SortedSetMultimap;
@@ -483,12 +482,12 @@ public class RelStructuredTypeFlattener implements ReflectiveVisitor {
 
   public void rewriteRel(LogicalCalc rel) {
     // Translate the child.
-    final RelNode newChild = getNewForOldRel(rel.getInput());
+    final RelNode newInput = getNewForOldRel(rel.getInput());
 
     final RelOptCluster cluster = rel.getCluster();
     RexProgramBuilder programBuilder =
         new RexProgramBuilder(
-            newChild.getRowType(),
+            newInput.getRowType(),
             cluster.getRexBuilder());
 
     // Convert the common expressions.
@@ -524,13 +523,7 @@ public class RelStructuredTypeFlattener implements ReflectiveVisitor {
     RexProgram newProgram = programBuilder.getProgram();
 
     // Create a new calc relational expression.
-    LogicalCalc newRel =
-        new LogicalCalc(
-            cluster,
-            rel.getTraitSet(),
-            newChild,
-            newProgram,
-            ImmutableList.<RelCollation>of());
+    LogicalCalc newRel = LogicalCalc.create(newInput, newProgram);
     setNewForOldRel(rel, newRel);
   }
 

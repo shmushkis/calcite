@@ -2071,54 +2071,6 @@ public abstract class RelOptUtil {
    * @param joinFilters  list of filters to push to the join
    * @param leftFilters  list of filters to push to the left child
    * @param rightFilters list of filters to push to the right child
-   * @param smart        Whether to try to strengthen the join type
-   * @return whether at least one filter was pushed, or join type was
-   * strengthened
-   *
-   * @deprecated Use the other {@link #classifyFilters};
-   * very short-term; will be removed before
-   * {@link org.apache.calcite.util.Bug#upgrade(String) calcite-0.9.2}.
-   */
-  public static boolean classifyFilters(
-      RelNode joinRel,
-      List<RexNode> filters,
-      JoinRelType joinType,
-      boolean pushInto,
-      boolean pushLeft,
-      boolean pushRight,
-      List<RexNode> joinFilters,
-      List<RexNode> leftFilters,
-      List<RexNode> rightFilters,
-      Holder<JoinRelType> joinTypeHolder,
-      boolean smart) {
-    final JoinRelType oldJoinType = joinType;
-    final int filterCount = filters.size();
-    if (smart) {
-      joinType = simplifyJoin(joinRel, ImmutableList.copyOf(joinFilters),
-          joinType);
-      joinTypeHolder.set(joinType);
-    }
-    classifyFilters(joinRel, filters, joinType, pushInto, pushLeft, pushRight,
-        joinFilters, leftFilters, rightFilters);
-
-    return filters.size() < filterCount || joinType != oldJoinType;
-  }
-
-  /**
-   * Classifies filters according to where they should be processed. They
-   * either stay where they are, are pushed to the join (if they originated
-   * from above the join), or are pushed to one of the children. Filters that
-   * are pushed are added to list passed in as input parameters.
-   *
-   * @param joinRel      join node
-   * @param filters      filters to be classified
-   * @param joinType     join type
-   * @param pushInto     whether filters can be pushed into the ON clause
-   * @param pushLeft     true if filters can be pushed to the left
-   * @param pushRight    true if filters can be pushed to the right
-   * @param joinFilters  list of filters to push to the join
-   * @param leftFilters  list of filters to push to the left child
-   * @param rightFilters list of filters to push to the right child
    * @return whether at least one filter was pushed
    */
   public static boolean classifyFilters(
@@ -2688,8 +2640,7 @@ public abstract class RelOptUtil {
         // Rename columns of child projection if desired field names are given.
         Project childProject = (Project) child;
         child = childProject.copy(childProject.getTraitSet(),
-            childProject.getInput(), childProject.getProjects(),
-            rowType);
+            childProject.getInput(), childProject.getProjects(), rowType);
       }
       return child;
     }
@@ -2802,12 +2753,7 @@ public abstract class RelOptUtil {
             rel.getCluster().getTypeFactory().createStructType(
                 outputTypeList,
                 outputNameList));
-    return new LogicalCalc(
-        rel.getCluster(),
-        rel.getTraitSet(),
-        rel,
-        program,
-        ImmutableList.<RelCollation>of());
+    return LogicalCalc.create(rel, program);
   }
 
   /**

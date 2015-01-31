@@ -16,16 +16,22 @@
  */
 package org.apache.calcite.rel.logical;
 
+import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Calc;
+import org.apache.calcite.rel.metadata.RelMdCollation;
 import org.apache.calcite.rel.rules.FilterToCalcRule;
 import org.apache.calcite.rel.rules.ProjectToCalcRule;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexProgram;
+import org.apache.calcite.util.Util;
+
+import com.google.common.base.Supplier;
 
 import java.util.List;
 import java.util.Set;
@@ -60,21 +66,35 @@ public final class LogicalCalc extends Calc {
   /** Creates a LogicalCalc. */
   public LogicalCalc(
       RelOptCluster cluster,
-      RelTraitSet traits,
+      RelTraitSet traitSet,
       RelNode child,
       RexProgram program) {
-    super(cluster, traits, child, program);
+    super(cluster, traitSet, child, program);
   }
 
-  /** @deprecated Will be removed before
-   * {@link org.apache.calcite.util.Bug#upgrade(String)} calcite-2.0} */
+  @Deprecated // to be removed before 2.0
   public LogicalCalc(
       RelOptCluster cluster,
-      RelTraitSet traits,
+      RelTraitSet traitSet,
       RelNode child,
       RexProgram program,
       List<RelCollation> collationList) {
-    this(cluster, traits, child, program);
+    this(cluster, traitSet, child, program);
+    Util.discard(collationList);
+  }
+
+  public static LogicalCalc create(final RelNode input,
+      final RexProgram program) {
+    final RelOptCluster cluster = input.getCluster();
+    final RelTraitSet traitSet = cluster.traitSet()
+        .replace(Convention.NONE)
+        .replaceIf(RelCollationTraitDef.INSTANCE,
+            new Supplier<List<RelCollation>>() {
+              public List<RelCollation> get() {
+                return RelMdCollation.calc(input, program);
+              }
+            });
+    return new LogicalCalc(cluster, traitSet, input, program);
   }
 
   //~ Methods ----------------------------------------------------------------
