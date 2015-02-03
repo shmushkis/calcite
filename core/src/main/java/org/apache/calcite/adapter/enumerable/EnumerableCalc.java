@@ -65,8 +65,8 @@ public class EnumerableCalc extends Calc implements EnumerableRel {
   }
 
   /** @deprecated Use {@link #create} or another constructor */
-   @Deprecated // to be removed before 2.0
-   public EnumerableCalc(
+  @Deprecated // to be removed before 2.0
+  public EnumerableCalc(
       RelOptCluster cluster,
       RelTraitSet traitSet,
       RelNode input,
