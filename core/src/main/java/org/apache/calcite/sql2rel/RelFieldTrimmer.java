@@ -157,9 +157,8 @@ public class RelFieldTrimmer implements ReflectiveVisitor {
    * @param setOpFactory SetOp factory
    * @param useNamesInIdentityProjCalc
    *            Include field names in identity project determination
-   *
-   * @deprecated Remove before
-   * {@link org.apache.calcite.util.Bug#upgrade Calcite-1.1}. */
+   */
+  @Deprecated // to be removed before 1.1
   public RelFieldTrimmer(SqlValidator validator,
       RelFactories.ProjectFactory projectFactory,
       RelFactories.FilterFactory filterFactory,

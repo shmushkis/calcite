@@ -616,10 +616,8 @@ public class RexUtil {
   /**
    * Returns whether the leading edge of a given array of expressions is
    * wholly {@link RexInputRef} objects with types and names corresponding
-   * to the underlying row type.
-   *
-   * @deprecated Remove before
-   * {@link org.apache.calcite.util.Bug#upgrade Calcite-1.1}. */
+   * to the underlying row type. */
+  @Deprecated // to be removed before 1.1
   public static boolean containIdentity(List<? extends RexNode> exps,
       RelDataType rowType, RelDataType childRowType) {
     List<RelDataTypeField> fields = rowType.getFieldList();

@@ -681,25 +681,6 @@ public class RexProgram {
   }
 
   /**
-   * Applies a visitor to an array of expressions and, if specified, a single
-   * expression.
-   *
-   * @param visitor Visitor
-   * @param exprs   Array of expressions
-   * @param expr    Single expression, may be null
-   *
-   * @deprecated Use
-   * {@link org.apache.calcite.rex.RexUtil#apply(RexVisitor, java.util.List, RexNode)};
-   * will be removed before {@link org.apache.calcite.util.Bug#upgrade 1.0}
-   */
-  public static void apply(
-      RexVisitor<Void> visitor,
-      List<RexNode> exprs,
-      RexNode expr) {
-    RexUtil.apply(visitor, exprs, expr);
-  }
-
-  /**
    * Returns whether an expression is constant.
    */
   public boolean isConstant(RexNode ref) {
