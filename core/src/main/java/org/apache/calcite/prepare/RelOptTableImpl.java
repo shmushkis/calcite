@@ -48,7 +48,6 @@ import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
 
 import java.lang.reflect.Type;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -243,7 +242,7 @@ public class RelOptTableImpl implements Prepare.PreparingTable {
   }
 
   public List<RelCollation> getCollationList() {
-    return Collections.emptyList();
+    return table.getStatistic().getCollations();
   }
 
   public boolean isKey(ImmutableBitSet columns) {

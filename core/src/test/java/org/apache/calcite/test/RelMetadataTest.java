@@ -16,15 +16,20 @@
  */
 package org.apache.calcite.test;
 
+import org.apache.calcite.adapter.enumerable.EnumerableMergeJoin;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.rel.InvalidRelException;
 import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
+import org.apache.calcite.rel.core.Join;
+import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.logical.LogicalAggregate;
@@ -47,7 +52,9 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.ImmutableIntList;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
@@ -648,25 +655,28 @@ public class RelMetadataTest extends SqlToRelTestBase {
    * {@link org.apache.calcite.rel.metadata.RelMdCollation#project}
    * and other helper functions for deducing collations. */
   @Test public void testCollation() {
-    final Project rel = (Project) convertSql("select * from emp");
-    final RelOptTable table = rel.getInput().getTable();
+    final Project rel = (Project) convertSql("select * from emp, dept");
+    final Join join = (Join) rel.getInput();
+    final RelOptTable empTable = join.getInput(0).getTable();
+    final RelOptTable deptTable = join.getInput(1).getTable();
     Frameworks.withPlanner(
         new Frameworks.PlannerAction<Void>() {
           public Void apply(RelOptCluster cluster,
               RelOptSchema relOptSchema,
               SchemaPlus rootSchema) {
-            checkCollation(cluster, table);
+            checkCollation(cluster, empTable, deptTable);
             return null;
           }
         });
   }
 
-  private void checkCollation(RelOptCluster cluster, RelOptTable empTable) {
+  private void checkCollation(RelOptCluster cluster, RelOptTable empTable,
+      RelOptTable deptTable) {
     final RexBuilder rexBuilder = cluster.getRexBuilder();
-    final LogicalTableScan scan = new LogicalTableScan(cluster, empTable);
+    final LogicalTableScan empScan = new LogicalTableScan(cluster, empTable);
 
     List<RelCollation> collations =
-        RelMdCollation.table(scan.getTable());
+        RelMdCollation.table(empScan.getTable());
     assertThat(collations.size(), equalTo(0));
 
     // ORDER BY field#0 ASC, field#1 ASC
@@ -676,17 +686,17 @@ public class RelMetadataTest extends SqlToRelTestBase {
     assertThat(collations.size(), equalTo(1));
     assertThat(collations.get(0).getFieldCollations().size(), equalTo(2));
 
-    final Sort sort = LogicalSort.create(scan, collation, null, null);
+    final Sort empSort = LogicalSort.create(empScan, collation, null, null);
 
     final List<RexNode> projects =
-        ImmutableList.of(rexBuilder.makeInputRef(sort, 1),
+        ImmutableList.of(rexBuilder.makeInputRef(empSort, 1),
             rexBuilder.makeLiteral("foo"),
-            rexBuilder.makeInputRef(sort, 0),
+            rexBuilder.makeInputRef(empSort, 0),
             rexBuilder.makeCall(SqlStdOperatorTable.MINUS,
-                rexBuilder.makeInputRef(sort, 0),
-                rexBuilder.makeInputRef(sort, 3)));
+                rexBuilder.makeInputRef(empSort, 0),
+                rexBuilder.makeInputRef(empSort, 3)));
 
-    collations = RelMdCollation.project(sort, projects);
+    collations = RelMdCollation.project(empSort, projects);
     assertThat(collations.size(), equalTo(1));
     assertThat(collations.get(0).getFieldCollations().size(), equalTo(2));
     assertThat(collations.get(0).getFieldCollations().get(0).getFieldIndex(),
@@ -694,8 +704,29 @@ public class RelMetadataTest extends SqlToRelTestBase {
     assertThat(collations.get(0).getFieldCollations().get(1).getFieldIndex(),
         equalTo(0));
 
-    final LogicalProject project = LogicalProject.create(sort, projects,
+    final LogicalProject project = LogicalProject.create(empSort, projects,
         ImmutableList.of("a", "b", "c", "d"));
+
+    final LogicalTableScan deptScan = new LogicalTableScan(cluster, deptTable);
+
+    final RelCollation deptCollation =
+        RelCollations.of(new RelFieldCollation(0), new RelFieldCollation(1));
+    final Sort deptSort =
+        LogicalSort.create(deptScan, deptCollation, null, null);
+
+    final ImmutableIntList leftKeys = ImmutableIntList.of(2);
+    final ImmutableIntList rightKeys = ImmutableIntList.of(0);
+    final EnumerableMergeJoin join;
+    try {
+      join = EnumerableMergeJoin.create(project, deptSort,
+          rexBuilder.makeLiteral(true), leftKeys, rightKeys, JoinRelType.INNER);
+    } catch (InvalidRelException e) {
+      throw Throwables.propagate(e);
+    }
+    collations =
+        RelMdCollation.mergeJoin(project, deptSort, leftKeys, rightKeys);
+    assertThat(collations,
+        equalTo(join.getTraitSet().getTraits(RelCollationTraitDef.INSTANCE)));
   }
 
   /** Custom metadata interface. */

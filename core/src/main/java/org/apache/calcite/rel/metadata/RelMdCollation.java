@@ -16,29 +16,25 @@
  */
 package org.apache.calcite.rel.metadata;
 
+import org.apache.calcite.adapter.enumerable.EnumerableMergeJoin;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Aggregate;
-import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
-import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.core.SemiJoin;
 import org.apache.calcite.rel.core.Sort;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.util.BuiltInMethod;
-import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.ImmutableIntList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
@@ -50,7 +46,7 @@ import java.util.List;
 
 /**
  * RelMdCollation supplies a default implementation of
- * {@link org.apache.calcite.rel.metadata.RelMetadataQuery#areColumnsUnique}
+ * {@link org.apache.calcite.rel.metadata.RelMetadataQuery#collations}
  * for the standard logical algebra.
  */
 public class RelMdCollation {
@@ -64,204 +60,41 @@ public class RelMdCollation {
 
   //~ Methods ----------------------------------------------------------------
 
+  public ImmutableList<RelCollation> collations(RelNode rel) {
+    return ImmutableList.of();
+  }
+
   public ImmutableList<RelCollation> collations(Filter rel) {
     return RelMetadataQuery.collations(rel.getInput());
   }
 
-  public Boolean areColumnsUnique(
-      Sort rel,
-      ImmutableBitSet columns,
-      boolean ignoreNulls) {
-    return RelMetadataQuery.areColumnsUnique(rel.getInput(),
-        columns,
-        ignoreNulls);
+  public ImmutableList<RelCollation> collations(TableScan scan) {
+    return ImmutableList.copyOf(table(scan.getTable()));
   }
 
-  public Boolean areColumnsUnique(
-      Correlate rel,
-      ImmutableBitSet columns,
-      boolean ignoreNulls) {
-    return RelMetadataQuery.areColumnsUnique(
-        rel.getLeft(),
-        columns,
-        ignoreNulls);
+  public ImmutableList<RelCollation> collations(EnumerableMergeJoin join) {
+    // In general a join is not sorted. But a merge join preserves the sort
+    // order of the left and right sides.
+    return ImmutableList.copyOf(
+        RelMdCollation.mergeJoin(join.getLeft(), join.getRight(),
+            join.getLeftKeys(), join.getRightKeys()));
   }
 
-  public Boolean areColumnsUnique(
-      Project rel,
-      ImmutableBitSet columns,
-      boolean ignoreNulls) {
-    // LogicalProject maps a set of rows to a different set;
-    // Without knowledge of the mapping function(whether it
-    // preserves uniqueness), it is only safe to derive uniqueness
-    // info from the child of a project when the mapping is f(a) => a.
-    //
-    // Also need to map the input column set to the corresponding child
-    // references
-
-    List<RexNode> projExprs = rel.getProjects();
-    ImmutableBitSet.Builder childColumns = ImmutableBitSet.builder();
-    for (int bit : columns) {
-      RexNode projExpr = projExprs.get(bit);
-      if (projExpr instanceof RexInputRef) {
-        childColumns.set(((RexInputRef) projExpr).getIndex());
-      } else if (projExpr instanceof RexCall && ignoreNulls) {
-        // If the expression is a cast such that the types are the same
-        // except for the nullability, then if we're ignoring nulls,
-        // it doesn't matter whether the underlying column reference
-        // is nullable.  Check that the types are the same by making a
-        // nullable copy of both types and then comparing them.
-        RexCall call = (RexCall) projExpr;
-        if (call.getOperator() != SqlStdOperatorTable.CAST) {
-          continue;
-        }
-        RexNode castOperand = call.getOperands().get(0);
-        if (!(castOperand instanceof RexInputRef)) {
-          continue;
-        }
-        RelDataTypeFactory typeFactory =
-            rel.getCluster().getTypeFactory();
-        RelDataType castType =
-            typeFactory.createTypeWithNullability(
-                projExpr.getType(), true);
-        RelDataType origType = typeFactory.createTypeWithNullability(
-            castOperand.getType(),
-            true);
-        if (castType.equals(origType)) {
-          childColumns.set(((RexInputRef) castOperand).getIndex());
-        }
-      } else {
-        // If the expression will not influence uniqueness of the
-        // projection, then skip it.
-        continue;
-      }
-    }
-
-    // If no columns can affect uniqueness, then return unknown
-    if (childColumns.cardinality() == 0) {
-      return null;
-    }
-
-    return RelMetadataQuery.areColumnsUnique(
-        rel.getInput(),
-        childColumns.build(),
-        ignoreNulls);
+  public ImmutableList<RelCollation> collations(Sort sort) {
+    return ImmutableList.copyOf(
+        RelMdCollation.sort(sort.getCollation()));
   }
 
-  public Boolean areColumnsUnique(
-      Join rel,
-      ImmutableBitSet columns,
-      boolean ignoreNulls) {
-    if (columns.cardinality() == 0) {
-      return false;
-    }
-
-    final RelNode left = rel.getLeft();
-    final RelNode right = rel.getRight();
-
-    // Divide up the input column mask into column masks for the left and
-    // right sides of the join
-    ImmutableBitSet.Builder leftBuilder = ImmutableBitSet.builder();
-    ImmutableBitSet.Builder rightBuilder = ImmutableBitSet.builder();
-    int nLeftColumns = left.getRowType().getFieldCount();
-    for (int bit : columns) {
-      if (bit < nLeftColumns) {
-        leftBuilder.set(bit);
-      } else {
-        rightBuilder.set(bit - nLeftColumns);
-      }
-    }
-
-    // If the original column mask contains columns from both the left and
-    // right hand side, then the columns are unique if and only if they're
-    // unique for their respective join inputs
-    final ImmutableBitSet leftColumns = leftBuilder.build();
-    Boolean leftUnique =
-        RelMetadataQuery.areColumnsUnique(left, leftColumns, ignoreNulls);
-    final ImmutableBitSet rightColumns = rightBuilder.build();
-    Boolean rightUnique =
-        RelMetadataQuery.areColumnsUnique(right, rightColumns, ignoreNulls);
-    if ((leftColumns.cardinality() > 0)
-        && (rightColumns.cardinality() > 0)) {
-      if ((leftUnique == null) || (rightUnique == null)) {
-        return null;
-      } else {
-        return leftUnique && rightUnique;
-      }
-    }
-
-    // If we're only trying to determine uniqueness for columns that
-    // originate from one join input, then determine if the equijoin
-    // columns from the other join input are unique.  If they are, then
-    // the columns are unique for the entire join if they're unique for
-    // the corresponding join input, provided that input is not null
-    // generating.
-    final JoinInfo joinInfo = rel.analyzeCondition();
-    if (leftColumns.cardinality() > 0) {
-      if (rel.getJoinType().generatesNullsOnLeft()) {
-        return false;
-      }
-      Boolean rightJoinColsUnique =
-          RelMetadataQuery.areColumnsUnique(right, joinInfo.rightSet(),
-              ignoreNulls);
-      if ((rightJoinColsUnique == null) || (leftUnique == null)) {
-        return null;
-      }
-      return rightJoinColsUnique && leftUnique;
-    } else if (rightColumns.cardinality() > 0) {
-      if (rel.getJoinType().generatesNullsOnRight()) {
-        return false;
-      }
-      Boolean leftJoinColsUnique =
-          RelMetadataQuery.areColumnsUnique(left, joinInfo.leftSet(),
-              ignoreNulls);
-      if ((leftJoinColsUnique == null) || (rightUnique == null)) {
-        return null;
-      }
-      return leftJoinColsUnique && rightUnique;
-    }
-
-    throw new AssertionError();
+  public ImmutableList<RelCollation> collations(Project project) {
+    return ImmutableList.copyOf(
+        RelMdCollation.project(project.getInput(), project.getProjects()));
   }
 
-  public Boolean areColumnsUnique(
-      SemiJoin rel,
-      ImmutableBitSet columns,
-      boolean ignoreNulls) {
-    // only return the unique keys from the LHS since a semijoin only
-    // returns the LHS
-    return RelMetadataQuery.areColumnsUnique(
-        rel.getLeft(),
-        columns,
-        ignoreNulls);
+  public ImmutableList<RelCollation> collations(HepRelVertex rel) {
+    return RelMetadataQuery.collations(rel.getCurrentRel());
   }
 
-  public Boolean areColumnsUnique(
-      Aggregate rel,
-      ImmutableBitSet columns,
-      boolean ignoreNulls) {
-    // group by keys form a unique key
-    if (rel.getGroupCount() > 0) {
-      ImmutableBitSet groupKey = ImmutableBitSet.range(rel.getGroupCount());
-      return columns.contains(groupKey);
-    } else {
-      // interpret an empty set as asking whether the aggregation is full
-      // table (in which case it returns at most one row);
-      // TODO jvs 1-Sept-2008:  apply this convention consistently
-      // to other relational expressions, as well as to
-      // RelMetadataQuery.getUniqueKeys
-      return columns.isEmpty();
-    }
-  }
-
-  // Catch-all rule when none of the others apply.
-  public Boolean areColumnsUnique(
-      RelNode rel,
-      ImmutableBitSet columns,
-      boolean ignoreNulls) {
-    // no information available
-    return null;
-  }
+  // Helper methods
 
   /** Helper method to determine a
    * {@link org.apache.calcite.rel.core.TableScan}'s collation. */
@@ -273,6 +106,19 @@ public class RelMdCollation {
    * {@link org.apache.calcite.rel.core.Sort}'s collation. */
   public static List<RelCollation> sort(RelCollation collation) {
     return ImmutableList.of(collation);
+  }
+
+  /** Helper method to determine a
+   * {@link org.apache.calcite.rel.core.Filter}'s collation. */
+  public static List<RelCollation> filter(RelNode input) {
+    return RelMetadataQuery.collations(input);
+  }
+
+  /** Helper method to determine a
+   * {@link org.apache.calcite.rel.core.Calc}'s collation. */
+  public static List<RelCollation> calc(RelNode input,
+      RexProgram program) {
+    return program.getCollations(RelMetadataQuery.collations(input));
   }
 
   /** Helper method to determine a {@link Project}'s collation. */
@@ -303,6 +149,32 @@ public class RelMdCollation {
       collations.add(RelCollations.of(fieldCollations));
     }
     return collations.build();
+  }
+
+  /** Helper method to determine a {@link Join}'s collation assuming that it
+   * uses a merge-join algorithm.
+   *
+   * <p>If the inputs are sorted on other keys <em>in addition to</em> the join
+   * key, the result preserves those collations too. */
+  public static List<RelCollation> mergeJoin(RelNode left, RelNode right,
+      ImmutableIntList leftKeys, ImmutableIntList rightKeys) {
+    final ImmutableList.Builder<RelCollation> builder = ImmutableList.builder();
+
+    final ImmutableList<RelCollation> leftCollations =
+        RelMetadataQuery.collations(left);
+    assert RelCollations.contains(leftCollations, leftKeys)
+        : "cannot merge join: left input is not sorted on left keys";
+    builder.addAll(leftCollations);
+
+    final ImmutableList<RelCollation> rightCollations =
+        RelMetadataQuery.collations(right);
+    assert RelCollations.contains(rightCollations, rightKeys)
+        : "cannot merge join: right input is not sorted on right keys";
+    final int leftFieldCount = left.getRowType().getFieldCount();
+    for (RelCollation collation : rightCollations) {
+      builder.add(RelCollations.shift(collation, leftFieldCount));
+    }
+    return builder.build();
   }
 }
 

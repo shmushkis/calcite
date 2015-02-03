@@ -19,6 +19,7 @@ package org.apache.calcite.plan;
 import org.apache.calcite.runtime.FlatLists;
 import org.apache.calcite.util.Pair;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 
 import java.util.AbstractList;
@@ -102,6 +103,13 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
 
   public RelTrait get(int index) {
     return getTrait(index);
+  }
+
+  /**
+   * Returns whether a given kind of trait is enabled.
+   */
+  public <T extends RelTrait> boolean isEnabled(RelTraitDef<T> traitDef) {
+    return getTrait(traitDef) != null;
   }
 
   /**
@@ -205,6 +213,21 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
       compositeTrait = RelCompositeTrait.of(traits);
     }
     return replace(compositeTrait);
+  }
+
+  /** If a given trait is enabled, replaces it by calling the given function. */
+  public <T extends RelMultipleTrait> RelTraitSet replaceIf(RelTraitDef<T> def,
+      Supplier<List<T>> traitSupplier) {
+    int index = findIndex(def);
+    if (index < 0) {
+      return this; // trait is not enabled; ignore it
+    }
+    final List<T> traitList = traitSupplier.get();
+    final RelCompositeTrait<T> compositeTrait =
+        traitList.isEmpty()
+            ? RelCompositeTrait.empty(def)
+            : RelCompositeTrait.of(traitList);
+    return replace(index, compositeTrait);
   }
 
   /**

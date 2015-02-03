@@ -30,13 +30,16 @@ import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.core.JoinRelType;
+import org.apache.calcite.rel.metadata.RelMdCollation;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.rules.EquiJoin;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.ImmutableIntList;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.List;
 import java.util.Set;
@@ -61,6 +64,21 @@ public class EnumerableMergeJoin extends EquiJoin implements EnumerableRel {
     final List<RelCollation> collations =
         traits.getTraits(RelCollationTraitDef.INSTANCE);
     assert collations == null || RelCollations.contains(collations, leftKeys);
+  }
+
+  public static EnumerableMergeJoin create(RelNode left, RelNode right,
+      RexLiteral condition, ImmutableIntList leftKeys,
+      ImmutableIntList rightKeys, JoinRelType joinType)
+      throws InvalidRelException {
+    final RelOptCluster cluster = right.getCluster();
+    RelTraitSet traitSet = cluster.traitSet();
+    if (traitSet.isEnabled(RelCollationTraitDef.INSTANCE)) {
+      final List<RelCollation> collations =
+          RelMdCollation.mergeJoin(left, right, leftKeys, rightKeys);
+      traitSet = traitSet.replace(collations);
+    }
+    return new EnumerableMergeJoin(cluster, traitSet, left, right, condition,
+        leftKeys, rightKeys, joinType, ImmutableSet.<String>of());
   }
 
   @Override public EnumerableMergeJoin copy(RelTraitSet traitSet,

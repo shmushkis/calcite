@@ -22,7 +22,6 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.SingleRel;
@@ -33,7 +32,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.rex.RexShuttle;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.calcite.util.Util;
 
 import java.util.List;
 
@@ -45,37 +44,43 @@ public abstract class Calc extends SingleRel {
   //~ Instance fields --------------------------------------------------------
 
   protected final RexProgram program;
-  private final ImmutableList<RelCollation> collationList;
 
   //~ Constructors -----------------------------------------------------------
 
   /**
-   * Creates calc node.
+   * Creates a Calc.
    *
    * @param cluster Cluster
    * @param traits Traits
    * @param child Input relation
    * @param program Calc program
-   * @param collationList Description of the physical ordering (or orderings)
-   *                      of this relational expression. Never null
    */
+  protected Calc(
+      RelOptCluster cluster,
+      RelTraitSet traits,
+      RelNode child,
+      RexProgram program) {
+    super(cluster, traits, child);
+    this.rowType = program.getOutputRowType();
+    this.program = program;
+    assert isValid(true);
+  }
+
+  /** @deprecated Will be removed before
+   * {@link org.apache.calcite.util.Bug#upgrade(String)} calcite-2.0} */
   protected Calc(
       RelOptCluster cluster,
       RelTraitSet traits,
       RelNode child,
       RexProgram program,
       List<RelCollation> collationList) {
-    super(cluster, traits, child);
-    this.rowType = program.getOutputRowType();
-    this.program = program;
-    this.collationList = ImmutableList.copyOf(collationList);
-    assert isValid(true);
+    this(cluster, traits, child, program);
   }
 
   //~ Methods ----------------------------------------------------------------
 
   @Override public final Calc copy(RelTraitSet traitSet, List<RelNode> inputs) {
-    return copy(traitSet, sole(inputs), program, collationList);
+    return copy(traitSet, sole(inputs), program);
   }
 
   /**
@@ -84,18 +89,26 @@ public abstract class Calc extends SingleRel {
    * @param traitSet Traits
    * @param child Input relation
    * @param program Calc program
-   * @param collationList Description of the physical ordering (or orderings)
-   *                      of this relational expression. Never null
    * @return New {@code Calc} if any parameter differs from the value of this
    *   {@code Calc}, or just {@code this} if all the parameters are the same
-
+   *
    * @see #copy(org.apache.calcite.plan.RelTraitSet, java.util.List)
    */
   public abstract Calc copy(
       RelTraitSet traitSet,
       RelNode child,
+      RexProgram program);
+
+  /** @deprecated Will be removed before
+   * {@link org.apache.calcite.util.Bug#upgrade(String)} calcite-2.0} */
+  public Calc copy(
+      RelTraitSet traitSet,
+      RelNode child,
       RexProgram program,
-      List<RelCollation> collationList);
+      List<RelCollation> collationList) {
+    Util.discard(collationList);
+    return copy(traitSet, child, program);
+  }
 
   public boolean isValid(boolean fail) {
     if (!RelOptUtil.equal(
@@ -112,9 +125,6 @@ public abstract class Calc extends SingleRel {
     if (!program.isNormalized(fail, getCluster().getRexBuilder())) {
       return false;
     }
-    if (!RelCollations.isValid(getRowType(), collationList, fail)) {
-      return false;
-    }
     return true;
   }
 
@@ -126,10 +136,6 @@ public abstract class Calc extends SingleRel {
     return LogicalFilter.estimateFilteredRows(
         getInput(),
         program);
-  }
-
-  public List<RelCollation> getCollationList() {
-    return collationList;
   }
 
   public RelOptCost computeSelfCost(RelOptPlanner planner) {
@@ -161,13 +167,11 @@ public abstract class Calc extends SingleRel {
       return this;
     }
     return copy(traitSet, getInput(),
-        new RexProgram(
-            program.getInputRowType(),
+        new RexProgram(program.getInputRowType(),
             exprs,
             projects,
             (RexLocalRef) condition,
-            program.getOutputRowType()),
-        collationList);
+            program.getOutputRowType()));
   }
 }
 

@@ -4424,6 +4424,10 @@ public class JdbcTest {
     checkRun("sql/sequence.oq");
   }
 
+  @Test public void testRunSort() throws Exception {
+    checkRun("sql/sort.oq");
+  }
+
   @Test public void testRunSubquery() throws Exception {
     checkRun("sql/subquery.oq");
   }

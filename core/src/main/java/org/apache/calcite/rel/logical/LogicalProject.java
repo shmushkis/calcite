@@ -19,6 +19,8 @@ package org.apache.calcite.rel.logical;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelInput;
 import org.apache.calcite.rel.RelNode;
@@ -30,6 +32,8 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.util.Pair;
+
+import com.google.common.base.Supplier;
 
 import java.util.List;
 
@@ -93,8 +97,8 @@ public final class LogicalProject extends Project {
   //~ Methods ----------------------------------------------------------------
 
   /** Creates a LogicalProject. */
-  public static LogicalProject create(RelNode input,
-      List<? extends RexNode> projects, List<String> fieldNames) {
+  public static LogicalProject create(final RelNode input,
+      final List<? extends RexNode> projects, List<String> fieldNames) {
     assert projects.size() == fieldNames.size();
     final RelOptCluster cluster = input.getCluster();
     final RelDataTypeFactory.FieldInfoBuilder builder =
@@ -104,7 +108,12 @@ public final class LogicalProject extends Project {
     }
     final RelTraitSet traitSet =
         cluster.traitSet().replace(Convention.NONE)
-            .replace(RelMdCollation.project(input, projects));
+            .replaceIf(RelCollationTraitDef.INSTANCE,
+                new Supplier<List<RelCollation>>() {
+                  public List<RelCollation> get() {
+                    return RelMdCollation.project(input, projects);
+                  }
+                });
     return new LogicalProject(cluster, traitSet, input, projects,
         builder.build());
   }

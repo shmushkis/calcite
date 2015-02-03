@@ -1,4 +1,4 @@
-# dummy.oq - Scratch space
+# sort.oq - Sorting and collation
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -18,10 +18,54 @@
 !use foodmart
 !set outputformat mysql
 
+# The ArrayTable "days" is sorted by "day", so plan must not contain sort
+select * from "days" order by "day";
++-----+-----------+
+| day | week_day  |
++-----+-----------+
+|   1 | Sunday    |
+|   2 | Monday    |
+|   3 | Tuesday   |
+|   4 | Wednesday |
+|   5 | Thursday  |
+|   6 | Friday    |
+|   7 | Saturday  |
++-----+-----------+
+(7 rows)
+
+!ok
+EnumerableTableScan(table=[[foodmart2, days]])
+!plan
+
+# The ArrayTable "days" is sorted by "day", so the plan does not sort, only applies limit
+select * from "days" order by "day" limit 2;
++-----+----------+
+| day | week_day |
++-----+----------+
+|   1 | Sunday   |
+|   2 | Monday   |
++-----+----------+
+(2 rows)
+
+!ok
+EnumerableLimit(fetch=[2])
+  EnumerableTableScan(table=[[foodmart2, days]])
+!plan
+
 # The ArrayTable "days" is sorted by "day", so the plan must not contain Sort
-explain plan for select * from "days" where "day" between 2 and 4 order by "day";
+select * from "days" where "day" between 2 and 4 order by "day";
++-----+-----------+
+| day | week_day  |
++-----+-----------+
+|   2 | Monday    |
+|   3 | Tuesday   |
+|   4 | Wednesday |
++-----+-----------+
+(3 rows)
+
+!ok
 EnumerableCalc(expr#0..1=[{inputs}], expr#2=[2], expr#3=[>=($t0, $t2)], expr#4=[4], expr#5=[<=($t0, $t4)], expr#6=[AND($t3, $t5)], proj#0..1=[{exprs}], $condition=[$t6])
   EnumerableTableScan(table=[[foodmart2, days]])
-!ok
+!plan
 
-# End dummy.oq
+# End sort.oq

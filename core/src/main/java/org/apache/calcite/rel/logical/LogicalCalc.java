@@ -62,17 +62,26 @@ public final class LogicalCalc extends Calc {
       RelOptCluster cluster,
       RelTraitSet traits,
       RelNode child,
+      RexProgram program) {
+    super(cluster, traits, child, program);
+  }
+
+  /** @deprecated Will be removed before
+   * {@link org.apache.calcite.util.Bug#upgrade(String)} calcite-2.0} */
+  public LogicalCalc(
+      RelOptCluster cluster,
+      RelTraitSet traits,
+      RelNode child,
       RexProgram program,
       List<RelCollation> collationList) {
-    super(cluster, traits, child, program, collationList);
+    this(cluster, traits, child, program);
   }
 
   //~ Methods ----------------------------------------------------------------
 
   @Override public LogicalCalc copy(RelTraitSet traitSet, RelNode child,
-      RexProgram program, List<RelCollation> collationList) {
-    return new LogicalCalc(getCluster(), traitSet, child,
-        program, collationList);
+      RexProgram program) {
+    return new LogicalCalc(getCluster(), traitSet, child, program);
   }
 
   @Override public void collectVariablesUsed(Set<String> variableSet) {

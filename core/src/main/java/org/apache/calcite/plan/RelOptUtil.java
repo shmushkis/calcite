@@ -18,7 +18,6 @@ package org.apache.calcite.plan;
 
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelHomogeneousShuttle;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelShuttle;
@@ -2673,23 +2672,19 @@ public abstract class RelOptUtil {
       List<String> fieldNames,
       boolean optimize) {
     final RelOptCluster cluster = child.getCluster();
-    final RexProgram program =
-        RexProgram.create(
-            child.getRowType(), exprs, null, fieldNames,
-            cluster.getRexBuilder());
-    final List<RelCollation> collationList =
-        program.getCollations(child.getCollationList());
-    final RelDataType rowType =
-        RexUtil.createStructType(
-            cluster.getTypeFactory(),
-            exprs,
-            fieldNames == null
-                ? null
-                : SqlValidatorUtil.uniquify(
-                    fieldNames, SqlValidatorUtil.F_SUGGESTER));
+    final List<String> fieldNames2 =
+        fieldNames == null
+            ? null
+            : SqlValidatorUtil.uniquify(fieldNames,
+                SqlValidatorUtil.F_SUGGESTER);
     if (optimize
         && ProjectRemoveRule.isIdentity(exprs, child.getRowType())) {
       if (child instanceof Project && fieldNames != null) {
+        final RelDataType rowType =
+            RexUtil.createStructType(
+                cluster.getTypeFactory(),
+                exprs,
+                fieldNames2);
         // Rename columns of child projection if desired field names are given.
         Project childProject = (Project) child;
         child = childProject.copy(childProject.getTraitSet(),
@@ -2698,13 +2693,7 @@ public abstract class RelOptUtil {
       }
       return child;
     }
-    return new LogicalProject(cluster,
-        cluster.traitSetOf(collationList.isEmpty()
-            ? RelCollations.EMPTY
-            : collationList.get(0)),
-        child,
-        exprs,
-        rowType);
+    return LogicalProject.create(child, exprs, fieldNames2);
   }
 
   /**
