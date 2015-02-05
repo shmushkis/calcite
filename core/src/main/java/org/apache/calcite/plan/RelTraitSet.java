@@ -196,7 +196,9 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
    * <p>The list must not be empty, and all traits must be of the same type.
    */
   public <T extends RelMultipleTrait> RelTraitSet replace(List<T> traits) {
-    return replace(RelCompositeTrait.of(traits));
+    assert !traits.isEmpty();
+    final RelTraitDef def = traits.get(0).getTraitDef();
+    return replace(RelCompositeTrait.of(def, traits));
   }
 
   /** Replaces the trait(s) of a given type with a list of traits of the same
@@ -206,13 +208,7 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
    */
   public <T extends RelMultipleTrait> RelTraitSet replace(RelTraitDef<T> def,
       List<T> traits) {
-    final RelCompositeTrait<T> compositeTrait;
-    if (traits.isEmpty()) {
-      compositeTrait = RelCompositeTrait.empty(def);
-    } else {
-      compositeTrait = RelCompositeTrait.of(traits);
-    }
-    return replace(compositeTrait);
+    return replace(RelCompositeTrait.of(def, traits));
   }
 
   /** If a given trait is enabled, replaces it by calling the given function. */
@@ -223,11 +219,7 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
       return this; // trait is not enabled; ignore it
     }
     final List<T> traitList = traitSupplier.get();
-    final RelCompositeTrait<T> compositeTrait =
-        traitList.isEmpty()
-            ? RelCompositeTrait.empty(def)
-            : RelCompositeTrait.of(traitList);
-    return replace(index, compositeTrait);
+    return replace(index, RelCompositeTrait.of(def, traitList));
   }
 
   /**
@@ -278,24 +270,29 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
   }
 
   /**
-   * Returns whether this trait set subsumes another trait set.
+   * Returns whether this trait set satisfies another trait set.
    *
-   * <p>For that to happen, each trait subsumes the corresponding trait in the
-   * other set. In particular, each trait set subsumes itself, because each
-   * trait subsumes itself.</p>
+   * <p>For that to happen, each trait satisfies the corresponding trait in the
+   * other set. In particular, each trait set satisfies itself, because each
+   * trait subsumes itself.
    *
    * <p>Intuitively, if a relational expression is needed that has trait set
-   * S, and trait set S1 subsumes S, then a relational expression R in S1
-   * meets that need. For example, if we need a relational expression that has
+   * S (A, B), and trait set S1 (A1, B1) subsumes S, then any relational
+   * expression R in S1 meets that need.
+   *
+   * <p>For example, if we need a relational expression that has
    * trait set S = {enumerable convention, sorted on [C1 asc]}, and R
-   * has {enumerable convention, sorted on [C1 asc, C2]}</p>
+   * has {enumerable convention, sorted on [C3], [C1, C2]}. R has two
+   * sort keys, but one them [C1, C2] satisfies S [C1], and that is enough.
    *
    * @param that another RelTraitSet
-   * @return whether this trait set subsumes other trait set
+   * @return whether this trait set satisfies other trait set
+   *
+   * @see org.apache.calcite.plan.RelTrait#satisfies(RelTrait)
    */
-  public boolean subsumes(RelTraitSet that) {
+  public boolean satisfies(RelTraitSet that) {
     for (Pair<RelTrait, RelTrait> pair : Pair.zip(traits, that.traits)) {
-      if (!pair.left.subsumes(pair.right)) {
+      if (!pair.left.satisfies(pair.right)) {
         return false;
       }
     }

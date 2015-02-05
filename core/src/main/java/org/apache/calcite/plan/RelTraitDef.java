@@ -85,7 +85,8 @@ public abstract class RelTraitDef<T extends RelTrait> {
                   @SuppressWarnings("unchecked")
                   final List<RelMultipleTrait> list =
                       (List<RelMultipleTrait>) key;
-                  return (RelCompositeTrait) RelCompositeTrait.of(list);
+                  final RelTraitDef def = list.get(0).getTraitDef();
+                  return (RelCompositeTrait) RelCompositeTrait.of(def, list);
                 }
               });
 
@@ -142,9 +143,8 @@ public abstract class RelTraitDef<T extends RelTrait> {
     return canonicalMap.getUnchecked(trait);
   }
 
-  private RelCompositeTrait canonizeComposite(
-      RelCompositeTrait compositeTrait) {
-    return null;
+  final RelCompositeTrait canonizeComposite(RelCompositeTrait compositeTrait) {
+    return canonicalCompositeMap.getUnchecked(compositeTrait);
   }
 
   /**

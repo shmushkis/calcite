@@ -89,7 +89,7 @@ public class RelCollationImpl implements RelCollation {
 
   public void register(RelOptPlanner planner) {}
 
-  public boolean subsumes(RelTrait trait) {
+  public boolean satisfies(RelTrait trait) {
     return this == trait
         || trait instanceof RelCollationImpl
         && Util.startsWith(fieldCollations,

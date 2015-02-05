@@ -33,9 +33,6 @@ import java.util.List;
  * @param <T> Member trait
  */
 class RelCompositeTrait<T extends RelMultipleTrait> implements RelTrait {
-  private static final RelMultipleTrait[] EMPTY_TRAITS =
-      new RelMultipleTrait[0];
-
   private final RelTraitDef traitDef;
   private final T[] traits;
 
@@ -52,24 +49,18 @@ class RelCompositeTrait<T extends RelMultipleTrait> implements RelTrait {
     }
   }
 
-  /** Creates a RelCompositeTrait. */
-  public static <T extends RelMultipleTrait> RelCompositeTrait<T> of(
+  /** Creates a RelCompositeTrait. The constituent traits are canonized. */
+  @SuppressWarnings("unchecked")
+  static <T extends RelMultipleTrait> RelCompositeTrait<T> of(RelTraitDef def,
       List<T> traitList) {
-    assert !traitList.isEmpty();
-    final RelTraitDef def = traitList.get(0).getTraitDef();
-    //noinspection unchecked
-    final T[] traits = (T[]) new RelMultipleTrait[traitList.size()];
+    final RelMultipleTrait[] traits =
+        traitList.toArray(new RelMultipleTrait[traitList.size()]);
     for (int i = 0; i < traits.length; i++) {
       traits[i] = (T) def.canonize(traits[i]);
     }
-    return new RelCompositeTrait<T>(def, traitList.toArray(traits));
-  }
-
-  /** Creates an empty RelCompositeTrait. */
-  public static <T extends RelMultipleTrait>
-  RelCompositeTrait<T> empty(RelTraitDef<T> def) {
-    //noinspection unchecked
-    return new RelCompositeTrait<T>(def, (T[]) EMPTY_TRAITS);
+    final RelCompositeTrait<T> compositeTrait =
+        new RelCompositeTrait<T>(def, (T[]) traits);
+    return def.canonizeComposite(compositeTrait);
   }
 
   public RelTraitDef getTraitDef() {
@@ -90,9 +81,9 @@ class RelCompositeTrait<T extends RelMultipleTrait> implements RelTrait {
     return Arrays.toString(traits);
   }
 
-  public boolean subsumes(RelTrait trait) {
+  public boolean satisfies(RelTrait trait) {
     for (T t : traits) {
-      if (t.subsumes(trait)) {
+      if (t.satisfies(trait)) {
         return true;
       }
     }

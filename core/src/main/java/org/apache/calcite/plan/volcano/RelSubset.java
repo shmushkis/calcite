@@ -340,7 +340,7 @@ public class RelSubset extends AbstractRelNode {
       RelNode rel,
       Set<RelSubset> activeSet) {
     for (RelSubset subset : set.subsets) {
-      if (rel.getTraitSet().subsumes(subset.traitSet)) {
+      if (rel.getTraitSet().satisfies(subset.traitSet)) {
         subset.propagateCostImprovements0(planner, rel, activeSet);
       }
     }
@@ -418,7 +418,7 @@ public class RelSubset extends AbstractRelNode {
             .where(
                 new Predicate1<RelNode>() {
                   public boolean apply(RelNode v1) {
-                    return v1.getTraitSet().subsumes(traitSet);
+                    return v1.getTraitSet().satisfies(traitSet);
                   }
                 })
             .iterator();
@@ -432,7 +432,7 @@ public class RelSubset extends AbstractRelNode {
   public List<RelNode> getRelList() {
     final List<RelNode> list = new ArrayList<RelNode>();
     for (RelNode rel : set.rels) {
-      if (rel.getTraitSet().subsumes(traitSet)) {
+      if (rel.getTraitSet().satisfies(traitSet)) {
         list.add(rel);
       }
     }

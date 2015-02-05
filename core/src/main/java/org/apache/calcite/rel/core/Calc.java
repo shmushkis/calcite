@@ -156,10 +156,15 @@ public abstract class Calc extends SingleRel {
     List<RexLocalRef> oldProjects = program.getProjectList();
     List<RexLocalRef> projects = shuttle.apply(oldProjects);
     RexLocalRef oldCondition = program.getCondition();
-    RexNode condition = shuttle.apply(oldCondition);
-    assert condition instanceof RexLocalRef
-        : "Invalid condition after rewrite. Expected RexLocalRef, got "
+    RexNode condition;
+    if (oldCondition != null) {
+      condition = shuttle.apply(oldCondition);
+      assert condition instanceof RexLocalRef
+          : "Invalid condition after rewrite. Expected RexLocalRef, got "
           + condition;
+    } else {
+      condition = null;
+    }
     if (exprs == oldExprs
         && projects == oldProjects
         && condition == oldCondition) {

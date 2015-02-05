@@ -1184,7 +1184,7 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
               toTrait,
               allowInfiniteCostConverters);
       if (rel != null) {
-        assert rel.getTraitSet().getTrait(traitDef).subsumes(toTrait);
+        assert rel.getTraitSet().getTrait(traitDef).satisfies(toTrait);
         rel =
             completeConversion(
                 rel, allowInfiniteCostConverters, toTraits,
@@ -1206,7 +1206,7 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
 
     // make sure final converted traitset subsumes what was required
     if (converted != null) {
-      assert converted.getTraitSet().subsumes(toTraits);
+      assert converted.getTraitSet().satisfies(toTraits);
     }
 
     return converted;
@@ -1351,8 +1351,7 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
                   inputSubset.getRels().iterator();
               if (rels.hasNext()) {
                 input = rels.next();
-                assert input.getTraitSet().subsumes(
-                    inputSubset.getTraitSet());
+                assert input.getTraitSet().satisfies(inputSubset.getTraitSet());
                 assert inputSet.rels.contains(input);
                 assert inputSet.subsets.contains(inputSubset);
               }
@@ -1668,12 +1667,6 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
     } else if (equivExp == rel) {
       return getSubset(rel);
     } else {
-      if (!(equivExp.getTraitSet().equals(traits)
-          && (equivExp.getClass() == rel.getClass()))) {
-        assert equivExp.getTraitSet().equals(traits)
-            && (equivExp.getClass() == rel.getClass());
-        throw new AssertionError();
-      }
       assert RelOptUtil.equal(
           "left", equivExp.getRowType(),
           "right", rel.getRowType(),

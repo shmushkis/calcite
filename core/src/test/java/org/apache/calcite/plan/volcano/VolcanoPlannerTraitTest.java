@@ -250,7 +250,7 @@ public class VolcanoPlannerTraitTest {
       return ordinal;
     }
 
-    public boolean subsumes(RelTrait trait) {
+    public boolean satisfies(RelTrait trait) {
       return equals(trait);
     }
 

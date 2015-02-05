@@ -29,6 +29,7 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexExecutorImpl;
@@ -47,7 +48,10 @@ import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.util.Holder;
+import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.mapping.IntPair;
+import org.apache.calcite.util.mapping.Mappings;
 import org.apache.calcite.util.trace.CalciteTimingTracer;
 import org.apache.calcite.util.trace.CalciteTrace;
 
@@ -104,15 +108,12 @@ public abstract class Prepare {
   /**
    * Optimizes a query plan.
    *
-   * @param logicalRowType logical row type of relational expression (before
-   * struct fields are flattened, or field names are renamed for uniqueness)
    * @param rootRel root of a relational expression
-   *
    * @param materializations Tables known to be populated with a given query
    * @param lattices Lattices
    * @return an equivalent optimized relational expression
    */
-  protected RelNode optimize(RelDataType logicalRowType, final RelNode rootRel,
+  protected RelNode optimize(final RelNode rootRel,
       final List<Materialization> materializations,
       final List<CalciteSchema.LatticeEntry> lattices) {
     final RelOptPlanner planner = rootRel.getCluster().getPlanner();
@@ -266,6 +267,12 @@ public abstract class Prepare {
 
     Hook.TRIMMED.run(rootRel);
 
+    if (false) {
+      final Pair<RelNode, ImmutableIntList> pair = extractMask(rootRel);
+      rootRel = pair.left;
+      final ImmutableIntList mask = pair.right;
+    }
+
     // Display physical plan after decorrelation.
     if (sqlExplain != null) {
       SqlExplain.Depth explainDepth = sqlExplain.getDepth();
@@ -274,14 +281,13 @@ public abstract class Prepare {
       switch (explainDepth) {
       case PHYSICAL:
       default:
-        rootRel = optimize(rootRel.getRowType(), rootRel, materializations,
-            lattices);
+        rootRel = optimize(rootRel, materializations, lattices);
         return createPreparedExplanation(
             null, parameterRowType, rootRel, explainAsXml, detailLevel);
       }
     }
 
-    rootRel = optimize(resultType, rootRel, materializations, lattices);
+    rootRel = optimize(rootRel, materializations, lattices);
 
     if (timingTracer != null) {
       timingTracer.traceTime("end optimization");
@@ -298,6 +304,22 @@ public abstract class Prepare {
         resultType,
         rootRel,
         kind);
+  }
+
+  private Pair<RelNode, ImmutableIntList> extractMask(RelNode rel) {
+    final int fieldCount = rel.getRowType().getFieldCount();
+    if (rel instanceof Project) {
+      final Project project = (Project) rel;
+      final Mappings.TargetMapping mapping = project.getMapping();
+      final int[] sources = new int[fieldCount];
+      for (IntPair intPair : mapping) {
+        sources[intPair.target] = intPair.source;
+      }
+      return Pair.of(project.getInput(), ImmutableIntList.of(sources));
+    } else {
+      return Pair.of(rel,
+          ImmutableIntList.copyOf(ImmutableIntList.range(0, fieldCount)));
+    }
   }
 
   protected LogicalTableModify.Operation mapTableModOp(
