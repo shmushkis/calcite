@@ -242,11 +242,17 @@ public class RelOptTableImpl implements Prepare.PreparingTable {
   }
 
   public List<RelCollation> getCollationList() {
-    return table.getStatistic().getCollations();
+    if (table != null) {
+      return table.getStatistic().getCollations();
+    }
+    return ImmutableList.of();
   }
 
   public boolean isKey(ImmutableBitSet columns) {
-    return table.getStatistic().isKey(columns);
+    if (table != null) {
+      return table.getStatistic().isKey(columns);
+    }
+    return false;
   }
 
   public RelDataType getRowType() {

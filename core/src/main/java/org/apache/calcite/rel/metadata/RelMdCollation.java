@@ -21,7 +21,6 @@ import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
@@ -128,7 +127,7 @@ public class RelMdCollation {
     final ImmutableList.Builder<RelCollation> collations =
         ImmutableList.builder();
     final List<RelCollation> inputCollations =
-        input.getTraitSet().getTraits(RelCollationTraitDef.INSTANCE);
+        RelMetadataQuery.collations(input);
     if (inputCollations == null || inputCollations.isEmpty()) {
       return ImmutableList.of();
     }
@@ -141,6 +140,9 @@ public class RelMdCollation {
     final List<RelFieldCollation> fieldCollations = Lists.newArrayList();
   loop:
     for (RelCollation ic : inputCollations) {
+      if (ic.getFieldCollations().isEmpty()) {
+        continue;
+      }
       fieldCollations.clear();
       for (RelFieldCollation ifc : ic.getFieldCollations()) {
         final Collection<Integer> integers = targets.get(ifc.getFieldIndex());
@@ -149,6 +151,7 @@ public class RelMdCollation {
         }
         fieldCollations.add(ifc.copy(integers.iterator().next()));
       }
+      assert !fieldCollations.isEmpty();
       collations.add(RelCollations.of(fieldCollations));
     }
     return collations.build();

@@ -36,6 +36,7 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.logical.LogicalTableFunctionScan;
 import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.rules.ProjectRemoveRule;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -229,6 +230,13 @@ public class RelFieldTrimmer implements ReflectiveVisitor {
       // MedMdrClassExtentRel, only naked MedMdrClassExtentRel.
       // So, disable trimming.
       fieldsUsed = ImmutableBitSet.range(input.getRowType().getFieldCount());
+    }
+    final ImmutableList<RelCollation> collations =
+        RelMetadataQuery.collations(rel);
+    for (RelCollation collation : collations) {
+      for (RelFieldCollation fieldCollation : collation.getFieldCollations()) {
+        fieldsUsed = fieldsUsed.set(fieldCollation.getFieldIndex());
+      }
     }
     return dispatchTrimFields(input, fieldsUsed, extraFields);
   }

@@ -1532,7 +1532,6 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
 
   private RelSet merge(RelSet set, RelSet set2) {
     assert set != set2 : "pre: set != set2";
-    assert set.equivalentSet == null;
 
     // Find the root of set2's equivalence tree.
     set = equivRoot(set);
