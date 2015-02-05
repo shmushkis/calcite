@@ -53,13 +53,17 @@ class RelCompositeTrait<T extends RelMultipleTrait> implements RelTrait {
   @SuppressWarnings("unchecked")
   static <T extends RelMultipleTrait> RelCompositeTrait<T> of(RelTraitDef def,
       List<T> traitList) {
-    final RelMultipleTrait[] traits =
-        traitList.toArray(new RelMultipleTrait[traitList.size()]);
-    for (int i = 0; i < traits.length; i++) {
-      traits[i] = (T) def.canonize(traits[i]);
+    final RelCompositeTrait<T> compositeTrait;
+    if (traitList.isEmpty()) {
+      compositeTrait = new EmptyCompositeTrait<T>(def);
+    } else {
+      final RelMultipleTrait[] traits =
+          traitList.toArray(new RelMultipleTrait[traitList.size()]);
+      for (int i = 0; i < traits.length; i++) {
+        traits[i] = (T) def.canonize(traits[i]);
+      }
+      compositeTrait = new RelCompositeTrait<T>(def, (T[]) traits);
     }
-    final RelCompositeTrait<T> compositeTrait =
-        new RelCompositeTrait<T>(def, (T[]) traits);
     return def.canonizeComposite(compositeTrait);
   }
 
@@ -123,6 +127,20 @@ class RelCompositeTrait<T extends RelMultipleTrait> implements RelTrait {
 
   public int size() {
     return traits.length;
+  }
+
+  /** Composite trait with 0 elements. */
+  private static class EmptyCompositeTrait<T extends RelMultipleTrait>
+      extends RelCompositeTrait<T> {
+    private EmptyCompositeTrait(RelTraitDef traitDef) {
+      //noinspection unchecked
+      super(traitDef, (T[]) new RelMultipleTrait[0]);
+    }
+
+    @Override public boolean satisfies(RelTrait trait) {
+      //noinspection unchecked
+      return ((T) trait).isTop();
+    }
   }
 }
 

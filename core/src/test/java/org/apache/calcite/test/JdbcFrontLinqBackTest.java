@@ -94,7 +94,7 @@ public class JdbcFrontLinqBackTest {
             + "from \"hr\".\"emps\" as e\n"
             + "order by \"deptno\", \"name\" desc")
         .explainContains(
-            "EnumerableCalc(expr#0..1=[{inputs}], expr#2=[UPPER($t1)], UN=[$t2], deptno=[$t0], name=[$t1])\n"
+            "EnumerableCalc(expr#0..1=[{inputs}], expr#2=[UPPER($t1)], UN=[$t2], deptno=[$t0])\n"
             + "  EnumerableSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[DESC])\n"
             + "    EnumerableCalc(expr#0..4=[{inputs}], deptno=[$t1], name=[$t2])\n"
             + "      EnumerableTableScan(table=[[hr, emps]])")

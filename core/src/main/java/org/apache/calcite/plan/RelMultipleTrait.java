@@ -24,6 +24,9 @@ package org.apache.calcite.plan;
  */
 public interface RelMultipleTrait
     extends RelTrait, Comparable<RelMultipleTrait> {
+  /** Returns whether this trait is satisfied by every instance of the trait
+   * (including itself). */
+  boolean isTop();
 }
 
 // End RelMultipleTrait.java

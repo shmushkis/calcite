@@ -4178,7 +4178,7 @@ public class JdbcTest {
     // RHS is empty, therefore returns all rows from emp, including the one
     // with deptno = NULL.
     checkOuter("select deptno from emp where deptno not in (\n"
-        + "select deptno from dept where deptno = -1)",
+            + "select deptno from dept where deptno = -1)",
         "DEPTNO=null",
         "DEPTNO=10",
         "DEPTNO=10",
