@@ -741,4 +741,4 @@ public class MongoAdapterIT {
   }
 }
 
-// End MongoAdapterTest.java
+// End MongoAdapterIT.java
