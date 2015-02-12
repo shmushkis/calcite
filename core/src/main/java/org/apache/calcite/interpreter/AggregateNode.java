@@ -30,6 +30,7 @@ import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.linq4j.tree.ParameterExpression;
+import org.apache.calcite.rel.SingleRel;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -62,14 +63,11 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
   private final ImmutableBitSet unionGroups;
   private final int outputRowLength;
   private final ImmutableList<AccumulatorFactory> accumulatorFactories;
-  private final DataContext dataContext;
 
   public AggregateNode(Interpreter interpreter, Aggregate rel) {
     super(interpreter, rel);
-    this.dataContext = interpreter.getDataContext();
 
     ImmutableBitSet union = ImmutableBitSet.of();
-
     if (rel.getGroupSets() != null) {
       for (ImmutableBitSet group : rel.getGroupSets()) {
         union = union.union(group);
@@ -83,8 +81,9 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
         + rel.getAggCallList().size();
 
     ImmutableList.Builder<AccumulatorFactory> builder = ImmutableList.builder();
+    final DataContext dataContext = interpreter.getDataContext();
     for (AggregateCall aggregateCall : rel.getAggCallList()) {
-      builder.add(getAccumulator(aggregateCall));
+      builder.add(getAccumulator(aggregateCall, rel, dataContext));
     }
     accumulatorFactories = builder.build();
   }
@@ -102,7 +101,8 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
     }
   }
 
-  private AccumulatorFactory getAccumulator(final AggregateCall call) {
+  static AccumulatorFactory getAccumulator(final AggregateCall call,
+      SingleRel rel, DataContext dataContext) {
     if (call.getAggregation() == SqlStdOperatorTable.COUNT) {
       return new AccumulatorFactory() {
         public Accumulator get() {
@@ -207,7 +207,7 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
   }
 
   /** Creates an {@link Accumulator}. */
-  private interface AccumulatorFactory extends Supplier<Accumulator> {
+  interface AccumulatorFactory extends Supplier<Accumulator> {
   }
 
   /** Accumulator powered by {@link Scalar} code fragments. */

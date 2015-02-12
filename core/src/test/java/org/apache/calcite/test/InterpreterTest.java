@@ -20,7 +20,10 @@ import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.interpreter.Interpreter;
 import org.apache.calcite.linq4j.QueryProvider;
+import org.apache.calcite.plan.hep.HepPlanner;
+import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.rules.ProjectToWindowRule;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -239,6 +242,35 @@ public class InterpreterTest {
     final Interpreter interpreter =
         new Interpreter(new MyDataContext(planner), convert);
     assertRows(interpreter, "[0]", "[10]", "[20]", "[30]");
+  }
+
+  /** Tests windowed aggregation in an interpreter. */
+  @Test public void testInterpretWindowedAgg() throws Exception {
+    final SqlNode parse =
+        planner.parse("select \"empid\",\n"
+            + "  count(*) over (\n"
+            + "    partition by \"deptno\"\n"
+            + "    order by \"empid\"\n"
+            + "    rows between 1 preceding and 1 following) as c\n"
+            + "from \"hr\".\"emps\" order by \"empid\"");
+
+    final SqlNode validate = planner.validate(parse);
+    final RelNode rel = planner.convert(validate);
+
+    final HepProgram program = HepProgram.builder()
+        .addRuleInstance(ProjectToWindowRule.PROJECT)
+        .build();
+    final HepPlanner planner1 = new HepPlanner(program);
+    planner1.setRoot(rel);
+    final RelNode rel2 = planner1.findBestExp();
+
+    final Interpreter interpreter =
+        new Interpreter(new MyDataContext(planner), rel2);
+    assertRows(interpreter,
+        "[100, 10, Bill, 10000.0, 1000]",
+        "[110, 10, Theodore, 11500.0, 250]",
+        "[150, 10, Sebastian, 7000.0, null]",
+        "[200, 20, Eric, 8000.0, 500]");
   }
 }
 
