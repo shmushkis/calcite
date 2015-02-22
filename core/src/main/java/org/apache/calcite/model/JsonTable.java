@@ -37,6 +37,7 @@ import java.util.List;
 public abstract class JsonTable {
   public String name;
   public final List<JsonColumn> columns = new ArrayList<JsonColumn>();
+  public boolean stream = false;
 
   public abstract void accept(ModelHandler handler);
 }

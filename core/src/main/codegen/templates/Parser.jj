@@ -943,14 +943,18 @@ SqlSelect SqlSelect() :
     }
     SqlSelectKeywords(keywords)
     (
+        <STREAM> {
+            keywords.add(SqlSelectKeyword.STREAM.symbol(getPos()));
+        }
+    )?
+    (
         <DISTINCT> {
             keywords.add(SqlSelectKeyword.DISTINCT.symbol(getPos()));
         }
         |   <ALL> {
             keywords.add(SqlSelectKeyword.ALL.symbol(getPos()));
         }
-        |   E()
-    )
+    )?
     selectList = SelectList()
     <FROM>
     fromClause = FromClause()
@@ -4981,6 +4985,7 @@ SqlPostfixOperator PostfixRowOperator() :
     | < STATIC: "STATIC" >
     | < STDDEV_POP: "STDDEV_POP" >
     | < STDDEV_SAMP: "STDDEV_SAMP" >
+    | < STREAM: "STREAM" >
     | < STRUCTURE: "STRUCTURE" >
     | < STYLE: "STYLE" >
     | < SUBCLASS_ORIGIN: "SUBCLASS_ORIGIN" >

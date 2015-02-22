@@ -35,6 +35,7 @@ import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.schema.QueryableTable;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.StreamableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.SqlAccessType;
@@ -125,6 +126,9 @@ public class RelOptTableImpl implements Prepare.PreparingTable {
               table.getClass());
         }
       };
+    } else if (table instanceof StreamableTable) {
+      return getClassExpressionFunction(tableEntry,
+          ((StreamableTable) table).stream());
     } else {
       return new Function<Class, Expression>() {
         public Expression apply(Class input) {

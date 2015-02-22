@@ -185,6 +185,7 @@ public class SqlAdvisorTest extends SqlValidatorTestCase {
       Arrays.asList(
           "KEYWORD(ALL)",
           "KEYWORD(DISTINCT)",
+          "KEYWORD(STREAM)",
           "KEYWORD(*)");
 
   private static final List<String> ORDER_KEYWORDS =

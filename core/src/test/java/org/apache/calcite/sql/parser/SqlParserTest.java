@@ -1894,6 +1894,18 @@ public class SqlParserTest {
             + "FROM `BAR`) AS `XYZ`");
   }
 
+  @Test public void testSelectStream() {
+    sql("select stream foo from bar")
+        .ok(
+            "SELECT STREAM `FOO`\n" + "FROM `BAR`");
+  }
+
+  @Test public void testSelectStreamDistinct() {
+    sql("select stream distinct foo from bar")
+        .ok("SELECT STREAM DISTINCT `FOO`\n"
+                + "FROM `BAR`");
+  }
+
   @Test public void testWhere() {
     check(
         "select * from emp where empno > 5 and gender = 'F'",

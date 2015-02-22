@@ -14,25 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.sql;
+package org.apache.calcite.rel.stream;
 
-import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelNode;
+
+import java.util.List;
 
 /**
- * Defines the keywords which can occur immediately after the "SELECT" keyword.
+ * Sub-class of {@link org.apache.calcite.rel.stream.Delta}
+ * not targeted at any particular engine or calling convention.
  */
-public enum SqlSelectKeyword implements SqlLiteral.SqlSymbol {
-  DISTINCT,
-  ALL,
-  STREAM;
+public final class LogicalDelta extends Delta {
+  public LogicalDelta(RelOptCluster cluster, RelTraitSet traits,
+      RelNode input) {
+    super(cluster, traits, input);
+  }
 
-  /**
-   * Creates a parse-tree node representing an occurrence of this keyword
-   * at a particular position in the parsed text.
-   */
-  public SqlLiteral symbol(SqlParserPos pos) {
-    return SqlLiteral.createSymbol(this, pos);
+  @Override public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
+    return new LogicalDelta(getCluster(), traitSet, sole(inputs));
   }
 }
 
-// End SqlSelectKeyword.java
+// End LogicalDelta.java

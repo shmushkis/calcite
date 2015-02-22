@@ -2357,4 +2357,17 @@ LogicalProject(EXPR$0=[$0])
 ]]>
         </Resource>
     </TestCase>
+    <TestCase name="testStream">
+        <Resource name="sql">
+            <![CDATA[select stream empno, deptno from emp where deptno = 10]]>
+        </Resource>
+        <Resource name="plan">
+            <![CDATA[
+LogicalDelta
+  LogicalProject(EMPNO=[$0], DEPTNO=[$7])
+    LogicalFilter(condition=[=($7, 10)])
+      LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+]]>
+        </Resource>
+    </TestCase>
 </Root>

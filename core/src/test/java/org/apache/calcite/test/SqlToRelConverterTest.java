@@ -1033,6 +1033,11 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
     }
   }
 
+  @Test public void testStream() {
+    sql("select stream empno, deptno from emp where deptno = 10")
+        .convertsTo("${plan}");
+  }
+
   @Test public void testExplainAsXml() {
     String sql = "select 1 + 2, 3 from (values (true))";
     final RelNode rel = tester.convertSqlToRel(sql);
