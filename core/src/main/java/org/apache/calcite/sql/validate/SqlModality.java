@@ -16,34 +16,10 @@
  */
 package org.apache.calcite.sql.validate;
 
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.sql.SqlAccessType;
-
-import java.util.List;
-
-/**
- * Supplies a {@link SqlValidator} with the metadata for a table.
- *
- * @see SqlValidatorCatalogReader
- */
-public interface SqlValidatorTable {
-  //~ Methods ----------------------------------------------------------------
-
-  RelDataType getRowType();
-
-  List<String> getQualifiedName();
-
-  /**
-   * Returns whether a given column is monotonic.
-   */
-  SqlMonotonicity getMonotonicity(String columnName);
-
-  /**
-   * Returns the access type of the table
-   */
-  SqlAccessType getAllowedAccess();
-
-  boolean supportsModality(SqlModality modality);
+/** Relational or streaming. */
+public enum SqlModality {
+  RELATION,
+  STREAM
 }
 
-// End SqlValidatorTable.java
+// End SqlModality.java

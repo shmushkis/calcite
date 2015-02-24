@@ -97,6 +97,9 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
           + " INTEGER NOT NULL DEPTNO,"
           + " BOOLEAN NOT NULL SLACKER) NOT NULL";
 
+  private static final String STR_AGG_REQUIRES_MONO =
+      "Streaming aggregation requires at least one monotonic expression in GROUP BY clause";
+
   //~ Constructors -----------------------------------------------------------
 
   public SqlValidatorTest() {
@@ -4933,8 +4936,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
   }
 
   @Test public void testSumInvalidArgs() {
-    checkFails(
-        "select ^sum(ename)^, deptno from emp group by deptno",
+    checkFails("select ^sum(ename)^, deptno from emp group by deptno",
         "(?s)Cannot apply 'SUM' to arguments of type 'SUM\\(<VARCHAR\\(20\\)>\\)'\\. .*");
   }
 
@@ -5333,7 +5335,8 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
 
     // self-reference is not ok, even in table not used
     checkFails("with emp2 as (select * from emp),\n"
-            + " emp3 as (select * from ^emp3^)\n" + "values (1)",
+            + " emp3 as (select * from ^emp3^)\n"
+            + "values (1)",
         "Table 'EMP3' not found");
 
     // self-reference not ok
@@ -6098,8 +6101,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
     checkWholeExpFails(
         "interval '1' second >= interval '1' year",
         "(?s).*Cannot apply '>=' to arguments of type '<INTERVAL SECOND> >= <INTERVAL YEAR>'.*");
-    checkWholeExpFails(
-        "interval '1' month = interval '1' day",
+    checkWholeExpFails("interval '1' month = interval '1' day",
         "(?s).*Cannot apply '=' to arguments of type '<INTERVAL MONTH> = <INTERVAL DAY>'.*");
   }
 
@@ -6128,8 +6130,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
   @Test public void testExtract() {
     // TODO: Need to have extract return decimal type for seconds
     // so we can have seconds fractions
-    checkExpType(
-        "extract(year from interval '1-2' year to month)",
+    checkExpType("extract(year from interval '1-2' year to month)",
         "BIGINT NOT NULL");
     checkExp("extract(minute from interval '1.1' second)");
     checkExp("extract(year from DATE '2008-2-2')");
@@ -6155,8 +6156,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
     checkExpType(
         "cast(interval '1-1' year to month as interval month)",
         "INTERVAL MONTH NOT NULL");
-    checkExpType(
-        "cast(interval '1:1' hour to minute as interval day)",
+    checkExpType("cast(interval '1:1' hour to minute as interval day)",
         "INTERVAL DAY NOT NULL");
     checkExpType(
         "cast(interval '1:1' hour to minute as interval minute to second)",
@@ -6174,8 +6174,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
     checkExpType(
         "(CURRENT_DATE - CURRENT_DATE) HOUR",
         "INTERVAL HOUR NOT NULL");
-    checkExpType(
-        "(CURRENT_DATE - CURRENT_DATE) YEAR TO MONTH",
+    checkExpType("(CURRENT_DATE - CURRENT_DATE) YEAR TO MONTH",
         "INTERVAL YEAR TO MONTH NOT NULL");
     checkWholeExpFails(
         "(CURRENT_DATE - LOCALTIME) YEAR TO MONTH",
@@ -6200,9 +6199,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
 
   @Test public void testUnnest() {
     checkColumnType("select*from unnest(multiset[1])", "INTEGER NOT NULL");
-    checkColumnType(
-        "select*from unnest(multiset[1, 2])",
-        "INTEGER NOT NULL");
+    checkColumnType("select*from unnest(multiset[1, 2])", "INTEGER NOT NULL");
     checkColumnType(
         "select*from unnest(multiset[321.3, 2.33])",
         "DECIMAL(5, 2) NOT NULL");
@@ -6246,14 +6243,11 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
     checkColumnType(
         "values new address()",
         "ObjectSqlType(ADDRESS) NOT NULL");
-    checkColumnType(
-        "select home_address from emp_address",
+    checkColumnType("select home_address from emp_address",
         "ObjectSqlType(ADDRESS) NOT NULL");
-    checkColumnType(
-        "select ea.home_address.zip from emp_address ea",
+    checkColumnType("select ea.home_address.zip from emp_address ea",
         "INTEGER NOT NULL");
-    checkColumnType(
-        "select ea.mailing_address.city from emp_address ea",
+    checkColumnType("select ea.mailing_address.city from emp_address ea",
         "VARCHAR(20) NOT NULL");
   }
 
@@ -6279,8 +6273,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
   }
 
   @Test public void testFusion() {
-    checkFails(
-        "select ^fusion(deptno)^ from emp",
+    checkFails("select ^fusion(deptno)^ from emp",
         "(?s).*Cannot apply 'FUSION' to arguments of type 'FUSION.<INTEGER>.'.*");
     check("select fusion(multiset[3]) from emp");
     // todo. FUSION is an aggregate function. test that validator only can
@@ -6304,8 +6297,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         "Column 'GENDER' not found in any table");
     check("select count(ename, 1, deptno) from emp");
     check("select count(distinct ename, 1, deptno) from emp");
-    checkFails(
-        "select count(deptno, *) from emp",
+    checkFails("select count(deptno, *) from emp",
         "(?s).*Encountered \", \\*\" at .*");
     checkFails(
         "select count(*, deptno) from emp",
@@ -6332,8 +6324,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
 
   @Test public void testFunctionalDistinct() {
     check("select count(distinct sal) from emp");
-    checkFails(
-        "select COALESCE(^distinct^ sal) from emp",
+    checkFails("select COALESCE(^distinct^ sal) from emp",
         "DISTINCT/ALL not allowed with COALESCE function");
   }
 
@@ -6410,9 +6401,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
             + " BOOLEAN NOT NULL SLACKER) NOT NULL";
     checkResultType("select * from (table emp)", empRecordType);
     checkResultType("table emp", empRecordType);
-    checkFails(
-        "table ^nonexistent^",
-        "Table 'NONEXISTENT' not found");
+    checkFails("table ^nonexistent^", "Table 'NONEXISTENT' not found");
   }
 
   @Test public void testCollectionTable() {
@@ -6420,8 +6409,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         "select * from table(ramp(3))",
         "RecordType(INTEGER NOT NULL I) NOT NULL");
 
-    checkFails(
-        "select * from table(^ramp('3')^)",
+    checkFails("select * from table(^ramp('3')^)",
         "Cannot apply 'RAMP' to arguments of type 'RAMP\\(<CHAR\\(1\\)>\\)'\\. Supported form\\(s\\): 'RAMP\\(<NUMERIC>\\)'");
 
     checkFails(
@@ -6686,8 +6674,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
             + " CATALOG.SALES.DEPT.DEPTNO,"
             + " CATALOG.SALES.DEPT.NAME}");
 
-    tester.checkFieldOrigin(
-        "select distinct emp.empno, hiredate, 1 as one,\n"
+    tester.checkFieldOrigin("select distinct emp.empno, hiredate, 1 as one,\n"
             + " emp.empno * 2 as twiceEmpno\n"
             + "from emp join dept on true",
         "{CATALOG.SALES.EMP.EMPNO,"
@@ -6711,12 +6698,10 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
             + "  select [e].EMPNO as [x] from [EMP] as [e])",
         "Column 'X' not found in any table");
 
-    tester1.checkQueryFails(
-        "select EMP.^\"x\"^ from EMP",
+    tester1.checkQueryFails("select EMP.^\"x\"^ from EMP",
         "(?s).*Encountered \"\\. \\\\\"\" at line .*");
 
-    tester1.checkResultType(
-        "select [x[y]] z ] from (\n"
+    tester1.checkResultType("select [x[y]] z ] from (\n"
             + "  select [e].EMPNO as [x[y]] z ] from [EMP] as [e])",
         "RecordType(INTEGER NOT NULL x[y] z ) NOT NULL");
   }
@@ -6946,6 +6931,55 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
     tester1.checkQuery("select eMp.empNo from (select * from emP) as EmP");
     tester1.checkQuery("select empNo from (select Empno from emP) as EmP");
     tester1.checkQuery("select empNo from (select Empno from emP)");
+  }
+
+  @Test public void testStream() {
+    sql("select stream * from orders").ok();
+    sql("select stream * from ^emp^")
+        .fails(cannotConvertToStream("EMP"));
+    sql("select * from ^orders^")
+        .fails(cannotConvertToRelation("ORDERS"));
+  }
+
+  private static String cannotConvertToStream(String name) {
+    return "Cannot convert table '" + name + "' to stream";
+  }
+
+  @Test public void testStreamWhere() {
+    sql("select stream * from orders where productId < 10").ok();
+    sql("select stream * from ^emp^ where deptno = 10")
+        .fails(cannotConvertToStream("EMP"));
+    sql("select stream * from ^emp^ as e where deptno = 10")
+        .fails(cannotConvertToStream("E"));
+    sql("select stream * from (^select * from emp as e1^) as e\n"
+        + "where deptno = 10")
+        .fails("Cannot convert table 'E' to stream");
+    sql("select * from ^orders^ where productId > 10")
+        .fails(cannotConvertToRelation("ORDERS"));
+  }
+
+  private static String cannotConvertToRelation(String table) {
+    return "Cannot convert stream '" + table + "' to relation";
+  }
+
+  @Test public void testStreamGroupBy() {
+    sql("select stream rowtime, productId, count(*) as c\n"
+        + "from orders\n"
+        + "group by productId, rowtime").ok();
+    sql("select stream floor(rowtime to hour) as rowtime, productId,\n"
+        + " count(*) as c\n"
+        + "from orders\n"
+        + "group by floor(rowtime to hour), productId").ok();
+    sql("select stream productId, count(*) as c\n"
+        + "from orders\n"
+        + "^group by productId^")
+        .fails(STR_AGG_REQUIRES_MONO);
+    sql("^select stream count(*) as c\n"
+        + "from orders^")
+        .fails(STR_AGG_REQUIRES_MONO);
+    sql("select stream count(*) as c\n"
+        + "from orders ^group by ()^")
+        .fails(STR_AGG_REQUIRES_MONO);
   }
 
   @Test public void testNew() {

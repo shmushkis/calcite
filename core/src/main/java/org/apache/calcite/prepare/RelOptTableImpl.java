@@ -39,6 +39,7 @@ import org.apache.calcite.schema.StreamableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.SqlAccessType;
+import org.apache.calcite.sql.validate.SqlModality;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Util;
@@ -245,6 +246,15 @@ public class RelOptTableImpl implements Prepare.PreparingTable {
 
   public RelDataType getRowType() {
     return rowType;
+  }
+
+  public boolean supportsModality(SqlModality modality) {
+    switch (modality) {
+    case STREAM:
+      return table instanceof StreamableTable;
+    default:
+      return !(table instanceof StreamableTable);
+    }
   }
 
   public List<String> getQualifiedName() {

@@ -1034,7 +1034,23 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
   }
 
   @Test public void testStream() {
-    sql("select stream empno, deptno from emp where deptno = 10")
+    sql("select stream productId from orders where productId = 10")
+        .convertsTo("${plan}");
+  }
+
+  @Test public void testStreamGroupBy() {
+    sql("select stream floor(rowtime to second) as rowtime, count(*) as c\n"
+            + "from orders\n"
+            + "group by floor(rowtime to second)")
+        .convertsTo("${plan}");
+  }
+
+  @Test public void testStreamWindowedAggregation() {
+    sql("select stream *,\n"
+            + "  count(*) over (partition by productId\n"
+            + "    order by rowtime\n"
+            + "    range interval '1' second preceding) as c\n"
+            + "from orders")
         .convertsTo("${plan}");
   }
 
@@ -1048,13 +1064,19 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
     rel.explain(planWriter);
     pw.flush();
     TestUtil.assertEqualsVerbose(
-        "<RelNode type=\"LogicalProject\">\n" + "\t<Property name=\"EXPR$0\">\n"
-            + "\t\t+(1, 2)\t</Property>\n" + "\t<Property name=\"EXPR$1\">\n"
-            + "\t\t3\t</Property>\n" + "\t<Inputs>\n"
+        "<RelNode type=\"LogicalProject\">\n"
+            + "\t<Property name=\"EXPR$0\">\n"
+            + "\t\t+(1, 2)\t</Property>\n"
+            + "\t<Property name=\"EXPR$1\">\n"
+            + "\t\t3\t</Property>\n"
+            + "\t<Inputs>\n"
             + "\t\t<RelNode type=\"LogicalValues\">\n"
             + "\t\t\t<Property name=\"tuples\">\n"
-            + "\t\t\t\t[{ true }]\t\t\t</Property>\n" + "\t\t\t<Inputs/>\n"
-            + "\t\t</RelNode>\n" + "\t</Inputs>\n" + "</RelNode>\n",
+            + "\t\t\t\t[{ true }]\t\t\t</Property>\n"
+            + "\t\t\t<Inputs/>\n"
+            + "\t\t</RelNode>\n"
+            + "\t</Inputs>\n"
+            + "</RelNode>\n",
         Util.toLinux(sw.toString()));
   }
 

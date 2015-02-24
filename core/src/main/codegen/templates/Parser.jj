@@ -91,6 +91,7 @@ import org.apache.calcite.sql.parser.SqlParserImplFactory;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.parser.SqlParserUtil;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.Util;
 import org.apache.calcite.util.trace.CalciteTrace;
 
 import com.google.common.collect.ImmutableList;
@@ -304,12 +305,12 @@ SqlNode ExtendedBuiltinFunctionCall() :
 /*
 * Parse Floor/Ceil function parameters
 */
-SqlNode FloorCeilOptions( SqlParserPos pos, boolean floorFlag) :
+SqlNode FloorCeilOptions(SqlParserPos pos, boolean floorFlag) :
 {
     SqlNode node;
 }
 {
-    node = StandardFloorCeilOptions( pos, floorFlag)
+    node = StandardFloorCeilOptions(pos, floorFlag)
     {
         return node;
     }
@@ -1962,7 +1963,7 @@ SqlNodeList GroupByOpt() :
 {
     <GROUP> { pos = getPos(); }
     <BY> list = GroupingElementList() {
-        return new SqlNodeList(list, pos);
+        return new SqlNodeList(list, pos.plusAll(list));
     }
 |
     {
@@ -3868,7 +3869,7 @@ SqlNode BuiltinFunctionCall() :
         }
         <LPAREN>
         unit = TimeUnit()
-        { args = startList(new SqlIntervalQualifier(unit, null,getPos())); }
+        { args = startList(new SqlIntervalQualifier(unit, null, getPos())); }
         <FROM>
         e = Expression(ExprContext.ACCEPT_SUBQUERY) { args.add(e); }
         <RPAREN>
@@ -4187,13 +4188,22 @@ SqlNode StandardFloorCeilOptions(SqlParserPos pos, boolean floorFlag) :
     SqlIdentifier name;
     SqlParserPos overPos = null;
     SqlIdentifier id = null;
-    SqlNode e = null;
-    SqlCall function = null;
-    SqlNodeList args;
+    SqlNode e;
+    List<SqlNode> args;
+    TimeUnit unit;
     boolean over = false;
 }
 {
-    args = ParenthesizedQueryOrCommaList(ExprContext.ACCEPT_SUBQUERY)
+    <LPAREN> e = Expression(ExprContext.ACCEPT_SUBQUERY) {
+        args = startList(e);
+    }
+    (
+        <TO>
+        unit = TimeUnit() {
+            args.add(new SqlIntervalQualifier(unit, null, getPos()));
+        }
+    )?
+    <RPAREN>
     [
         <OVER>
         {
@@ -4209,16 +4219,10 @@ SqlNode StandardFloorCeilOptions(SqlParserPos pos, boolean floorFlag) :
         SqlOperator op = floorFlag
             ? SqlStdOperatorTable.FLOOR
             : SqlStdOperatorTable.CEIL;
-        function =  op.createCall(
-            pos, args.toArray());
+        final SqlCall function =  op.createCall(pos.plus(getPos()), args);
         if (over) {
-            if (id != null) {
-                return SqlStdOperatorTable.OVER.createCall(
-                    overPos, new SqlNode[] {function, id});
-            } else {
-                return SqlStdOperatorTable.OVER.createCall(
-                    overPos, new SqlNode[] { function, e });
-            }
+            return SqlStdOperatorTable.OVER.createCall(overPos, function,
+                Util.first(id, e));
         } else {
             return function;
         }

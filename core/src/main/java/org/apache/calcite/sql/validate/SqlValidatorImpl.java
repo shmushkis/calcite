@@ -75,6 +75,7 @@ import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.calcite.util.BitString;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.Static;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.trace.CalciteTrace;
 
@@ -2924,10 +2925,71 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
         validateSelectList(selectItems, select, targetRowType);
     ns.setType(rowType);
 
+    final SqlModality modality =
+        select.getModifierNode(SqlSelectKeyword.STREAM) != null
+            ? SqlModality.STREAM
+            : SqlModality.RELATION;
+    validateModality(select, modality, true);
+
     // Validate ORDER BY after we have set ns.rowType because in some
     // dialects you can refer to columns of the select list, e.g.
     // "SELECT empno AS x FROM emp ORDER BY x"
     validateOrderList(select);
+  }
+
+  public boolean validateModality(SqlSelect select, SqlModality modality,
+      boolean fail) {
+    final SelectScope scope = getRawSelectScope(select);
+    for (Pair<String, SqlValidatorNamespace> namespace : scope.children) {
+      if (!namespace.right.supportsModality(modality)) {
+        switch (modality) {
+        case STREAM:
+          if (fail) {
+            throw newValidationError(namespace.right.getNode(),
+                Static.RESOURCE.cannotConvertToStream(namespace.left));
+          } else {
+            return false;
+          }
+        default:
+          if (fail) {
+            throw newValidationError(namespace.right.getNode(),
+                Static.RESOURCE.cannotConvertToRelation(namespace.left));
+          } else {
+            return false;
+          }
+        }
+      }
+    }
+    if (isAggregate(select)) {
+      switch (modality) {
+      case STREAM:
+        SqlNodeList groupList = select.getGroup();
+        if (groupList == null || !containsMonotonic(scope, groupList)) {
+          if (fail) {
+            throw newValidationError(groupList == null ? select : groupList,
+                Static.RESOURCE.streamMustGroupByMonotonic());
+          } else {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  private static boolean containsMonotonic(SelectScope scope,
+      SqlNodeList nodes) {
+    for (SqlNode node : nodes) {
+      final SqlMonotonicity monotonicity = scope.getMonotonicity(node);
+      switch (monotonicity) {
+      case CONSTANT:
+      case NOT_MONOTONIC:
+        break;
+      default:
+        return true;
+      }
+    }
+    return false;
   }
 
   protected void validateWindowClause(SqlSelect select) {

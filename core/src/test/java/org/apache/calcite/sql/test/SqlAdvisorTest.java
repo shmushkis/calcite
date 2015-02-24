@@ -69,6 +69,7 @@ public class SqlAdvisorTest extends SqlValidatorTestCase {
           "TABLE(CATALOG.SALES.EMP_ADDRESS)",
           "TABLE(CATALOG.SALES.DEPT)",
           "TABLE(CATALOG.SALES.BONUS)",
+          "TABLE(CATALOG.SALES.ORDERS)",
           "TABLE(CATALOG.SALES.SALGRADE)");
 
   private static final List<String> SCHEMAS =
