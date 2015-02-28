@@ -6982,6 +6982,27 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         .fails(STR_AGG_REQUIRES_MONO);
   }
 
+  @Test public void testStreamHaving() {
+    sql("select stream rowtime, productId, count(*) as c\n"
+        + "from orders\n"
+        + "group by productId, rowtime\n"
+        + "having count(*) > 5").ok();
+    sql("select stream floor(rowtime to hour) as rowtime, productId,\n"
+        + " count(*) as c\n"
+        + "from orders\n"
+        + "group by floor(rowtime to hour), productId\n"
+        + "having false").ok();
+    sql("select stream productId, count(*) as c\n"
+        + "from orders\n"
+        + "^group by productId^\n"
+        + "having count(*) > 5")
+        .fails(STR_AGG_REQUIRES_MONO);
+    sql("^select stream 1 \n"
+        + "from orders\n"
+        + "having count(*) > 3^")
+        .fails(STR_AGG_REQUIRES_MONO);
+  }
+
   @Test public void testNew() {
     // (To debug individual statements, paste them into this method.)
     //            1         2         3         4         5         6
