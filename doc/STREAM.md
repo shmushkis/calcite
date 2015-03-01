@@ -15,7 +15,7 @@ based on relational algebra, validated according to a schema, and optimized
 to take advantage of available resources and algorithms.
 
 Calcite's SQL is an extension to standard SQL, not another 'SQL-like' language.
-This is important, for several reasons:
+The distinction is important, for several reasons:
 * Streaming SQL is easy to learn for anyone who knows regular SQL.
 * The semantics are clear, because we aim to produce the same results on a
   stream as if the same data were in a table.
@@ -124,7 +124,7 @@ We recommend that you always include the `rowtime` column in the `SELECT`
 clause. Having a sorted timestamp in each stream and streaming query makes it
 possible to do advanced calculations later, such as `GROUP BY` and `JOIN`.
 
-# Aggregating
+# Tumbling windows
 
 There are several ways to compute aggregate functions on streams. The
 differences are:
@@ -137,20 +137,20 @@ First we'll look a *tumbling window*, which is defined by a streaming
 `GROUP BY`. Here is an example:
 
 ```sql
- SELECT STREAM FLOOR(rowtime TO HOUR) AS rowtime,
-   productId,
-   COUNT(*) AS c,
-   SUM(units) AS units
- FROM Orders
- GROUP BY FLOOR(rowtime TO HOUR), productId;
+SELECT STREAM FLOOR(rowtime TO HOUR) AS rowtime,
+  productId,
+  COUNT(*) AS c,
+  SUM(units) AS units
+FROM Orders
+GROUP BY FLOOR(rowtime TO HOUR), productId;
 
-   rowtime | productId |       c | units
- ----------+-----------+---------+-------
-  10:00:00 |        30 |       2 |    24
-  10:00:00 |        10 |       1 |     1
-  10:00:00 |        20 |       1 |     7
-  11:00:00 |        10 |       3 |    11
-  11:00:00 |        40 |       1 |    12
+  rowtime | productId |       c | units
+----------+-----------+---------+-------
+ 10:00:00 |        30 |       2 |    24
+ 10:00:00 |        10 |       1 |     1
+ 10:00:00 |        20 |       1 |     7
+ 11:00:00 |        10 |       3 |    11
+ 11:00:00 |        40 |       1 |    12
 ```
 
 The result is a stream. At 11 o'clock, Calcite emits a sub-total for every
@@ -242,7 +242,7 @@ CREATE VIEW HourlyOrderTotals (rowtime, productId, c, su) AS
     COUNT(*),
     SUM(units)
   FROM Orders
-  GROUP BY FLOOR(rowtime TO HOUR), productId);
+  GROUP BY FLOOR(rowtime TO HOUR), productId;
 
 SELECT STREAM rowtime, productId
 FROM HourlyOrderTotals
@@ -257,7 +257,7 @@ WHERE c > 2 OR su > 12;
 
 Sub-queries in the `FROM` clause are sometimes referred to as "inline views",
 but really, nested queries are more fundamental. Views are just a convenient
-way of carving your SQL into manageable chunks.
+way to carve your SQL into manageable chunks.
 
 Many people find that nested queries and views are even more useful on streams
 than they are on relations. Streaming queries are pipelines of
@@ -325,6 +325,62 @@ Sometimes a stream makes available some of its history (say the last 24 hours of
 data in an Apache Kafka [<a href="#ref2">2</a>] topic)
 but not all. At run time, Calcite figures out whether there is sufficient
 history to run the query, and if not, gives an error.
+
+## Hopping windows
+
+Previously we saw how to define a tumbling window using a `GROUP BY` clause.
+Each record contributed to a single sub-total record, the one containing its
+hour and product id.
+
+But suppose we want to emit, every hour, the number of each product ordered over
+the past three hours. To do this, we use `SELECT ... OVER` and a sliding window
+to combine multiple tumbling windows.
+
+```sql
+SELECT STREAM rowtime,
+  productId,
+  SUM(su) OVER w AS su,
+  SUM(c) OVER w AS c
+FROM HourlyTotals
+WINDOW w AS (
+  ORDER BY rowtime
+  PARTITION BY productId
+  RANGE INTERVAL '2' HOUR PRECEDING)
+```
+
+This query uses the `HourlyOrderTotals` view defined previously.
+The 2 hour interval combines the totals timestamped 09:00:00, 10:00:00 and
+11:00:00 for a particular product into a single total timestamped 11:00:00 and
+summarizing orders for that product between 09:00:00 and 12:00:00.
+
+## Limitations of tumbling and hopping windows
+
+In the present syntax, we acknowledge that it is not easy to create certain
+kinds of windows.
+
+First, let's consider tumbling windows over complex periods.
+
+The `FLOOR` and `CEIL` functions make is easy to create a tumbling window that
+emits on a whole time unit (say every hour, or every minute) but less easy to
+emit, say, every 15 minutes. One could imagine an extension to the `FLOOR`
+function that emits unique values on just about any periodic basis (say in 11
+minute intervals starting from midnight of the current day).
+
+Next, let's consider hopping windows whose retention period is not a multiple
+of its emission period. Say we want to output, at the top of each hour, the
+orders for the previous 7,007 seconds. If we were to simulate this hopping
+window using a sliding window over a tumbling window, as before, we would have
+to sum lots of 1-second windows (because 3,600 and 7,007 are co-prime).
+This is a lot of effort for both the system and the person writing the query.
+
+Calcite could perhaps solve this generalizing `GROUP BY` syntax, but we would
+be destroying the principle that an input row into a `GROUP BY` appears in
+precisely one output row.
+
+Calcite's SQL extensions for streaming queries are evolving. As we learn more
+about how people wish to query streams, we plan to make the language more
+expressive while remaining compatible with standard SQL and consistent with
+its principles, look and feel.
 
 ## State of the stream
 
