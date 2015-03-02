@@ -82,6 +82,24 @@ public class StreamTest {
                 "id=2; product=paper; quantity=5"));
   }
 
+  @Test public void testStreamFilterProject() {
+    CalciteAssert.model(STREAM_MODEL)
+        .withDefaultSchema("STREAMS")
+        .query("select stream \"product\" from orders where \"quantity\" > 6")
+        .convertContains(
+            "LogicalDelta\n"
+                + "  LogicalProject(product=[$1])\n"
+                + "    LogicalFilter(condition=[>($2, 6)])\n"
+                + "      EnumerableTableScan(table=[[STREAMS, ORDERS]])\n")
+        .explainContains(
+            "EnumerableCalc(expr#0..2=[{inputs}], expr#3=[6], expr#4=[>($t2, $t3)], product=[$t1], $condition=[$t4])\n"
+                + "  EnumerableInterpreter\n"
+                + "    BindableTableScan(table=[[]])")
+        .returns(
+            startsWith("product=paint",
+                "product=brush"));
+  }
+
   private Function<ResultSet, Void> startsWith(String... rows) {
     final ImmutableList<String> rowList = ImmutableList.copyOf(rows);
     return new Function<ResultSet, Void>() {
@@ -126,7 +144,9 @@ public class StreamTest {
       };
       final ImmutableList<Object[]> rows = ImmutableList.of(
           new Object[] {1, "paint", 10},
-          new Object[] {2, "paper", 5});
+          new Object[] {2, "paper", 5},
+          new Object[] {3, "brush", 12},
+          new Object[] {4, "paint", 3});
 
       return new StreamableTable() {
         public Table stream() {
