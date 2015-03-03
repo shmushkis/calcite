@@ -21,7 +21,8 @@ import org.apache.calcite.schema.Schema;
 /**
  * Root schema.
  */
-public class CalciteRootSchema extends CalciteSchema {
+@Deprecated
+public class CalciteRootSchema extends CachingCalciteSchema {
   /** Creates a root schema. */
   CalciteRootSchema(Schema schema) {
     super(null, schema, "");
