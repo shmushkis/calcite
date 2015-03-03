@@ -25,6 +25,7 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelDistributionTraitDef;
+import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.type.RelDataType;
@@ -262,7 +263,37 @@ public class RelOptTableImpl implements Prepare.PreparingTable {
   }
 
   public SqlMonotonicity getMonotonicity(String columnName) {
+    final int i = rowType.getFieldNames().indexOf(columnName);
+    if (i >= 0) {
+      for (RelCollation collation : table.getStatistic().getCollations()) {
+        final RelFieldCollation fieldCollation =
+            collation.getFieldCollations().get(0);
+        if (fieldCollation.getFieldIndex() == i) {
+          return monotonicity(fieldCollation.direction);
+        }
+      }
+    }
     return SqlMonotonicity.NOT_MONOTONIC;
+  }
+
+  /** Converts a {@link org.apache.calcite.rel.RelFieldCollation.Direction}
+   * value to a {@link org.apache.calcite.sql.validate.SqlMonotonicity}. */
+  private static SqlMonotonicity
+  monotonicity(RelFieldCollation.Direction direction) {
+    switch (direction) {
+    case ASCENDING:
+      return SqlMonotonicity.INCREASING;
+    case STRICTLY_ASCENDING:
+      return SqlMonotonicity.STRICTLY_INCREASING;
+    case DESCENDING:
+      return SqlMonotonicity.DECREASING;
+    case STRICTLY_DESCENDING:
+      return SqlMonotonicity.STRICTLY_DECREASING;
+    case CLUSTERED:
+      return SqlMonotonicity.MONOTONIC;
+    default:
+      throw new AssertionError("unknown: " + direction);
+    }
   }
 
   public SqlAccessType getAllowedAccess() {

@@ -18,6 +18,7 @@ package org.apache.calcite.rel.stream;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelInput;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.SingleRel;
 import org.apache.calcite.rel.core.TableScan;
@@ -37,6 +38,11 @@ import org.apache.calcite.rel.core.TableScan;
 public abstract class Delta extends SingleRel {
   protected Delta(RelOptCluster cluster, RelTraitSet traits, RelNode input) {
     super(cluster, traits, input);
+  }
+
+  /** Creates a Delta by parsing serialized output. */
+  protected Delta(RelInput input) {
+    this(input.getCluster(), input.getTraitSet(), input.getInput());
   }
 }
 

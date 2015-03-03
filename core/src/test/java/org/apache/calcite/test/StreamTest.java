@@ -17,8 +17,10 @@
 package org.apache.calcite.test;
 
 import org.apache.calcite.DataContext;
+import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelProtoDataType;
@@ -31,11 +33,13 @@ import org.apache.calcite.schema.StreamableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TableFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.ImmutableBitSet;
 
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.ResultSet;
@@ -55,7 +59,9 @@ public class StreamTest {
       + "       tables: [ {\n"
       + "         type: 'custom',\n"
       + "         name: 'ORDERS',\n"
-      + "         stream: true,\n"
+      + "         stream: {\n"
+      + "           stream: true\n"
+      + "         },\n"
       + "         factory: '" + OrdersStreamTableFactory.class.getName() + "'\n"
       + "       } ]\n"
       + "     }\n";
@@ -73,31 +79,111 @@ public class StreamTest {
         .withDefaultSchema("STREAMS")
         .query("select stream * from orders")
         .convertContains("LogicalDelta\n"
-            + "  LogicalProject(id=[$0], product=[$1], quantity=[$2])\n"
+            + "  LogicalProject(ROWTIME=[$0], ID=[$1], PRODUCT=[$2], UNITS=[$3])\n"
             + "    EnumerableTableScan(table=[[STREAMS, ORDERS]])\n")
         .explainContains("EnumerableInterpreter\n"
             + "  BindableTableScan(table=[[]])")
         .returns(
-            startsWith("id=1; product=paint; quantity=10",
-                "id=2; product=paper; quantity=5"));
+            startsWith(
+                "ROWTIME=2015-02-15 10:15:00; ID=1; PRODUCT=paint; UNITS=10",
+                "ROWTIME=2015-02-15 10:24:15; ID=2; PRODUCT=paper; UNITS=5"));
   }
 
   @Test public void testStreamFilterProject() {
     CalciteAssert.model(STREAM_MODEL)
         .withDefaultSchema("STREAMS")
-        .query("select stream \"product\" from orders where \"quantity\" > 6")
+        .query("select stream product from orders where units > 6")
         .convertContains(
             "LogicalDelta\n"
-                + "  LogicalProject(product=[$1])\n"
-                + "    LogicalFilter(condition=[>($2, 6)])\n"
+                + "  LogicalProject(PRODUCT=[$2])\n"
+                + "    LogicalFilter(condition=[>($3, 6)])\n"
                 + "      EnumerableTableScan(table=[[STREAMS, ORDERS]])\n")
         .explainContains(
-            "EnumerableCalc(expr#0..2=[{inputs}], expr#3=[6], expr#4=[>($t2, $t3)], product=[$t1], $condition=[$t4])\n"
+            "EnumerableCalc(expr#0..3=[{inputs}], expr#4=[6], expr#5=[>($t3, $t4)], PRODUCT=[$t2], $condition=[$t5])\n"
                 + "  EnumerableInterpreter\n"
                 + "    BindableTableScan(table=[[]])")
         .returns(
-            startsWith("product=paint",
-                "product=brush"));
+            startsWith("PRODUCT=paint",
+                "PRODUCT=brush"));
+  }
+
+  @Test public void testStreamGroupByHaving() {
+    CalciteAssert.model(STREAM_MODEL)
+        .withDefaultSchema("STREAMS")
+        .query("select stream floor(rowtime to hour) as rowtime,\n"
+            + "  product, count(*) as c\n"
+            + "from orders\n"
+            + "group by floor(rowtime to hour), product\n"
+            + "having count(*) > 1")
+        .convertContains(
+            "LogicalDelta\n"
+                + "  LogicalFilter(condition=[>($2, 1)])\n"
+                + "    LogicalAggregate(group=[{0, 1}], C=[COUNT()])\n"
+                + "      LogicalProject(ROWTIME=[FLOOR($0, FLAG(HOUR))], PRODUCT=[$2])\n"
+                + "        EnumerableTableScan(table=[[STREAMS, ORDERS]])\n")
+        .explainContains(
+            "EnumerableCalc(expr#0..2=[{inputs}], expr#3=[1], expr#4=[>($t2, $t3)], proj#0..2=[{exprs}], $condition=[$t4])\n"
+                + "  EnumerableAggregate(group=[{0, 1}], C=[COUNT()])\n"
+                + "    EnumerableCalc(expr#0..3=[{inputs}], expr#4=[FLAG(HOUR)], expr#5=[FLOOR($t0, $t4)], ROWTIME=[$t5], PRODUCT=[$t2])\n"
+                + "      EnumerableInterpreter\n"
+                + "        BindableTableScan(table=[[]])")
+        .returns(
+            startsWith("ROWTIME=2015-02-15 10:00:00; PRODUCT=paint; C=2"));
+  }
+
+  @Test public void testStreamOrderBy() {
+    CalciteAssert.model(STREAM_MODEL)
+        .withDefaultSchema("STREAMS")
+        .query("select stream floor(rowtime to hour) as rowtime,\n"
+            + "  product, units\n"
+            + "from orders\n"
+            + "order by floor(orders.rowtime to hour), product desc")
+        .convertContains(
+            "LogicalDelta\n"
+                + "  LogicalSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[DESC])\n"
+                + "    LogicalProject(ROWTIME=[FLOOR($0, FLAG(HOUR))], PRODUCT=[$2], UNITS=[$3])\n"
+                + "      EnumerableTableScan(table=[[STREAMS, ORDERS]])\n")
+        .explainContains(
+            "EnumerableSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[DESC])\n"
+                + "  EnumerableCalc(expr#0..3=[{inputs}], expr#4=[FLAG(HOUR)], expr#5=[FLOOR($t0, $t4)], ROWTIME=[$t5], PRODUCT=[$t2], UNITS=[$t3])\n"
+                + "    EnumerableInterpreter\n"
+                + "      BindableTableScan(table=[[]])")
+        .returns(
+            startsWith("ROWTIME=2015-02-15 10:00:00; PRODUCT=paper; UNITS=5",
+                "ROWTIME=2015-02-15 10:00:00; PRODUCT=paint; UNITS=10",
+                "ROWTIME=2015-02-15 10:00:00; PRODUCT=paint; UNITS=3"));
+  }
+
+  @Ignore
+  @Test public void testStreamUnionAllOrderBy() {
+    CalciteAssert.model(STREAM_MODEL)
+        .withDefaultSchema("STREAMS")
+        .query("select stream *\n"
+            + "from (\n"
+            + "  select rowtime, product\n"
+            + "  from orders\n"
+            + "  union all\n"
+            + "  select rowtime, product\n"
+            + "  from orders)\n"
+            + "order by rowtime\n")
+        .convertContains(
+            "LogicalDelta\n"
+                + "  LogicalSort(sort0=[$0], dir0=[ASC])\n"
+                + "    LogicalProject(ROWTIME=[$0], PRODUCT=[$1])\n"
+                + "      LogicalUnion(all=[true])\n"
+                + "        LogicalProject(ROWTIME=[$0], PRODUCT=[$2])\n"
+                + "          EnumerableTableScan(table=[[STREAMS, ORDERS]])\n"
+                + "        LogicalProject(ROWTIME=[$0], PRODUCT=[$2])\n"
+                + "          EnumerableTableScan(table=[[STREAMS, ORDERS]])\n")
+        .explainContains(
+            "EnumerableSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[DESC])\n"
+                + "  EnumerableCalc(expr#0..3=[{inputs}], expr#4=[FLAG(HOUR)], expr#5=[FLOOR($t0, $t4)], ROWTIME=[$t5], PRODUCT=[$t2], UNITS=[$t3])\n"
+                + "    EnumerableInterpreter\n"
+                + "      BindableTableScan(table=[[]])")
+        .returns(
+            startsWith("ROWTIME=2015-02-15 10:00:00; PRODUCT=paper; UNITS=5",
+                "ROWTIME=2015-02-15 10:00:00; PRODUCT=paint; UNITS=10",
+                "ROWTIME=2015-02-15 10:00:00; PRODUCT=paint; UNITS=3"));
   }
 
   private Function<ResultSet, Void> startsWith(String... rows) {
@@ -136,17 +222,19 @@ public class StreamTest {
       final RelProtoDataType protoRowType = new RelProtoDataType() {
         public RelDataType apply(RelDataTypeFactory a0) {
           return a0.builder()
-              .add("id", SqlTypeName.INTEGER)
-              .add("product", SqlTypeName.VARCHAR, 10)
-              .add("quantity", SqlTypeName.INTEGER)
+              .add("ROWTIME", SqlTypeName.TIMESTAMP)
+              .add("ID", SqlTypeName.INTEGER)
+              .add("PRODUCT", SqlTypeName.VARCHAR, 10)
+              .add("UNITS", SqlTypeName.INTEGER)
               .build();
         }
       };
       final ImmutableList<Object[]> rows = ImmutableList.of(
-          new Object[] {1, "paint", 10},
-          new Object[] {2, "paper", 5},
-          new Object[] {3, "brush", 12},
-          new Object[] {4, "paint", 3});
+          new Object[] {ts(10, 15, 0), 1, "paint", 10},
+          new Object[] {ts(10, 24, 15), 2, "paper", 5},
+          new Object[] {ts(10, 24, 45), 3, "brush", 12},
+          new Object[] {ts(10, 58, 0), 4, "paint", 3},
+          new Object[] {ts(11, 10, 0), 5, "paint", 3});
 
       return new StreamableTable() {
         public Table stream() {
@@ -158,13 +246,19 @@ public class StreamTest {
         }
 
         public Statistic getStatistic() {
-          return Statistics.UNKNOWN;
+          return Statistics.of(100d,
+              ImmutableList.<ImmutableBitSet>of(),
+              RelCollations.createSingleton(0));
         }
 
         public Schema.TableType getJdbcTableType() {
           return Schema.TableType.TABLE;
         }
       };
+    }
+
+    private Object ts(int h, int m, int s) {
+      return DateTimeUtils.unixTimestamp(2015, 2, 15, h, m, s);
     }
   }
 
@@ -188,7 +282,9 @@ public class StreamTest {
     }
 
     public Statistic getStatistic() {
-      return Statistics.UNKNOWN;
+      return Statistics.of(100d,
+          ImmutableList.<ImmutableBitSet>of(),
+          RelCollations.createSingleton(0));
     }
 
     public Schema.TableType getJdbcTableType() {

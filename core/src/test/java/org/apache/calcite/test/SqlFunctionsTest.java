@@ -39,6 +39,7 @@ import static org.apache.calcite.avatica.util.DateTimeUtils.timestampStringToUni
 import static org.apache.calcite.avatica.util.DateTimeUtils.unixDateExtract;
 import static org.apache.calcite.avatica.util.DateTimeUtils.unixDateToString;
 import static org.apache.calcite.avatica.util.DateTimeUtils.unixTimeToString;
+import static org.apache.calcite.avatica.util.DateTimeUtils.unixTimestamp;
 import static org.apache.calcite.avatica.util.DateTimeUtils.unixTimestampToString;
 import static org.apache.calcite.avatica.util.DateTimeUtils.ymdToJulian;
 import static org.apache.calcite.avatica.util.DateTimeUtils.ymdToUnixDate;
@@ -310,6 +311,12 @@ public class SqlFunctionsTest {
         equalTo((long) month));
     assertThat(unixDateExtract(TimeUnitRange.DAY, unixDate),
         equalTo((long) day));
+  }
+
+  @Test public void testUnixTimestamp() {
+    assertThat(unixTimestamp(1970, 1, 1, 0, 0, 0), is(0L));
+    assertThat(unixTimestamp(1970, 1, 2, 0, 0, 0), is(86400000L));
+    assertThat(unixTimestamp(1970, 1, 1, 23, 59, 59), is(86399000L));
   }
 
   @Test public void testFloor() {

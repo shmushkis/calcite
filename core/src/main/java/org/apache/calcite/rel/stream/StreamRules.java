@@ -21,16 +21,27 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.prepare.RelOptTableImpl;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.core.Union;
+import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.logical.LogicalTableScan;
+import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.schema.StreamableTable;
 import org.apache.calcite.schema.Table;
+import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+
+import java.util.List;
 
 /**
  * Rules and relational operators for streaming relational expressions.
@@ -42,11 +53,14 @@ public class StreamRules {
       ImmutableList.of(
           new DeltaProjectTransposeRule(),
           new DeltaFilterTransposeRule(),
+          new DeltaAggregateTransposeRule(),
+          new DeltaSortTransposeRule(),
+          new DeltaUnionTransposeRule(),
           new DeltaTableScanRule());
 
   /** Planner rule that pushes a {@link Delta} through a {@link Project}. */
   public static class DeltaProjectTransposeRule extends RelOptRule {
-    public DeltaProjectTransposeRule() {
+    private DeltaProjectTransposeRule() {
       super(
           operand(Delta.class,
               operand(Project.class, any())));
@@ -54,20 +68,19 @@ public class StreamRules {
 
     @Override public void onMatch(RelOptRuleCall call) {
       final Delta delta = call.rel(0);
+      Util.discard(delta);
       final Project project = call.rel(1);
-      final RelOptCluster cluster = delta.getCluster();
-      final LogicalDelta newDelta =
-          new LogicalDelta(cluster, delta.getTraitSet(), project.getInput());
+      final LogicalDelta newDelta = LogicalDelta.create(project.getInput());
       final LogicalProject newProject =
-          new LogicalProject(cluster, newDelta, project.getProjects(),
-              project.getRowType().getFieldNames(), project.getFlags());
+          LogicalProject.create(newDelta, project.getProjects(),
+              project.getRowType().getFieldNames());
       call.transformTo(newProject);
     }
   }
 
   /** Planner rule that pushes a {@link Delta} through a {@link Filter}. */
   public static class DeltaFilterTransposeRule extends RelOptRule {
-    public DeltaFilterTransposeRule() {
+    private DeltaFilterTransposeRule() {
       super(
           operand(Delta.class,
               operand(Filter.class, any())));
@@ -75,24 +88,88 @@ public class StreamRules {
 
     @Override public void onMatch(RelOptRuleCall call) {
       final Delta delta = call.rel(0);
+      Util.discard(delta);
       final Filter filter = call.rel(1);
-      final RelOptCluster cluster = delta.getCluster();
-      final LogicalDelta newDelta =
-          new LogicalDelta(cluster, delta.getTraitSet(), filter.getInput());
+      final LogicalDelta newDelta = LogicalDelta.create(filter.getInput());
       final LogicalFilter newFilter =
-          new LogicalFilter(cluster, newDelta, filter.getCondition());
+          LogicalFilter.create(newDelta, filter.getCondition());
       call.transformTo(newFilter);
     }
   }
 
+  /** Planner rule that pushes a {@link Delta} through an {@link Aggregate}. */
+  public static class DeltaAggregateTransposeRule extends RelOptRule {
+    private DeltaAggregateTransposeRule() {
+      super(
+          operand(Delta.class,
+              operand(Aggregate.class, any())));
+    }
+
+    @Override public void onMatch(RelOptRuleCall call) {
+      final Delta delta = call.rel(0);
+      Util.discard(delta);
+      final Aggregate aggregate = call.rel(1);
+      final LogicalDelta newDelta =
+          LogicalDelta.create(aggregate.getInput());
+      final LogicalAggregate newAggregate =
+          LogicalAggregate.create(newDelta, aggregate.indicator,
+              aggregate.getGroupSet(), aggregate.groupSets,
+              aggregate.getAggCallList());
+      call.transformTo(newAggregate);
+    }
+  }
+
+  /** Planner rule that pushes a {@link Delta} through an {@link Sort}. */
+  public static class DeltaSortTransposeRule extends RelOptRule {
+    private DeltaSortTransposeRule() {
+      super(
+          operand(Delta.class,
+              operand(Sort.class, any())));
+    }
+
+    @Override public void onMatch(RelOptRuleCall call) {
+      final Delta delta = call.rel(0);
+      Util.discard(delta);
+      final Sort sort = call.rel(1);
+      final LogicalDelta newDelta =
+          LogicalDelta.create(sort.getInput());
+      final LogicalSort newSort =
+          LogicalSort.create(newDelta, sort.collation, sort.offset, sort.fetch);
+      call.transformTo(newSort);
+    }
+  }
+
+  /** Planner rule that pushes a {@link Delta} through an {@link Union}. */
+  public static class DeltaUnionTransposeRule extends RelOptRule {
+    private DeltaUnionTransposeRule() {
+      super(
+          operand(Delta.class,
+              operand(Union.class, any())));
+    }
+
+    @Override public void onMatch(RelOptRuleCall call) {
+      final Delta delta = call.rel(0);
+      Util.discard(delta);
+      final Union union = call.rel(1);
+      final List<RelNode> newInputs = Lists.newArrayList();
+      for (RelNode input : union.getInputs()) {
+        final LogicalDelta newDelta =
+            LogicalDelta.create(input);
+        newInputs.add(newDelta);
+      }
+      final LogicalUnion newUnion = LogicalUnion.create(newInputs, union.all);
+      call.transformTo(newUnion);
+    }
+  }
+
   /** Planner rule that pushes a {@link Delta} into a {@link TableScan} of a
-   * streamable table.
+   * {@link org.apache.calcite.schema.StreamableTable}.
    *
    * <p>Very likely, the stream was only represented as a table for uniformity
    * with the other relations in the system. The Delta disappears and the stream
    * can be implemented directly. */
   public static class DeltaTableScanRule extends RelOptRule {
-    public DeltaTableScanRule() {
+    private DeltaTableScanRule() {
       super(
           operand(Delta.class,
               operand(TableScan.class, none())));

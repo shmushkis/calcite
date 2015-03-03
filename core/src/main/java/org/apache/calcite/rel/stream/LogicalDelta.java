@@ -16,8 +16,10 @@
  */
 package org.apache.calcite.rel.stream;
 
+import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelInput;
 import org.apache.calcite.rel.RelNode;
 
 import java.util.List;
@@ -27,9 +29,28 @@ import java.util.List;
  * not targeted at any particular engine or calling convention.
  */
 public final class LogicalDelta extends Delta {
+  /**
+   * Creates a LogicalDelta.
+   *
+   * <p>Use {@link #create} unless you know what you're doing.
+   *
+   * @param cluster   Cluster that this relational expression belongs to
+   * @param input     Input relational expression
+   */
   public LogicalDelta(RelOptCluster cluster, RelTraitSet traits,
       RelNode input) {
     super(cluster, traits, input);
+  }
+
+  /** Creates a LogicalDelta by parsing serialized output. */
+  public LogicalDelta(RelInput input) {
+    super(input);
+  }
+
+  /** Creates a LogicalDelta. */
+  public static LogicalDelta create(RelNode input) {
+    final RelTraitSet traitSet = input.getTraitSet().replace(Convention.NONE);
+    return new LogicalDelta(input.getCluster(), traitSet, input);
   }
 
   @Override public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {

@@ -44,6 +44,10 @@ FROM Orders;
  10:17:05 |        10 |       6 |     1
  10:18:05 |        20 |       7 |     2
  10:18:07 |        30 |       8 |    20
+ 11:02:00 |        10 |       9 |     6
+ 11:04:00 |        10 |      10 |     1
+ 11:09:30 |        40 |      11 |    12
+ 11:24:11 |        10 |      12 |     4
 ```
 
 This query reads all columns and rows from the `Orders` stream.
@@ -98,6 +102,9 @@ WHERE units > 3;
 ----------+-----------+---------+-------
  10:17:00 |        30 |       5 |     4
  10:18:07 |        30 |       8 |    20
+ 11:02:00 |        10 |       9 |     6
+ 11:09:30 |        40 |      11 |    12
+ 11:24:11 |        10 |      12 |     4
 ```
 
 # Projecting expressions
@@ -118,6 +125,10 @@ FROM Orders;
  10:17:05 | An order for 1 unit of product #10
  10:18:05 | An order for 2 units of product #20
  10:18:07 | An order for 20 units of product #30
+ 11:02:00 | An order by 6 units of product #10
+ 11:04:00 | An order by 1 unit of product #10
+ 11:09:30 | An order for 12 units of product #40
+ 11:24:11 | An order by 4 units of product #10
 ```
 
 We recommend that you always include the `rowtime` column in the `SELECT`
@@ -192,7 +203,7 @@ SELECT STREAM FLOOR(rowtime TO HOUR) AS rowtime,
   productId
 FROM Orders
 GROUP BY FLOOR(rowtime TO HOUR), productId
-HAVING COUNT(*) > 2 OR SUM(units) > 12;
+HAVING COUNT(*) > 2 OR SUM(units) > 10;
 
   rowtime | productId
 ----------+-----------
@@ -215,7 +226,7 @@ FROM (
     SUM(units) AS su
   FROM Orders
   GROUP BY FLOOR(rowtime TO HOUR), productId)
-WHERE c > 2 OR su > 12;
+WHERE c > 2 OR su > 10;
 
   rowtime | productId
 ----------+-----------
@@ -246,7 +257,7 @@ CREATE VIEW HourlyOrderTotals (rowtime, productId, c, su) AS
 
 SELECT STREAM rowtime, productId
 FROM HourlyOrderTotals
-WHERE c > 2 OR su > 12;
+WHERE c > 2 OR su > 10;
 
   rowtime | productId
 ----------+-----------
@@ -277,7 +288,7 @@ WITH HourlyOrderTotals (rowtime, productId, c, su) AS (
   GROUP BY FLOOR(rowtime TO HOUR), productId)
 SELECT STREAM rowtime, productId
 FROM HourlyOrderTotals
-WHERE c > 2 OR su > 12;
+WHERE c > 2 OR su > 10;
 
   rowtime | productId
 ----------+-----------
@@ -382,6 +393,99 @@ about how people wish to query streams, we plan to make the language more
 expressive while remaining compatible with standard SQL and consistent with
 its principles, look and feel.
 
+## Sorting
+
+The story for `ORDER BY` is similar to `GROUP BY`.
+The syntax looks like regular SQL, but Calcite must be sure that it can deliver
+timely results. It therefore requires a monotonic expression on the leading edge
+of your `ORDER BY` key.
+
+```sql
+SELECT STREAM FLOOR(rowtime TO hour) AS rowtime, productId, orderId, units
+FROM Orders
+ORDER BY FLOOR(rowtime TO hour) ASC, units DESC;
+
+  rowtime | productId | orderId | units
+----------+-----------+---------+-------
+ 10:00:00 |        30 |       8 |    20
+ 10:00:00 |        30 |       5 |     4
+ 10:00:00 |        20 |       7 |     2
+ 10:00:00 |        10 |       6 |     1
+ 11:00:00 |        40 |      11 |    12
+ 11:00:00 |        10 |       9 |     6
+ 11:00:00 |        10 |      12 |     4
+ 11:00:00 |        10 |      10 |     1
+```
+
+Most queries will return results in the order that they were inserted,
+because the engine is using streaming algorithms, but you should not rely on it.
+For example, consider this:
+
+```sql
+SELECT STREAM *
+FROM Orders
+WHERE productId = 10
+UNION ALL
+SELECT STREAM *
+FROM Orders
+WHERE productId = 30;
+
+  rowtime | productId | orderId | units
+----------+-----------+---------+-------
+ 10:17:05 |        10 |       6 |     1
+ 10:17:00 |        30 |       5 |     4
+ 10:18:07 |        30 |       8 |    20
+ 11:02:00 |        10 |       9 |     6
+ 11:04:00 |        10 |      10 |     1
+ 11:24:11 |        10 |      12 |     4
+```
+
+The rows with `productId` = 30 are apparently out of order, probably because
+the `Orders` stream was partitioned on `productId` and the partitioned streams
+sent their data at different times.
+
+If you require a particular ordering, add an explicit `ORDER BY`:
+
+```sql
+SELECT STREAM *
+FROM Orders
+WHERE productId = 10
+UNION ALL
+SELECT STREAM *
+FROM Orders
+WHERE productId = 30
+ORDER BY rowtime;
+
+  rowtime | productId | orderId | units
+----------+-----------+---------+-------
+ 10:17:00 |        30 |       5 |     4
+ 10:17:05 |        10 |       6 |     1
+ 10:18:07 |        30 |       8 |    20
+ 11:02:00 |        10 |       9 |     6
+ 11:04:00 |        10 |      10 |     1
+ 11:24:11 |        10 |      12 |     4
+```
+
+Calcite will probably implement the `UNION ALL` by merging using `rowtime`,
+which is only slightly less efficient.
+
+You only need to add an `ORDER BY` to the outermost query. If you need to,
+say, perform `GROUP BY` after a `UNION ALL`, Calcite will add an `ORDER BY`
+implicitly, in order to make the GROUP BY algorithm possible.
+
+## Table constructor
+
+The `VALUES` clause creates an inline table with a given set of rows.
+
+Streaming is disallowed. The set of rows never changes, and therefore a stream
+would never return any rows.
+
+```sql
+> SELECT STREAM * FROM (VALUES (1, 'abc'));
+
+ERROR: Cannot stream VALUES
+```
+
 ## State of the stream
 
 Not all concepts in this article have been implemented in Calcite.
@@ -389,20 +493,20 @@ And others may be implemented in Calcite but not in a particular adapter
 such as Samza SQL [<a href="#ref3">3</a>].
 
 ### Implemented
-* Streaming SELECT, WHERE
-* Streaming GROUP BY, HAVING (validate only)
+* Streaming SELECT, WHERE, GROUP BY, HAVING, UNION ALL, ORDER BY
 * FLOOR and CEILING functions
 * Monotonicity
+* Streaming VALUES is disallowed
 
 ### Not implemented
 * Stream-to-stream JOIN
 * Stream-to-table JOIN
 * Stream on view
-* Streaming ORDER BY
-* Streaming UNION; UNION ALL; UNION with ORDER BY (merge)
+* Streaming UNION ALL with ORDER BY (merge)
 * Relational query on stream
 * Streaming windowed aggregation
 * Check that STREAM in sub-queries and views is ignored
+* Check that streaming ORDER BY cannot have OFFSET or LIMIT
 * Limited history; at run time, check that there is sufficient history
   to run the query.
 

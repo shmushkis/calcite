@@ -781,6 +781,15 @@ public class DateTimeUtils {
     return j;
   }
 
+  public static long unixTimestamp(int year, int month, int day, int hour,
+      int minute, int second) {
+    final int date = ymdToUnixDate(year, month, day);
+    return (long) date * MILLIS_PER_DAY
+        + (long) hour * MILLIS_PER_HOUR
+        + (long) minute * MILLIS_PER_MINUTE
+        + (long) second * MILLIS_PER_SECOND;
+  }
+
   //~ Inner Classes ----------------------------------------------------------
 
   /**

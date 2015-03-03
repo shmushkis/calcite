@@ -100,6 +100,12 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
   private static final String STR_AGG_REQUIRES_MONO =
       "Streaming aggregation requires at least one monotonic expression in GROUP BY clause";
 
+  private static final String STR_ORDER_REQUIRES_MONO =
+      "Streaming ORDER BY must start with monotonic expression";
+
+  private static final String STR_SET_OP_INCONSISTENT =
+      "Set operator cannot combine streaming and non-streaming inputs";
+
   //~ Constructors -----------------------------------------------------------
 
   public SqlValidatorTest() {
@@ -112,6 +118,14 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
     // This ensures numbers in exceptions are printed as in asserts.
     // For example, 1,000 vs 1 000
     Locale.setDefault(Locale.US);
+  }
+
+  private static String cannotConvertToStream(String name) {
+    return "Cannot convert table '" + name + "' to stream";
+  }
+
+  private static String cannotConvertToRelation(String table) {
+    return "Cannot convert stream '" + table + "' to relation";
   }
 
   @Test public void testMultipleSameAsPass() {
@@ -6383,8 +6397,8 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
     checkResultType("select * from dept extend (x int not null)",
         "RecordType(INTEGER NOT NULL DEPTNO, VARCHAR(10) NOT NULL NAME, INTEGER NOT NULL X) NOT NULL");
     checkResultType("select deptno + x as z\n"
-        + "from dept extend (x int not null) as x\n"
-        + "where x > 10",
+            + "from dept extend (x int not null) as x\n"
+            + "where x > 10",
         "RecordType(INTEGER NOT NULL Z) NOT NULL");
   }
 
@@ -6941,10 +6955,6 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         .fails(cannotConvertToRelation("ORDERS"));
   }
 
-  private static String cannotConvertToStream(String name) {
-    return "Cannot convert table '" + name + "' to stream";
-  }
-
   @Test public void testStreamWhere() {
     sql("select stream * from orders where productId < 10").ok();
     sql("select stream * from ^emp^ where deptno = 10")
@@ -6956,10 +6966,6 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         .fails("Cannot convert table 'E' to stream");
     sql("select * from ^orders^ where productId > 10")
         .fails(cannotConvertToRelation("ORDERS"));
-  }
-
-  private static String cannotConvertToRelation(String table) {
-    return "Cannot convert stream '" + table + "' to relation";
   }
 
   @Test public void testStreamGroupBy() {
@@ -6974,8 +6980,8 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         + "from orders\n"
         + "^group by productId^")
         .fails(STR_AGG_REQUIRES_MONO);
-    sql("^select stream count(*) as c\n"
-        + "from orders^")
+    sql("select stream ^count(*)^ as c\n"
+        + "from orders")
         .fails(STR_AGG_REQUIRES_MONO);
     sql("select stream count(*) as c\n"
         + "from orders ^group by ()^")
@@ -6997,10 +7003,81 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         + "^group by productId^\n"
         + "having count(*) > 5")
         .fails(STR_AGG_REQUIRES_MONO);
-    sql("^select stream 1 \n"
+    sql("select stream 1\n"
         + "from orders\n"
-        + "having count(*) > 3^")
+        + "having ^count(*) > 3^")
         .fails(STR_AGG_REQUIRES_MONO);
+  }
+
+  @Test public void testStreamUnionAll() {
+    sql("select orderId\n"
+        + "from ^orders^\n"
+        + "union all\n"
+        + "select orderId\n"
+        + "from shipments")
+        .fails(cannotConvertToRelation("ORDERS"));
+    sql("select stream orderId\n"
+        + "from orders\n"
+        + "union all\n"
+        + "^select orderId\n"
+        + "from shipments^")
+        .fails(STR_SET_OP_INCONSISTENT);
+    sql("select empno\n"
+        + "from emp\n"
+        + "union all\n"
+        + "^select stream orderId\n"
+        + "from orders^")
+        .fails(STR_SET_OP_INCONSISTENT);
+    sql("select stream orderId\n"
+        + "from orders\n"
+        + "union all\n"
+        + "select stream orderId\n"
+        + "from shipments").ok();
+    sql("select stream rowtime, orderId\n"
+        + "from orders\n"
+        + "union all\n"
+        + "select stream rowtime, orderId\n"
+        + "from shipments\n"
+        + "order by rowtime").ok();
+  }
+
+  @Test public void testStreamValues() {
+    sql("select stream * from (^values 1^) as e")
+        .fails(cannotConvertToStream("E"));
+    sql("select stream orderId from orders\n"
+        + "union all\n"
+        + "^values 1^")
+        .fails(STR_SET_OP_INCONSISTENT);
+    sql("values 1, 2\n"
+        + "union all\n"
+        + "^select stream orderId from orders^\n")
+        .fails(STR_SET_OP_INCONSISTENT);
+  }
+
+  @Test public void testStreamOrderBy() {
+    sql("select stream *\n"
+        + "from orders\n"
+        + "order by rowtime").ok();
+    sql("select stream *\n"
+        + "from orders\n"
+        + "order by floor(rowtime to hour)").ok();
+    sql("select stream floor(rowtime to minute), productId\n"
+        + "from orders\n"
+        + "order by floor(rowtime to hour)").ok();
+    sql("select stream floor(rowtime to minute), productId\n"
+        + "from orders\n"
+        + "order by floor(rowtime to minute), productId desc").ok();
+    sql("select stream *\n"
+        + "from orders\n"
+        + "order by ^productId^, rowtime")
+        .fails(STR_ORDER_REQUIRES_MONO);
+    sql("select stream *\n"
+        + "from orders\n"
+        + "order by ^rowtime desc^")
+        .fails(STR_ORDER_REQUIRES_MONO);
+    sql("select stream *\n"
+        + "from orders\n"
+        + "order by floor(rowtime to hour), rowtime desc").ok();
   }
 
   @Test public void testNew() {

@@ -217,7 +217,16 @@ public class MockCatalogReader implements Prepare.CatalogReader {
     ordersStream.addColumn("ROWTIME", timestampType);
     ordersStream.addMonotonic("ROWTIME");
     ordersStream.addColumn("PRODUCTID", intType);
+    ordersStream.addColumn("ORDERID", intType);
     registerTable(ordersStream);
+
+    // Register "SHIPMENTS" stream.
+    MockTable shipmentsStream = MockTable.create(this, salesSchema, "SHIPMENTS",
+        true);
+    shipmentsStream.addColumn("ROWTIME", timestampType);
+    shipmentsStream.addMonotonic("ROWTIME");
+    shipmentsStream.addColumn("ORDERID", intType);
+    registerTable(shipmentsStream);
 
     return this;
   }

@@ -2227,19 +2227,16 @@ SqlNodeList OrderBy(boolean accept) :
     SqlParserPos pos;
 }
 {
-    <ORDER>
-    {
+    <ORDER> {
+        pos = getPos();
         if (!accept) {
             // Someone told us ORDER BY wasn't allowed here.  So why
             // did they bother calling us?  To get the correct
             // parser position for error reporting.
-            throw SqlUtil.newContextException(getPos(),
-                RESOURCE.illegalOrderBy());
+            throw SqlUtil.newContextException(pos, RESOURCE.illegalOrderBy());
         }
     }
-    <BY> e = OrderItem()
-    {
-        pos = getPos();
+    <BY> e = OrderItem() {
         list = startList(e);
     }
     (
@@ -2248,7 +2245,7 @@ SqlNodeList OrderBy(boolean accept) :
         LOOKAHEAD(2) <COMMA> e = OrderItem() { list.add(e); }
     ) *
     {
-        return new SqlNodeList(list, pos);
+        return new SqlNodeList(list, pos.plusAll(list));
     }
 }
 
@@ -2258,29 +2255,22 @@ SqlNodeList OrderBy(boolean accept) :
 SqlNode OrderItem() :
 {
     SqlNode e;
-    SqlParserPos pos;
 }
 {
     e = Expression(ExprContext.ACCEPT_SUBQUERY)
     (
         <ASC>
-        | <DESC>
-        {
-            pos = getPos();
-            e = SqlStdOperatorTable.DESC.createCall(pos, e);
+    |   <DESC> {
+            e = SqlStdOperatorTable.DESC.createCall(getPos(), e);
         }
     )?
     (
-        <NULLS> <FIRST>
-        {
-            pos = getPos();
-            e = SqlStdOperatorTable.NULLS_FIRST.createCall(pos, e);
+        <NULLS> <FIRST> {
+            e = SqlStdOperatorTable.NULLS_FIRST.createCall(getPos(), e);
         }
     |
-        <NULLS> <LAST>
-        {
-            pos = getPos();
-            e = SqlStdOperatorTable.NULLS_LAST.createCall(pos, e);
+        <NULLS> <LAST> {
+            e = SqlStdOperatorTable.NULLS_LAST.createCall(getPos(), e);
         }
     )?
     {
