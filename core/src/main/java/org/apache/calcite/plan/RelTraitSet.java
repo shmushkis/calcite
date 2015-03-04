@@ -180,6 +180,10 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
    */
   public RelTraitSet replace(
       RelTrait trait) {
+    // Quick check for common case
+    if (containsShallow(traits, trait)) {
+      return this;
+    }
     final RelTraitDef traitDef = trait.getTraitDef();
     int index = findIndex(traitDef);
     if (index < 0) {
@@ -188,6 +192,18 @@ public final class RelTraitSet extends AbstractList<RelTrait> {
     }
 
     return replace(index, trait);
+  }
+
+  /** Returns whether an element occurs within an array.
+   *
+   * <p>Uses {@code ==}, not {@link #equals}. Nulls are allowed. */
+  private static <T> boolean containsShallow(T[] ts, RelTrait seek) {
+    for (T t : ts) {
+      if (t == seek) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Replaces the trait(s) of a given type with a list of traits of the same
