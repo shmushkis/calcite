@@ -16,37 +16,38 @@
  */
 package org.apache.calcite.schema;
 
-import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptTable;
-import org.apache.calcite.prepare.Prepare;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.TableModify;
-
-import java.util.Collection;
-import java.util.List;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.util.ImmutableIntList;
 
 /**
- * A table that can be modified.
+ * A modifiable view onto {@link ModifiableTable}.
+ *
+ * <p>It describes how its columns map onto the underlying table's columns,
+ * and any constraints that incoming rows must satisfy.
+ *
+ * <p>For example, given
+ *
+ * <blockquote><pre>
+ *   CREATE TABLE emps (empno INTEGER, gender VARCHAR(1), deptno INTEGER);
+ *   CREATE VIEW female_emps AS
+ *     SELECT empno, deptno FROM emps WHERE gender = 'F';
+ * </pre></blockquote>
+ *
+ * constraint is {@code $1 = 'F'}
+ * and column mapping is {@code [0, 2]}.
  *
  * <p>NOTE: The current API is inefficient and experimental. It will change
  * without notice.</p>
- *
- * @see ModifiableView
  */
-public interface ModifiableTable extends QueryableTable {
-  /** Returns the modifiable collection.
-   * Modifying the collection will change the table's contents. */
-  Collection getModifiableCollection();
+public interface ModifiableView extends Table {
+  /** Returns a list of constraints that each candidate row must satisfy.
+   *
+   * <p>Never null; if there is no constraint, returns "true".
+   */
+  RexNode getConstraint();
 
-  /** Creates a relational expression that modifies this table. */
-  TableModify toModificationRel(
-      RelOptCluster cluster,
-      RelOptTable table,
-      Prepare.CatalogReader catalogReader,
-      RelNode child,
-      TableModify.Operation operation,
-      List<String> updateColumnList,
-      boolean flattened);
+  /** Returns the column mapping onto another table. */
+  ImmutableIntList getColumnMapping();
 }
 
-// End ModifiableTable.java
+// End ModifiableView.java

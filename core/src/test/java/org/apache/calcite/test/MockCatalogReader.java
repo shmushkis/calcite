@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.test;
 
+import org.apache.calcite.linq4j.QueryProvider;
+import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptSchema;
@@ -27,14 +29,21 @@ import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeComparability;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
+import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.ModifiableTable;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlAccessType;
 import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ObjectSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -51,21 +60,24 @@ import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
-import java.util.ArrayList;
+import java.lang.reflect.Type;
+import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 /**
  * Mock implementation of {@link SqlValidatorCatalogReader} which returns tables
  * "EMP", "DEPT", "BONUS", "SALGRADE" (same as Oracle's SCOTT schema).
+ * Also two streams "ORDERS", "SHIPMENTS";
+ * and a view "EMP_20".
  */
 public class MockCatalogReader implements Prepare.CatalogReader {
   //~ Static fields/initializers ---------------------------------------------
@@ -100,12 +112,11 @@ public class MockCatalogReader implements Prepare.CatalogReader {
     this.typeFactory = typeFactory;
     this.caseSensitive = caseSensitive;
     if (caseSensitive) {
-      tables = new HashMap<List<String>, MockTable>();
-      schemas = new HashMap<String, MockSchema>();
+      tables = Maps.newHashMap();
+      schemas = Maps.newHashMap();
     } else {
-      tables = new TreeMap<List<String>, MockTable>(
-          CASE_INSENSITIVE_LIST_COMPARATOR);
-      schemas = new TreeMap<String, MockSchema>(String.CASE_INSENSITIVE_ORDER);
+      tables = Maps.newTreeMap(CASE_INSENSITIVE_LIST_COMPARATOR);
+      schemas = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     }
   }
 
@@ -147,7 +158,8 @@ public class MockCatalogReader implements Prepare.CatalogReader {
     registerSchema(salesSchema);
 
     // Register "EMP" table.
-    MockTable empTable = MockTable.create(this, salesSchema, "EMP", false);
+    final MockTable empTable =
+        MockTable.create(this, salesSchema, "EMP", false);
     empTable.addColumn("EMPNO", intType);
     empTable.addColumn("ENAME", varchar20Type);
     empTable.addColumn("JOB", varchar10Type);
@@ -228,6 +240,86 @@ public class MockCatalogReader implements Prepare.CatalogReader {
     shipmentsStream.addColumn("ORDERID", intType);
     registerTable(shipmentsStream);
 
+    // Register "EMP_20" view.
+    // Same columns as "EMP",
+    // but "DEPTNO" not visible and set to 20 by default
+    // and "SAL" is visible but must be greater than 1000
+    MockTable emp20View = new MockTable(this, salesSchema.getCatalogName(),
+        salesSchema.name, "EMP_20", false) {
+      @Override public RelNode toRel(ToRelContext context) {
+        // Expand to the equivalent of:
+        //   SELECT EMPNO, ENAME, JOB, MGR, HIREDATE, SAL, COMM, SLACKER
+        //   FROM EMP
+        //   WHERE DEPTNO = 20 AND SAL > 1000
+        RelNode rel = LogicalTableScan.create(context.getCluster(), empTable);
+        final RexBuilder rexBuilder = context.getCluster().getRexBuilder();
+        rel = LogicalFilter.create(rel,
+            rexBuilder.makeCall(
+                SqlStdOperatorTable.AND,
+                rexBuilder.makeCall(SqlStdOperatorTable.EQUALS,
+                    rexBuilder.makeInputRef(rel, 7),
+                    rexBuilder.makeExactLiteral(BigDecimal.valueOf(20))),
+                rexBuilder.makeCall(SqlStdOperatorTable.GREATER_THAN,
+                    rexBuilder.makeInputRef(rel, 5),
+                    rexBuilder.makeExactLiteral(BigDecimal.valueOf(1000)))));
+        rel = LogicalProject.create(rel,
+            ImmutableList.<RexNode>of(
+                rexBuilder.makeInputRef(rel, 0),
+                rexBuilder.makeInputRef(rel, 1),
+                rexBuilder.makeInputRef(rel, 2),
+                rexBuilder.makeInputRef(rel, 3),
+                rexBuilder.makeInputRef(rel, 4),
+                rexBuilder.makeInputRef(rel, 5),
+                rexBuilder.makeInputRef(rel, 6),
+                rexBuilder.makeInputRef(rel, 8)),
+            ImmutableList.of("EMPNO", "ENAME", "JOB", "MGR", "HIREDATE", "SAL",
+                "COMM", "SLACKER"));
+        return rel;
+      }
+
+      @Override public <T> T unwrap(Class<T> clazz) {
+        if (clazz.isAssignableFrom(ModifiableTable.class)) {
+          return clazz.cast(
+              new JdbcTest.AbstractModifiableTable(Util.last(names)) {
+                @Override public Collection getModifiableCollection() {
+                  return null;
+                }
+
+                @Override public <E> Queryable<E>
+                asQueryable(QueryProvider queryProvider, SchemaPlus schema,
+                    String tableName) {
+                  return null;
+                }
+
+                @Override public Type getElementType() {
+                  return null;
+                }
+
+                @Override public Expression getExpression(SchemaPlus schema,
+                    String tableName, Class clazz) {
+                  return null;
+                }
+
+                @Override public RelDataType
+                getRowType(RelDataTypeFactory typeFactory) {
+                  return null;
+                }
+              });
+        }
+        return super.unwrap(clazz);
+      }
+    };
+    salesSchema.addTable(Util.last(emp20View.getQualifiedName()));
+    emp20View.addColumn("EMPNO", intType);
+    emp20View.addColumn("ENAME", varchar20Type);
+    emp20View.addColumn("JOB", varchar10Type);
+    emp20View.addColumn("MGR", intTypeNull);
+    emp20View.addColumn("HIREDATE", timestampType);
+    emp20View.addColumn("SAL", intType);
+    emp20View.addColumn("COMM", intType);
+    emp20View.addColumn("SLACKER", booleanType);
+    registerTable(emp20View);
+
     return this;
   }
 
@@ -296,7 +388,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
           .build();
     case 1:
       // looking for schema names
-      result = new ArrayList<SqlMoniker>();
+      result = Lists.newArrayList();
       for (MockSchema schema : schemas.values()) {
         final String catalogName = names.get(0);
         if (schema.getCatalogName().equals(catalogName)) {
@@ -312,7 +404,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
       if (schema == null) {
         return Collections.emptyList();
       }
-      result = new ArrayList<SqlMoniker>();
+      result = Lists.newArrayList();
       for (String tableName : schema.tableNames) {
         result.add(
             new SqlMonikerImpl(
@@ -328,30 +420,6 @@ public class MockCatalogReader implements Prepare.CatalogReader {
 
   public List<String> getSchemaName() {
     return ImmutableList.of(DEFAULT_CATALOG, DEFAULT_SCHEMA);
-  }
-
-  private MockSchema getMockSchema(List<String> names) {
-    return schemas.get(names.get(0));
-  }
-
-  public List<SqlMoniker> getAllSchemaObjectNames2(List<String> names) {
-    List<SqlMoniker> result = new ArrayList<SqlMoniker>();
-    if (names.isEmpty()) {
-      for (MockSchema schema : schemas.values()) {
-        result.add(
-            new SqlMonikerImpl(schema.name, SqlMonikerType.SCHEMA));
-      }
-    }
-    // looking for table names in the given schema
-    MockSchema schema = getMockSchema(names);
-    if (schema != null) {
-      for (String tableName : schema.tableNames) {
-        result.add(
-            new SqlMonikerImpl(
-                tableName, SqlMonikerType.TABLE));
-      }
-    }
-    return result;
   }
 
   public RelDataTypeField field(RelDataType rowType, String alias) {
@@ -380,8 +448,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
 
   private static List<RelCollation> deduceMonotonicity(
       Prepare.PreparingTable table) {
-    final List<RelCollation> collationList =
-        new ArrayList<RelCollation>();
+    final List<RelCollation> collationList = Lists.newArrayList();
 
     // Deduce which fields the table is sorted on.
     int i = -1;
@@ -407,7 +474,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
 
   /** Mock schema. */
   public static class MockSchema {
-    private final List<String> tableNames = new ArrayList<String>();
+    private final List<String> tableNames = Lists.newArrayList();
     private String name;
 
     public MockSchema(String name) {
@@ -428,13 +495,13 @@ public class MockCatalogReader implements Prepare.CatalogReader {
    * {@link org.apache.calcite.prepare.Prepare.PreparingTable}.
    */
   public static class MockTable implements Prepare.PreparingTable {
-    private final MockCatalogReader catalogReader;
+    protected final MockCatalogReader catalogReader;
     private final boolean stream;
     private final List<Map.Entry<String, RelDataType>> columnList =
         Lists.newArrayList();
     private RelDataType rowType;
     private List<RelCollation> collationList;
-    private final List<String> names;
+    protected final List<String> names;
     private final Set<String> monotonicColumnSet = Sets.newHashSet();
 
     public MockTable(MockCatalogReader catalogReader, String catalogName,
@@ -513,10 +580,6 @@ public class MockCatalogReader implements Prepare.CatalogReader {
 
     public Expression getExpression(Class clazz) {
       throw new UnsupportedOperationException();
-    }
-
-    public void addColumn(int index, String name, RelDataType type) {
-      columnList.add(index, Pair.of(name, type));
     }
 
     public void addColumn(String name, RelDataType type) {

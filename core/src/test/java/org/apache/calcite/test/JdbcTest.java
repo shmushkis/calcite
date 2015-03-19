@@ -84,6 +84,7 @@ import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -248,6 +249,30 @@ public class JdbcTest {
 
   public static List<Pair<String, String>> getFoodmartQueries() {
     return FOODMART_QUERIES;
+  }
+
+  /** Tests a modifiable view. */
+  @Test public void testModelWithModifiableView() throws Exception {
+    final CalciteAssert.AssertThat with =
+        modelWithView("select \"name\" from \"EMPLOYEES\" where \"deptno\" = 10");
+    with
+        .query("select \"name\" from \"adhoc\".V order by \"name\"")
+        .returns("name=Bill\n"
+                + "name=Sebastian\n"
+                + "name=Theodore\n");
+    with.doWithConnection(
+        new Function<CalciteConnection, Object>() {
+          @Override public Object apply(CalciteConnection input) {
+            try {
+              final Statement statement = input.createStatement();
+              statement.executeUpdate("insert into \"adhoc\".V values ('Fred')");
+              statement.close();
+              return null;
+            } catch (SQLException e) {
+              throw Throwables.propagate(e);
+            }
+          }
+        });
   }
 
   /**
