@@ -79,8 +79,9 @@ public class SemiJoin extends EquiJoin {
   public static SemiJoin create(RelNode left, RelNode right, RexNode condition,
       ImmutableIntList leftKeys, ImmutableIntList rightKeys) {
     final RelOptCluster cluster = left.getCluster();
-    return new SemiJoin(cluster, cluster.traitSetOf(Convention.NONE), left,
-        right, condition, leftKeys, rightKeys);
+    final RelTraitSet traitSet = cluster.traitSetOf(Convention.NONE);
+    return new SemiJoin(cluster, traitSet, left, right, condition, leftKeys,
+        rightKeys);
   }
 
   //~ Methods ----------------------------------------------------------------

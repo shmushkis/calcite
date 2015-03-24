@@ -608,8 +608,7 @@ public class PlannerTest {
           .append(i).append(".\"deptno\" = d")
           .append(i - 1).append(".\"deptno\"");
     }
-    Planner planner = getPlanner(null,
-        Programs.heuristicJoinOrder(Programs.RULE_SET, false, 6));
+    Planner planner = getPlanner(null, Programs.heuristic(6));
     SqlNode parse = planner.parse(buf.toString());
 
     SqlNode validate = planner.validate(parse);
@@ -690,8 +689,7 @@ public class PlannerTest {
   }
 
   private void checkHeuristic(String sql, String expected) throws Exception {
-    Planner planner = getPlanner(null,
-        Programs.heuristicJoinOrder(Programs.RULE_SET, false, 0));
+    Planner planner = getPlanner(null, Programs.heuristic(0));
     SqlNode parse = planner.parse(sql);
     SqlNode validate = planner.validate(parse);
     RelNode convert = planner.convert(validate);
@@ -816,7 +814,7 @@ public class PlannerTest {
             CalciteAssert.addSchema(rootSchema,
                 CalciteAssert.SchemaSpec.CLONE_FOODMART))
         .traitDefs((List<RelTraitDef>) null)
-        .programs(Programs.heuristicJoinOrder(Programs.RULE_SET, true, 2))
+        .programs(Programs.bushy(2))
         .build();
     Planner planner = Frameworks.getPlanner(config);
     SqlNode parse = planner.parse(sql);
