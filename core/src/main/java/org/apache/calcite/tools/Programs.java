@@ -51,6 +51,7 @@ import org.apache.calcite.rel.rules.MultiJoinOptimizeBushyRule;
 import org.apache.calcite.rel.rules.ProjectCalcMergeRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectToCalcRule;
+import org.apache.calcite.rel.rules.SemiJoinReductionRule;
 import org.apache.calcite.rel.rules.SemiJoinRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
 import org.apache.calcite.rel.rules.TableScanRule;
@@ -200,13 +201,31 @@ public class Programs {
     };
   }
 
+  /** Creates a program that executes the "bushy join" optimization. */
+  public static Program bushy(final int minJoinCount) {
+    return heuristicJoinOrder(Programs.RULE_SET,
+        MultiJoinOptimizeBushyRule.INSTANCE, minJoinCount);
+  }
+
+  /** Creates a program that executes the "heuristic join" optimization. */
+  public static Program heuristic(final int minJoinCount) {
+    return heuristicJoinOrder(Programs.RULE_SET,
+        LoptOptimizeJoinRule.INSTANCE, minJoinCount);
+  }
+
+  /** Creates a program that executes the "semi-join reduction" optimization. */
+  public static Program semi(final int minJoinCount) {
+    return heuristicJoinOrder(Programs.RULE_SET,
+        SemiJoinReductionRule.INSTANCE, minJoinCount);
+  }
+
   /** Creates a program that invokes heuristic join-order optimization
    * (via {@link org.apache.calcite.rel.rules.JoinToMultiJoinRule},
    * {@link org.apache.calcite.rel.rules.MultiJoin} and
    * {@link org.apache.calcite.rel.rules.LoptOptimizeJoinRule})
    * if there are 6 or more joins (7 or more relations). */
   public static Program heuristicJoinOrder(final Collection<RelOptRule> rules,
-      final boolean bushy, final int minJoinCount) {
+      final RelOptRule rule, final int minJoinCount) {
     return new Program() {
       public RelNode run(RelOptPlanner planner, RelNode rel,
           RelTraitSet requiredOutputTraits) {
@@ -234,9 +253,7 @@ public class Programs {
                   JoinAssociateRule.INSTANCE,
                   JoinPushThroughJoinRule.LEFT,
                   JoinPushThroughJoinRule.RIGHT));
-          list.add(bushy
-              ? MultiJoinOptimizeBushyRule.INSTANCE
-              : LoptOptimizeJoinRule.INSTANCE);
+          list.add(rule);
           final Program program2 = ofRules(list);
 
           program = sequence(program1, program2);

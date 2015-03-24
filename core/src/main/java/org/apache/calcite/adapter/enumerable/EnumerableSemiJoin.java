@@ -23,7 +23,6 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.InvalidRelException;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -42,29 +41,23 @@ public class EnumerableSemiJoin extends SemiJoin implements EnumerableRel {
    * <p>Use {@link #create} unless you know what you're doing. */
   EnumerableSemiJoin(
       RelOptCluster cluster,
-      RelTraitSet traits,
+      RelTraitSet traitSet,
       RelNode left,
       RelNode right,
       RexNode condition,
       ImmutableIntList leftKeys,
-      ImmutableIntList rightKeys)
-      throws InvalidRelException {
-    super(cluster, traits, left, right, condition, leftKeys, rightKeys);
+      ImmutableIntList rightKeys) {
+    super(cluster, traitSet, left, right, condition, leftKeys, rightKeys);
   }
 
   /** Creates an EnumerableSemiJoin. */
-  public static EnumerableSemiJoin create(RelNode left, RelNode right, RexNode condition,
-      ImmutableIntList leftKeys, ImmutableIntList rightKeys) {
+  public static EnumerableSemiJoin create(RelNode left, RelNode right,
+      RexNode condition, ImmutableIntList leftKeys,
+      ImmutableIntList rightKeys) {
     final RelOptCluster cluster = left.getCluster();
-    try {
-      return new EnumerableSemiJoin(cluster,
-          cluster.traitSetOf(EnumerableConvention.INSTANCE), left,
-          right, condition, leftKeys, rightKeys);
-    } catch (InvalidRelException e) {
-      // Semantic error not possible. Must be a bug. Convert to
-      // internal error.
-      throw new AssertionError(e);
-    }
+    return new EnumerableSemiJoin(cluster,
+        cluster.traitSetOf(EnumerableConvention.INSTANCE), left,
+        right, condition, leftKeys, rightKeys);
   }
 
   @Override public SemiJoin copy(RelTraitSet traitSet, RexNode condition,
@@ -73,14 +66,8 @@ public class EnumerableSemiJoin extends SemiJoin implements EnumerableRel {
     assert joinType == JoinRelType.INNER;
     final JoinInfo joinInfo = JoinInfo.of(left, right, condition);
     assert joinInfo.isEqui();
-    try {
-      return new EnumerableSemiJoin(getCluster(), traitSet, left, right,
-          condition, joinInfo.leftKeys, joinInfo.rightKeys);
-    } catch (InvalidRelException e) {
-      // Semantic error not possible. Must be a bug. Convert to
-      // internal error.
-      throw new AssertionError(e);
-    }
+    return new EnumerableSemiJoin(getCluster(), traitSet, left, right,
+        condition, joinInfo.leftKeys, joinInfo.rightKeys);
   }
 
   @Override public RelOptCost computeSelfCost(RelOptPlanner planner) {

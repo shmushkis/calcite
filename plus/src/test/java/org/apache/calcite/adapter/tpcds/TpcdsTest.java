@@ -43,16 +43,12 @@ import java.util.Random;
 public class TpcdsTest {
   private static
   Function<Pair<List<Prepare.Materialization>, Holder<Program>>, Void>
-  handler(final boolean bushy, final int minJoinCount) {
+  handler(final Program program) {
     return new Function<Pair<List<Prepare.Materialization>, Holder<Program>>,
         Void>() {
       public Void apply(
           Pair<List<Prepare.Materialization>, Holder<Program>> pair) {
-        pair.right.set(
-            Programs.sequence(
-                Programs.heuristicJoinOrder(Programs.RULE_SET, bushy,
-                    minJoinCount),
-                Programs.CALC_PROGRAM));
+        pair.right.set(Programs.sequence(program, Programs.CALC_PROGRAM));
         return null;
       }
     };
@@ -113,7 +109,7 @@ public class TpcdsTest {
   @Test public void testQuery17Plan() {
     //noinspection unchecked
     checkQuery(17)
-        .withHook(Hook.PROGRAM, handler(true, 2))
+        .withHook(Hook.PROGRAM, handler(Programs.bushy(2)))
         .explainMatches("including all attributes ",
             CalciteAssert.checkMaskedResultContains(""
                 + "EnumerableCalcRel(expr#0..11=[{inputs}], expr#12=[/($t5, $t4)], expr#13=[/($t8, $t7)], expr#14=[/($t11, $t10)], proj#0..5=[{exprs}], STORE_SALES_QUANTITYCOV=[$t12], AS_STORE_RETURNS_QUANTITYCOUNT=[$t6], AS_STORE_RETURNS_QUANTITYAVE=[$t7], AS_STORE_RETURNS_QUANTITYSTDEV=[$t8], STORE_RETURNS_QUANTITYCOV=[$t13], CATALOG_SALES_QUANTITYCOUNT=[$t9], CATALOG_SALES_QUANTITYAVE=[$t10], CATALOG_SALES_QUANTITYSTDEV=[$t14], CATALOG_SALES_QUANTITYCOV=[$t14]): rowcount = 5.434029018852197E26, cumulative cost = {1.618185849567114E30 rows, 1.2672155671963324E30 cpu, 0.0 io}\n"
@@ -145,6 +141,36 @@ public class TpcdsTest {
     checkQuery(58).explainContains("PLAN").runs();
   }
 
+  // semi-join reduction
+  @Test public void testQuery64() {
+    checkQuery(64)
+        .withHook(Hook.PROGRAM, handler(Programs.heuristic(6)))
+        .runs();
+  }
+
+  // semi-join reduction
+  @Test public void testQuery64subset() {
+    with()
+        .query("select count(*)\n"
+                + "FROM store_sales\n"
+                + "JOIN item ON store_sales.ss_item_sk = item.i_item_sk\n"
+                + "JOIN store_returns ON store_sales.ss_item_sk = store_returns.sr_item_sk\n"
+                + "JOIN (\n"
+                + "    select cs_item_sk\n"
+                + "    from catalog_sales\n"
+                + "    JOIN catalog_returns ON catalog_sales.cs_item_sk = catalog_returns.cr_item_sk\n"
+                + "    group by cs_item_sk\n"
+                + "    having sum(cs_ext_list_price) > 2 * sum(cr_refunded_cash + cr_reversed_charge + cr_store_credit)) cs_ui \n"
+                + "ON store_sales.ss_item_sk = cs_ui.cs_item_sk\n"
+                + "WHERE\n"
+                + "    i_color in ('maroon', 'burnished', 'dim', 'steel', 'navajo', 'chocolate')\n"
+                + "        and i_current_price between 35 and 35 + 10\n"
+                + "        and i_current_price between 35 + 1 and 35 + 15")
+        .withHook(Hook.PROGRAM, handler(Programs.semi(3)))
+        .explainContains("xx")
+        .runs();
+  }
+
   @Ignore("takes too long to optimize")
   @Test public void testQuery72() {
     checkQuery(72).runs();
@@ -153,13 +179,20 @@ public class TpcdsTest {
   @Ignore("work in progress")
   @Test public void testQuery72Plan() {
     checkQuery(72)
-        .withHook(Hook.PROGRAM, handler(true, 2))
+        .withHook(Hook.PROGRAM, handler(Programs.bushy(2)))
         .planContains("xx");
+  }
+
+  // semi-join reduction
+  @Test public void testQuery80() {
+    checkQuery(80)
+        .withHook(Hook.PROGRAM, handler(Programs.heuristic(6)))
+        .runs();
   }
 
   @Test public void testQuery95() {
     checkQuery(95)
-        .withHook(Hook.PROGRAM, handler(false, 6))
+        .withHook(Hook.PROGRAM, handler(Programs.heuristic(6)))
         .runs();
   }
 
@@ -180,6 +213,12 @@ public class TpcdsTest {
     case 72:
       // Work around CALCITE-304: Support '<DATE> + <INTEGER>'.
       sql = sql.replace("+ 5", "+ interval '5' day");
+      break;
+    case 80:
+      sql = sql.replace(" returns", " _returns");
+      sql = sql.replace("(returns", "(_returns");
+      sql = sql.replace("30 days", "interval '30' day");
+      System.out.println(sql);
       break;
     case 95:
       sql = sql.replace("60 days", "interval '60' day");

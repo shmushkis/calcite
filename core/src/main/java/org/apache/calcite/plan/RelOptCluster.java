@@ -23,6 +23,7 @@ import org.apache.calcite.rel.metadata.MetadataFactoryImpl;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 
 import com.google.common.base.Preconditions;
@@ -47,6 +48,7 @@ public class RelOptCluster {
   private RelMetadataProvider metadataProvider;
   private MetadataFactory metadataFactory;
   private final RelTraitSet emptyTraitSet;
+  private final Map<RelNode, RexNode> inMap = new HashMap<>();
 
   //~ Constructors -----------------------------------------------------------
 
@@ -165,6 +167,29 @@ public class RelOptCluster {
 
   public RelTraitSet traitSetOf(RelTrait trait) {
     return emptyTraitSet.replace(trait);
+  }
+
+  /** Returns a placeholder for the result of a query.
+   *
+   * <p>The placeholder is just a literal. It is not evaluated, but is useful
+   * for identifying semi-join predicates.
+   *
+   * <p>This method returns null if the relational expression is not considered
+   * worth semi-joining on.
+   *
+   * @param node  Relational expression
+   * @return Scalar expression placeholder for result, or null
+   */
+  public RexNode getIn(RelNode node) {
+    return inMap.get(node);
+  }
+
+  public void setIn(RelNode node) {
+    if (!inMap.containsKey(node)) {
+      final RexLiteral literal =
+          node.getCluster().getRexBuilder().makeLiteral("$q" + inMap.size());
+      inMap.put(node, literal);
+    }
   }
 }
 

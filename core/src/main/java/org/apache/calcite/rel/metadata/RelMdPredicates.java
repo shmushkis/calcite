@@ -19,6 +19,7 @@ package org.apache.calcite.rel.metadata;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.function.Predicate1;
+import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptPredicateList;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
@@ -40,6 +41,7 @@ import org.apache.calcite.rex.RexPermuteInputsShuttle;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.BitSets;
 import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -193,9 +195,26 @@ public class RelMdPredicates {
 
   /** Infers predicates for a {@link org.apache.calcite.rel.core.SemiJoin}. */
   public RelOptPredicateList getPredicates(SemiJoin semiJoin) {
-    // Workaround, pending [CALCITE-390] "Transitive inference (RelMdPredicate)
-    // doesn't handle semi-join"
-    return RelOptPredicateList.EMPTY;
+    final RelNode left = semiJoin.getInput(0);
+    final RelNode right = semiJoin.getInput(1);
+    final RelOptPredicateList leftInfo =
+        RelMetadataQuery.getPulledUpPredicates(left);
+    final RelOptCluster cluster = semiJoin.getCluster();
+    final RexNode node = ((RelOptCluster) cluster).getIn(right);
+    if (node == null) {
+      return leftInfo;
+    }
+    final List<RexNode> operands = new ArrayList<>();
+    final RexBuilder rexBuilder = cluster.getRexBuilder();
+    for (int i : semiJoin.analyzeCondition().leftKeys) {
+      operands.add(rexBuilder.makeInputRef(left, i));
+    }
+    operands.add(node);
+    final RexNode call =
+        rexBuilder.makeCall(SqlStdOperatorTable.IN_QUERY, operands);
+    return RelOptPredicateList.of(
+        ImmutableList.<RexNode>builder().addAll(leftInfo.pulledUpPredicates)
+            .add(call).build());
   }
 
   /** Infers predicates for a {@link org.apache.calcite.rel.core.Join}. */

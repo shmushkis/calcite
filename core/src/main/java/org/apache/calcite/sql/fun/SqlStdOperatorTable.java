@@ -1567,6 +1567,22 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
         }
       };
 
+  /**
+   * The internal "$IN_QUERY" operator is a way of representing a semi-join as a
+   * scalar expression. It returns whether its left-hand side is  in the set of
+   * rows returned by the query on the right-hand side.
+   *
+   * <p>Do not use this to represent {@code x IN (SELECT ...)} in a
+   * {@link org.apache.calcite.sql.SqlNode} parse tree. Use the {@link #IN}
+   * operator for that.
+   *
+   * <p>The arguments are an internal parameter (registered in the planner, and
+   * denoting the results of executing a particular query) and one or more field
+   * references.
+   */
+  public static final SqlInternalOperator IN_QUERY =
+      new SqlInternalOperator("$IN_QUERY", SqlKind.IN_QUERY, 0);
+
   //~ Methods ----------------------------------------------------------------
 
   /**

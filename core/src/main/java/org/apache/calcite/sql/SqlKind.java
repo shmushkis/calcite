@@ -365,6 +365,11 @@ public enum SqlKind {
   SCALAR_QUERY,
 
   /**
+   * Semi-join as a scalar expression.
+   */
+  IN_QUERY,
+
+  /**
    * ProcedureCall
    */
   PROCEDURE_CALL,
