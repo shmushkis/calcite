@@ -295,15 +295,27 @@ public class JdbcRules {
     }
 
     @Override public RelOptCost computeSelfCost(RelOptPlanner planner) {
-      // We always "build" the
-      double rowCount = RelMetadataQuery.getRowCount(this);
-
-      return planner.getCostFactory().makeCost(rowCount, 0, 0);
+      return super.computeSelfCost(planner)
+          .multiplyBy(JdbcConvention.COST_MULTIPLIER * .5);
     }
 
     @Override public double getRows() {
+      final JoinInfo joinInfo = analyzeCondition();
+      final boolean leftKey =
+          left.isKey(ImmutableBitSet.of(joinInfo.leftKeys));
+      final boolean rightKey =
+          right.isKey(ImmutableBitSet.of(joinInfo.rightKeys));
       final double leftRowCount = left.getRows();
       final double rightRowCount = right.getRows();
+      if (leftKey && rightKey) {
+        return Math.min(leftRowCount, rightRowCount);
+      }
+      if (leftKey) {
+        return rightRowCount;
+      }
+      if (rightKey) {
+        return leftRowCount;
+      }
       return Math.max(leftRowCount, rightRowCount);
     }
 
