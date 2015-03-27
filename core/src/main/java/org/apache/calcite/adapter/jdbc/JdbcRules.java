@@ -329,85 +329,87 @@ public class JdbcRules {
     }
 
     /**
-     * Convert {@link RexNode} condition into {@link SqlNode}
+     * Converts {@link RexNode} condition into a {@link SqlNode} expression.
      *
      * @param node            condition Node
-     * @param leftContext     LeftContext
-     * @param rightContext    RightContext
-     * @param leftFieldCount  Number of field on left result
-     * @return SqlJoin which represent the condition
+     * @param leftContext     Left context
+     * @param rightContext    Right context
+     * @param leftFieldCount  Number of fields on left result
+     * @return Condition in SqlNode format
      */
     private SqlNode convertConditionToSqlNode(RexNode node,
         JdbcImplementor.Context leftContext,
         JdbcImplementor.Context rightContext, int leftFieldCount) {
-      if (node instanceof RexCall) {
-        RexCall call = (RexCall) node;
-        SqlOperator op = call.getOperator();
-        final List<RexNode> operands = call.getOperands();
-
-        if ((op == SqlStdOperatorTable.AND)
-            || (op == SqlStdOperatorTable.OR)) {
-          SqlNode sqlCondition = null;
-          for (RexNode operand : operands) {
-            SqlNode x = convertConditionToSqlNode(operand, leftContext,
-                rightContext, leftFieldCount);
-            if (sqlCondition == null) {
-              sqlCondition = x;
-            } else {
-              sqlCondition = op.createCall(POS, sqlCondition, x);
-              return sqlCondition;
-            }
+      final RexCall call;
+      final List<RexNode> operands;
+      switch (node.getKind()) {
+      case AND:
+      case OR:
+        call = (RexCall) node;
+        operands = call.getOperands();
+        SqlNode sqlCondition = null;
+        for (RexNode operand : operands) {
+          SqlNode x = convertConditionToSqlNode(operand, leftContext,
+              rightContext, leftFieldCount);
+          if (sqlCondition == null) {
+            sqlCondition = x;
+          } else {
+            sqlCondition = call.getOperator().createCall(POS, sqlCondition, x);
           }
-        } else if ((op == SqlStdOperatorTable.EQUALS)
-            || (op == SqlStdOperatorTable.IS_NOT_DISTINCT_FROM)
-            || (op == SqlStdOperatorTable.EQUALS)
-            || (op == SqlStdOperatorTable.GREATER_THAN)
-            || (op == SqlStdOperatorTable.GREATER_THAN_OR_EQUAL)
-            || (op == SqlStdOperatorTable.LESS_THAN)
-            || (op == SqlStdOperatorTable.LESS_THAN_OR_EQUAL)) {
+        }
+        return sqlCondition;
 
-          if ((operands.get(0) instanceof RexInputRef)
-              && (operands.get(1) instanceof RexInputRef)) {
-            RexInputRef op0 = (RexInputRef) operands.get(0);
-            RexInputRef op1 = (RexInputRef) operands.get(1);
+      case EQUALS:
+      case IS_NOT_DISTINCT_FROM:
+      case NOT_EQUALS:
+      case GREATER_THAN:
+      case GREATER_THAN_OR_EQUAL:
+      case LESS_THAN:
+      case LESS_THAN_OR_EQUAL:
+        call = (RexCall) node;
+        operands = call.getOperands();
+        if (operands.get(0) instanceof RexInputRef
+            && operands.get(1) instanceof RexInputRef) {
+          SqlOperator operator = call.getOperator();
+          final RexInputRef op0 = (RexInputRef) operands.get(0);
+          final RexInputRef op1 = (RexInputRef) operands.get(1);
 
-            RexInputRef leftField = null;
-            RexInputRef rightField = null;
-            SqlOperator operator = null;
-            if ((op0.getIndex() < leftFieldCount)
-                && (op1.getIndex() >= leftFieldCount)) {
-              // Arguments were of form 'op0 = op1'
-              leftField = op0;
-              rightField = op1;
-              operator = op;
-            } else if ((op1.getIndex() < leftFieldCount)
-                && (op0.getIndex() >= leftFieldCount)) {
-              // Arguments were of form 'op1 = op0'
-              leftField = op1;
-              rightField = op0;
-              operator = reverseOperatorDirection(op);
-            }
+          if (op0.getIndex() < leftFieldCount
+              && op1.getIndex() >= leftFieldCount) {
+            // Arguments were of form 'op0 = op1'
             return operator.createCall(POS,
-                leftContext.field(leftField.getIndex()),
-                rightContext.field(rightField.getIndex() - leftFieldCount));
+                leftContext.field(op0.getIndex()),
+                rightContext.field(op1.getIndex() - leftFieldCount));
+          }
+          if (op1.getIndex() < leftFieldCount
+              && op0.getIndex() >= leftFieldCount) {
+            // Arguments were of form 'op1 = op0'
+            operator = reverse(operator);
+            return operator.createCall(POS,
+                leftContext.field(op1.getIndex()),
+                rightContext.field(op0.getIndex() - leftFieldCount));
           }
         }
       }
       throw new AssertionError(node);
     }
 
-    private SqlOperator reverseOperatorDirection(SqlOperator oper) {
-      switch (oper.kind) {
-      case GREATER_THAN :
+    private static SqlOperator reverse(SqlOperator op) {
+      switch (op.kind) {
+      case GREATER_THAN:
         return SqlStdOperatorTable.LESS_THAN;
-      case GREATER_THAN_OR_EQUAL :
+      case GREATER_THAN_OR_EQUAL:
         return SqlStdOperatorTable.LESS_THAN_OR_EQUAL;
-      case LESS_THAN :
+      case LESS_THAN:
         return SqlStdOperatorTable.GREATER_THAN;
-      case LESS_THAN_OR_EQUAL :
+      case LESS_THAN_OR_EQUAL:
         return SqlStdOperatorTable.GREATER_THAN_OR_EQUAL;
-      default :
-        return oper;
+      case EQUALS:
+      case IS_NOT_DISTINCT_FROM:
+      case NOT_EQUALS:
+        return op;
+      default:
+        throw new AssertionError("cannot reverse " + op);
       }
     }
 
