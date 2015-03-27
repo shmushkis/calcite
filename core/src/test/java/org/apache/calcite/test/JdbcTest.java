@@ -192,6 +192,25 @@ public class JdbcTest {
       + "   ]\n"
       + "}";
 
+  public static final String SCOTT_SCHEMA = "     {\n"
+      + "       type: 'jdbc',\n"
+      + "       name: 'SCOTT',\n"
+      + "       jdbcDriver: '" + CalciteAssert.DB.scott.driver + "',\n"
+      + "       jdbcUser: '" + CalciteAssert.DB.scott.username + "',\n"
+      + "       jdbcPassword: '" + CalciteAssert.DB.scott.password + "',\n"
+      + "       jdbcUrl: '" + CalciteAssert.DB.scott.url + "',\n"
+      + "       jdbcCatalog: null,\n"
+      + "       jdbcSchema: 'SCOTT'\n"
+      + "     }\n";
+
+  public static final String SCOTT_MODEL = "{\n"
+      + "  version: '1.0',\n"
+      + "  defaultSchema: 'SCOTT',\n"
+      + "   schemas: [\n"
+      + SCOTT_SCHEMA
+      + "   ]\n"
+      + "}";
+
   public static final String HR_SCHEMA = "     {\n"
       + "       type: 'custom',\n"
       + "       name: 'hr',\n"
