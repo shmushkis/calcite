@@ -528,7 +528,7 @@ public abstract class RelOptRule {
       return rel;
     }
 
-    return planner.changeTraits(rel, outTraits);
+    return planner.changeTraits(rel, outTraits.simplify());
   }
 
   /**
