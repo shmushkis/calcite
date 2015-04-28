@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.rel.core;
 
+import com.google.common.base.Preconditions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -38,6 +39,8 @@ public class AggregateCall {
 
   private final boolean distinct;
   public final RelDataType type;
+
+  @Deprecated // to be removed before 2.0
   public final String name;
 
   // We considered using ImmutableIntList but we would not save much memory:
@@ -55,19 +58,43 @@ public class AggregateCall {
    * @param type        Result type
    * @param name        Name (may be null)
    */
+  @Deprecated // to be removed before 2.0
   public AggregateCall(
       SqlAggFunction aggFunction,
       boolean distinct,
       List<Integer> argList,
       RelDataType type,
       String name) {
-    this.type = type;
-    this.name = name;
-    assert aggFunction != null;
-    assert argList != null;
-    assert type != null;
-    this.aggFunction = aggFunction;
+    this(aggFunction, distinct, argList, type, name, true);
+  }
 
+  /**
+   * Creates an AggregateCall.
+   *
+   * @param aggFunction Aggregate function
+   * @param distinct    Whether distinct
+   * @param argList     List of ordinals of arguments
+   * @param type        Result type
+   */
+  public AggregateCall(
+      SqlAggFunction aggFunction,
+      boolean distinct,
+      List<Integer> argList,
+      RelDataType type) {
+    this(aggFunction, distinct, argList, type, null, true);
+  }
+
+  /** Internal constructor. */
+  private AggregateCall(
+      SqlAggFunction aggFunction,
+      boolean distinct,
+      List<Integer> argList,
+      RelDataType type,
+      String name,
+      boolean dummy) {
+    this.type = Preconditions.checkNotNull(type);
+    this.name = name;
+    this.aggFunction = Preconditions.checkNotNull(aggFunction);
     this.argList = ImmutableList.copyOf(argList);
     this.distinct = distinct;
   }

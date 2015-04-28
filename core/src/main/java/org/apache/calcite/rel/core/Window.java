@@ -40,6 +40,7 @@ import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.ImmutableIntList;
+import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
@@ -302,22 +303,23 @@ public abstract class Window extends SingleRel {
      * Presents a view of the {@link RexWinAggCall} list as a list of
      * {@link AggregateCall}.
      */
-    public List<AggregateCall> getAggregateCalls(Window windowRel) {
+    public List<Pair<AggregateCall, String>> getAggregateCalls(
+        Window windowRel) {
       final List<String> fieldNames =
           Util.skip(windowRel.getRowType().getFieldNames(),
               windowRel.getInput().getRowType().getFieldCount());
-      return new AbstractList<AggregateCall>() {
+      return new AbstractList<Pair<AggregateCall, String>>() {
         public int size() {
           return aggCalls.size();
         }
 
-        public AggregateCall get(int index) {
+        public Pair<AggregateCall, String> get(int index) {
           final RexWinAggCall aggCall = aggCalls.get(index);
-          return new AggregateCall(
-              (SqlAggFunction) aggCall.getOperator(),
-              false,
-              getProjectOrdinals(aggCall.getOperands()),
-              aggCall.getType(),
+          return Pair.of(
+              new AggregateCall((SqlAggFunction) aggCall.getOperator(),
+                  false,
+                  getProjectOrdinals(aggCall.getOperands()),
+                  aggCall.getType()),
               fieldNames.get(aggCall.ordinal));
         }
       };

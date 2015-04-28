@@ -147,7 +147,7 @@ public class SubstitutionVisitor {
           AggregateOnProjectToAggregateUnifyRule.INSTANCE);
 
   private static final Map<Pair<Class, Class>, List<UnifyRule>> RULE_MAP =
-      new HashMap<Pair<Class, Class>, List<UnifyRule>>();
+      new HashMap<>();
 
   private final RelOptCluster cluster;
   private final Holder query;
@@ -163,8 +163,7 @@ public class SubstitutionVisitor {
    */
   final List<MutableRel> queryLeaves;
 
-  final Map<MutableRel, MutableRel> replacementMap =
-      new HashMap<MutableRel, MutableRel>();
+  final Map<MutableRel, MutableRel> replacementMap = new HashMap<>();
 
   final Multimap<MutableRel, MutableRel> equivalents =
       LinkedHashMultimap.create();
@@ -179,7 +178,7 @@ public class SubstitutionVisitor {
     this.query = Holder.of(toMutable(query_));
     this.target = toMutable(target_);
     final Set<MutableRel> parents = Sets.newIdentityHashSet();
-    final List<MutableRel> allNodes = new ArrayList<MutableRel>();
+    final List<MutableRel> allNodes = new ArrayList<>();
     final MutableRelVisitor visitor =
         new MutableRelVisitor() {
           public void visit(MutableRel node) {
@@ -226,7 +225,7 @@ public class SubstitutionVisitor {
       final MutableRel input = toMutable(aggregate.getInput());
       return MutableAggregate.of(input, aggregate.indicator,
           aggregate.getGroupSet(), aggregate.getGroupSets(),
-          aggregate.getAggCallList());
+          aggregate.getAggCallList(), aggregate.getRowType());
     }
     throw new RuntimeException("cannot translate " + rel + " to MutableRel");
   }
@@ -373,8 +372,8 @@ public class SubstitutionVisitor {
     //  e: x = 1 AND y = 2 AND z = 3 AND NOT (x = 1 AND y = 2)
     //  disjunctions: {x = 1, y = 2, z = 3}
     //  notDisjunctions: {x = 1 AND y = 2}
-    final List<RexNode> disjunctions = new ArrayList<RexNode>();
-    final List<RexNode> notDisjunctions = new ArrayList<RexNode>();
+    final List<RexNode> disjunctions = new ArrayList<>();
+    final List<RexNode> notDisjunctions = new ArrayList<>();
     RelOptUtil.decomposeConjunction(e, disjunctions, notDisjunctions);
 
     // If there is a single FALSE or NOT TRUE, the whole expression is
@@ -425,7 +424,7 @@ public class SubstitutionVisitor {
    */
   public static RexNode simplify(RexBuilder rexBuilder, RexNode e) {
     final List<RexNode> disjunctions = RelOptUtil.conjunctions(e);
-    final List<RexNode> notDisjunctions = new ArrayList<RexNode>();
+    final List<RexNode> notDisjunctions = new ArrayList<>();
     for (int i = 0; i < disjunctions.size(); i++) {
       final RexNode disjunction = disjunctions.get(i);
       final SqlKind kind = disjunction.getKind();
@@ -995,7 +994,7 @@ public class SubstitutionVisitor {
             + "input: " + input + "\n"
             + "project: " + shuttle + "\n");
       }
-      final List<RexNode> exprList = new ArrayList<RexNode>();
+      final List<RexNode> exprList = new ArrayList<>();
       final RexBuilder rexBuilder = input.cluster.getRexBuilder();
       final List<RexNode> projects = Pair.left(namedProjects);
       for (RexNode expr : projects) {
@@ -1019,7 +1018,7 @@ public class SubstitutionVisitor {
             + "input: " + input + "\n"
             + "project: " + project + "\n");
       }
-      final List<RexNode> exprList = new ArrayList<RexNode>();
+      final List<RexNode> exprList = new ArrayList<>();
       final RexBuilder rexBuilder = model.cluster.getRexBuilder();
       for (RelDataTypeField field : model.getRowType().getFieldList()) {
         exprList.add(rexBuilder.makeZeroLiteral(field.getType()));
@@ -1144,21 +1143,29 @@ public class SubstitutionVisitor {
     }
   }
 
-  public static MutableAggregate permute(MutableAggregate aggregate,
+  public static MutableAggregate permute(final MutableAggregate aggregate,
       MutableRel input, final Mapping mapping) {
     ImmutableBitSet groupSet = Mappings.apply(mapping, aggregate.getGroupSet());
     ImmutableList<ImmutableBitSet> groupSets =
         ImmutableList.copyOf(
-            Iterables.transform(aggregate.getGroupSets(),
-                new Function<ImmutableBitSet, ImmutableBitSet>() {
+            Iterables.transform(
+                aggregate.getGroupSets(), new Function<ImmutableBitSet, ImmutableBitSet>() {
                   public ImmutableBitSet apply(ImmutableBitSet input1) {
                     return Mappings.apply(mapping, input1);
                   }
                 }));
     List<AggregateCall> aggregateCalls =
         apply(mapping, aggregate.getAggCallList());
+    final int offset = aggregate.groupSet.cardinality()
+        * (aggregate.indicator ? 2 : 1);
+    final Function<Integer, String> aggNames =
+        new Function<Integer, String>() {
+          public String apply(Integer input) {
+            return aggregate.getRowType().getFieldNames().get(offset + input);
+          }
+        };
     return MutableAggregate.of(input, aggregate.indicator, groupSet, groupSets,
-        aggregateCalls);
+        aggregateCalls, aggNames);
   }
 
   private static List<AggregateCall> apply(final Mapping mapping,
@@ -1217,10 +1224,10 @@ public class SubstitutionVisitor {
             new AggregateCall(getRollup(aggregateCall.getAggregation()),
                 aggregateCall.isDistinct(),
                 ImmutableList.of(target.groupSet.cardinality() + i),
-                aggregateCall.type, aggregateCall.name));
+                aggregateCall.type));
       }
       result = MutableAggregate.of(target, false, groupSet.build(), null,
-          aggregateCalls);
+          aggregateCalls, query.getRowType());
     }
     return MutableRels.createCastRel(result, query.getRowType(), true);
   }
@@ -1281,7 +1288,7 @@ public class SubstitutionVisitor {
   /** Builds a shuttle that stores a list of expressions, and can map incoming
    * expressions to references to them. */
   private static RexShuttle getRexShuttle(MutableProject target) {
-    final Map<String, Integer> map = new HashMap<String, Integer>();
+    final Map<String, Integer> map = new HashMap<>();
     for (RexNode e : target.getProjects()) {
       map.put(e.toString(), map.size());
     }
@@ -1653,10 +1660,16 @@ public class SubstitutionVisitor {
 
     static MutableAggregate of(MutableRel input, boolean indicator,
         ImmutableBitSet groupSet, ImmutableList<ImmutableBitSet> groupSets,
-        List<AggregateCall> aggCalls) {
-      RelDataType rowType =
+        List<AggregateCall> aggCalls, Function<Integer, String> aggNames) {
+      return of(input, indicator, groupSet, groupSets, aggCalls,
           Aggregate.deriveRowType(input.cluster.getTypeFactory(),
-              input.getRowType(), indicator, groupSet, groupSets, aggCalls);
+              input.getRowType(), indicator, groupSet, groupSets, aggCalls,
+              aggNames));
+    }
+
+    static MutableAggregate of(MutableRel input, boolean indicator,
+        ImmutableBitSet groupSet, ImmutableList<ImmutableBitSet> groupSets,
+        List<AggregateCall> aggCalls, RelDataType rowType) {
       return new MutableAggregate(input, rowType, indicator, groupSet,
           groupSets, aggCalls);
     }
@@ -1822,7 +1835,7 @@ public class SubstitutionVisitor {
     }
 
     private static List<MutableRel> descendants(MutableRel query) {
-      final List<MutableRel> list = new ArrayList<MutableRel>();
+      final List<MutableRel> list = new ArrayList<>();
       descendantsRecurse(list, query);
       return list;
     }
@@ -2090,8 +2103,7 @@ public class SubstitutionVisitor {
       final LogicalFilter filter = call.rel(0);
       final LogicalProject project = call.rel(1);
 
-      final List<RexNode> newProjects =
-          new ArrayList<RexNode>(project.getProjects());
+      final List<RexNode> newProjects = new ArrayList<>(project.getProjects());
       newProjects.add(filter.getCondition());
 
       final RelOptCluster cluster = filter.getCluster();

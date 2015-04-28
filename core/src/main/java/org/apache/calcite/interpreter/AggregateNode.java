@@ -116,7 +116,7 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
       final JavaTypeFactory typeFactory =
           (JavaTypeFactory) rel.getCluster().getTypeFactory();
       int stateOffset = 0;
-      final AggImpState agg = new AggImpState(0, call, false);
+      final AggImpState agg = new AggImpState(0, call, call.right, false);
       int stateSize = agg.state.size();
 
       final BlockBuilder builder2 = new BlockBuilder();

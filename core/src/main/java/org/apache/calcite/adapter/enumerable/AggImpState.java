@@ -27,14 +27,17 @@ import java.util.List;
 public class AggImpState {
   public final int aggIdx;
   public final AggregateCall call;
+  public final String name;
   public final AggImplementor implementor;
   public AggContext context;
   public Expression result;
   public List<Expression> state;
 
-  public AggImpState(int aggIdx, AggregateCall call, boolean windowContext) {
+  public AggImpState(int aggIdx, AggregateCall call, String name,
+      boolean windowContext) {
     this.aggIdx = aggIdx;
     this.call = call;
+    this.name = name;
     this.implementor =
         RexImpTable.INSTANCE.get(call.getAggregation(), windowContext);
     if (implementor == null) {

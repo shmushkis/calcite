@@ -182,7 +182,7 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
 
     for (int i = 0; i < aggCalls.size(); i++) {
       AggregateCall call = aggCalls.get(i);
-      aggs.add(new AggImpState(i, call, false));
+      aggs.add(new AggImpState(i, call, call.right, false));
     }
 
     // Function0<Object[]> accumulatorInitializer =

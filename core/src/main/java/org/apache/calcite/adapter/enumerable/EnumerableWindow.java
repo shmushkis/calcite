@@ -202,11 +202,12 @@ public class EnumerableWindow extends Window implements EnumerableRel {
       final Expression collectionExpr = partitionIterator.left;
       final Expression iterator_ = partitionIterator.right;
 
-      List<AggImpState> aggs = new ArrayList<AggImpState>();
-      List<AggregateCall> aggregateCalls = group.getAggregateCalls(this);
+      final List<AggImpState> aggs = new ArrayList<>();
+      List<Pair<AggregateCall, String>> aggregateCalls =
+          group.getAggregateCalls(this);
       for (int aggIdx = 0; aggIdx < aggregateCalls.size(); aggIdx++) {
-        AggregateCall call = aggregateCalls.get(aggIdx);
-        aggs.add(new AggImpState(aggIdx, call, true));
+        Pair<AggregateCall, String> call = aggregateCalls.get(aggIdx);
+        aggs.add(new AggImpState(aggIdx, call.left, call.right, true));
       }
 
       // The output from this stage is the input plus the aggregate functions.
@@ -214,7 +215,7 @@ public class EnumerableWindow extends Window implements EnumerableRel {
           typeFactory.builder();
       typeBuilder.addAll(inputPhysType.getRowType().getFieldList());
       for (AggImpState agg : aggs) {
-        typeBuilder.add(agg.call.name, agg.call.type);
+        typeBuilder.add(agg.name, agg.call.type);
       }
       RelDataType outputRowType = typeBuilder.build();
       final PhysType outputPhysType =

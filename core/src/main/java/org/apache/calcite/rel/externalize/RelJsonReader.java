@@ -269,7 +269,7 @@ public class RelJsonReader {
     final List<Integer> operands = (List<Integer>) jsonAggCall.get("operands");
     final RelDataType type =
         relJson.toType(cluster.getTypeFactory(), jsonAggCall.get("type"));
-    return new AggregateCall(aggregation, distinct, operands, type, null);
+    return new AggregateCall(aggregation, distinct, operands, type);
   }
 
   private RelNode lookupInput(String jsonInput) {

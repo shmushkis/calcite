@@ -1045,9 +1045,9 @@ public class SqlToRelConverter {
             LogicalAggregate.create(seek, false, ImmutableBitSet.of(), null,
                 ImmutableList.of(
                     new AggregateCall(SqlStdOperatorTable.COUNT, false,
-                        ImmutableList.<Integer>of(), longType, null),
+                        ImmutableList.<Integer>of(), longType),
                     new AggregateCall(SqlStdOperatorTable.COUNT, false,
-                        args, longType, null)));
+                        args, longType)));
         LogicalJoin join =
             LogicalJoin.create(bb.root,
                 aggregate,

@@ -285,8 +285,7 @@ public class AggregateReduceFunctionsRule extends RelOptRule {
             sumAgg,
             oldCall.isDistinct(),
             oldCall.getArgList(),
-            sumType,
-            null);
+            sumType);
     AggregateCall countCall =
         AggregateCall.create(
             SqlStdOperatorTable.COUNT,
@@ -342,8 +341,7 @@ public class AggregateReduceFunctionsRule extends RelOptRule {
             SqlStdOperatorTable.SUM0,
             oldCall.isDistinct(),
             oldCall.getArgList(),
-            sumType,
-            null);
+            sumType);
     final AggregateCall countCall =
         AggregateCall.create(
             SqlStdOperatorTable.COUNT,
@@ -429,8 +427,7 @@ public class AggregateReduceFunctionsRule extends RelOptRule {
             new SqlSumAggFunction(sumType),
             oldCall.isDistinct(),
             ImmutableIntList.of(argSquaredOrdinal),
-            sumType,
-            null);
+            sumType);
     final RexNode sumArgSquared =
         rexBuilder.addAggCall(sumArgSquaredAggCall,
             nGroups,
@@ -444,8 +441,7 @@ public class AggregateReduceFunctionsRule extends RelOptRule {
             new SqlSumAggFunction(sumType),
             oldCall.isDistinct(),
             ImmutableIntList.of(argOrdinal),
-            sumType,
-            null);
+            sumType);
     final RexNode sumArg =
         rexBuilder.addAggCall(sumArgAggCall,
             nGroups,

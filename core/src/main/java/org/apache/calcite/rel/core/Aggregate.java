@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.rel.core;
 
+import com.google.common.base.Function;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
@@ -40,6 +41,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.IntList;
+import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
 import com.google.common.base.Preconditions;
@@ -117,11 +119,13 @@ public abstract class Aggregate extends SingleRel {
       RelOptCluster cluster,
       RelTraitSet traits,
       RelNode child,
+      RelDataType rowType,
       boolean indicator,
       ImmutableBitSet groupSet,
       List<ImmutableBitSet> groupSets,
       List<AggregateCall> aggCalls) {
     super(cluster, traits, child);
+    this.rowType = Preconditions.checkNotNull(rowType);
     this.indicator = indicator;
     this.aggCalls = ImmutableList.copyOf(aggCalls);
     this.groupSet = Preconditions.checkNotNull(groupSet);
@@ -138,6 +142,21 @@ public abstract class Aggregate extends SingleRel {
     for (AggregateCall aggCall : aggCalls) {
       assert typeMatchesInferred(aggCall, true);
     }
+  }
+
+  @Deprecated // to be removed before 2.0
+  protected Aggregate(
+      RelOptCluster cluster,
+      RelTraitSet traits,
+      RelNode child,
+      boolean indicator,
+      ImmutableBitSet groupSet,
+      List<ImmutableBitSet> groupSets,
+      List<AggregateCall> aggCalls) {
+    this(cluster, traits, child,
+        deriveRowType(cluster.getTypeFactory(), child.getRowType(), indicator,
+            groupSet, groupSets, aggCalls), indicator, groupSet, groupSets,
+        aggCalls);
   }
 
   /**
@@ -250,8 +269,10 @@ public abstract class Aggregate extends SingleRel {
         .itemIf("indicator", indicator, indicator)
         .itemIf("aggs", aggCalls, pw.nest());
     if (!pw.nest()) {
-      for (Ord<AggregateCall> ord : Ord.zip(aggCalls)) {
-        pw.item(Util.first(ord.e.name, "agg#" + ord.i), ord.e);
+      final int n = getGroupCount() + getIndicatorCount();
+      final List<String> names = Util.skip(rowType.getFieldNames(), n);
+      for (Pair<String, AggregateCall> ord : Pair.zip(names, aggCalls)) {
+        pw.item(ord.left, ord.right);
       }
     }
     return pw;
@@ -282,8 +303,7 @@ public abstract class Aggregate extends SingleRel {
   }
 
   protected RelDataType deriveRowType() {
-    return deriveRowType(getCluster().getTypeFactory(), getInput().getRowType(),
-        indicator, groupSet, groupSets, aggCalls);
+    throw new AssertionError(); // should have set row type on construction
   }
 
   /**
@@ -299,10 +319,41 @@ public abstract class Aggregate extends SingleRel {
    * @param aggCalls Collection of calls to aggregate functions
    * @return Row type of the aggregate
    */
+  @Deprecated // to be removed before 2.0
   public static RelDataType deriveRowType(RelDataTypeFactory typeFactory,
       final RelDataType inputRowType, boolean indicator,
       ImmutableBitSet groupSet, List<ImmutableBitSet> groupSets,
       final List<AggregateCall> aggCalls) {
+    final Function<Integer, String> aggNames =
+        new Function<Integer, String>() {
+          public String apply(Integer input) {
+            return aggCalls.get(input).name;
+          }
+        };
+    return deriveRowType(typeFactory, inputRowType, indicator, groupSet,
+        groupSets, aggCalls, aggNames);
+  }
+
+  /**
+   * Computes the row type of an {@code Aggregate} before it exists.
+   *
+   * @param typeFactory Type factory
+   * @param inputRowType Input row type
+   * @param indicator Whether row type should include indicator fields to
+   *                 indicate which grouping set is active; must be true if
+   *                 aggregate is not simple
+   * @param groupSet Bit set of grouping fields
+   * @param groupSets List of all grouping sets; null for just {@code groupSet}
+   * @param aggCalls Collection of calls to aggregate functions
+   * @param aggNames Generates the name of the column derived from the
+   *                 {@code i}th aggregate function
+   * @return Row type of the aggregate
+   */
+  public static RelDataType deriveRowType(RelDataTypeFactory typeFactory,
+      final RelDataType inputRowType, boolean indicator,
+      ImmutableBitSet groupSet, List<ImmutableBitSet> groupSets,
+      final List<AggregateCall> aggCalls,
+      final Function<Integer, String> aggNames) {
     final IntList groupList = groupSet.toList();
     assert groupList.size() == groupSet.cardinality();
     final RelDataTypeFactory.FieldInfoBuilder builder = typeFactory.builder();
@@ -319,12 +370,9 @@ public abstract class Aggregate extends SingleRel {
       }
     }
     for (Ord<AggregateCall> aggCall : Ord.zip(aggCalls)) {
-      String name;
-      if (aggCall.e.name != null) {
-        name = aggCall.e.name;
-      } else {
-        name = "$f" + (groupList.size() + aggCall.i);
-      }
+      final String name =
+          Util.first(aggNames.apply(aggCall.i),
+              "$f" + (groupList.size() + aggCall.i));
       builder.add(name, aggCall.e.type);
     }
     return builder.build();

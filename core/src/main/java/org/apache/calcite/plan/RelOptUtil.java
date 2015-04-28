@@ -705,8 +705,7 @@ public abstract class RelOptUtil {
               SqlStdOperatorTable.SINGLE_VALUE,
               false,
               ImmutableList.of(i),
-              returnType,
-              null));
+              returnType));
     }
 
     return LogicalAggregate.create(rel, false,
