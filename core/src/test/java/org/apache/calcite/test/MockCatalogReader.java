@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.test;
 
+import org.apache.calcite.linq4j.QueryProvider;
+import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptSchema;
@@ -39,6 +41,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.ModifiableView;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlAccessType;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -64,9 +67,11 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.util.AbstractList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -285,8 +290,12 @@ public class MockCatalogReader implements Prepare.CatalogReader {
         if (clazz.isAssignableFrom(ModifiableView.class)) {
           return clazz.cast(
               new JdbcTest.AbstractModifiableView() {
-                @Override public RelOptTable getTable() {
-                  return empTable;
+                @Override public Table getTable() {
+                  return empTable.unwrap(Table.class);
+                }
+
+                @Override public List<String> getTableNames() {
+                  return empTable.names;
                 }
 
                 @Override public ImmutableIntList getColumnMapping() {
@@ -547,6 +556,34 @@ public class MockCatalogReader implements Prepare.CatalogReader {
     public <T> T unwrap(Class<T> clazz) {
       if (clazz.isInstance(this)) {
         return clazz.cast(this);
+      }
+      if (clazz.isAssignableFrom(Table.class)) {
+        return clazz.cast(
+            new JdbcTest.AbstractModifiableTable(Util.last(names)) {
+              @Override public RelDataType
+              getRowType(RelDataTypeFactory typeFactory) {
+                return typeFactory.createStructType(rowType.getFieldList());
+              }
+
+              @Override public Collection getModifiableCollection() {
+                return null;
+              }
+
+              @Override public <T> Queryable<T>
+              asQueryable(QueryProvider queryProvider, SchemaPlus schema,
+                  String tableName) {
+                return null;
+              }
+
+              @Override public Type getElementType() {
+                return null;
+              }
+
+              @Override public Expression getExpression(SchemaPlus schema,
+                  String tableName, Class clazz) {
+                return null;
+              }
+            });
       }
       return null;
     }

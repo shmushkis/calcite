@@ -74,6 +74,7 @@ import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.schema.ModifiableTable;
 import org.apache.calcite.schema.ModifiableView;
+import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.JoinConditionType;
 import org.apache.calcite.sql.JoinType;
@@ -3027,8 +3028,14 @@ public class SqlToRelConverter {
     final ModifiableView modifiableView =
         targetTable.unwrap(ModifiableView.class);
     if (modifiableView != null) {
-      RelNode newSource = createSource(targetTable, source, modifiableView);
-      return createModify(modifiableView.getTable(), newSource);
+      final Table delegateTable = modifiableView.getTable();
+      final RelDataType delegateRowType = delegateTable.getRowType(typeFactory);
+      final RelOptTable delegateRelOptTable =
+          RelOptTableImpl.create(null, delegateRowType, delegateTable,
+              modifiableView.getTableNames());
+      final RelNode newSource =
+          createSource(targetTable, source, modifiableView, delegateRowType);
+      return createModify(delegateRelOptTable, newSource);
     }
     return LogicalTableModify.create(targetTable, catalogReader, source,
         LogicalTableModify.Operation.INSERT, null, false);
@@ -3044,9 +3051,7 @@ public class SqlToRelConverter {
    * <p>In principle, the delegate table of a view might be another modifiable
    * view, and if so, the process can be repeated. */
   private RelNode createSource(RelOptTable targetTable, RelNode source,
-      ModifiableView modifiableView) {
-    final RelOptTable delegateTargetTable = modifiableView.getTable();
-    final RelDataType delegateRowType = delegateTargetTable.getRowType();
+      ModifiableView modifiableView, RelDataType delegateRowType) {
     final ImmutableIntList mapping = modifiableView.getColumnMapping();
     assert mapping.size() == targetTable.getRowType().getFieldCount();
 

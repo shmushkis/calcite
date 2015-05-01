@@ -32,6 +32,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.ExtensibleTable;
 import org.apache.calcite.schema.FilterableTable;
+import org.apache.calcite.schema.ModifiableTable;
 import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.schema.QueryableTable;
 import org.apache.calcite.schema.ScannableTable;
@@ -99,6 +100,12 @@ public class RelOptTableImpl implements Prepare.PreparingTable {
   }
 
   public static RelOptTableImpl create(RelOptSchema schema, RelDataType rowType,
+      Table table, List<String> path) {
+    return new RelOptTableImpl(schema, rowType, path, table, null,
+        table.getStatistic().getRowCount());
+  }
+
+  public static RelOptTableImpl create(RelOptSchema schema, RelDataType rowType,
       final CalciteSchema.TableEntry tableEntry, Double rowCount) {
     final Table table = tableEntry.getTable();
     Function<Class, Expression> expressionFunction =
@@ -145,7 +152,8 @@ public class RelOptTableImpl implements Prepare.PreparingTable {
       RelDataType rowType,
       Table table) {
     assert table instanceof TranslatableTable
-        || table instanceof ScannableTable;
+        || table instanceof ScannableTable
+        || table instanceof ModifiableTable;
     return new RelOptTableImpl(schema, rowType, ImmutableList.<String>of(),
         table, null, null);
   }
