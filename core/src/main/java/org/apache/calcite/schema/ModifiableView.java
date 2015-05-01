@@ -16,6 +16,9 @@
  */
 package org.apache.calcite.schema;
 
+import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ImmutableIntList;
 
@@ -43,11 +46,17 @@ public interface ModifiableView extends Table {
   /** Returns a list of constraints that each candidate row must satisfy.
    *
    * <p>Never null; if there is no constraint, returns "true".
+   *
+   * @param rexBuilder Rex builder
+   * @param tableRowType Row type of the table that this view maps onto
    */
-  RexNode getConstraint();
+  Iterable<? extends RexNode> getConstraint(RexBuilder rexBuilder,
+      RelDataType tableRowType);
 
   /** Returns the column mapping onto another table. */
   ImmutableIntList getColumnMapping();
+
+  RelOptTable getTable();
 }
 
 // End ModifiableView.java

@@ -16,8 +16,6 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.linq4j.QueryProvider;
-import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptSchema;
@@ -38,9 +36,10 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.schema.ModifiableTable;
-import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.ModifiableView;
+import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlAccessType;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -55,6 +54,7 @@ import org.apache.calcite.sql.validate.SqlMonotonicity;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
@@ -64,10 +64,9 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
-import java.lang.reflect.Type;
 import java.math.BigDecimal;
+import java.util.AbstractList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -246,6 +245,10 @@ public class MockCatalogReader implements Prepare.CatalogReader {
     // and "SAL" is visible but must be greater than 1000
     MockTable emp20View = new MockTable(this, salesSchema.getCatalogName(),
         salesSchema.name, "EMP_20", false) {
+      private final Table table = empTable.unwrap(Table.class);
+      private final ImmutableIntList mapping =
+          ImmutableIntList.of(0, 1, 2, 3, 4, 5, 6, 8);
+
       @Override public RelNode toRel(ToRelContext context) {
         // Expand to the equivalent of:
         //   SELECT EMPNO, ENAME, JOB, MGR, HIREDATE, SAL, COMM, SLACKER
@@ -262,47 +265,68 @@ public class MockCatalogReader implements Prepare.CatalogReader {
                 rexBuilder.makeCall(SqlStdOperatorTable.GREATER_THAN,
                     rexBuilder.makeInputRef(rel, 5),
                     rexBuilder.makeExactLiteral(BigDecimal.valueOf(1000)))));
-        rel = LogicalProject.create(rel,
-            ImmutableList.<RexNode>of(
-                rexBuilder.makeInputRef(rel, 0),
-                rexBuilder.makeInputRef(rel, 1),
-                rexBuilder.makeInputRef(rel, 2),
-                rexBuilder.makeInputRef(rel, 3),
-                rexBuilder.makeInputRef(rel, 4),
-                rexBuilder.makeInputRef(rel, 5),
-                rexBuilder.makeInputRef(rel, 6),
-                rexBuilder.makeInputRef(rel, 8)),
-            ImmutableList.of("EMPNO", "ENAME", "JOB", "MGR", "HIREDATE", "SAL",
-                "COMM", "SLACKER"));
-        return rel;
+        final List<RelDataTypeField> fieldList =
+            rel.getRowType().getFieldList();
+        final List<Pair<RexNode, String>> projects =
+            new AbstractList<Pair<RexNode, String>>() {
+              @Override public Pair<RexNode, String> get(int index) {
+                return RexInputRef.of2(mapping.get(index), fieldList);
+              }
+
+              @Override public int size() {
+                return mapping.size();
+              }
+            };
+        return LogicalProject.create(rel, Pair.left(projects),
+            Pair.right(projects));
       }
 
       @Override public <T> T unwrap(Class<T> clazz) {
-        if (clazz.isAssignableFrom(ModifiableTable.class)) {
+        if (clazz.isAssignableFrom(ModifiableView.class)) {
           return clazz.cast(
-              new JdbcTest.AbstractModifiableTable(Util.last(names)) {
-                @Override public Collection getModifiableCollection() {
-                  return null;
+              new JdbcTest.AbstractModifiableView() {
+                @Override public RelOptTable getTable() {
+                  return empTable;
                 }
 
-                @Override public <E> Queryable<E>
-                asQueryable(QueryProvider queryProvider, SchemaPlus schema,
-                    String tableName) {
-                  return null;
+                @Override public ImmutableIntList getColumnMapping() {
+                  return mapping;
                 }
 
-                @Override public Type getElementType() {
-                  return null;
-                }
-
-                @Override public Expression getExpression(SchemaPlus schema,
-                    String tableName, Class clazz) {
-                  return null;
+                @Override public Iterable<? extends RexNode> getConstraint(
+                    RexBuilder rexBuilder, RelDataType tableRowType) {
+                  final RelDataTypeField deptnoField =
+                      tableRowType.getFieldList().get(7);
+                  final RelDataTypeField salField =
+                      tableRowType.getFieldList().get(5);
+                  return ImmutableList.of(
+                      rexBuilder.makeCall(SqlStdOperatorTable.EQUALS,
+                          rexBuilder.makeInputRef(deptnoField.getType(),
+                              deptnoField.getIndex()),
+                          rexBuilder.makeExactLiteral(BigDecimal.valueOf(20L),
+                              deptnoField.getType())),
+                      rexBuilder.makeCall(SqlStdOperatorTable.GREATER_THAN,
+                          rexBuilder.makeInputRef(salField.getType(),
+                              salField.getIndex()),
+                          rexBuilder.makeExactLiteral(BigDecimal.valueOf(1000L),
+                              salField.getType())));
                 }
 
                 @Override public RelDataType
-                getRowType(RelDataTypeFactory typeFactory) {
-                  return null;
+                getRowType(final RelDataTypeFactory typeFactory) {
+                  return typeFactory.createStructType(
+                      new AbstractList<Map.Entry<String, RelDataType>>() {
+                        @Override public Map.Entry<String, RelDataType>
+                        get(int index) {
+                          return table.getRowType(typeFactory).getFieldList()
+                              .get(mapping.get(index));
+                        }
+
+                        @Override public int size() {
+                          return mapping.size();
+                        }
+                      }
+                  );
                 }
               });
         }

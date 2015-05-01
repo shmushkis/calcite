@@ -73,6 +73,7 @@ import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.schema.ModifiableTable;
+import org.apache.calcite.schema.ModifiableView;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.JoinConditionType;
 import org.apache.calcite.sql.JoinType;
@@ -3011,20 +3012,95 @@ public class SqlToRelConverter {
             targetRowType);
     RelNode massagedRel = convertColumnList(call, sourceRel);
 
+    return createModify(targetTable, massagedRel);
+  }
+
+  /** Creates a relational expression to modify a table or modifiable view. */
+  private RelNode createModify(RelOptTable targetTable, RelNode source) {
     final ModifiableTable modifiableTable =
         targetTable.unwrap(ModifiableTable.class);
     if (modifiableTable != null) {
-      return modifiableTable.toModificationRel(
-          cluster,
-          targetTable,
-          catalogReader,
-          massagedRel,
-          LogicalTableModify.Operation.INSERT,
-          null,
+      return modifiableTable.toModificationRel(cluster, targetTable,
+          catalogReader, source, LogicalTableModify.Operation.INSERT, null,
           false);
     }
-    return LogicalTableModify.create(targetTable, catalogReader, massagedRel,
+    final ModifiableView modifiableView =
+        targetTable.unwrap(ModifiableView.class);
+    if (modifiableView != null) {
+      RelNode newSource = createSource(targetTable, source, modifiableView);
+      return createModify(modifiableView.getTable(), newSource);
+    }
+    return LogicalTableModify.create(targetTable, catalogReader, source,
         LogicalTableModify.Operation.INSERT, null, false);
+  }
+
+  /** Wraps a relational expression in the projects and filters implied by
+   * a {@link ModifiableView}.
+   *
+   * <p>The input relational expression is suitable for inserting into the view,
+   * and the returned relational expression is suitable for inserting into its
+   * delegate table.
+   *
+   * <p>In principle, the delegate table of a view might be another modifiable
+   * view, and if so, the process can be repeated. */
+  private RelNode createSource(RelOptTable targetTable, RelNode source,
+      ModifiableView modifiableView) {
+    final RelOptTable delegateTargetTable = modifiableView.getTable();
+    final RelDataType delegateRowType = delegateTargetTable.getRowType();
+    final ImmutableIntList mapping = modifiableView.getColumnMapping();
+    assert mapping.size() == targetTable.getRowType().getFieldCount();
+
+    // For columns represented in the mapping, the expression is just a field
+    // reference.
+    final Map<Integer, RexNode> projectMap = new HashMap<>();
+    final List<RexNode> filters = new ArrayList<>();
+    for (int i = 0; i < mapping.size(); i++) {
+      int target = mapping.get(i);
+      if (target >= 0) {
+        projectMap.put(target, RexInputRef.of(i, source.getRowType()));
+      }
+    }
+
+    // For columns that are not in the mapping, and have a constraint of the
+    // form "column = value", the expression is the literal "value".
+    //
+    // If a column has multiple constraints, the extra ones will become a
+    // filter.
+    for (RexNode node
+        : modifiableView.getConstraint(rexBuilder, delegateRowType)) {
+      switch (node.getKind()) {
+      case EQUALS:
+        final List<RexNode> operands = ((RexCall) node).getOperands();
+        RexNode o0 = operands.get(0);
+        RexNode o1 = operands.get(1);
+        if (o0 instanceof RexLiteral) {
+          o0 = operands.get(1);
+          o1 = operands.get(0);
+        }
+        if (o0 instanceof RexInputRef && o1 instanceof RexLiteral) {
+          final int index = ((RexInputRef) o0).getIndex();
+          if (projectMap.get(index) == null) {
+            projectMap.put(index, o1);
+            continue;
+          }
+        }
+      }
+      filters.add(node);
+    }
+    final List<Pair<RexNode, String>> projects = new ArrayList<>();
+    for (RelDataTypeField field : delegateRowType.getFieldList()) {
+      projects.add(
+          Pair.of(
+              rexBuilder.ensureType(field.getType(),
+                  projectMap.get(field.getIndex()), false),
+              field.getName()));
+    }
+
+    source = RelOptUtil.createProject(source, projects, true);
+    if (filters.size() > 0) {
+      source = RelOptUtil.createFilter(source, filters);
+    }
+    return source;
   }
 
   private RelOptTable.ToRelContext createToRelContext() {

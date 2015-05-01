@@ -58,6 +58,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.runtime.SqlFunctions;
 import org.apache.calcite.schema.ModifiableTable;
+import org.apache.calcite.schema.ModifiableView;
 import org.apache.calcite.schema.QueryableTable;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaFactory;
@@ -6442,6 +6443,14 @@ public class JdbcTest {
         boolean flattened) {
       return LogicalTableModify.create(table, catalogReader, child, operation,
           updateColumnList, flattened);
+    }
+  }
+
+  /** Abstract base class for implementations of {@link ModifiableView}. */
+  public abstract static class AbstractModifiableView
+      extends AbstractTable implements ModifiableView {
+    protected AbstractModifiableView() {
+      super();
     }
   }
 
