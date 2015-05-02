@@ -313,6 +313,22 @@ public final class Schemas {
     }
   }
 
+  /** Analyzes a view. For use within Calcite only. */
+  public static CalcitePrepare.AnalyzeViewResult analyzeView(
+      final CalciteConnection connection, final CalciteSchema schema,
+      final List<String> schemaPath, final String sql, boolean fail) {
+    final CalcitePrepare prepare = CalcitePrepare.DEFAULT_FACTORY.apply();
+    final CalcitePrepare.Context context =
+        makeContext(connection, schema, schemaPath,
+            ImmutableMap.<CalciteConnectionProperty, String>of());
+    CalcitePrepare.Dummy.push(context);
+    try {
+      return prepare.analyzeView(context, sql, fail);
+    } finally {
+      CalcitePrepare.Dummy.pop(context);
+    }
+  }
+
   /** Prepares a SQL query for execution. For use within Calcite only. */
   public static CalcitePrepare.CalciteSignature<Object> prepare(
       final CalciteConnection connection, final CalciteSchema schema,

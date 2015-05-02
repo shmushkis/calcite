@@ -44,24 +44,28 @@ import java.util.List;
  * without notice.</p>
  */
 public interface ModifiableView extends Table {
-  /** Returns a list of constraints that each candidate row must satisfy.
+  /** Returns a constraint that each candidate row must satisfy.
    *
    * <p>Never null; if there is no constraint, returns "true".
    *
    * @param rexBuilder Rex builder
    * @param tableRowType Row type of the table that this view maps onto
    */
-  Iterable<? extends RexNode> getConstraint(RexBuilder rexBuilder,
-      RelDataType tableRowType);
+  RexNode getConstraint(RexBuilder rexBuilder, RelDataType tableRowType);
 
-  /** Returns the column mapping onto another table. */
+  /** Returns the column mapping onto another table.
+   *
+   * {@code mapping[i]} contains the column of the underlying table that the
+   * {@code i}th column of the view comes from, or -1 if it is based on an
+   * expression.
+   */
   ImmutableIntList getColumnMapping();
 
   /** Returns the underlying table. */
   Table getTable();
 
   /** Returns the full path of the underlying table. */
-  List<String> getTableNames();
+  List<String> getTablePath();
 }
 
 // End ModifiableView.java

@@ -40,6 +40,7 @@ import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.schema.ModifiableView;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
@@ -294,7 +295,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
                   return empTable.unwrap(Table.class);
                 }
 
-                @Override public List<String> getTableNames() {
+                @Override public List<String> getTablePath() {
                   return empTable.names;
                 }
 
@@ -302,23 +303,23 @@ public class MockCatalogReader implements Prepare.CatalogReader {
                   return mapping;
                 }
 
-                @Override public Iterable<? extends RexNode> getConstraint(
-                    RexBuilder rexBuilder, RelDataType tableRowType) {
+                @Override public RexNode getConstraint(RexBuilder rexBuilder,
+                    RelDataType tableRowType) {
                   final RelDataTypeField deptnoField =
                       tableRowType.getFieldList().get(7);
                   final RelDataTypeField salField =
                       tableRowType.getFieldList().get(5);
-                  return ImmutableList.of(
+                  final List<RexNode> nodes = Arrays.asList(
                       rexBuilder.makeCall(SqlStdOperatorTable.EQUALS,
                           rexBuilder.makeInputRef(deptnoField.getType(),
                               deptnoField.getIndex()),
                           rexBuilder.makeExactLiteral(BigDecimal.valueOf(20L),
                               deptnoField.getType())),
-                      rexBuilder.makeCall(SqlStdOperatorTable.GREATER_THAN,
-                          rexBuilder.makeInputRef(salField.getType(),
-                              salField.getIndex()),
-                          rexBuilder.makeExactLiteral(BigDecimal.valueOf(1000L),
-                              salField.getType())));
+                      rexBuilder.makeCall(
+                          SqlStdOperatorTable.GREATER_THAN, rexBuilder.makeInputRef(
+                              salField.getType(), salField.getIndex()), rexBuilder.makeExactLiteral(
+                              BigDecimal.valueOf(1000L), salField.getType())));
+                  return RexUtil.composeConjunction(rexBuilder, nodes, false);
                 }
 
                 @Override public RelDataType

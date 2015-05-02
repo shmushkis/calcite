@@ -569,11 +569,7 @@ public class SqlToRelConverter {
     validatedRowType = uniquifyFields(validatedRowType);
 
     return RelOptUtil.equal(
-        "validated row type",
-        validatedRowType,
-        "converted row type",
-        convertedRowType,
-        false);
+        "validated row type", validatedRowType, "converted row type", convertedRowType, false);
   }
 
   protected RelDataType uniquifyFields(RelDataType rowType) {
@@ -2032,7 +2028,8 @@ public class SqlToRelConverter {
     Set<RelColumnMapping> columnMappings =
         getColumnMappings(operator);
     LogicalTableFunctionScan callRel =
-        LogicalTableFunctionScan.create(cluster,
+        LogicalTableFunctionScan.create(
+            cluster,
             inputs,
             rexCall,
             elementType,
@@ -2776,8 +2773,8 @@ public class SqlToRelConverter {
   protected RelNode createAggregate(Blackboard bb, boolean indicator,
       ImmutableBitSet groupSet, ImmutableList<ImmutableBitSet> groupSets,
       List<AggregateCall> aggCalls) {
-    return LogicalAggregate.create(bb.root, indicator, groupSet, groupSets,
-        aggCalls);
+    return LogicalAggregate.create(
+        bb.root, indicator, groupSet, groupSets, aggCalls);
   }
 
   public RexDynamicParam convertDynamicParam(
@@ -3008,9 +3005,7 @@ public class SqlToRelConverter {
     assert targetRowType != null;
     RelNode sourceRel =
         convertQueryRecursive(
-            call.getSource(),
-            false,
-            targetRowType);
+            call.getSource(), false, targetRowType);
     RelNode massagedRel = convertColumnList(call, sourceRel);
 
     return createModify(targetTable, massagedRel);
@@ -3032,7 +3027,7 @@ public class SqlToRelConverter {
       final RelDataType delegateRowType = delegateTable.getRowType(typeFactory);
       final RelOptTable delegateRelOptTable =
           RelOptTableImpl.create(null, delegateRowType, delegateTable,
-              modifiableView.getTableNames());
+              modifiableView.getTablePath());
       final RelNode newSource =
           createSource(targetTable, source, modifiableView, delegateRowType);
       return createModify(delegateRelOptTable, newSource);
@@ -3071,8 +3066,31 @@ public class SqlToRelConverter {
     //
     // If a column has multiple constraints, the extra ones will become a
     // filter.
-    for (RexNode node
-        : modifiableView.getConstraint(rexBuilder, delegateRowType)) {
+    final RexNode constraint =
+        modifiableView.getConstraint(rexBuilder, delegateRowType);
+    asdasd(projectMap, filters, constraint);
+    final List<Pair<RexNode, String>> projects = new ArrayList<>();
+    for (RelDataTypeField field : delegateRowType.getFieldList()) {
+      RexNode node = projectMap.get(field.getIndex());
+      if (node == null) {
+        node = rexBuilder.makeNullLiteral(field.getType().getSqlTypeName());
+      }
+      projects.add(
+          Pair.of(rexBuilder.ensureType(field.getType(), node, false),
+              field.getName()));
+    }
+
+    source = RelOptUtil.createProject(source, projects, true);
+    if (filters.size() > 0) {
+      source = RelOptUtil.createFilter(source, filters);
+    }
+    return source;
+  }
+
+  /** TODO: move this */
+  public static void asdasd(Map<Integer, RexNode> projectMap,
+      List<RexNode> filters, RexNode constraint) {
+    for (RexNode node : RelOptUtil.conjunctions(constraint)) {
       switch (node.getKind()) {
       case EQUALS:
         final List<RexNode> operands = ((RexCall) node).getOperands();
@@ -3081,6 +3099,9 @@ public class SqlToRelConverter {
         if (o0 instanceof RexLiteral) {
           o0 = operands.get(1);
           o1 = operands.get(0);
+        }
+        if (o0.getKind() == SqlKind.CAST) {
+          o0 = ((RexCall) o0).getOperands().get(0);
         }
         if (o0 instanceof RexInputRef && o1 instanceof RexLiteral) {
           final int index = ((RexInputRef) o0).getIndex();
@@ -3092,20 +3113,6 @@ public class SqlToRelConverter {
       }
       filters.add(node);
     }
-    final List<Pair<RexNode, String>> projects = new ArrayList<>();
-    for (RelDataTypeField field : delegateRowType.getFieldList()) {
-      projects.add(
-          Pair.of(
-              rexBuilder.ensureType(field.getType(),
-                  projectMap.get(field.getIndex()), false),
-              field.getName()));
-    }
-
-    source = RelOptUtil.createProject(source, projects, true);
-    if (filters.size() > 0) {
-      source = RelOptUtil.createFilter(source, filters);
-    }
-    return source;
   }
 
   private RelOptTable.ToRelContext createToRelContext() {

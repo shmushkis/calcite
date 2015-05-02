@@ -255,7 +255,9 @@ public class JdbcTest {
   /** Tests a modifiable view. */
   @Test public void testModelWithModifiableView() throws Exception {
     final CalciteAssert.AssertThat with =
-        modelWithView("select \"name\" from \"EMPLOYEES\" where \"deptno\" = 10");
+        modelWithView("select \"name\", \"empid\" as e, \"salary\"\n"
+            + "from \"EMPLOYEES\" where \"deptno\" = 10",
+            null);
     with
         .query("select \"name\" from \"adhoc\".V order by \"name\"")
         .returns("name=Bill\n"
@@ -266,7 +268,7 @@ public class JdbcTest {
           @Override public Object apply(CalciteConnection input) {
             try {
               final Statement statement = input.createStatement();
-              statement.executeUpdate("insert into \"adhoc\".V values ('Fred')");
+              statement.executeUpdate("insert into \"adhoc\".V values ('Fred', 56, 123.4)");
               statement.close();
               return null;
             } catch (SQLException e) {
@@ -3290,10 +3292,10 @@ public class JdbcTest {
             + "    EnumerableCalc(expr#0..4=[{inputs}], expr#5=[+($t3, $t0)], proj#0..1=[{exprs}], salary=[$t3], $3=[$t5])\n"
             + "      EnumerableTableScan(table=[[hr, emps]])\n")
         .returnsUnordered(
-            "deptno=10; empid=100; S=10100.0; FIVE=5; M=10000.0; C=1"
-            , "deptno=10; empid=110; S=21710.0; FIVE=5; M=10000.0; C=2"
-            , "deptno=10; empid=150; S=18760.0; FIVE=5; M=7000.0; C=2"
-            , "deptno=20; empid=200; S=8200.0; FIVE=5; M=8000.0; C=1")
+            "deptno=10; empid=100; S=10100.0; FIVE=5; M=10000.0; C=1",
+            "deptno=10; empid=110; S=21710.0; FIVE=5; M=10000.0; C=2",
+            "deptno=10; empid=150; S=18760.0; FIVE=5; M=7000.0; C=2",
+            "deptno=20; empid=200; S=8200.0; FIVE=5; M=8000.0; C=1")
         .planContains(CalcitePrepareImpl.DEBUG
             ? "_list.add(new Object[] {\n"
             + "        row[0],\n" // box-unbox is optimized
@@ -4848,7 +4850,7 @@ public class JdbcTest {
             "Cannot define view; parent schema 'adhoc' is not mutable");
   }
 
-  private CalciteAssert.AssertThat modelWithView(String view) {
+  private CalciteAssert.AssertThat modelWithView(String view, Boolean modifiable) {
     final Class<EmpDeptTableFactory> clazz = EmpDeptTableFactory.class;
     return CalciteAssert.model("{\n"
         + "  version: '1.0',\n"
@@ -4865,6 +4867,7 @@ public class JdbcTest {
         + "         {\n"
         + "           name: 'V',\n"
         + "           type: 'view',\n"
+        + (modifiable == null ? "" : " modifiable: " + modifiable + ",\n")
         + "           sql: '" + view + "'\n"
         + "         }\n"
         + "       ]\n"
@@ -4876,7 +4879,8 @@ public class JdbcTest {
   /** Tests a JDBC connection that provides a model that contains a view. */
   @Test public void testModelView() throws Exception {
     final CalciteAssert.AssertThat with =
-        modelWithView("select * from \"EMPLOYEES\" where \"deptno\" = 10");
+        modelWithView("select * from \"EMPLOYEES\" where \"deptno\" = 10",
+            null);
 
     with.query("select * from \"adhoc\".V order by \"name\" desc")
         .returns(""
@@ -4957,7 +4961,7 @@ public class JdbcTest {
   @Test public void testOrderByView() throws Exception {
     final CalciteAssert.AssertThat with =
         modelWithView("select * from \"EMPLOYEES\" where \"deptno\" = 10 "
-            + "order by \"empid\" limit 2");
+            + "order by \"empid\" limit 2", null);
     with
         .query("select \"name\" from \"adhoc\".V order by \"name\"")
         .returns("name=Bill\n"
@@ -6076,7 +6080,9 @@ public class JdbcTest {
     assertThat(a2CalciteSchema.getTable("table1", false), notNullValue());
     assertThat(a2CalciteSchema.getTable("taBle1", true), nullValue());
     assertThat(a2CalciteSchema.getTable("taBle1", false), notNullValue());
-    final TableMacro function = ViewTable.viewMacro(a2Schema, "values 1", null);
+    final TableMacro function =
+        ViewTable.viewMacro(a2Schema, "values 1", null, null);
+    Util.discard(function);
 
     connection.close();
   }
@@ -6212,7 +6218,7 @@ public class JdbcTest {
 
     assertThat(rs.next(), is(true));
     assertThat((Integer) rs.getObject("ID"), equalTo(2));
-    assertThat((Double) rs.getObject("VALS"), nullValue());
+    assertThat(rs.getObject("VALS"), nullValue());
 
     assertThat(rs.next(), is(true));
     assertThat(rs.getObject("ID"), nullValue());
