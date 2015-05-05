@@ -270,6 +270,10 @@ public class RemoteDriverTest {
     checkStatementExecute(ljs(), false, 2);
   }
 
+  @Test public void testStatementPrepareExecuteLocalMaxRow() throws Exception {
+    checkStatementExecute(ljs(), true, 2);
+  }
+
   @Test public void testPrepareExecuteLocal() throws Exception {
     checkStatementExecute(ljs(), true);
   }
@@ -280,7 +284,7 @@ public class RemoteDriverTest {
   }
 
   private void checkStatementExecute(Connection connection,
-      boolean prepare, int maxRow) throws SQLException {
+      boolean prepare, int maxRowCount) throws SQLException {
     final String sql = "select * from (\n"
         + "  values (1, 'a'), (null, 'b'), (3, 'c')) as t (c1, c2)";
     final Statement statement;
@@ -294,8 +298,8 @@ public class RemoteDriverTest {
       resultSet = ps.getResultSet();
     } else {
       statement = connection.createStatement();
-      if (maxRow > 0) {
-        statement.setMaxRows(maxRow);
+      if (maxRowCount > 0) {
+        statement.setMaxRows(maxRowCount);
       }
       parameterMetaData = null;
       assertTrue(statement.execute(sql));
@@ -308,10 +312,17 @@ public class RemoteDriverTest {
     assertEquals(2, metaData.getColumnCount());
     assertEquals("C1", metaData.getColumnName(1));
     assertEquals("C2", metaData.getColumnName(2));
-    for (int i = 0; i < maxRow || (maxRow == 0 && i < 3); i++) {
+    for (int i = 0; i < maxRowCount || (maxRowCount == 0 && i < 3); i++) {
       assertTrue(resultSet.next());
     }
     assertFalse(resultSet.next());
+    if (prepare) {
+      ResultSet resultSet2 = ((PreparedStatement) statement).executeQuery();
+      for (int i = 0; i < maxRowCount || (maxRowCount == 0 && i < 3); i++) {
+        assertTrue(resultSet2.next());
+      }
+      assertFalse(resultSet2.next());
+    }
     resultSet.close();
     statement.close();
     connection.close();
