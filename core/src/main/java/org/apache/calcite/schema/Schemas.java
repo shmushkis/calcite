@@ -39,6 +39,7 @@ import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.BuiltInMethod;
+import org.apache.calcite.util.Pair;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -47,6 +48,7 @@ import com.google.common.collect.Lists;
 
 import java.lang.reflect.Type;
 import java.sql.Connection;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -92,8 +94,7 @@ public final class Schemas {
       String name,
       Collection<CalciteSchema.FunctionEntry> functionEntries,
       List<RelDataType> argumentTypes) {
-    final List<CalciteSchema.FunctionEntry> matches =
-        new ArrayList<CalciteSchema.FunctionEntry>();
+    final List<CalciteSchema.FunctionEntry> matches = new ArrayList<>();
     for (CalciteSchema.FunctionEntry entry : functionEntries) {
       if (matches(typeFactory, entry.getFunction(), argumentTypes)) {
         matches.add(entry);
@@ -286,8 +287,8 @@ public final class Schemas {
       final List<String> schemaPath, final String sql) {
     final CalcitePrepare prepare = CalcitePrepare.DEFAULT_FACTORY.apply();
     final CalcitePrepare.Context context =
-        makeContext(connection, schema, schemaPath,
-            ImmutableMap.<CalciteConnectionProperty, String>of());
+        makeContext(
+            connection, schema, schemaPath, ImmutableMap.<CalciteConnectionProperty, String>of());
     CalcitePrepare.Dummy.push(context);
     try {
       return prepare.parse(context, sql);
@@ -486,6 +487,26 @@ public final class Schemas {
     return t;
   }
 
+  /** Creates a path with a given list of names starting from a given root
+   * schema. */
+  public static Path path(CalciteSchema rootSchema, Iterable<String> names) {
+    final ImmutableList.Builder<Pair<String, Schema>> builder =
+        ImmutableList.builder();
+    Schema schema = rootSchema.schema;
+    Iterator<String> iterator = names.iterator();
+    if (!iterator.hasNext()) {
+      return PathImpl.EMPTY;
+    }
+    for (;;) {
+      final String name = iterator.next();
+      builder.add(Pair.of(name, schema));
+      if (!iterator.hasNext()) {
+        return new PathImpl(builder.build());
+      }
+      schema = schema.getSubSchema(name);
+    }
+  }
+
   /** Dummy data context that has no variables. */
   private static class DummyDataContext implements DataContext {
     private final CalciteConnection connection;
@@ -511,6 +532,27 @@ public final class Schemas {
 
     public Object get(String name) {
       return map.get(name);
+    }
+  }
+
+  /** Implementation of {@link Path}. */
+  private static class PathImpl
+      extends AbstractList<Pair<String, Schema>> implements Path {
+    private final ImmutableList<Pair<String, Schema>> pairs;
+
+    private static final PathImpl EMPTY =
+        new PathImpl(ImmutableList.<Pair<String, Schema>>of());
+
+    PathImpl(ImmutableList<Pair<String, Schema>> pairs) {
+      this.pairs = pairs;
+    }
+
+    public Pair<String, Schema> get(int index) {
+      return pairs.get(index);
+    }
+
+    public int size() {
+      return pairs.size();
     }
   }
 }

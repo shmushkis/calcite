@@ -33,6 +33,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.ModifiableView;
+import org.apache.calcite.schema.Path;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Schemas;
@@ -168,8 +169,8 @@ public class ViewTable
       if ((modifiable == null || modifiable) && parsed.table != null) {
         return new ModifiableViewTable(elementType,
             RelDataTypeImpl.proto(parsed.rowType), viewSql, schemaPath1,
-            parsed.table, parsed.tablePath, parsed.constraint,
-            parsed.columnMapping);
+            parsed.table, Schemas.path(schema.root(), parsed.tablePath),
+            parsed.constraint, parsed.columnMapping);
       } else {
         return new ViewTable(elementType,
             RelDataTypeImpl.proto(parsed.rowType), viewSql, schemaPath1);
@@ -181,13 +182,13 @@ public class ViewTable
   static class ModifiableViewTable extends ViewTable
       implements ModifiableView {
     private final Table table;
-    private final ImmutableList<String> tablePath;
+    private final Path tablePath;
     private final RexNode constraint;
     private final ImmutableIntList columnMapping;
 
     public ModifiableViewTable(Type elementType, RelProtoDataType rowType,
         String viewSql, List<String> schemaPath, Table table,
-        ImmutableList<String> tablePath, RexNode constraint,
+        Path tablePath, RexNode constraint,
         ImmutableIntList columnMapping) {
       super(elementType, rowType, viewSql, schemaPath);
       this.table = table;
@@ -209,7 +210,7 @@ public class ViewTable
       return table;
     }
 
-    public List<String> getTablePath() {
+    public Path getTablePath() {
       return tablePath;
     }
   }

@@ -33,6 +33,7 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.ExtensibleTable;
 import org.apache.calcite.schema.FilterableTable;
 import org.apache.calcite.schema.ModifiableTable;
+import org.apache.calcite.schema.Path;
 import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.schema.QueryableTable;
 import org.apache.calcite.schema.ScannableTable;
@@ -100,7 +101,9 @@ public class RelOptTableImpl implements Prepare.PreparingTable {
   }
 
   public static RelOptTableImpl create(RelOptSchema schema, RelDataType rowType,
-      Table table, List<String> path) {
+      Table table, Path path) {
+    Function<Class, Expression> expressionFunction =
+        getClassExpressionFunction(tableEntry, table);
     return new RelOptTableImpl(schema, rowType, path, table, null,
         table.getStatistic().getRowCount());
   }
@@ -115,13 +118,18 @@ public class RelOptTableImpl implements Prepare.PreparingTable {
   }
 
   private static Function<Class, Expression> getClassExpressionFunction(
-      final CalciteSchema.TableEntry tableEntry, final Table table) {
+      CalciteSchema.TableEntry tableEntry, Table table) {
+    return getClassExpressionFunction(tableEntry.schema, tableEntry.name,
+        table);
+  }
+
+  private static Function<Class, Expression> getClassExpressionFunction(
+      final CalciteSchema schema, final String tableName, final Table table) {
     if (table instanceof QueryableTable) {
       final QueryableTable queryableTable = (QueryableTable) table;
       return new Function<Class, Expression>() {
         public Expression apply(Class clazz) {
-          return queryableTable.getExpression(tableEntry.schema.plus(),
-              tableEntry.name, clazz);
+          return queryableTable.getExpression(schema.plus(), tableName, clazz);
         }
       };
     } else if (table instanceof ScannableTable
@@ -129,14 +137,12 @@ public class RelOptTableImpl implements Prepare.PreparingTable {
         || table instanceof ProjectableFilterableTable) {
       return new Function<Class, Expression>() {
         public Expression apply(Class clazz) {
-          return Schemas.tableExpression(tableEntry.schema.plus(),
-              Object[].class,
-              tableEntry.name,
-              table.getClass());
+          return Schemas.tableExpression(schema.plus(), Object[].class,
+              tableName, table.getClass());
         }
       };
     } else if (table instanceof StreamableTable) {
-      return getClassExpressionFunction(tableEntry,
+      return getClassExpressionFunction(schema, tableName,
           ((StreamableTable) table).stream());
     } else {
       return new Function<Class, Expression>() {

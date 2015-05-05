@@ -21,8 +21,6 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ImmutableIntList;
 
-import java.util.List;
-
 /**
  * A modifiable view onto {@link ModifiableTable}.
  *
@@ -65,7 +63,7 @@ public interface ModifiableView extends Table {
   Table getTable();
 
   /** Returns the full path of the underlying table. */
-  List<String> getTablePath();
+  Path getTablePath();
 }
 
 // End ModifiableView.java

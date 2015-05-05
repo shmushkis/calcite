@@ -254,28 +254,32 @@ public class JdbcTest {
 
   /** Tests a modifiable view. */
   @Test public void testModelWithModifiableView() throws Exception {
-    final CalciteAssert.AssertThat with =
-        modelWithView("select \"name\", \"empid\" as e, \"salary\"\n"
-            + "from \"EMPLOYEES\" where \"deptno\" = 10",
-            null);
-    with
-        .query("select \"name\" from \"adhoc\".V order by \"name\"")
-        .returns("name=Bill\n"
-                + "name=Sebastian\n"
-                + "name=Theodore\n");
-    with.doWithConnection(
-        new Function<CalciteConnection, Object>() {
-          @Override public Object apply(CalciteConnection input) {
-            try {
-              final Statement statement = input.createStatement();
-              statement.executeUpdate("insert into \"adhoc\".V values ('Fred', 56, 123.4)");
-              statement.close();
-              return null;
-            } catch (SQLException e) {
-              throw Throwables.propagate(e);
+    final List<Employee> employees = new ArrayList<>();
+    employees.add(new Employee(135, 10, "Simon", 56.7f, null));
+    try {
+      EmpDeptTableFactory.THREAD_COLLECTION.set(employees);
+      final CalciteAssert.AssertThat with = modelWithView(
+          "select \"name\", \"empid\" as e, \"salary\" "
+              + "from \"MUTABLE_EMPLOYEES\" where \"deptno\" = 10",
+          null);
+      with.query("select \"name\" from \"adhoc\".V order by \"name\"")
+          .returns("name=Simon\n");
+      with.doWithConnection(
+          new Function<CalciteConnection, Object>() {
+            @Override public Object apply(CalciteConnection input) {
+              try {
+                final Statement statement = input.createStatement();
+                statement.executeUpdate("insert into \"adhoc\".V values ('Fred', 56, 123.4)");
+                statement.close();
+                return null;
+              } catch (SQLException e) {
+                throw Throwables.propagate(e);
+              }
             }
-          }
-        });
+          });
+    } finally {
+      EmpDeptTableFactory.THREAD_COLLECTION.remove();
+    }
   }
 
   /**
@@ -4865,6 +4869,12 @@ public class JdbcTest {
         + "           operand: {'foo': true, 'bar': 345}\n"
         + "         },\n"
         + "         {\n"
+        + "           name: 'MUTABLE_EMPLOYEES',\n"
+        + "           type: 'custom',\n"
+        + "           factory: '" + clazz.getName() + "',\n"
+        + "           operand: {'foo': false}\n"
+        + "         },\n"
+        + "         {\n"
         + "           name: 'V',\n"
         + "           type: 'view',\n"
         + (modifiable == null ? "" : " modifiable: " + modifiable + ",\n")
@@ -4898,6 +4908,7 @@ public class JdbcTest {
               // all table types
               assertEquals(
                   "TABLE_CAT=null; TABLE_SCHEM=adhoc; TABLE_NAME=EMPLOYEES; TABLE_TYPE=TABLE; REMARKS=null; TYPE_CAT=null; TYPE_SCHEM=null; TYPE_NAME=null; SELF_REFERENCING_COL_NAME=null; REF_GENERATION=null\n"
+                      + "TABLE_CAT=null; TABLE_SCHEM=adhoc; TABLE_NAME=MUTABLE_EMPLOYEES; TABLE_TYPE=TABLE; REMARKS=null; TYPE_CAT=null; TYPE_SCHEM=null; TYPE_NAME=null; SELF_REFERENCING_COL_NAME=null; REF_GENERATION=null\n"
                       + "TABLE_CAT=null; TABLE_SCHEM=adhoc; TABLE_NAME=V; TABLE_TYPE=VIEW; REMARKS=null; TYPE_CAT=null; TYPE_SCHEM=null; TYPE_NAME=null; SELF_REFERENCING_COL_NAME=null; REF_GENERATION=null\n",
                   CalciteAssert.toString(
                       metaData.getTables(null, "adhoc", null, null)));
@@ -6462,6 +6473,9 @@ public class JdbcTest {
 
   /** Factory for EMP and DEPT tables. */
   public static class EmpDeptTableFactory implements TableFactory<Table> {
+    public static final ThreadLocal<List<Employee>> THREAD_COLLECTION =
+        new ThreadLocal<>();
+
     public Table create(
         SchemaPlus schema,
         String name,
@@ -6469,12 +6483,23 @@ public class JdbcTest {
         RelDataType rowType) {
       final Class clazz;
       final Object[] array;
-      if (name.equals("EMPLOYEES")) {
+      switch (name) {
+      case "EMPLOYEES":
         clazz = Employee.class;
         array = new HrSchema().emps;
-      } else {
+        break;
+      case "MUTABLE_EMPLOYEES":
+        List<Employee> employees = THREAD_COLLECTION.get();
+        if (employees == null) {
+          employees = Collections.emptyList();
+        }
+        return JdbcFrontLinqBackTest.mutable(name, employees);
+      case "DEPARTMENTS":
         clazz = Department.class;
         array = new HrSchema().depts;
+        break;
+      default:
+        throw new AssertionError(name);
       }
       return new AbstractQueryableTable(clazz) {
         public RelDataType getRowType(RelDataTypeFactory typeFactory) {

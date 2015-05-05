@@ -42,6 +42,8 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.schema.ModifiableView;
+import org.apache.calcite.schema.Path;
+import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlAccessType;
@@ -295,8 +297,9 @@ public class MockCatalogReader implements Prepare.CatalogReader {
                   return empTable.unwrap(Table.class);
                 }
 
-                @Override public List<String> getTablePath() {
-                  return empTable.names;
+                @Override public Path getTablePath() {
+                  return ImmutableList.<Pair<String, Schema>>builder().build();
+//                  return empTable.names;
                 }
 
                 @Override public ImmutableIntList getColumnMapping() {

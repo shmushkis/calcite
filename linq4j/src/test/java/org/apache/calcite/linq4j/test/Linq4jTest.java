@@ -34,6 +34,7 @@ import org.apache.calcite.linq4j.function.Functions;
 import org.apache.calcite.linq4j.function.IntegerFunction1;
 import org.apache.calcite.linq4j.function.Predicate1;
 import org.apache.calcite.linq4j.function.Predicate2;
+import org.apache.calcite.linq4j.tree.ConstantExpression;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.linq4j.tree.ParameterExpression;
 
@@ -43,6 +44,7 @@ import com.google.common.collect.Lists;
 
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -259,8 +261,7 @@ public class Linq4jTest {
 
   @Test public void testAverageSelector() {
     assertEquals(
-        20,
-        Linq4j.asEnumerable(depts).average(DEPT_DEPTNO_SELECTOR2));
+        20, Linq4j.asEnumerable(depts).average(DEPT_DEPTNO_SELECTOR2));
   }
 
   @Test public void testMin() {
@@ -307,8 +308,7 @@ public class Linq4jTest {
         Linq4j.asEnumerable(depts)
             .select(DEPT_NAME_SELECTOR)
             .aggregate(
-                null,
-                new Function2<String, String, String>() {
+                null, new Function2<String, String, String>() {
                   public String apply(String v1, String v2) {
                     return v1 == null ? v2 : v1 + "," + v2;
                   }
@@ -726,8 +726,7 @@ public class Linq4jTest {
   @Test public void testToLookupSelectorComparer() {
     final Lookup<String, Employee> lookup =
         Linq4j.asEnumerable(emps).toLookup(
-            EMP_NAME_SELECTOR,
-            new EqualityComparer<String>() {
+            EMP_NAME_SELECTOR, new EqualityComparer<String>() {
               public boolean equal(String v1, String v2) {
                 return v1.length() == v2.length();
               }
@@ -809,8 +808,7 @@ public class Linq4jTest {
                   public String apply(String v1, Employee e0) {
                     return v1 == null ? e0.name : (v1 + "+" + e0.name);
                   }
-                },
-                new Function1<String, String>() {
+                }, new Function1<String, String>() {
                   public String apply(String v2) {
                     return "<no key>: " + v2;
                   }
@@ -1361,8 +1359,7 @@ public class Linq4jTest {
         Linq4j.asEnumerable(depts);
     final List<Department> deptList =
         EnumerableDefaults.takeWhile(
-            enumerableDepts,
-            new Predicate1<Department>() {
+            enumerableDepts, new Predicate1<Department>() {
               public boolean apply(Department v1) {
                 return v1.name.contains("e");
               }
@@ -1641,8 +1638,8 @@ public class Linq4jTest {
         Linq4j.asEnumerable(Lists.newLinkedList(experience));
     final Enumerator<String> iterableEnumerator =
         linkedListEnumerable.enumerator();
-    assertThat(iterableEnumerator.getClass().getName(),
-        endsWith("IterableEnumerator"));
+    assertThat(
+        iterableEnumerator.getClass().getName(), endsWith("IterableEnumerator"));
     assertThat(count(iterableEnumerator), equalTo(3));
   }
 
@@ -1658,6 +1655,37 @@ public class Linq4jTest {
 
   @Test public void testExample() {
     Linq4jExample.main(new String[0]);
+  }
+
+  /** We use BigDecimal to represent literals of float and double using
+   * BigDecimal, because we want an exact representation. */
+  @Test public void testApproxConstant() {
+    ConstantExpression c;
+    c = Expressions.constant(new BigDecimal("3.1"), float.class);
+    assertThat(Expressions.toString(c), equalTo("3.1F"));
+    c = Expressions.constant(new BigDecimal("-5.156"), float.class);
+    assertThat(Expressions.toString(c), equalTo("-5.156F"));
+    c = Expressions.constant(new BigDecimal("-51.6"), Float.class);
+    assertThat(Expressions.toString(c), equalTo("Float.valueOf(-51.6F)"));
+    c = Expressions.constant(new BigDecimal(Float.MAX_VALUE), Float.class);
+    assertThat(Expressions.toString(c),
+        equalTo("Float.valueOf(Float.intBitsToFloat(2139095039))"));
+    c = Expressions.constant(new BigDecimal(Float.MIN_VALUE), Float.class);
+    assertThat(Expressions.toString(c),
+        equalTo("Float.valueOf(Float.intBitsToFloat(1))"));
+
+    c = Expressions.constant(new BigDecimal("3.1"), double.class);
+    assertThat(Expressions.toString(c), equalTo("3.1D"));
+    c = Expressions.constant(new BigDecimal("-5.156"), double.class);
+    assertThat(Expressions.toString(c), equalTo("-5.156D"));
+    c = Expressions.constant(new BigDecimal("-51.6"), Double.class);
+    assertThat(Expressions.toString(c), equalTo("Double.valueOf(-51.6D)"));
+    c = Expressions.constant(new BigDecimal(Double.MAX_VALUE), Double.class);
+    assertThat(Expressions.toString(c),
+        equalTo("Double.valueOf(Double.longBitsToDouble(9218868437227405311L))"));
+    c = Expressions.constant(new BigDecimal(Double.MIN_VALUE), Double.class);
+    assertThat(Expressions.toString(c),
+        equalTo("Double.valueOf(Double.longBitsToDouble(1L))"));
   }
 
   /** Employee. */
