@@ -32,6 +32,7 @@ import java.util.RandomAccess;
  * </ul>
  */
 public interface Path extends List<Pair<String, Schema>>, RandomAccess {
+  Path parent();
 }
 
 // End Path.java

@@ -139,6 +139,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -269,7 +270,55 @@ public class JdbcTest {
             @Override public Object apply(CalciteConnection input) {
               try {
                 final Statement statement = input.createStatement();
-                statement.executeUpdate("insert into \"adhoc\".V values ('Fred', 56, 123.4)");
+                ResultSet resultSet =
+                    statement.executeQuery("explain plan for\n"
+                        + "insert into \"adhoc\".V\n"
+                        + "values ('Fred', 56, 123.4)");
+                assertThat(resultSet.next(), is(true));
+                assertThat(resultSet.getString(1),
+                    is(
+                        "EnumerableTableModify(table=[[adhoc, MUTABLE_EMPLOYEES]], operation=[INSERT], updateColumnList=[[]], flattened=[false])\n"
+                        + "  EnumerableCalc(expr#0..2=[{inputs}], expr#3=[CAST($t1):JavaType(int) NOT NULL], expr#4=[10], expr#5=[CAST($t0):JavaType(class java.lang.String)], expr#6=[CAST($t2):JavaType(float) NOT NULL], expr#7=[null], empid=[$t3], deptno=[$t4], name=[$t5], salary=[$t6], commission=[$t7])\n"
+                        + "    EnumerableValues(tuples=[[{ 'Fred', 56, 123.4 }]])\n"));
+
+                // With named columns
+                resultSet =
+                    statement.executeQuery("explain plan for\n"
+                        + "insert into \"adhoc\".V (\"name\", e, \"salary\")\n"
+                        + "values ('Fred', 56, 123.4)");
+                assertThat(resultSet.next(), is(true));
+
+                // With named columns, in different order
+                resultSet =
+                    statement.executeQuery("explain plan for\n"
+                        + "insert into \"adhoc\".V (e, \"salary\", \"name\")\n"
+                        + "values (56, 123.4, 'Fred')");
+                assertThat(resultSet.next(), is(true));
+
+                // Mis-named column
+                try {
+                  final PreparedStatement s =
+                      input.prepareStatement("explain plan for\n"
+                          + "insert into \"adhoc\".V (empno, \"salary\", \"name\")\n"
+                          + "values (56, 123.4, 'Fred')");
+                  fail("expected error, got " + resultSet);
+                } catch (SQLException e) {
+                  assertThat(e.getMessage(),
+                      startsWith("Error while preparing statement"));
+                }
+
+                // Fail to provide mandatory column
+                try {
+                  final PreparedStatement s =
+                      input.prepareStatement("explain plan for\n"
+                          + "insert into \"adhoc\".V (e, name)\n"
+                          + "values (56, 'Fred')");
+                  fail("expected error, got " + s);
+                } catch (SQLException e) {
+                  assertThat(e.getMessage(),
+                      startsWith("Error while preparing statement"));
+                }
+
                 statement.close();
                 return null;
               } catch (SQLException e) {
@@ -277,6 +326,23 @@ public class JdbcTest {
               }
             }
           });
+    } finally {
+      EmpDeptTableFactory.THREAD_COLLECTION.remove();
+    }
+  }
+
+  /** Tests a validation of modifiable view. */
+  @Test public void testModelWithModifiableView2() throws Exception {
+    final List<Employee> employees = new ArrayList<>();
+    employees.add(new Employee(135, 10, "Simon", 56.7f, null));
+    try {
+      EmpDeptTableFactory.THREAD_COLLECTION.set(employees);
+      final CalciteAssert.AssertThat with = modelWithView(
+          "select \"name\", \"empid\" as e, \"salary\" "
+              + "from \"MUTABLE_EMPLOYEES\" where \"commission\" = 10",
+          true);
+      with.query("select \"name\" from \"adhoc\".V order by \"name\"")
+          .returns("name=Simon\n");
     } finally {
       EmpDeptTableFactory.THREAD_COLLECTION.remove();
     }
@@ -4854,7 +4920,8 @@ public class JdbcTest {
             "Cannot define view; parent schema 'adhoc' is not mutable");
   }
 
-  private CalciteAssert.AssertThat modelWithView(String view, Boolean modifiable) {
+  private CalciteAssert.AssertThat modelWithView(String view,
+      Boolean modifiable) {
     final Class<EmpDeptTableFactory> clazz = EmpDeptTableFactory.class;
     return CalciteAssert.model("{\n"
         + "  version: '1.0',\n"

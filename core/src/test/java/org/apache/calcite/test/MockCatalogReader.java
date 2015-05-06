@@ -45,6 +45,7 @@ import org.apache.calcite.schema.ModifiableView;
 import org.apache.calcite.schema.Path;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlAccessType;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -298,7 +299,12 @@ public class MockCatalogReader implements Prepare.CatalogReader {
                 }
 
                 @Override public Path getTablePath() {
-                  return ImmutableList.<Pair<String, Schema>>builder().build();
+                  final ImmutableList.Builder<Pair<String, Schema>> builder =
+                      ImmutableList.builder();
+                  builder.add(Pair.<String, Schema>of(empTable.names.get(0), null));
+                  builder.add(Pair.<String, Schema>of(empTable.names.get(1), null));
+                  builder.add(Pair.<String, Schema>of(empTable.names.get(2), null));
+                  return Schemas.path(builder.build());
 //                  return empTable.names;
                 }
 
@@ -318,10 +324,11 @@ public class MockCatalogReader implements Prepare.CatalogReader {
                               deptnoField.getIndex()),
                           rexBuilder.makeExactLiteral(BigDecimal.valueOf(20L),
                               deptnoField.getType())),
-                      rexBuilder.makeCall(
-                          SqlStdOperatorTable.GREATER_THAN, rexBuilder.makeInputRef(
-                              salField.getType(), salField.getIndex()), rexBuilder.makeExactLiteral(
-                              BigDecimal.valueOf(1000L), salField.getType())));
+                      rexBuilder.makeCall(SqlStdOperatorTable.GREATER_THAN,
+                          rexBuilder.makeInputRef(salField.getType(),
+                              salField.getIndex()),
+                          rexBuilder.makeExactLiteral(BigDecimal.valueOf(1000L),
+                              salField.getType())));
                   return RexUtil.composeConjunction(rexBuilder, nodes, false);
                 }
 

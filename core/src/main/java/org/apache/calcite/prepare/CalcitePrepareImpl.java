@@ -266,7 +266,8 @@ public class CalcitePrepareImpl implements CalcitePrepare {
             SqlStdOperatorTable.instance(), catalogReader, typeFactory);
     SqlNode sqlNode1 = validator.validate(sqlNode);
     if (convert) {
-      return convert_(context, sql, analyze, fail, catalogReader, validator, sqlNode1);
+      return convert_(context, sql, analyze, fail, catalogReader, validator,
+          sqlNode1);
     }
     return new ParseResult(this, validator, sql, sqlNode1,
         validator.getValidatedNodeType(sqlNode1));

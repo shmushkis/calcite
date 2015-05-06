@@ -74,7 +74,6 @@ import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.schema.ModifiableTable;
 import org.apache.calcite.schema.ModifiableView;
-import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.JoinConditionType;
@@ -2010,8 +2009,7 @@ public class SqlToRelConverter {
       final TranslatableTable table = udf.getTable(typeFactory,
         call.getOperandList());
       final RelDataType rowType = table.getRowType(typeFactory);
-      RelOptTable relOptTable = RelOptTableImpl.create(null, rowType, table,
-          Schemas.path(cont)udf.getNameAsId().getTablePath());
+      RelOptTable relOptTable = RelOptTableImpl.create(null, rowType, table);
       RelNode converted = toRel(relOptTable);
       bb.setRoot(converted, true);
       return;

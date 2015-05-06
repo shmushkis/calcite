@@ -493,7 +493,7 @@ public final class Schemas {
     final ImmutableList.Builder<Pair<String, Schema>> builder =
         ImmutableList.builder();
     Schema schema = rootSchema.schema;
-    Iterator<String> iterator = names.iterator();
+    final Iterator<String> iterator = names.iterator();
     if (!iterator.hasNext()) {
       return PathImpl.EMPTY;
     }
@@ -501,10 +501,14 @@ public final class Schemas {
       final String name = iterator.next();
       builder.add(Pair.of(name, schema));
       if (!iterator.hasNext()) {
-        return new PathImpl(builder.build());
+        return path(builder.build());
       }
       schema = schema.getSubSchema(name);
     }
+  }
+
+  public static PathImpl path(ImmutableList<Pair<String, Schema>> build) {
+    return new PathImpl(build);
   }
 
   /** Dummy data context that has no variables. */
@@ -547,12 +551,29 @@ public final class Schemas {
       this.pairs = pairs;
     }
 
+    @Override public boolean equals(Object o) {
+      return this == o
+          || o instanceof PathImpl
+          && pairs.equals(((PathImpl) o).pairs);
+    }
+
+    @Override public int hashCode() {
+      return pairs.hashCode();
+    }
+
     public Pair<String, Schema> get(int index) {
       return pairs.get(index);
     }
 
     public int size() {
       return pairs.size();
+    }
+
+    @Override public Path parent() {
+      if (pairs.isEmpty()) {
+        throw new IllegalArgumentException("at root");
+      }
+      return new PathImpl(pairs.subList(0, pairs.size() - 1));
     }
   }
 }
