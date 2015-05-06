@@ -286,9 +286,10 @@ public final class Schemas {
       final CalciteConnection connection, final CalciteSchema schema,
       final List<String> schemaPath, final String sql) {
     final CalcitePrepare prepare = CalcitePrepare.DEFAULT_FACTORY.apply();
+    final ImmutableMap<CalciteConnectionProperty, String> propValues =
+        ImmutableMap.of();
     final CalcitePrepare.Context context =
-        makeContext(
-            connection, schema, schemaPath, ImmutableMap.<CalciteConnectionProperty, String>of());
+        makeContext(connection, schema, schemaPath, propValues);
     CalcitePrepare.Dummy.push(context);
     try {
       return prepare.parse(context, sql);
@@ -303,9 +304,10 @@ public final class Schemas {
       final CalciteConnection connection, final CalciteSchema schema,
       final List<String> schemaPath, final String sql) {
     final CalcitePrepare prepare = CalcitePrepare.DEFAULT_FACTORY.apply();
+    final ImmutableMap<CalciteConnectionProperty, String> propValues =
+        ImmutableMap.of();
     final CalcitePrepare.Context context =
-        makeContext(connection, schema, schemaPath,
-            ImmutableMap.<CalciteConnectionProperty, String>of());
+        makeContext(connection, schema, schemaPath, propValues);
     CalcitePrepare.Dummy.push(context);
     try {
       return prepare.convert(context, sql);
@@ -319,9 +321,10 @@ public final class Schemas {
       final CalciteConnection connection, final CalciteSchema schema,
       final List<String> schemaPath, final String sql, boolean fail) {
     final CalcitePrepare prepare = CalcitePrepare.DEFAULT_FACTORY.apply();
+    final ImmutableMap<CalciteConnectionProperty, String> propValues =
+        ImmutableMap.of();
     final CalcitePrepare.Context context =
-        makeContext(connection, schema, schemaPath,
-            ImmutableMap.<CalciteConnectionProperty, String>of());
+        makeContext(connection, schema, schemaPath, propValues);
     CalcitePrepare.Dummy.push(context);
     try {
       return prepare.analyzeView(context, sql, fail);

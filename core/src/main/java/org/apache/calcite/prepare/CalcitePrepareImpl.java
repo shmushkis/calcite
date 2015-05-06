@@ -266,8 +266,8 @@ public class CalcitePrepareImpl implements CalcitePrepare {
             SqlStdOperatorTable.instance(), catalogReader, typeFactory);
     SqlNode sqlNode1 = validator.validate(sqlNode);
     if (convert) {
-      return convert_(context, sql, analyze, fail, catalogReader, validator,
-          sqlNode1);
+      return convert_(
+          context, sql, analyze, fail, catalogReader, validator, sqlNode1);
     }
     return new ParseResult(this, validator, sql, sqlNode1,
         validator.getValidatedNodeType(sqlNode1));
@@ -373,7 +373,26 @@ public class CalcitePrepareImpl implements CalcitePrepare {
     final List<RexNode> filters = new ArrayList<>();
     SqlToRelConverter.asdasd(projectMap, filters, constraint);
 
-    // TODO: check that all columns that are not projected have a constant value
+    // No column is mapped more than once. (We checked, and would have thrown
+    // moreThanOneMappedColumn, above.)
+    assert Util.isDistinct(columnMapping);
+
+    // Check that all columns that are not projected have a constant value
+    for (RelDataTypeField field : targetRowType.getFieldList()) {
+      if (columnMapping.indexOf(field.getIndex()) >= 0) {
+        // Target column is projected
+        continue;
+      }
+      if (projectMap.get(field.getIndex()) != null) {
+        continue; // constant expression
+      }
+      if (field.getType().isNullable()) {
+        continue;
+      }
+      throw validator.newValidationError(sqlNode,
+          RESOURCE.noValueSuppliedForViewColumn(field.getName(),
+              Util.last(tablePath)));
+    }
 
     return new AnalyzeViewResult(this, validator, sql, sqlNode,
         validator.getValidatedNodeType(sqlNode), rel, table,

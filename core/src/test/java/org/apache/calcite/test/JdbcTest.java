@@ -80,6 +80,7 @@ import org.apache.calcite.sql.advise.SqlAdvisorGetHintsFunction;
 import org.apache.calcite.sql.parser.SqlParserUtil;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Bug;
+import org.apache.calcite.util.JsonBuilder;
 import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
@@ -131,6 +132,8 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 import javax.sql.DataSource;
+
+import static org.apache.calcite.util.Static.RESOURCE;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -301,7 +304,7 @@ public class JdbcTest {
                       input.prepareStatement("explain plan for\n"
                           + "insert into \"adhoc\".V (empno, \"salary\", \"name\")\n"
                           + "values (56, 123.4, 'Fred')");
-                  fail("expected error, got " + resultSet);
+                  fail("expected error, got " + s);
                 } catch (SQLException e) {
                   assertThat(e.getMessage(),
                       startsWith("Error while preparing statement"));
@@ -337,12 +340,53 @@ public class JdbcTest {
     employees.add(new Employee(135, 10, "Simon", 56.7f, null));
     try {
       EmpDeptTableFactory.THREAD_COLLECTION.set(employees);
-      final CalciteAssert.AssertThat with = modelWithView(
-          "select \"name\", \"empid\" as e, \"salary\" "
+
+      Util.discard(RESOURCE.noValueSuppliedForViewColumn(null, null));
+      modelWithView("select \"name\", \"empid\" as e, \"salary\" "
               + "from \"MUTABLE_EMPLOYEES\" where \"commission\" = 10",
-          true);
-      with.query("select \"name\" from \"adhoc\".V order by \"name\"")
-          .returns("name=Simon\n");
+          true)
+          .query("select \"name\" from \"adhoc\".V order by \"name\"")
+          .throws_(
+              "View is not modifiable. No value is supplied for NOT NULL "
+                  + "column 'deptno' of base table 'MUTABLE_EMPLOYEES'");
+
+      modelWithView("select \"name\", \"empid\" as e, \"salary\" "
+              + "from \"MUTABLE_EMPLOYEES\" where \"deptno\" IN (10, 20)",
+          true)
+          .query("select \"name\" from \"adhoc\".V order by \"name\"")
+          .throws_(
+              "View is not modifiable. No value is supplied for NOT NULL "
+                  + "column 'deptno' of base table 'MUTABLE_EMPLOYEES'");
+
+      // Deduce "deptno = 10" from the constraint, and add a further
+      // condition "deptno < 20 OR commission > 1000".
+      modelWithView("select \"name\", \"empid\" as e, \"salary\" "
+              + "from \"MUTABLE_EMPLOYEES\"\n"
+              + "where \"deptno\" = 10 AND (\"deptno\" < 20 OR \"commission\" > 1000)",
+          true)
+          .query("insert into \"adhoc\".v values ('n',1,2)")
+          .explainContains(""
+              + "EnumerableTableModify(table=[[adhoc, MUTABLE_EMPLOYEES]], operation=[INSERT], updateColumnList=[[]], flattened=[false])\n"
+              + "  EnumerableCalc(expr#0..2=[{inputs}], expr#3=[CAST($t1):JavaType(int) NOT NULL], expr#4=[10], expr#5=[CAST($t0):JavaType(class java.lang.String)], expr#6=[CAST($t2):JavaType(float) NOT NULL], expr#7=[null], expr#8=[20], expr#9=[<($t4, $t8)], expr#10=[1000], expr#11=[>($t7, $t10)], expr#12=[OR($t9, $t11)], empid=[$t3], deptno=[$t4], name=[$t5], salary=[$t6], commission=[$t7], $condition=[$t12])\n"
+              + "    EnumerableValues(tuples=[[{ 'n', 1, 2 }]])");
+
+      modelWithView(
+          "select \"name\", \"empid\" as e, \"salary\" "
+              + "from \"MUTABLE_EMPLOYEES\"\n"
+              + "where \"commission\" = 100 AND \"deptno\" = 20",
+          true)
+          .query("select \"name\" from \"adhoc\".V order by \"name\"")
+          .runs();
+
+      Util.discard(RESOURCE.moreThanOneMappedColumn(null, null));
+      modelWithView(
+          "select \"name\", \"empid\" as e, \"salary\", \"name\" as n2 "
+              + "from \"MUTABLE_EMPLOYEES\" where \"deptno\" IN (10, 20)",
+          true)
+          .query("select \"name\" from \"adhoc\".V order by \"name\"")
+          .throws_(
+              "View is not modifiable. More than one expression maps to "
+              + "column 'name' of base table 'MUTABLE_EMPLOYEES'");
     } finally {
       EmpDeptTableFactory.THREAD_COLLECTION.remove();
     }
@@ -4945,7 +4989,7 @@ public class JdbcTest {
         + "           name: 'V',\n"
         + "           type: 'view',\n"
         + (modifiable == null ? "" : " modifiable: " + modifiable + ",\n")
-        + "           sql: '" + view + "'\n"
+        + "           sql: " + new JsonBuilder().toJsonString(view) + "\n"
         + "         }\n"
         + "       ]\n"
         + "     }\n"
