@@ -91,7 +91,9 @@ public abstract class RexWindowBound {
    *
    * @return relative order or -1 when order is not known
    */
-  public int getOrderKey() { return -1; }
+  public int getOrderKey() {
+    return -1;
+  }
 
   /**
    * Transforms the bound via {@link org.apache.calcite.rex.RexVisitor}.

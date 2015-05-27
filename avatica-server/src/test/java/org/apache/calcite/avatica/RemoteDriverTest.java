@@ -805,7 +805,8 @@ public class RemoteDriverTest {
     /**
      * Reach into the guts of a quasi-remote connection and pull out the
      * connection map from the other side.
-     * TODO: refactor tests to replace reflection with package-local access
+     *
+     * <p>TODO: refactor tests to replace reflection with package-local access
      */
     static Cache<String, Connection>
     getRemoteConnectionMap(AvaticaConnection connection) throws Exception {

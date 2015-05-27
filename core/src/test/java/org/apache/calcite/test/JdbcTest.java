@@ -6851,15 +6851,25 @@ public class JdbcTest {
     private MultipleFunction() {}
 
     // Three overloads
-    public static String fun1(String x) { return x.toLowerCase(); }
-    public static int fun1(int x) { return x * 2; }
-    public static int fun1(int x, int y) { return x + y; }
+    public static String fun1(String x) {
+      return x.toLowerCase();
+    }
+    public static int fun1(int x) {
+      return x * 2;
+    }
+    public static int fun1(int x, int y) {
+      return x + y;
+    }
 
     // Another method
-    public static int fun2(int x) { return x * 3; }
+    public static int fun2(int x) {
+      return x * 3;
+    }
 
     // Non-static method cannot be used because constructor is private
-    public int nonStatic(int x) { return x * 3; }
+    public int nonStatic(int x) {
+      return x * 3;
+    }
   }
 
   /** Example of a user-defined aggregate function (UDAF). */

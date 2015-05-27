@@ -217,8 +217,8 @@ public final class FunctionExpression<F extends Function<?>>
 
   private Method getAbstractMethod() {
     if (type instanceof Class
-      && ((Class) type).isInterface()
-      && ((Class) type).getDeclaredMethods().length == 1) {
+        && ((Class) type).isInterface()
+        && ((Class) type).getDeclaredMethods().length == 1) {
       return ((Class) type).getDeclaredMethods()[0];
     }
     return null;

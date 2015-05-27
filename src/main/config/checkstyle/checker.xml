@@ -90,10 +90,6 @@ limitations under the License.
     </module>
       <!-- Switch statements should be complete and with independent cases -->
     <module name="FallThrough"/>
-    <!-- For hadoop_yarn profile, some YARN exceptions aren't loading in checkstyle -->
-    <module name="RedundantThrows">
-        <property name="suppressLoadErrors" value="true" />
-    </module>
     <module name="SimplifyBooleanExpression"/>
     <module name="SimplifyBooleanReturn"/>
       <!-- Only one statement per line allowed -->
@@ -141,6 +137,16 @@ limitations under the License.
       <!-- Must have class / interface header comments -->
     <module name="JavadocType"/>
 
+    <!-- Checks that there is a blank line between paragraphs, and
+         each paragraph but the first has <p> immediately before the
+         first word, with no space after. -->
+    <!-- enable after 6.0 module name="JavadocParagraph" -->
+
+    <!-- Checks that a JavaDoc block which can fit on a single line
+         and doesn't contain at-clauses. Javadoc comment that contains
+         at least one at-clause should be formatted in few lines. -->
+    <!-- module name="SingleLineJavadoc" -->
+
     <!-- Miscellaneous other checks (tree walker).     -->
     <!-- See http://checkstyle.sf.net/config_misc.html -->
       <!-- Java style arrays -->
@@ -150,6 +156,8 @@ limitations under the License.
       <property name="caseIndent" value="0"/>
       <property name="basicOffset" value="2"/>
       <property name="braceAdjustment" value="0"/>
+      <property name="arrayInitIndent" value="2"/>
+      <property name="lineWrappingIndentation" value="4"/>
     </module>
       <!-- Turn this on to see what needs to be done
     <module name="TodoComment"/>

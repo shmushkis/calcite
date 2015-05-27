@@ -250,8 +250,7 @@ public class ByteString implements Comparable<ByteString>, Serializable {
 
   @SuppressWarnings({
       "CloneDoesntCallSuperClone",
-      "CloneDoesntDeclareCloneNotSupportedException"
-  })
+      "CloneDoesntDeclareCloneNotSupportedException"})
   @Override public Object clone() {
     return this;
   }

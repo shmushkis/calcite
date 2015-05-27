@@ -190,10 +190,18 @@ public class StatementTest {
 
   private static void close(ResultSet rs, Statement st) {
     if (rs != null) {
-      try { rs.close(); } catch (SQLException e) { /**/ }
+      try {
+        rs.close();
+      } catch (SQLException e) {
+        /**/
+      }
     }
     if (st != null) {
-      try { st.close(); } catch (SQLException e) { /**/ }
+      try {
+        st.close();
+      } catch (SQLException e) {
+        /**/
+      }
     }
   }
 

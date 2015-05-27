@@ -601,7 +601,7 @@ public interface Meta {
       defaultImpl = ConnectionPropertiesImpl.class)
   @JsonSubTypes({
       @JsonSubTypes.Type(value = ConnectionPropertiesImpl.class, name = "connPropsImpl")
-  })
+      })
   interface ConnectionProperties {
 
     /** Overwrite fields in {@code this} with any non-null fields in {@code that}
@@ -610,7 +610,8 @@ public interface Meta {
      */
     ConnectionProperties merge(ConnectionProperties that);
 
-    /** @return {@code true} when no properies have been set, {@code false} otherwise. */
+    /** Returns {@code true} when no properies have been set,
+     * {@code false} otherwise. */
     @JsonIgnore
     boolean isEmpty();
 
