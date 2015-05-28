@@ -1,3 +1,9 @@
+---
+layout: docs
+title: History
+permalink: "/docs/history.html"
+---
+
 <!--
 Licensed to the Apache Software Foundation (ASF) under one or more
 contributor license agreements.  See the NOTICE file distributed with
@@ -14,12 +20,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-# Apache Calcite release history
 
 For a full list of releases, see
 <a href="https://github.com/apache/incubator-calcite/releases">github</a>.
 
 ## <a href="https://github.com/apache/incubator-calcite/releases/tag/calcite-1.3.0-incubating">1.3.0-incubating</a> / 2015-05-21
+{: #v1-3-0}
 
 Mainly bug-fixes, but this release adds support for
 <a href="https://issues.apache.org/jira/browse/CALCITE-505">modifiable views</a>
@@ -28,6 +34,7 @@ and
 and various improvements to Avatica.
 
 New features
+
 * [<a href="https://issues.apache.org/jira/browse/CALCITE-505">CALCITE-505</a>]
   Support modifiable view
 * [<a href="https://issues.apache.org/jira/browse/CALCITE-704">CALCITE-704</a>]
@@ -39,6 +46,7 @@ New features
 * Support Date, Time, Timestamp parameters
 
 API changes
+
 * [<a href="https://issues.apache.org/jira/browse/CALCITE-722">CALCITE-722</a>]
   Rename markdown files to lower-case
 * [<a href="https://issues.apache.org/jira/browse/CALCITE-697">CALCITE-697</a>]
@@ -132,6 +140,7 @@ Bug-fixes and internal changes
   `SemiJoinRule` mixes up fields when `Aggregate.groupSet` is not field #0
 
 ## <a href="https://github.com/apache/incubator-calcite/releases/tag/calcite-1.2.0-incubating">1.2.0-incubating</a> / 2015-04-07
+{: #v1-2-0}
 
 A short release, less than a month after 1.1.
 
@@ -257,6 +266,7 @@ Bug-fixes and internal changes
   Slim down dependencies in parent POM
 
 ## <a href="https://github.com/apache/incubator-calcite/releases/tag/calcite-1.1.0-incubating">1.1.0-incubating</a> / 2015-03-13
+{: #v1-1-0}
 
 This Calcite release makes it possible to exploit physical properties
 of relational expressions to produce more efficient plans, introducing
@@ -361,6 +371,7 @@ Bug-fixes and internal changes
   Prevent JSON serialization of `Signature.internalParameters`
 
 ## <a href="https://github.com/apache/incubator-calcite/releases/tag/calcite-1.0.0-incubating">1.0.0-incubating</a> / 2015-01-31
+{: #v1-0-0}
 
 Calcite's first major release.
 

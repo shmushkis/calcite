@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Tutorial
+permalink: /docs/tutorial.html
+---
 <!--
 Licensed to the Apache Software Foundation (ASF) under one or more
 contributor license agreements.  See the NOTICE file distributed with
@@ -14,10 +19,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-# CSV Adapter Tutorial
+
+This is a step-by-step tutorial that shows how to build and connect to
+Calcite. It uses a simple adapter that makes a directory of CSV files
+appear to be a schema containing tables. Calcite does the rest, and
+provides a full SQL interface.
 
 Calcite-example-CSV is a fully functional adapter for
-<a href="https://github.com/apache/incubator-calcite">Calcite</a> that reads
+Calcite that reads
 text files in
 <a href="http://en.wikipedia.org/wiki/Comma-separated_values">CSV
 (comma-separated values)</a> format. It is remarkable that a couple of

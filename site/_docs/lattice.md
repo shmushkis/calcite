@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Lattices
+permalink: /docs/lattice.html
+---
 <!--
 Licensed to the Apache Software Foundation (ASF) under one or more
 contributor license agreements.  See the NOTICE file distributed with
@@ -14,8 +19,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-# Lattice
-
 A lattice is a framework for creating and populating materialized views,
 and for recognizing that a materialized view can be used to solve a
 particular query.
@@ -31,7 +34,7 @@ is a
 ordered set</a> where any two elements have a unique greatest lower
 bound and least upper bound.
 
-[<a href="#user-content-ref-hru96">HRU96</a>] observed that the set of possible
+[<a href="#ref-hru96">HRU96</a>] observed that the set of possible
 materializations of a data cube forms a lattice, and presented an
 algorithm to choose a good set of materializations. Calcite's
 recommendation algorithm is derived from this.
@@ -109,7 +112,7 @@ Examples:
 
 A "tile" is a materialized table in a lattice, with a particular
 dimensionality. (What Kylin calls a "cuboid".) The "tiles" attribute
-of the <a href="model.json#lattice">lattice JSON element</a>
+of the <a href="model.html#lattice">lattice JSON element</a>
 defines an initial set of tiles to materialize.
 
 If you run the algorithm, you can omit the tiles attribute. Calcite
@@ -120,6 +123,9 @@ tiles).
 
 ### References
 
-* <a name="ref-hru96">[HRU96]</a> V. Harinarayan, A. Rajaraman and J. Ullman.
-  <a href="http://web.eecs.umich.edu/~jag/eecs584/papers/implementing_data_cube.pdf">Implementing
-  data cubes efficiently</a>. In _Proc. ACM SIGMOD Conf._, Montreal, 1996.
+#### [HRU96]
+{: #ref-hru96}
+V. Harinarayan, A. Rajaraman and J. Ullman.
+<a href="http://web.eecs.umich.edu/~jag/eecs584/papers/implementing_data_cube.pdf">Implementing
+data cubes efficiently</a>. In _Proc. ACM SIGMOD Conf._, Montreal, 1996.
+

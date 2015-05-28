@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Streaming
+permalink: /docs/stream.html
+---
 <!--
 Licensed to the Apache Software Foundation (ASF) under one or more
 contributor license agreements.  See the NOTICE file distributed with
@@ -14,9 +19,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-# Calcite SQL extensions for streaming
 
-## Introduction
+Calcite has extended SQL and relational algebra in order to support
+streaming queries.
 
 Streams are collections to records that flow continuously, and forever.
 Unlike tables, they are not typically stored on disk, but flow over the
@@ -38,6 +43,9 @@ The distinction is important, for several reasons:
 * You can write queries that combine streams and tables (or the history of
   a stream, which is basically an in-memory table).
 * Lots of existing tools can generate standard SQL.
+
+If you don't use the `STREAM` keyword, you are back in regular
+standard SQL.
 
 ## An example schema
 

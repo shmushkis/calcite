@@ -1,3 +1,8 @@
+---
+layout: docs
+title: JSON models
+permalink: /docs/model.html
+---
 <!--
 Licensed to the Apache Software Foundation (ASF) under one or more
 contributor license agreements.  See the NOTICE file distributed with
@@ -14,7 +19,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-# Calcite JSON model reference
+Calcite models can be represented as JSON files.
+This page describes the structure of those files.
+
+Models can also be built programmatically using the `Schema` SPI.
 
 ## Elements
 
