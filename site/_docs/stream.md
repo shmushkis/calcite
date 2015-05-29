@@ -37,6 +37,7 @@ to take advantage of available resources and algorithms.
 
 Calcite's SQL is an extension to standard SQL, not another 'SQL-like' language.
 The distinction is important, for several reasons:
+
 * Streaming SQL is easy to learn for anyone who knows regular SQL.
 * The semantics are clear, because we aim to produce the same results on a
   stream as if the same data were in a table.
@@ -50,6 +51,7 @@ standard SQL.
 ## An example schema
 
 Our streaming SQL examples use the following schema:
+
 * `Orders (rowtime, productId, orderId, units)` - a stream and a table
 * `Products (rowtime, productId, name)` - a table
 * `Shipments (rowtime, orderId)` - a stream
@@ -163,6 +165,7 @@ possible to do advanced calculations later, such as `GROUP BY` and `JOIN`.
 
 There are several ways to compute aggregate functions on streams. The
 differences are:
+
 * How many rows come out for each row in?
 * Does each incoming value appear in one total, or more?
 * What defines the "window", the set of rows that contribute to a given output row?
@@ -291,8 +294,9 @@ WHERE c > 2 OR su > 10;
 {% endhighlight %}
 
 Sub-queries in the `FROM` clause are sometimes referred to as "inline views",
-but really, nested queries are more fundamental. Views are just a convenient
-way to carve your SQL into manageable chunks.
+but really, they are more fundamental than views. Views are just a convenient
+way to carve your SQL into manageable chunks by giving the pieces names and
+storing them in the metadata repository.
 
 Many people find that nested queries and views are even more useful on streams
 than they are on relations. Streaming queries are pipelines of
@@ -559,6 +563,7 @@ with FIFO queues. But you can access those tables without introducing a join
 into the query.
 
 Some other features of the windowed aggregation syntax:
+
 * You can define windows based on row count.
 * The window can reference rows that have not yet arrived.
   (The stream will wait until they have arrived).
@@ -623,7 +628,7 @@ such as Samza SQL [<a href="#ref3">3</a>].
 * Windowed aggregation
 * Punctuation
 * Stream-to-table join
-** Stream-to-table join where table is changing
+  * Stream-to-table join where table is changing
 * Stream-to-stream join
 * Relational queries on streams (e.g. "pie chart" query)
 * Diagrams for various window types

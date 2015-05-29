@@ -19,7 +19,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-## SQL constructs
+The page describes the SQL dialect recognized by Calcite's default SQL parser.
+
+## Grammar
+
+SQL grammar in [BNF](http://en.wikipedia.org/wiki/Backus%E2%80%93Naur_Form)-like
+form.
 
 {% highlight SQL %}
 statement:
@@ -180,11 +185,11 @@ Unquoted identifiers, such as emp, must start with a letter and can
 only contain letters, digits, and underscores. They are implicitly
 converted to upper case.
 
-Quoted identifiers, such as "Employee Name", start and end with
+Quoted identifiers, such as `"Employee Name"`, start and end with
 double quotes.  They may contain virtually any character, including
 spaces and other punctuation.  If you wish to include a double quote
 in an identifier, use another double quote to escape it, like this:
-"An employee called ""Fred""."
+`"An employee called ""Fred""."`.
 
 In Calcite, matching identifiers to the name of the referenced object is
 case-sensitive.  But remember that unquoted identifiers are implicitly
@@ -197,7 +202,7 @@ name will have been converted to upper case also.
 ### Scalar types
 
 | Data type   | Description               | Range and examples   |
-| ----------- | ------------------------- | ---------------------|
+|:----------- |:------------------------- |:---------------------|
 | BOOLEAN     | Logical values            | Values: TRUE, FALSE, UNKNOWN
 | TINYINT     | 1 byte signed integer     | Range is -255 to 256
 | SMALLINT    | 2 byte signed integer     | Range is -32768 to 32767
@@ -234,7 +239,7 @@ Note:
 ### Non-scalar types
 
 | Type     | Description
-| -------- | -----------------------------------------------------------
+|:-------- |:-----------------------------------------------------------
 | ANY      | A value of an unknown type
 | ROW      | Row with 1 or more columns
 | MAP      | Collection of keys mapped to values
@@ -247,7 +252,7 @@ Note:
 ### Comparison operators
 
 | Operator syntax                                   | Description
-| ------------------------------------------------- | -----------
+|:------------------------------------------------- |:-----------
 | value1 = value2                                   | Equals
 | value1 <> value2                                  | Not equal
 | value1 > value2                                   | Greater than
@@ -273,7 +278,7 @@ Note:
 ### Logical operators
 
 | Operator syntax        | Description
-| ---------------------- | -----------
+|:---------------------- |:-----------
 | boolean1 OR boolean2   | Whether *boolean1* is TRUE or *boolean2* is TRUE
 | boolean1 AND boolean2  | Whether *boolean1* and *boolean2* are both TRUE
 | NOT boolean            | Whether *boolean* is not TRUE; returns UNKNOWN if *boolean* is UNKNOWN
@@ -287,9 +292,9 @@ Note:
 ### Arithmetic operators and functions
 
 | Operator syntax           | Description
-| ------------------------- | -----------
+|:------------------------- |:-----------
 | + numeric                 | Returns *numeric*
-| - numeric                 | Returns negative *numeric*
+|:- numeric                 | Returns negative *numeric*
 | numeric1 + numeric2       | Returns *numeric1* plus *numeric2*
 | numeric1 - numeric2       | Returns *numeric1* minus *numeric2*
 | numeric1 * numeric2       | Returns *numeric1* multiplied by *numeric2*
@@ -307,7 +312,7 @@ Note:
 ### Character string operators and functions
 
 | Operator syntax            | Description
-| -------------------------- | -----------
+|:-------------------------- |:-----------
 | string &#124;&#124; string | Concatenates two character strings.
 | CHAR_LENGTH(string)        | Returns the number of characters in a character string
 | CHARACTER_LENGTH(string)   | As CHAR_LENGTH(*string*)
@@ -327,7 +332,7 @@ Not implemented:
 ### Binary string operators and functions
 
 | Operator syntax | Description
-| --------------- | -----------
+|:--------------- |:-----------
 | binary &#124;&#124; binary | Concatenates two binary strings.
 | POSITION(binary1 IN binary2) | Returns the position of the first occurrence of *binary1* in *binary2*
 | OVERLAY(binary1 PLACING binary2 FROM integer [ FOR integer2 ]) | Replaces a substring of *binary1* with *binary2*
@@ -337,7 +342,7 @@ Not implemented:
 ### Date/time functions
 
 | Operator syntax           | Description
-| ------------------------- | -----------
+|:------------------------- |:-----------
 | LOCALTIME                 | Returns the current date and time in the session time zone in a value of datatype TIME
 | LOCALTIME(precision)      | Returns the current date and time in the session time zone in a value of datatype TIME, with *precision* digits of precision
 | LOCALTIMESTAMP            | Returns the current date and time in the session time zone in a value of datatype TIMESTAMP
@@ -356,8 +361,8 @@ Not implemented:
 * FLOOR(interval)
 * datetime - datetime timeUnit [ TO timeUnit ]
 * interval OVERLAPS interval
-* + interval
-* - interval
+* \+ interval
+* \- interval
 * interval + interval
 * interval - interval
 * interval / interval
@@ -367,7 +372,7 @@ Not implemented:
 ### System functions
 
 | Operator syntax | Description
-| --------------- | -----------
+|:--------------- |:-----------
 | USER            | Equivalent to CURRENT_USER
 | CURRENT_USER    | User name of current execution context
 | SESSION_USER    | Session user name
@@ -378,22 +383,22 @@ Not implemented:
 ### Conditional functions and operators
 
 | Operator syntax | Description
-| --------------- | -----------
+|:--------------- |:-----------
 | CASE value<br/>WHEN value1 [, value11 ]* THEN result1<br/>[ WHEN valueN [, valueN1 ]* THEN resultN ]*<br/>[ ELSE resultZ ]<br/> END | Simple case
 | CASE<br/>WHEN condition1 THEN result1<br/>[ WHEN conditionN THEN resultN ]*<br/>[ ELSE resultZ ]<br/>END | Searched case
-| NULLIF(value, value) | Returns NULL if the values are the same. For example, <code>NULLIF(5, 5)</code> returns NULL; <code>NULLIF(5, 0)</code> returns 5.
-| COALESCE(value, value [, value]* ) | Provides a value if the first value is null. For example, <code>COALESCE(NULL, 5)</code> returns 5.
+| NULLIF(value, value) | Returns NULL if the values are the same.<br/><br/>For example, <code>NULLIF(5, 5)</code> returns NULL; <code>NULLIF(5, 0)</code> returns 5.
+| COALESCE(value, value [, value]* ) | Provides a value if the first value is null.<br/><br/>For example, <code>COALESCE(NULL, 5)</code> returns 5.
 
 ### Type conversion
 
 | Operator syntax | Description
-| --------------- | -----------
+|:--------------- | :----------
 | CAST(value AS type) | Converts a value to a given type.
 
 ### Value constructors
 
 | Operator syntax | Description
-| --------------- | -----------
+|:--------------- |:-----------
 | ROW (value [, value]* ) | Creates a row from a list of values.
 | (value [, value]* )     | Creates a row from a list of values.
 | map [ key ]     | Returns the element of a map with a particular key.
@@ -404,7 +409,7 @@ Not implemented:
 ### Collection functions
 
 | Operator syntax | Description
-| --------------- | -----------
+|:--------------- |:-----------
 | ELEMENT(value)  | Returns the sole element of a array or multiset; null if the collection is empty; throws if it has more than one element.
 | CARDINALITY(value) | Returns the number of elements in an array or multiset.
 
@@ -415,7 +420,7 @@ See also: UNNEST relational operator converts a collection to a relation.
 #### Numeric
 
 | Operator syntax                | Description
-| ------------------------------ | -----------
+|:------------------------------ |:-----------
 | {fn LOG10(numeric)}            | Returns the base-10 logarithm of *numeric*
 | {fn POWER(numeric1, numeric2)} | Returns *numeric1* raised to the power of *numeric2*
 
@@ -447,7 +452,7 @@ Not implemented:
 #### String
 
 | Operator syntax | Description
-| --------------- | -----------
+|:--------------- |:-----------
 | {fn LOCATE(string1, string2)} | Returns the position in *string2* of the first occurrence of *string1*. Searches from the beginning of the second CharacterExpression, unless the startIndex parameter is specified.
 | {fn INSERT(string1, start, length, string2)} | Inserts *string2* into a slot in *string1*
 | {fn LCASE(string)}            | Returns a string in which all alphabetic characters in *string* have been converted to lower case
@@ -519,7 +524,7 @@ If `DISTINCT` is present, duplicate argument values are eliminated before being
 passed to the aggregate function.
 
 | Operator syntax                    | Description
-| ---------------------------------- | -----------
+|:---------------------------------- |:-----------
 | COUNT( [ DISTINCT ] value [, value]* ) | Returns the number of input rows for which *value* is not null (wholly not null if *value* is composite)
 | COUNT(*)                           | Returns the number of input rows
 | AVG( [ DISTINCT ] numeric)         | Returns the average (arithmetic mean) of *numeric* across all input values
@@ -548,7 +553,7 @@ Not implemented:
 ### Window functions
 
 | Operator syntax                           | Description
-| ----------------------------------------- | -----------
+|:----------------------------------------- |:-----------
 | COUNT(value [, value ]* ) OVER window     | Returns the number of rows in *window* for which *value* is not null (wholly not null if *value* is composite)
 | COUNT(*) OVER window                      | Returns the number of rows in *window*
 | AVG(numeric) OVER window                  | Returns the average (arithmetic mean) of *numeric* across all values in *window*
@@ -576,7 +581,7 @@ Not implemented:
 ### Grouping functions
 
 | Operator syntax      | Description
-| -------------------- | -----------
+|:-------------------- |:-----------
 | GROUPING(expression) | Returns 1 if expression is rolled up in the current row's grouping set, 0 otherwise
 | GROUP_ID()           | Returns an integer that uniquely identifies the combination of grouping keys
 | GROUPING_ID(expression [, expression ] * ) | Returns a bit vector of the given grouping expressions
