@@ -30,15 +30,15 @@ proposed feature or start a discussion on the dev list.
 
 Fork the github repository, and create a branch for your feature.
 
-Develop your feature and test cases, and make sure that `mvn
-install` succeeds. (Run extra tests if your change warrants it.)
+Develop your feature and test cases, and make sure that
+`mvn install` succeeds. (Run extra tests if your change warrants it.)
 
 Commit your change to your branch, and use a comment that starts with
 the JIRA case number, like this:
 
-```
+{% highlight text %}
 [CALCITE-345] AssertionError in RexToLixTranslator comparing to date literal
-```
+{% endhighlight %}
 
 If your change had multiple commits, use `git rebase -i master` to
 combine them into a single commit, and to bring your code up to date

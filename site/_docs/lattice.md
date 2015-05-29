@@ -106,6 +106,7 @@ to columns in two ways. If the column is unique, you can use its name,
 ["unit_sales"]. Whether or not it is unique in the lattice, it will be
 unique in its table, so you can use it qualified by its table alias.
 Examples:
+
 * ["sales", "unit_sales"]
 * ["ship_date", "time_id"]
 * ["order_date", "time_id"]
@@ -123,9 +124,10 @@ tiles).
 
 ### References
 
-#### [HRU96]
-{: #ref-hru96}
-V. Harinarayan, A. Rajaraman and J. Ullman.
-<a href="http://web.eecs.umich.edu/~jag/eecs584/papers/implementing_data_cube.pdf">Implementing
-data cubes efficiently</a>. In _Proc. ACM SIGMOD Conf._, Montreal, 1996.
+<ul>
+<li>[<a name="ref-hru96">HRU96</a>] V. Harinarayan, A. Rajaraman and J. Ullman.
+    <a href="http://web.eecs.umich.edu/~jag/eecs584/papers/implementing_data_cube.pdf">Implementing
+    data cubes efficiently</a>.
+    In <i>Proc. ACM SIGMOD Conf.</i>, Montreal, 1996.</li>
+</ul>
 

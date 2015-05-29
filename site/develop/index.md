@@ -43,10 +43,11 @@ later, 1.8 preferred) on your path.
 Create a local copy of the git repository, cd to its root directory,
 then build using maven:
 
-```$ git clone git://github.com/apache/incubator-calcite.git
+{% highlight bash %}
+$ git clone git://github.com/apache/incubator-calcite.git
 $ cd incubator-calcite
 $ mvn install
-```
+{% endhighlight %}
 
 Please check our [contributing guidelines](/docs/howto.html#contributing).
 

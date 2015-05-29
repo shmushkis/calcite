@@ -27,7 +27,7 @@ Calcite is released as a source artifact, and also through Maven.
 
 Release          | Date       | Commit   | Notes | Download
 :--------------- | :--------- | :------- | :---- | :-------
-{% for post in site.categories.release %}{{ post.version }} | {{ post.date | date_to_string }} | <a href="https://github.com/apache/incubator-calcite/commit/{{ post.sha }}">{{ post.sha }}</a> | <a href="history.html#{{ post.tag }}">notes</a> | <a href="http://www.apache.org/dyn/closer.cgi/incubator/calcite/apache-calcite-{{ post.version }}">src</a>
+{% for post in site.categories.release %}{{ post.version }} | {{ post.date | date_to_string }} | <a href="https://github.com/apache/incubator-calcite/commit/{{ post.sha }}">{{ post.sha }}</a> | <a href="history.html#{{ post.tag }}">notes</a> | <a href="http://{% if forloop.index0 < 2 %}www.apache.org/dyn/closer.cgi{% else %}archive.apache.org/dist{% endif %}/incubator/calcite/{% if post.fullVersion %}{{ post.fullVersion }}{% else %}apache-calcite-{{ post.version }}{% endif %}">src</a>
       {% endfor %}
 
 # Maven artifacts

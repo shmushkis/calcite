@@ -40,6 +40,7 @@ Avatica-Server is a Java implementation of Avatica RPC.
 It embeds the Jetty HTTP server.
 
 Core concepts:
+
 * Meta is a local API sufficient to implement any Avatica provider
 * Factory creates implementations of the JDBC classes (Driver, Connection,
   Statement, ResultSet) on top of a Meta
@@ -71,14 +72,16 @@ It does not depend upon any other part of Calcite.
 At some point Avatica could become a separate project.
 
 Packages:
-* [org.apache.calcite.avatica](http://www.hydromatic.net/calcite/apidocs/org/apache/calcite/avatica/package-summary.html) Core framework
-* [org.apache.calcite.avatica.remote](http://www.hydromatic.net/calcite/apidocs/org/apache/calcite/avatica/remote/package-summary.html) JDBC driver that uses remote procedure calls
-* [org.apache.calcite.avatica.server](http://www.hydromatic.net/calcite/apidocs/org/apache/calcite/avatica/server/package-summary.html) HTTP server
-* [org.apache.calcite.avatica.util](http://www.hydromatic.net/calcite/apidocs/org/apache/calcite/avatica/util/package-summary.html) Utilities
+
+* [org.apache.calcite.avatica](/apidocs/org/apache/calcite/avatica/package-summary.html) Core framework
+* [org.apache.calcite.avatica.remote](/apidocs/org/apache/calcite/avatica/remote/package-summary.html) JDBC driver that uses remote procedure calls
+* [org.apache.calcite.avatica.server](/apidocs/org/apache/calcite/avatica/server/package-summary.html) HTTP server
+* [org.apache.calcite.avatica.util](/apidocs/org/apache/calcite/avatica/util/package-summary.html) Utilities
 
 ## Status
 
 ### Implemented
+
 * Create connection, create statement, metadata, prepare, bind, execute, fetch
 * RPC using JSON over HTTP
 * Local implementation
@@ -88,6 +91,7 @@ Packages:
   * Metadata-Fetch (metadata calls such as getTables return all rows)
 
 ### Not implemented
+
 * ODBC
 * RPCs
   * CloseStatement

@@ -21,7 +21,7 @@ limitations under the License.
 -->
 ## SQL constructs
 
-```SQL
+{% highlight SQL %}
 statement:
       setStatement
   |   explain
@@ -143,7 +143,7 @@ windowSpec:
       |   ROWS numericExpression { PRECEDING | FOLLOWING }
       ]
       ')'
-```
+{% endhighlight %}
 
 In *merge*, at least one of the WHEN MATCHED and WHEN NOT MATCHED clauses must
 be present.
@@ -219,12 +219,14 @@ name will have been converted to upper case also.
 | Anchored interval | Date time interval  | Example: (DATE '1969-07-20', DATE '1972-08-29')
 
 Where:
-```SQL
+
+{% highlight SQL %}
 timeUnit:
   YEAR | MONTH | DAY | HOUR | MINUTE | SECOND
-```
+{% endhighlight %}
 
 Note:
+
 * DATE, TIME and TIMESTAMP have no time zone. There is not even an implicit
   time zone, such as UTC (as in Java) or the local time zone. It is left to
   the user or application to supply a time zone.
@@ -312,13 +314,14 @@ Note:
 | UPPER(string)              | Returns a character string converted to upper case
 | LOWER(string)              | Returns a character string converted to lower case
 | POSITION(string1 IN string2) | Returns the position of the first occurrence of *string1* in *string2*
-| TRIM( { BOTH ;&#124; LEADING ;&#124; TRAILING } string1 FROM string2) | Removes the longest string containing only the characters in *string1* from the start/end/both ends of *string1*
+| TRIM( { BOTH &#124; LEADING &#124; TRAILING } string1 FROM string2) | Removes the longest string containing only the characters in *string1* from the start/end/both ends of *string1*
 | OVERLAY(string1 PLACING string2 FROM integer [ FOR integer2 ]) | Replaces a substring of *string1* with *string2*
 | SUBSTRING(string FROM integer)  | Returns a substring of a character string starting at a given point.
 | SUBSTRING(string FROM integer FOR integer) | Returns a substring of a character string starting at a given point with a given length.
 | INITCAP(string)            | Returns *string* with the first letter of each word converter to upper case and the rest to lower case. Words are sequences of alphanumeric characters separated by non-alphanumeric characters.
 
 Not implemented:
+
 * SUBSTRING(string FROM regexp FOR regexp)
 
 ### Binary string operators and functions
@@ -347,6 +350,7 @@ Not implemented:
 | CEIL(datetime TO timeUnit) | Rounds *datetime* up to *timeUnit*
 
 Not implemented:
+
 * EXTRACT(timeUnit FROM interval)
 * CEIL(interval)
 * FLOOR(interval)
@@ -416,6 +420,7 @@ See also: UNNEST relational operator converts a collection to a relation.
 | {fn POWER(numeric1, numeric2)} | Returns *numeric1* raised to the power of *numeric2*
 
 Not implemented:
+
 * {fn ABS(numeric)} - Returns the absolute value of *numeric*
 * {fn ACOS(numeric)} - Returns the arc cosine of *numeric*
 * {fn ASIN(numeric)} - Returns the arc sine of *numeric*
@@ -448,6 +453,7 @@ Not implemented:
 | {fn LCASE(string)}            | Returns a string in which all alphabetic characters in *string* have been converted to lower case
 
 Not implemented:
+
 * {fn ASCII(string)} - Convert a single-character string to the corresponding ASCII code, an integer between 0 and 255
 * {fn CHAR(string)}
 * {fn CONCAT(character, character)} - Returns the concatenation of character strings
@@ -468,6 +474,7 @@ Not implemented:
 #### Date/time
 
 Not implemented:
+
 * {fn CURDATE()}
 * {fn CURTIME()}
 * {fn DAYNAME(date)}
@@ -489,6 +496,7 @@ Not implemented:
 #### System
 
 Not implemented:
+
 * {fn DATABASE()}
 * {fn IFNULL(value, value)}
 * {fn USER(value, value)}
@@ -498,11 +506,11 @@ Not implemented:
 
 Syntax:
 
-```SQL
+{% highlight SQL %}
 aggregateCall:
         agg( [ DISTINCT ] value [, value]* ) [ FILTER ( WHERE condition ) ]
     |   agg(*) [ FILTER ( WHERE condition ) ]
-```
+{% endhighlight %}
 
 If `FILTER` is present, the aggregate function only considers rows for which
 *condition* evaluates to TRUE.
@@ -528,6 +536,7 @@ passed to the aggregate function.
 | REGR_SYY(numeric1, numeric2)       | Returns the sum of squares of the independent expression in a linear regression model
 
 Not implemented:
+
 * REGR_AVGX(numeric1, numeric2)
 * REGR_AVGY(numeric1, numeric2)
 * REGR_COUNT(numeric1, numeric2)
@@ -556,6 +565,7 @@ Not implemented:
 | NTILE(value) OVER window                  | Returns an integer ranging from 1 to *value*, dividing the partition as equally as possible
 
 Not implemented:
+
 * COUNT(DISTINCT value) OVER window
 * FIRST_VALUE(value) IGNORE NULLS OVER window
 * LAST_VALUE(value) IGNORE NULLS OVER window
