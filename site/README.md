@@ -29,7 +29,10 @@ running from within the directory:
 ## Pushing to site
 
 1. `cd site/target`
-2. `git status`
-3. You'll need to `git add` any new files
-4. `git commit -a`
-5. `git push origin asf-site`
+2. `svn status`
+3. You'll need to `svn add` any new files
+4. `svn ci`
+
+Within a few minutes, svnpubsub should kick in and you'll be able to
+see the results at
+[calcite.incubator.apache.org](https://calcite.incubator.apache.org/).
