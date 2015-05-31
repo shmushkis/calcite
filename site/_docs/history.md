@@ -24,7 +24,7 @@ limitations under the License.
 For a full list of releases, see
 <a href="https://github.com/apache/incubator-calcite/releases">github</a>.
 
-## <a href="https://github.com/apache/incubator-calcite/releases/tag/calcite-1.3.0-incubating">1.3.0-incubating</a> / 2015-05-21
+## <a href="https://github.com/apache/incubator-calcite/releases/tag/calcite-1.3.0-incubating">1.3.0-incubating</a> / 2015-05-30
 {: #v1-3-0}
 
 Mainly bug-fixes, but this release adds support for

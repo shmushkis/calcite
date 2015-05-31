@@ -20,6 +20,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+{% assign sourceRoot = "http://github.com/apache/incubator-calcite/blob/master" %}
+
 Here's some miscellaneous documentation about using Calcite and its various
 adapters.
 
@@ -38,7 +40,7 @@ $ cd calcite-1.3.0-incubating
 $ mvn install
 {% endhighlight %}
 
-[Running tests](howto.md#running-tests) describes how to run more or fewer
+[Running tests](#running-tests) describes how to run more or fewer
 tests.
 
 ## Building from git
@@ -56,7 +58,7 @@ $ cd incubator-calcite
 $ mvn install
 {% endhighlight %}
 
-[Running tests](howto.md#running-tests) describes how to run more or fewer
+[Running tests](#running-tests) describes how to run more or fewer
 tests.
 
 ## Running tests
@@ -65,7 +67,8 @@ The test suite will run by default when you build, unless you specify
 `-DskipTests`:
 
 {% highlight bash %}
-$ mvn clean # Note: mvn clean install does not work, use mvn clean && mvn install
+# Note: "mvn clean install" does not work; use "mvn clean" then "mvn install"
+$ mvn clean 
 $ mvn -DskipTests install
 {% endhighlight %}
 
@@ -77,8 +80,10 @@ environment, as follows.
   suite requires a JDBC data source populated with the foodmart data
   set.
    * `hsqldb`, the default, uses an in-memory hsqldb database.
-   * all others access test virtual machine (see [integration tests](howto.md#running-integration-tests) below)
-     `mysql` and `postgresql` might be somewhat faster than hsqldb, but you need to populate it (i.e. provision a VM).
+   * All others access a test virtual machine
+     (see [integration tests](#running-integration-tests) below).
+     `mysql` and `postgresql` might be somewhat faster than hsqldb, but you need
+     to populate it (i.e. provision a VM).
 * `-Dcalcite.debug` prints extra debugging information to stdout.
 * `-Dcalcite.test.slow` enables tests that take longer to execute. For
   example, there are tests that create virtual TPC-H and TPC-DS schemas
@@ -229,7 +234,7 @@ planning process so detailed that it might fill up your hard drive.
 
 ## CSV adapter
 
-See the <a href="tutorial.md">tutorial</a>.
+See the [tutorial](/docs/tutorial.html).
 
 ## MongoDB adapter
 
@@ -262,7 +267,7 @@ bye
 {% endhighlight %}
 
 Connect using the
-<a href="https://github.com/apache/incubator-calcite/blob/master/mongodb/src/test/resources/mongo-zips-model.json">mongo-zips-model.json</a>
+[mongo-zips-model.json]({{ sourceRoot }}/mongodb/src/test/resources/mongo-zips-model.json)
 Calcite model:
 
 {% highlight bash %}
@@ -370,9 +375,9 @@ recommended to:
 
 ## Set up PGP signing keys (for Calcite committers)
 
-Follow instructions at http://www.apache.org/dev/release-signing to
-create a key pair. (On Mac OS X, I did `brew install gpg` and `gpg
---gen-key`.)
+Follow instructions [here](http://www.apache.org/dev/release-signing) to
+create a key pair. (On Mac OS X, I did `brew install gpg` and
+`gpg --gen-key`.)
 
 Add your public key to the `KEYS` file by following instructions in
 the `KEYS` file.
@@ -479,7 +484,7 @@ Check the artifacts:
   `NOTICE` and `git.properties`
 * In each .jar, check that `org-apache-calcite-jdbc.properties` is
   present and does not contain un-substituted `${...}` variables
-* Check PGP, per https://httpd.apache.org/dev/verification.html
+* Check PGP, per [this](https://httpd.apache.org/dev/verification.html)
 
 Now, remove the `-DdryRun` flag and run the release for real.
 
@@ -599,7 +604,7 @@ I have created a build for Apache Calcite X.Y.Z-incubating, release candidate N.
 
 Thanks to everyone who has contributed to this release.
 <Further details about release.> You can read the release notes here:
-https://github.com/apache/incubator-calcite/blob/XXXX/doc/history.md
+https://github.com/apache/incubator-calcite/blob/XXXX/site/_docs/history.md
 
 The commit to be voted upon:
 http://git-wip-us.apache.org/repos/asf/incubator-calcite/commit/NNNNNN
@@ -782,6 +787,24 @@ Svnpubsub will publish to
 https://dist.apache.org/repos/dist/release/incubator/calcite and propagate to
 http://www.apache.org/dyn/closer.cgi/incubator/calcite within 24 hours.
 
-## Publishing the web site (for Calcite committers)
+If there are now more than 2 releases, clear out the oldest ones:
 
-See instructions [http://github.com/apache/incubator-calcite/site/README.md](here).
+{% highlight bash %}
+cd ~/dist/release/calcite
+svn rm apache-calcite-X.Y.Z-incubating
+svn ci
+{% endhighlight %}
+
+The old releases will remain available in the
+[release archive](http://archive.apache.org/dist/incubator/calcite/).
+
+Add a release note by copying
+[site/_posts/2015-03-13-release-1.1.0-incubating.md]({{ sourceRoot }}/site/_posts/2015-03-13-release-1.1.0-incubating.md),
+[publish the site](#publish-the-web-site),
+and check that it appears in the contents in [news](http://localhost:4000/news/).
+
+## Publishing the web site (for Calcite committers)
+{: #publish-the-web-site}
+
+See instructions in
+[site/README.md]({{ sourceRoot }}/site/README.md).

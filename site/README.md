@@ -8,9 +8,8 @@ This directory contains the code for the Apache Calcite (incubating) web site,
 1. `cd site`
 2. svn co https://svn.apache.org/repos/asf/incubator/calcite/site target
 3. `sudo apt-get install rubygems ruby2.1-dev zlib1g-dev` (linux)
-4. `sudo gem install bundler`
-5. `sudo gem install github-pages jekyll`
-6. `bundle install`
+4. `sudo gem install bundler github-pages jekyll`
+5. `bundle install`
 
 ## Add javadoc
 
