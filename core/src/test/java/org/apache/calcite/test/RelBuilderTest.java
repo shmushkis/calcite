@@ -19,6 +19,7 @@ package org.apache.calcite.test;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.Exchange;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -51,6 +52,11 @@ import static org.junit.Assert.fail;
  * <ol>
  *   <li>Add RelBuilder.scan(List&lt;String&gt;)</li>
  *   <li>Add RelBuilder.scan(Table)</li>
+ *   <li>Test that {@link RelBuilder#filter} does not create a filter if the
+ *   predicates optimize to true</li>
+ *   <li>Test that {@link RelBuilder#filter} DOES create a filter if the
+ *   predicates optimize to false. (Creating an empty Values seems too
+ *   devious.)</li>
  *   <li>Test that {@link RelBuilder#scan} throws good error if table not
  *   found</li>
  *   <li>Test that {@link RelBuilder#scan} obeys case-sensitivity</li>
@@ -59,7 +65,7 @@ import static org.junit.Assert.fail;
  *   <li>Test RelBuilder with alternative factories</li>
  *   <li>Test that {@link RelBuilder#field(String)} obeys case-sensitivity</li>
  *   <li>Test case-insensitive unique field names</li>
- *   <li>Tests that an alias created using
+ *   <li>Test that an alias created using
  *      {@link RelBuilder#alias(RexNode, String)} is removed if not a top-level
  *      project</li>
  *   <li>{@link RelBuilder#aggregate} with grouping sets</li>
@@ -69,6 +75,7 @@ import static org.junit.Assert.fail;
  *   <li>Add call to create {@link TableModify}</li>
  *   <li>Add call to create {@link Exchange}</li>
  *   <li>Add call to create {@link Correlate}</li>
+ *   <li>Add call to create {@link AggregateCall} with filter</li>
  * </ol>
  */
 public class RelBuilderTest {
@@ -95,7 +102,7 @@ public class RelBuilderTest {
         is("LogicalTableScan(table=[[scott, EMP]])\n"));
   }
 
-  @Test public void testScanFilter() {
+  @Test public void testScanFilterTrue() {
     // Equivalent SQL:
     //   SELECT *
     //   FROM emp
@@ -106,15 +113,30 @@ public class RelBuilderTest {
             .filter(builder.literal(true))
             .build();
     assertThat(RelOptUtil.toString(root),
-        is("LogicalFilter(condition=[true])\n"
-            + "  LogicalTableScan(table=[[scott, EMP]])\n"));
+        is("LogicalTableScan(table=[[scott, EMP]])\n"));
   }
 
   @Test public void testScanFilterEquals() {
     // Equivalent SQL:
     //   SELECT *
     //   FROM emp
-    //   WHERE deptno = 20 OR comm IS NULL
+    //   WHERE deptno = 20
+    final RelBuilder builder = RelBuilder.create(config().build());
+    RelNode root =
+        builder.scan("EMP")
+            .filter(
+                builder.equals(builder.field("DEPTNO"), builder.literal(20)))
+            .build();
+    assertThat(RelOptUtil.toString(root),
+        is("LogicalFilter(condition=[=($7, 20)])\n"
+            + "  LogicalTableScan(table=[[scott, EMP]])\n"));
+  }
+
+  @Test public void testScanFilterOr() {
+    // Equivalent SQL:
+    //   SELECT *
+    //   FROM emp
+    //   WHERE (deptno = 20 OR comm IS NULL) AND mgr IS NOT NULL
     final RelBuilder builder = RelBuilder.create(config().build());
     RelNode root =
         builder.scan("EMP")
@@ -123,10 +145,11 @@ public class RelBuilderTest {
                     builder.call(SqlStdOperatorTable.EQUALS,
                         builder.field("DEPTNO"),
                         builder.literal(20)),
-                    builder.call(SqlStdOperatorTable.IS_NULL, builder.field(6))))
+                    builder.isNull(builder.field(6))),
+                builder.isNotNull(builder.field(3)))
             .build();
     assertThat(RelOptUtil.toString(root),
-        is("LogicalFilter(condition=[OR(=($7, 20), IS NULL($6))])\n"
+        is("LogicalFilter(condition=[AND(OR(=($7, 20), IS NULL($6)), IS NOT NULL($3))])\n"
             + "  LogicalTableScan(table=[[scott, EMP]])\n"));
   }
 
@@ -145,12 +168,12 @@ public class RelBuilderTest {
   @Test public void testBadFieldOrdinal() {
     final RelBuilder builder = RelBuilder.create(config().build());
     try {
-      RexInputRef ref = builder.scan("EMP").field(20);
+      RexInputRef ref = builder.scan("DEPT").field(20);
       fail("expected error, got " + ref);
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(),
-          is("field ordinal [20] out of range; input fields are: [EMPNO, "
-              + "ENAME, JOB, MGR, HIREDATE, SAL, COMM, DEPTNO]"));
+          is("field ordinal [20] out of range; "
+                  + "input fields are: [DEPTNO, DNAME, LOC]"));
     }
   }
 
@@ -190,6 +213,39 @@ public class RelBuilderTest {
             + "  LogicalTableScan(table=[[scott, EMP]])\n"));
   }
 
+  /** Tests each method that creates a scalar expression. */
+  @Test public void testProject2() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+    RelNode root =
+        builder.scan("EMP")
+            .project(builder.field("DEPTNO"),
+                builder.cast(builder.field(6), SqlTypeName.SMALLINT),
+                builder.or(
+                    builder.equals(builder.field("DEPTNO"),
+                        builder.literal(20)),
+                    builder.and(builder.literal(false),
+                        builder.equals(builder.field("DEPTNO"),
+                            builder.literal(10)),
+                        builder.and(builder.isNull(builder.field(6)),
+                            builder.not(builder.isNotNull(builder.field(7))))),
+                    builder.equals(builder.field("DEPTNO"),
+                        builder.literal(20)),
+                    builder.equals(builder.field("DEPTNO"),
+                        builder.literal(30))),
+                builder.alias(builder.isNull(builder.field(2)), "n2"),
+                builder.alias(builder.isNotNull(builder.field(3)), "nn2"),
+                builder.literal(20),
+                builder.field(6),
+                builder.alias(builder.field(6), "C"))
+            .build();
+    assertThat(RelOptUtil.toString(root),
+        is("LogicalProject(DEPTNO=[$7], COMM=[CAST($6):SMALLINT NOT NULL],"
+                + " $f2=[OR(=($7, 20), AND(false, =($7, 10), IS NULL($6),"
+                + " NOT(IS NOT NULL($7))), =($7, 30))], n2=[IS NULL($2)],"
+                + " nn2=[IS NOT NULL($3)], $f5=[20], COMM6=[$6], C=[$6])\n"
+                + "  LogicalTableScan(table=[[scott, EMP]])\n"));
+  }
+
   @Test public void testAggregate() {
     // Equivalent SQL:
     //   SELECT COUNT(DISTINCT deptno) AS c
@@ -198,8 +254,11 @@ public class RelBuilderTest {
     final RelBuilder builder = RelBuilder.create(config().build());
     RelNode root =
         builder.scan("EMP")
-            .aggregate(builder.groupKey(),
-                builder.aggregateCall(SqlStdOperatorTable.COUNT, true, "C",
+            .aggregate(
+                builder.groupKey(), builder.aggregateCall(
+                    SqlStdOperatorTable.COUNT,
+                    true,
+                    "C",
                     builder.field("DEPTNO")))
             .build();
     assertThat(RelOptUtil.toString(root),
@@ -222,7 +281,9 @@ public class RelBuilderTest {
                     builder.field(1)),
                 builder.aggregateCall(SqlStdOperatorTable.COUNT, false, "C"),
                 builder.aggregateCall(SqlStdOperatorTable.SUM, false, "S",
-                    builder.call(SqlStdOperatorTable.PLUS, builder.field(3),
+                    builder.call(
+                        SqlStdOperatorTable.PLUS,
+                        builder.field(3),
                         builder.literal(1))))
             .build();
     assertThat(RelOptUtil.toString(root),
@@ -230,6 +291,20 @@ public class RelBuilderTest {
             + "LogicalAggregate(group=[{1, 8}], C=[COUNT()], S=[SUM($9)])\n"
             + "  LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], $f8=[+($4, $3)], $f9=[+($3, 1)])\n"
             + "    LogicalTableScan(table=[[scott, EMP]])\n"));
+  }
+
+  @Test public void testDistinct() {
+    // Equivalent SQL:
+    //   SELECT DISTINCT *
+    //   FROM emp
+    final RelBuilder builder = RelBuilder.create(config().build());
+    RelNode root =
+        builder.scan("EMP")
+            .distinct()
+            .build();
+    assertThat(RelOptUtil.toString(root),
+        is("LogicalAggregate(group=[{}])\n"
+                + "  LogicalTableScan(table=[[scott, EMP]])\n"));
   }
 
   @Test public void testUnion() {

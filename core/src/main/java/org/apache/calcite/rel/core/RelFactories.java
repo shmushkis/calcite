@@ -17,6 +17,7 @@
 
 package org.apache.calcite.rel.core;
 
+import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
@@ -37,6 +38,7 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 
 import com.google.common.collect.ImmutableList;
@@ -74,6 +76,21 @@ public class RelFactories {
 
   public static final TableScanFactory DEFAULT_TABLE_SCAN_FACTORY =
       new TableScanFactoryImpl();
+
+  /** Creates a {@link RelBuilder} that will create logical relational
+   * expressions for everything.
+   */
+  public static final RelBuilder.ProtoRelBuilder DEFAULT_PROTO =
+      RelBuilder.proto(
+          Contexts.of(DEFAULT_PROJECT_FACTORY,
+              DEFAULT_FILTER_FACTORY,
+              DEFAULT_JOIN_FACTORY,
+              DEFAULT_SEMI_JOIN_FACTORY,
+              DEFAULT_SORT_FACTORY,
+              DEFAULT_AGGREGATE_FACTORY,
+              DEFAULT_SET_OP_FACTORY,
+              DEFAULT_VALUES_FACTORY,
+              DEFAULT_TABLE_SCAN_FACTORY));
 
   private RelFactories() {
   }

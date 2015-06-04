@@ -20,6 +20,7 @@ import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelCollations;
@@ -97,22 +98,13 @@ public class RelBuilder {
   private final RelFactories.TableScanFactory scanFactory;
   private final List<RelNode> stack = new ArrayList<>();
 
-  private RelBuilder(FrameworkConfig config) {
-    final RelOptCluster[] clusters = {null};
-    final RelOptSchema[] relOptSchemas = {null};
-    Frameworks.withPrepare(
-        new Frameworks.PrepareAction<Void>(config) {
-          public Void apply(RelOptCluster cluster, RelOptSchema relOptSchema,
-              SchemaPlus rootSchema, CalciteServerStatement statement) {
-            clusters[0] = cluster;
-            relOptSchemas[0] = relOptSchema;
-            return null;
-          }
-        });
-    this.cluster = clusters[0];
-    this.relOptSchema = relOptSchemas[0];
-    final Context context =
-        Util.first(config.getContext(), Contexts.EMPTY_CONTEXT);
+  private RelBuilder(Context context, RelOptCluster cluster,
+      RelOptSchema relOptSchema) {
+    this.cluster = cluster;
+    this.relOptSchema = relOptSchema;
+    if (context == null) {
+      context = Contexts.EMPTY_CONTEXT;
+    }
     this.aggregateFactory =
         Util.first(context.unwrap(RelFactories.AggregateFactory.class),
             RelFactories.DEFAULT_AGGREGATE_FACTORY);
@@ -141,7 +133,18 @@ public class RelBuilder {
 
   /** Creates a RelBuilder. */
   public static RelBuilder create(FrameworkConfig config) {
-    return new RelBuilder(config);
+    final RelOptCluster[] clusters = {null};
+    final RelOptSchema[] relOptSchemas = {null};
+    Frameworks.withPrepare(
+        new Frameworks.PrepareAction<Void>(config) {
+          public Void apply(RelOptCluster cluster, RelOptSchema relOptSchema,
+              SchemaPlus rootSchema, CalciteServerStatement statement) {
+            clusters[0] = cluster;
+            relOptSchemas[0] = relOptSchema;
+            return null;
+          }
+        });
+    return new RelBuilder(config.getContext(), clusters[0], relOptSchemas[0]);
   }
 
   /** Returns the type factory. */
@@ -149,12 +152,28 @@ public class RelBuilder {
     return cluster.getTypeFactory();
   }
 
+  /** Creates a {@link ProtoRelBuilder}, a partially-created RelBuilder.
+   * Just add a {@link RelOptCluster} and a {@link RelOptSchema} */
+  public static ProtoRelBuilder proto(final Context context) {
+    return new ProtoRelBuilder() {
+      public RelBuilder create(RelOptCluster cluster, RelOptSchema schema) {
+        return new RelBuilder(context, cluster, schema);
+      }
+    };
+  }
+
   // Methods for manipulating the stack
 
   /** Adds a relational expression to be the input to the next relational
-   * expression constructed. */
-  private void push(RelNode node) {
+   * expression constructed.
+   *
+   * <p>This method is usual when you want to weave in relational expressions
+   * that are not supported by the builder. If, while creating such expressions,
+   * you need to use previously built expressions as inputs, call
+   * {@link #build()} to pop those inputs. */
+  public RelBuilder push(RelNode node) {
     Stacks.push(stack, node);
+    return this;
   }
 
   /** Returns the final relational expression.
@@ -278,6 +297,46 @@ public class RelBuilder {
       Iterable<? extends RexNode> operands) {
     return cluster.getRexBuilder().makeCall(operator,
         ImmutableList.copyOf(operands));
+  }
+
+  /** Creates an AND. */
+  public RexNode and(RexNode... operands) {
+    return and(ImmutableList.copyOf(operands));
+  }
+
+  /** Creates an AND. */
+  public RexNode and(Iterable<? extends RexNode> operands) {
+    return RexUtil.composeConjunction(cluster.getRexBuilder(), operands, false);
+  }
+
+  /** Creates an OR. */
+  public RexNode or(RexNode... operands) {
+    return or(ImmutableList.copyOf(operands));
+  }
+
+  /** Creates an OR. */
+  public RexNode or(Iterable<? extends RexNode> operands) {
+    return RexUtil.composeDisjunction(cluster.getRexBuilder(), operands, false);
+  }
+
+  /** Creates a NOT. */
+  public RexNode not(RexNode operand) {
+    return call(SqlStdOperatorTable.NOT, operand);
+  }
+
+  /** Creates an =. */
+  public RexNode equals(RexNode operand0, RexNode operand1) {
+    return call(SqlStdOperatorTable.EQUALS, operand0, operand1);
+  }
+
+  /** Creates a IS NULL. */
+  public RexNode isNull(RexNode operand) {
+    return call(SqlStdOperatorTable.IS_NULL, operand);
+  }
+
+  /** Creates a IS NOT NULL. */
+  public RexNode isNotNull(RexNode operand) {
+    return call(SqlStdOperatorTable.IS_NOT_NULL, operand);
   }
 
   /** Creates an expression that casts an expression to a given type. */
@@ -413,10 +472,29 @@ public class RelBuilder {
     return this;
   }
 
-  /** Creates a {@link org.apache.calcite.rel.core.Filter}. */
-  public RelBuilder filter(RexNode literal) {
-    final RelNode filter = filterFactory.createFilter(build(), literal);
-    push(filter);
+  /** Creates a {@link org.apache.calcite.rel.core.Filter} of an array of
+   * predicates.
+   *
+   * <p>The predicates are combined using AND,
+   * and optimized in a similar way to the {@link #and} method.
+   * If the result is TRUE no filter is created. */
+  public RelBuilder filter(RexNode... predicates) {
+    return filter(ImmutableList.copyOf(predicates));
+  }
+
+  /** Creates a {@link org.apache.calcite.rel.core.Filter} of a list of
+   * predicates.
+   *
+   * <p>The predicates are combined using AND,
+   * and optimized in a similar way to the {@link #and} method.
+   * If the result is TRUE no filter is created. */
+  public RelBuilder filter(Iterable<? extends RexNode> predicates) {
+    final RexNode x = RexUtil.composeConjunction(cluster.getRexBuilder(),
+        predicates, true);
+    if (x != null) {
+      final RelNode filter = filterFactory.createFilter(build(), x);
+      push(filter);
+    }
     return this;
   }
 
@@ -480,8 +558,21 @@ public class RelBuilder {
     }
   }
 
-  /** Creates an {@link org.apache.calcite.rel.core.Aggregate}. */
+  /** Creates an {@link org.apache.calcite.rel.core.Aggregate} that makes the
+   * relational expression distinct on all fields. */
+  public RelBuilder distinct() {
+    return aggregate(groupKey());
+  }
+
+  /** Creates an {@link org.apache.calcite.rel.core.Aggregate} with an array of
+   * calls. */
   public RelBuilder aggregate(GroupKey groupKey, AggCall... aggCalls) {
+    return aggregate(groupKey, ImmutableList.copyOf(aggCalls));
+  }
+
+  /** Creates an {@link org.apache.calcite.rel.core.Aggregate} with a list of
+   * calls. */
+  public RelBuilder aggregate(GroupKey groupKey, Iterable<AggCall> aggCalls) {
     final ImmutableBitSet.Builder builder = ImmutableBitSet.builder();
     final RelDataType inputRowType = peek().getRowType();
     final List<RexNode> extraNodes = projects(inputRowType);
@@ -845,6 +936,22 @@ public class RelBuilder {
       this.alias = alias;
       this.operands = operands;
     }
+  }
+
+  /** A partially-created RelBuilder.
+   *
+   * <p>Add a cluster, and optionally a schema,
+   * when you want to create a builder.
+   *
+   * <p>A {@code ProtoRelBuilder} can be shared among queries, and thus can
+   * be inside a {@link RelOptRule}. It is a nice way to encapsulate the policy
+   * that this particular rule instance should create {@code DrillFilter}
+   * and {@code DrillProject} versus {@code HiveFilter} and {@code HiveProject}.
+   *
+   * @see RelFactories#DEFAULT_PROTO
+   */
+  public interface ProtoRelBuilder {
+    RelBuilder create(RelOptCluster cluster, RelOptSchema schema);
   }
 }
 
