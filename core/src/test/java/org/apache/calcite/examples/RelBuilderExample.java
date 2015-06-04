@@ -85,7 +85,7 @@ public class RelBuilderExample {
   private static void example3(RelBuilder builder) {
     final RelNode node = builder
         .scan("EMP")
-        .aggregate(builder.groupKey(builder.field("DEPTNO")),
+        .aggregate(builder.groupKey("DEPTNO"),
             builder.aggregateCall(SqlStdOperatorTable.COUNT,
                 false, "C"),
             builder.aggregateCall(SqlStdOperatorTable.SUM,

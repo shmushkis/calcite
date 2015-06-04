@@ -301,7 +301,7 @@ public class RelBuilderTest {
             .project(builder.field("EMPNO"))
             .scan("DEPT")
             .project(builder.field("DEPTNO"))
-            .except(false)
+            .minus(false)
             .build();
     assertThat(RelOptUtil.toString(root),
         is("LogicalMinus(all=[false])\n"
