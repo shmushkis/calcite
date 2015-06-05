@@ -93,12 +93,10 @@ public class MaterializationService {
 
   /** Defines a new materialization. Returns its key. */
   public MaterializationKey defineMaterialization(final CalciteSchema schema,
-                                                  TileKey tileKey, String viewSql,
-                                                  List<String> viewSchemaPath,
-                                                  final String suggestedTableName, boolean create) {
-    TableFactory tableFactory =
-        new MaterializationService.DefaultTableFactory(suggestedTableName);
-    return defineMaterialization(schema, tileKey, viewSql, viewSchemaPath, tableFactory, create);
+      TileKey tileKey, String viewSql, List<String> viewSchemaPath,
+      final String suggestedTableName, boolean create) {
+    return defineMaterialization(schema, tileKey, viewSql, viewSchemaPath,
+        new DefaultTableFactory(suggestedTableName), create);
   }
 
   /** Defines a new materialization. Returns its key. */
@@ -169,8 +167,9 @@ public class MaterializationService {
   }
 
   public Pair<CalciteSchema.TableEntry, TileKey> defineTile(Lattice lattice,
-        ImmutableBitSet groupSet, List<Lattice.Measure> measureList,
-        CalciteSchema schema, boolean create, boolean exact, TableFactory tableFactory) {
+      ImmutableBitSet groupSet, List<Lattice.Measure> measureList,
+      CalciteSchema schema, boolean create, boolean exact,
+      TableFactory tableFactory) {
     MaterializationKey materializationKey;
     final TileKey tileKey =
         new TileKey(lattice, groupSet, ImmutableList.copyOf(measureList));
@@ -260,7 +259,6 @@ public class MaterializationService {
 
     final String sql = lattice.sql(groupSet, newTileKey.measures);
 
-    System.out.println(sql);
     materializationKey =
         defineMaterialization(schema, newTileKey, sql, schema.path(null),
             tableFactory, true);
@@ -335,14 +333,12 @@ public class MaterializationService {
   }
 
   /**
-   * TableFactory Interface defines functions required by
-   * MaterializationService to create tables that represent
-   * a materialized view.
+   * Creates tables that represent a materialized view.
    */
   public interface TableFactory {
-    CalciteSchema.TableEntry createTable(final CalciteSchema schema,
-                                         final String viewSql,
-                                         final List<String> viewSchemaPath);
+    CalciteSchema.TableEntry createTable(CalciteSchema schema, String viewSql,
+        List<String> viewSchemaPath);
+
     String getTableName(CalciteSchema schema);
   }
 
@@ -357,9 +353,8 @@ public class MaterializationService {
       this.tableName = tableName;
     }
 
-    public CalciteSchema.TableEntry createTable(final CalciteSchema schema,
-                                                final String viewSql,
-                                                final List<String> viewSchemaPath) {
+    public CalciteSchema.TableEntry createTable(CalciteSchema schema,
+        String viewSql, List<String> viewSchemaPath) {
       final CalciteConnection connection =
           CalciteMetaImpl.connect(schema.root(), null);
       final ImmutableMap<CalciteConnectionProperty, String> map =
@@ -402,7 +397,7 @@ public class MaterializationService {
           });
 
       final String tableName = this.getTableName(schema);
-      CalciteSchema.TableEntry tableEntry = schema.add(tableName, table,
+      final CalciteSchema.TableEntry tableEntry = schema.add(tableName, table,
           ImmutableList.of(viewSql));
       Hook.CREATE_MATERIALIZATION.run(tableName);
       return tableEntry;
