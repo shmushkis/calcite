@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.rel.metadata;
 
+import org.apache.calcite.plan.hep.HepRelVertex;
+import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Correlate;
@@ -34,6 +36,8 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.ImmutableBitSet;
+
+import com.google.common.collect.Iterables;
 
 import java.util.List;
 
@@ -257,6 +261,35 @@ public class RelMdColumnUniqueness {
       boolean ignoreNulls) {
     // no information available
     return null;
+  }
+
+  public Boolean areColumnsUnique(
+      HepRelVertex rel,
+      ImmutableBitSet columns,
+      boolean ignoreNulls) {
+    return RelMetadataQuery.areColumnsUnique(
+        rel.getCurrentRel(),
+        columns,
+        ignoreNulls);
+  }
+
+  public Boolean areColumnsUnique(
+      RelSubset rel,
+      ImmutableBitSet columns,
+      boolean ignoreNulls) {
+    int nullCount = 0;
+    for (RelNode rel2 : Iterables.filter(rel.getRels(), Aggregate.class)) {
+      final Boolean unique =
+          RelMetadataQuery.areColumnsUnique(rel2, columns, ignoreNulls);
+      if (unique != null) {
+        if (unique) {
+          return true;
+        }
+      } else {
+        ++nullCount;
+      }
+    }
+    return nullCount == 0 ? false : null;
   }
 }
 

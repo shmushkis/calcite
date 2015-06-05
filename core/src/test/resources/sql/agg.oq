@@ -52,7 +52,6 @@ select count(deptno) as c from emp;
 !ok
 
 # composite count
-!if (false) {
 select count(deptno, ename, 1, deptno) as c from emp;
 +---+
 | C |
@@ -62,7 +61,6 @@ select count(deptno, ename, 1, deptno) as c from emp;
 (1 row)
 
 !ok
-!}
 
 select city, gender as c from emps;
 +---------------+---+
@@ -772,6 +770,195 @@ select avg(comm) as a, count(comm) as c from "scott".emp where empno < 7844;
 (1 row)
 
 !ok
+
+# [CALCITE-751] Aggregate join transpose
+select count(*)
+from "scott".emp join "scott".dept using (deptno);
++--------+
+| EXPR$0 |
++--------+
+|     14 |
++--------+
+(1 row)
+
+!ok
+EnumerableAggregate(group=[{}], EXPR$0=[$SUM0($4)])
+  EnumerableCalc(expr#0..3=[{inputs}], expr#4=[*($t1, $t3)], proj#0..4=[{exprs}])
+    EnumerableJoin(condition=[=($0, $2)], joinType=[inner])
+      EnumerableAggregate(group=[{0}], EXPR$0=[COUNT()])
+        EnumerableTableScan(table=[[scott, DEPT]])
+      EnumerableAggregate(group=[{7}], EXPR$0=[COUNT()])
+        EnumerableTableScan(table=[[scott, EMP]])
+!plan
+
+select sum(sal)
+from "scott".emp join "scott".dept using (deptno);
++----------+
+| EXPR$0   |
++----------+
+| 29025.00 |
++----------+
+(1 row)
+
+!ok
+EnumerableAggregate(group=[{}], EXPR$0=[SUM($1)])
+  EnumerableJoin(condition=[=($0, $2)], joinType=[inner])
+    EnumerableAggregate(group=[{7}], EXPR$0=[SUM($5)])
+      EnumerableTableScan(table=[[scott, EMP]])
+    EnumerableAggregate(group=[{0}])
+      EnumerableTableScan(table=[[scott, DEPT]])
+!plan
+
+select sum(sal)
+from "scott".emp join "scott".dept using (deptno)
+group by emp.deptno, dept.deptno;
++----------+
+| EXPR$0   |
++----------+
+| 10875.00 |
+|  8750.00 |
+|  9400.00 |
++----------+
+(3 rows)
+
+!ok
+EnumerableCalc(expr#0..1=[{inputs}], EXPR$0=[$t1])
+  EnumerableSemiJoin(condition=[=($0, $2)], joinType=[inner])
+    EnumerableAggregate(group=[{7}], EXPR$0=[SUM($5)])
+      EnumerableTableScan(table=[[scott, EMP]])
+    EnumerableTableScan(table=[[scott, DEPT]])
+!plan
+
+select sum(sal)
+from "scott".emp join "scott".dept using (deptno)
+group by emp.deptno;
++----------+
+| EXPR$0   |
++----------+
+| 10875.00 |
+|  8750.00 |
+|  9400.00 |
++----------+
+(3 rows)
+
+!ok
+EnumerableCalc(expr#0..1=[{inputs}], EXPR$0=[$t1])
+  EnumerableSemiJoin(condition=[=($0, $2)], joinType=[inner])
+    EnumerableAggregate(group=[{7}], EXPR$0=[SUM($5)])
+      EnumerableTableScan(table=[[scott, EMP]])
+    EnumerableTableScan(table=[[scott, DEPT]])
+!plan
+
+# Plan contains SemiJoin (optimized from Join-Aggregate)
+select min(sal)
+from "scott".emp join "scott".dept using (deptno)
+group by emp.deptno;
++---------+
+| EXPR$0  |
++---------+
+| 1300.00 |
+|  800.00 |
+|  950.00 |
++---------+
+(3 rows)
+
+!ok
+EnumerableCalc(expr#0..1=[{inputs}], EXPR$0=[$t1])
+  EnumerableSemiJoin(condition=[=($0, $2)], joinType=[inner])
+    EnumerableAggregate(group=[{7}], EXPR$0=[MIN($5)])
+      EnumerableTableScan(table=[[scott, EMP]])
+    EnumerableTableScan(table=[[scott, DEPT]])
+!plan
+
+select count(*) as c, sum(sal) as s
+from "scott".emp join "scott".dept using (deptno);
++----+----------+
+| C  | S        |
++----+----------+
+| 14 | 29025.00 |
++----+----------+
+(1 row)
+
+!ok
+EnumerableAggregate(group=[{}], C=[$SUM0($5)], S=[SUM($2)])
+  EnumerableCalc(expr#0..4=[{inputs}], expr#5=[*($t1, $t4)], proj#0..5=[{exprs}])
+    EnumerableJoin(condition=[=($0, $3)], joinType=[inner])
+      EnumerableAggregate(group=[{7}], C=[COUNT()], S=[SUM($5)])
+        EnumerableTableScan(table=[[scott, EMP]])
+      EnumerableAggregate(group=[{0}], C=[COUNT()])
+        EnumerableTableScan(table=[[scott, DEPT]])
+!plan
+
+select count(*) as c, sum(sal) as s
+from "scott".emp join "scott".dept using (deptno) group by emp.deptno;
++---+----------+
+| C | S        |
++---+----------+
+| 3 |  8750.00 |
+| 5 | 10875.00 |
+| 6 |  9400.00 |
++---+----------+
+(3 rows)
+
+!ok
+# No aggregate on top, because output of join is unique
+EnumerableCalc(expr#0..4=[{inputs}], expr#5=[*($t1, $t4)], C=[$t5], S=[$t2])
+  EnumerableJoin(condition=[=($0, $3)], joinType=[inner])
+    EnumerableAggregate(group=[{7}], C=[COUNT()], S=[SUM($5)])
+      EnumerableTableScan(table=[[scott, EMP]])
+    EnumerableAggregate(group=[{0}], C=[COUNT()])
+      EnumerableTableScan(table=[[scott, DEPT]])
+!plan
+
+select count(*) as c, sum(sal) as s
+from "scott".emp join "scott".dept using (deptno) group by emp.job, dept.deptno;
++---+---------+
+| C | S       |
++---+---------+
+| 1 | 1300.00 |
+| 1 | 2450.00 |
+| 1 | 2850.00 |
+| 1 | 2975.00 |
+| 1 | 5000.00 |
+| 1 |  950.00 |
+| 2 | 1900.00 |
+| 2 | 6000.00 |
+| 4 | 5600.00 |
++---+---------+
+(9 rows)
+
+!ok
+EnumerableCalc(expr#0..5=[{inputs}], expr#6=[*($t2, $t5)], C=[$t6], S=[$t3])
+  EnumerableJoin(condition=[=($1, $4)], joinType=[inner])
+    EnumerableAggregate(group=[{2, 7}], C=[COUNT()], S=[SUM($5)])
+      EnumerableTableScan(table=[[scott, EMP]])
+    EnumerableAggregate(group=[{0}], C=[COUNT()])
+      EnumerableTableScan(table=[[scott, DEPT]])
+!plan
+
+select count(*) as c, sum(sal) as s
+from "scott".emp join "scott".dept using (deptno) group by emp.job;
++---+---------+
+| C | S       |
++---+---------+
+| 1 | 5000.00 |
+| 2 | 6000.00 |
+| 3 | 8275.00 |
+| 4 | 4150.00 |
+| 4 | 5600.00 |
++---+---------+
+(5 rows)
+
+!ok
+EnumerableCalc(expr#0..2=[{inputs}], C=[$t1], S=[$t2])
+  EnumerableAggregate(group=[{0}], C=[$SUM0($6)], S=[SUM($3)])
+    EnumerableCalc(expr#0..5=[{inputs}], expr#6=[*($t2, $t5)], proj#0..6=[{exprs}])
+      EnumerableJoin(condition=[=($1, $4)], joinType=[inner])
+        EnumerableAggregate(group=[{2, 7}], C=[COUNT()], S=[SUM($5)])
+          EnumerableTableScan(table=[[scott, EMP]])
+        EnumerableAggregate(group=[{0}], C=[COUNT()])
+          EnumerableTableScan(table=[[scott, DEPT]])
+!plan
 
 # [CALCITE-729] IndexOutOfBoundsException in ROLLUP query on JDBC data source
 !use jdbc_scott
