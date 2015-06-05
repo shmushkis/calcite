@@ -113,7 +113,13 @@ A query with an Aggregate, and a Filter:
 {% highlight java %}
 final RelNode node = builder
   .scan("EMP")
-  .filter(builder.field("DEPTNO"), builder.field("ENAME"))
+  .aggregate(builder.groupKey("DEPTNO"),
+      builder.count(false, "C"),
+      builder.sum(false, "S", builder.field("SAL")))
+  .filter(
+      builder.call(SqlStdOperatorTable.GREATER_THAN,
+          builder.field("C"),
+          builder.literal(10)))
   .build();
 System.out.println(RelOptUtil.toString(node));
 {% endhighlight %}
