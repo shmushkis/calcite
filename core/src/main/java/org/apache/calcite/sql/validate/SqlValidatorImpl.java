@@ -3087,10 +3087,11 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
   }
 
+  // obsolete
   private static boolean containsMonotonic(SelectScope scope,
       SqlNodeList nodes) {
     for (SqlNode node : nodes) {
-      final SqlMonotonicity monotonicity = scope.getMonotonicity(node);
+      final SqlMonotonicity monotonicity = node.getMonotonicity(scope);
       switch (monotonicity) {
       case CONSTANT:
       case NOT_MONOTONIC:

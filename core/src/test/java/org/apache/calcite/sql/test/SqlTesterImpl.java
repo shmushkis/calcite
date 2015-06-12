@@ -502,6 +502,7 @@ public class SqlTesterImpl implements SqlTester {
     final SqlSelect select = (SqlSelect) node;
     final SqlNode selectItem0 = select.getSelectList().get(0);
     final SqlValidatorScope scope = validator.getSelectScope(select);
+    final SqlValidatorNamespace namespace = validator.getNamespace(select);
     return selectItem0.getMonotonicity(scope);
   }
 

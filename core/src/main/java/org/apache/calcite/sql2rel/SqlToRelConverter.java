@@ -2624,6 +2624,11 @@ public class SqlToRelConverter {
       // the physical level?
 
       // Tell bb which of group columns are sorted.
+      final SelectScope selectScope =
+          SqlValidatorUtil.getEnclosingSelectScope(bb.scope);
+      assert selectScope != null;
+      final SqlValidatorNamespace selectNamespace =
+          validator.getNamespace(selectScope.getNode());
       bb.columnMonotonicities.clear();
       for (SqlNode groupItem : groupList) {
         bb.columnMonotonicities.add(
@@ -2698,11 +2703,6 @@ public class SqlToRelConverter {
       // validator. This is especially the case when there are system
       // fields; system fields appear in the relnode's rowtype but do not
       // (yet) appear in the validator type.
-      final SelectScope selectScope =
-          SqlValidatorUtil.getEnclosingSelectScope(bb.scope);
-      assert selectScope != null;
-      final SqlValidatorNamespace selectNamespace =
-          validator.getNamespace(selectScope.getNode());
       final List<String> names =
           selectNamespace.getRowType().getFieldNames();
       int sysFieldCount = selectList.size() - names.size();
@@ -3483,6 +3483,7 @@ public class SqlToRelConverter {
     for (int i = 0; i < joinList.size(); i++) {
       Object o = joinList.get(i);
       if (o instanceof List) {
+        @SuppressWarnings("unchecked")
         List<SqlNode> projectList = (List<SqlNode>) o;
         final List<RexNode> selectList = new ArrayList<>();
         final List<String> fieldNameList = new ArrayList<>();
@@ -3593,6 +3594,12 @@ public class SqlToRelConverter {
     bb.setRoot(
         RelOptUtil.createProject(bb.root, exprs, fieldNames),
         false);
+
+    final SelectScope selectScope =
+        SqlValidatorUtil.getEnclosingSelectScope(bb.scope);
+    assert selectScope != null;
+    final SqlValidatorNamespace selectNamespace =
+        validator.getNamespace(selectScope.getNode());
 
     assert bb.columnMonotonicities.isEmpty();
     bb.columnMonotonicities.addAll(columnMonotonicityList);

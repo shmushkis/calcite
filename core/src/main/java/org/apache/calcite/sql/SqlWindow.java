@@ -24,16 +24,16 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.util.SqlVisitor;
-import org.apache.calcite.sql.validate.SqlMoniker;
+import org.apache.calcite.sql.validate.ListScope;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
 import org.apache.calcite.sql.validate.SqlValidator;
+import org.apache.calcite.sql.validate.SqlValidatorNamespace;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.ImmutableNullableList;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.calcite.util.Static.RESOURCE;
@@ -330,25 +330,31 @@ public class SqlWindow extends SqlCall {
   }
 
   /**
-   * This method retrieves the list of columns for the current table then
-   * walks through the list looking for a column that is monotonic (sorted)
+   * Returns whether there are any input columns that are sorted.
+   *
+   * <p>If so, it can be the default ORDER BY clause for a WINDOW specification.
+   * (This is an extension to the SQL standard for streaming.)
    */
   static boolean isTableSorted(SqlValidatorScope scope) {
-    List<SqlMoniker> columnNames = new ArrayList<SqlMoniker>();
-
-    // REVIEW: jhyde, 2007/11/7: This is the only use of
-    // findAllColumnNames. Find a better way to detect monotonicity, then
-    // remove that method.
-    scope.findAllColumnNames(columnNames);
-    for (SqlMoniker columnName : columnNames) {
-      SqlIdentifier columnId = columnName.toIdentifier();
-      final SqlMonotonicity monotonicity =
-          scope.getMonotonicity(columnId);
-      if (monotonicity != SqlMonotonicity.NOT_MONOTONIC) {
-        return true;
+    for (SqlValidatorNamespace ns : children(scope)) {
+      for (String field : ns.getRowType().getFieldNames()) {
+        final SqlMonotonicity monotonicity = ns.getMonotonicity(field);
+        switch (monotonicity) {
+        case NOT_MONOTONIC:
+        case CONSTANT:
+          break;
+        default:
+          return true;
+        }
       }
     }
     return false;
+  }
+
+  private static List<SqlValidatorNamespace> children(SqlValidatorScope scope) {
+    return scope instanceof ListScope
+        ? ((ListScope) scope).getChildren()
+        : ImmutableList.<SqlValidatorNamespace>of();
   }
 
   public static SqlNode createCurrentRow(SqlParserPos pos) {
