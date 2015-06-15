@@ -3347,12 +3347,13 @@ public class SqlToRelConverter {
     for (int i = 1; i < joinList.size(); i++) {
       RelNode relNode = (RelNode) joinList.get(i);
       ret =
-          RelOptUtil.createJoin(
+          RelFactories.DEFAULT_JOIN_FACTORY.createJoin(
               ret,
               relNode,
               rexBuilder.makeLiteral(true),
               JoinRelType.INNER,
-              ImmutableSet.<String>of());
+              ImmutableSet.<String>of(),
+              false);
     }
     return ret;
   }
