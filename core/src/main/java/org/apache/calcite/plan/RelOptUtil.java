@@ -2981,12 +2981,10 @@ public abstract class RelOptUtil {
       leftRel = RelOptUtil.createProject(
           leftRel,
           new AbstractList<Pair<RexNode, String>>() {
-            @Override
             public int size() {
               return leftCount + extraLeftExprs.size();
             }
 
-            @Override
             public Pair<RexNode, String> get(int index) {
               if (index < leftCount) {
                 RelDataTypeField field = fields.get(index);
@@ -3008,12 +3006,10 @@ public abstract class RelOptUtil {
       rightRel = RelOptUtil.createProject(
           rightRel,
           new AbstractList<Pair<RexNode, String>>() {
-            @Override
             public int size() {
               return rightCount + extraRightExprs.size();
             }
 
-            @Override
             public Pair<RexNode, String> get(int index) {
               if (index < rightCount) {
                 RelDataTypeField field = fields.get(index);
