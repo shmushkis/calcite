@@ -115,7 +115,7 @@ public class SqlMinMaxAggFunction extends SqlAggFunction {
 
   @Override public <T> T unwrap(Class<T> clazz) {
     if (clazz == SqlSplittableAggFunction.class) {
-      return clazz.cast(SqlSplittableAggFunction.SELF);
+      return clazz.cast(SqlSplittableAggFunction.SelfSplitter.INSTANCE);
     }
     return super.unwrap(clazz);
   }

@@ -156,6 +156,8 @@ public class AggregateJoinTransposeRule extends RelOptRule {
       } else {
         side.aggregate = true;
         List<AggregateCall> belowAggCalls = new ArrayList<>();
+        final SqlSplittableAggFunction.Registry<AggregateCall>
+            belowAggCallRegistry = registry(belowAggCalls);
         final Mappings.TargetMapping mapping =
             s == 0
                 ? Mappings.createIdentity(fieldCount)
@@ -166,10 +168,16 @@ public class AggregateJoinTransposeRule extends RelOptRule {
           final SqlSplittableAggFunction splitter =
               Preconditions.checkNotNull(
                   aggregation.unwrap(SqlSplittableAggFunction.class));
+          final AggregateCall call1;
           if (fieldSet.contains(ImmutableBitSet.of(aggCall.e.getArgList()))) {
+            call1 = splitter.split(aggCall.e, mapping);
+          } else {
+            call1 = splitter.other(rexBuilder.getTypeFactory(), aggCall.e);
+          }
+          if (call1 != null) {
             side.split.put(aggCall.i,
-                belowAggregateKey.cardinality() + belowAggCalls.size());
-            belowAggCalls.add(splitter.split(aggCall.e, mapping));
+                belowAggregateKey.cardinality()
+                    + belowAggCallRegistry.register(call1));
           }
         }
         side.newInput = aggregateFactory.createAggregate(joinInput, false,
@@ -220,7 +228,7 @@ public class AggregateJoinTransposeRule extends RelOptRule {
       final Integer rightSubTotal = sides.get(1).split.get(aggCall.i);
       newAggCalls.add(
           splitter.topSplit(rexBuilder, registry(projects),
-              groupIndicatorCount, aggCall.e,
+              groupIndicatorCount, newJoin.getRowType(), aggCall.e,
               leftSubTotal == null ? -1 : leftSubTotal,
               rightSubTotal == null ? -1 : rightSubTotal + newLeftWidth));
     }
@@ -241,10 +249,12 @@ public class AggregateJoinTransposeRule extends RelOptRule {
               newAggCall.getAggregation()
                   .unwrap(SqlSplittableAggFunction.class);
           if (splitter != null) {
-            projects2.add(splitter.singleton(rexBuilder, r.getRowType(), newAggCall));
+            projects2.add(
+                splitter.singleton(rexBuilder, r.getRowType(), newAggCall));
           }
         }
-        if (projects2.size() == aggregate.getGroupSet().cardinality() + newAggCalls.size()) {
+        if (projects2.size()
+            == aggregate.getGroupSet().cardinality() + newAggCalls.size()) {
           // We successfully converted agg calls into projects.
           r = RelOptUtil.createProject(r, projects2, null, true);
           break b;

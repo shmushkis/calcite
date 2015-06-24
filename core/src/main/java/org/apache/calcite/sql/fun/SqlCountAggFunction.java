@@ -87,7 +87,7 @@ public class SqlCountAggFunction extends SqlAggFunction {
 
   @Override public <T> T unwrap(Class<T> clazz) {
     if (clazz == SqlSplittableAggFunction.class) {
-      return clazz.cast(SqlSplittableAggFunction.COUNT);
+      return clazz.cast(SqlSplittableAggFunction.CountSplitter.INSTANCE);
     }
     return super.unwrap(clazz);
   }
