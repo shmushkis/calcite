@@ -1,0 +1,69 @@
+# calcite-762-trim-char-literal.oq - Test case for [CALCITE-762]
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to you under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+!use calcite-762
+!set outputformat csv
+
+# [CALCITE-762] Trailing spaces on character literals
+select * from t1;
+ID, V1, V2
+0, null value, null
+1, a, aa
+2, noBlank, 
+3, oneBlank,  
+4, ltrOneBlank, aa 
+!ok
+
+select * from t1 where v2 = '';
+ID, V1, V2
+2, noBlank, 
+!ok
+
+select * from t1 where v2 = ' ';
+ID, V1, V2
+3, oneBlank,  
+!ok
+
+select * from t1 where v2 = 'aa';
+ID, V1, V2
+1, a, aa
+!ok
+
+select * from t1 where v2 = 'aa ';
+ID, V1, V2
+4, ltrOneBlank, aa 
+!ok
+
+# Postgres returns false
+values (cast('a ' as varchar(30)) = cast('a' as varchar(30)));
+EXPR$0
+false
+!ok
+
+# Postgres returns false
+select cast(p1 as varchar(30)) = cast(p0 as varchar(30)) from (values ('a', 'a ')) as t(p0, p1);
+EXPR$0
+false
+!ok
+
+# Postgres returns true
+select cast(p1 as varchar(1)) = cast(p0 as varchar(1)) from (values ('a', 'a ')) as t(p0, p1);
+EXPR$0
+true
+!ok
+
+# End calcite-762-trim-char-literal.oq

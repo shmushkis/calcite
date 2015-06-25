@@ -4573,6 +4573,10 @@ public class JdbcTest {
     checkRun("sql/subquery.oq");
   }
 
+  @Test public void testRunCalcite762() throws Exception {
+    checkRun("sql/calcite-762-trim-char-literal.oq");
+  }
+
   private void checkRun(String path) throws Exception {
     final File inFile;
     final File outFile;
@@ -4601,44 +4605,44 @@ public class JdbcTest {
     quidem.execute(
         new Quidem.ConnectionFactory() {
           public Connection connect(String name) throws Exception {
-            if (name.equals("hr")) {
-              return CalciteAssert.hr()
-                  .connect();
-            }
-            if (name.equals("foodmart")) {
+            switch (name) {
+            case "hr":
+              return CalciteAssert.hr().connect();
+            case "foodmart":
               return CalciteAssert.that()
                   .with(CalciteAssert.Config.FOODMART_CLONE)
                   .connect();
-            }
-            if (name.equals("scott")) {
+            case "scott":
               return CalciteAssert.that()
                   .with(CalciteAssert.Config.SCOTT)
                   .connect();
-            }
-            if (name.equals("jdbc_scott")) {
+            case "jdbc_scott":
               return CalciteAssert.that()
                   .with(CalciteAssert.Config.JDBC_SCOTT)
                   .connect();
-            }
-            if (name.equals("post")) {
+            case "post":
               return CalciteAssert.that()
                   .with(CalciteAssert.Config.REGULAR)
                   .with(CalciteAssert.SchemaSpec.POST)
                   .withDefaultSchema("POST")
                   .connect();
-            }
-            if (name.equals("catchall")) {
+            case "catchall":
               return CalciteAssert.that()
                   .withSchema("s",
                       new ReflectiveSchema(
                           new ReflectiveSchemaTest.CatchallSchema()))
                   .connect();
-            }
-            if (name.equals("seq")) {
+            case "calcite-762":
+              return CalciteAssert.that()
+                  .withSchema("TEST",
+                      new ReflectiveSchema(new Calcite762Schema()))
+                  .connect();
+            case "seq":
               final Connection connection = CalciteAssert.that()
                   .withSchema("s", new AbstractSchema())
                   .connect();
-              connection.unwrap(CalciteConnection.class).getRootSchema()
+              connection.unwrap(CalciteConnection.class)
+                  .getRootSchema()
                   .getSubSchema("s")
                   .add("my_seq",
                       new AbstractTable() {
@@ -4653,8 +4657,9 @@ public class JdbcTest {
                         }
                       });
               return connection;
+            default:
+              throw new RuntimeException("unknown connection '" + name + "'");
             }
-            throw new RuntimeException("unknown connection '" + name + "'");
           }
         });
     final String diff = DiffTestCase.diff(inFile, outFile);

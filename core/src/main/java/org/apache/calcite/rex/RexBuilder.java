@@ -478,7 +478,8 @@ public class RexBuilder {
                   >= ((ByteString) value).length()))) {
         switch (literal.getTypeName()) {
         case CHAR:
-          if (value instanceof NlsString) {
+          if (value instanceof NlsString
+              && sqlType != SqlTypeName.VARCHAR) {
             value = ((NlsString) value).rtrim();
           }
           break;

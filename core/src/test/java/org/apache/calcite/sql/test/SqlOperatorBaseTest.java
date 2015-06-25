@@ -1930,7 +1930,7 @@ public abstract class SqlOperatorBaseTest {
         Boolean.TRUE);
     tester.checkBoolean(
         "cast('a ' as varchar(30))=cast('a' as varchar(30))",
-        Boolean.TRUE);
+        Boolean.FALSE);
     tester.checkBoolean(
         "cast('a' as varchar(30))=cast('b' as varchar(30))",
         Boolean.FALSE);

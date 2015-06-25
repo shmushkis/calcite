@@ -350,20 +350,24 @@ public class RexToLixTranslator {
     if (convert == null) {
       convert = convert(operand, typeFactory.getJavaClass(targetType));
     }
-    // Going from CHAR(n), trim.
+    // Going from CHAR(n) to shorter VARCHAR(m), trim.
     switch (sourceType.getSqlTypeName()) {
     case CHAR:
       switch (targetType.getSqlTypeName()) {
       case VARCHAR:
-        convert = Expressions.call(
-            BuiltInMethod.RTRIM.method, convert);
+        if (targetType.getPrecision() < sourceType.getPrecision()) {
+          convert = Expressions.call(
+              BuiltInMethod.RTRIM.method, convert);
+        }
       }
       break;
     case BINARY:
       switch (targetType.getSqlTypeName()) {
       case VARBINARY:
-        convert = Expressions.call(
-            BuiltInMethod.RTRIM.method, convert);
+        if (targetType.getPrecision() < sourceType.getPrecision()) {
+          convert = Expressions.call(
+              BuiltInMethod.RTRIM.method, convert);
+        }
       }
       break;
     }
