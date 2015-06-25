@@ -37,19 +37,20 @@ public class Calcite762Schema {
   public static class Table1 {
     // CHECKSTYLE: IGNORE 3
     public final int ID;
-    public final String V1;
-    public final String V2;
+    public final String V;
+    public final String D;
 
-    public Table1(int id, String v1, String v2) {
+    public Table1(int id, String d, String v) {
       this.ID = id;
-      this.V1 = v1;
-      this.V2 = v2;
+      this.V = v;
+      this.D = d;
     }
 
     public String toString() {
       return "Table1 [ID: " + ID
-          + ", V1: " + V1
-          + ", V2: " + V2 + "]";
+          + ", V: " + V
+          + ", D: " + D
+          + "]";
     }
   }
 }

@@ -20,32 +20,32 @@
 
 # [CALCITE-762] Trailing spaces on character literals
 select * from t1;
-ID, V1, V2
-0, null value, null
-1, a, aa
-2, noBlank, 
-3, oneBlank,  
-4, ltrOneBlank, aa 
+ID, V, D
+0, null, null value
+1, aa, a
+2, , noBlank
+3,  , oneBlank
+4, aa , ltrOneBlank
 !ok
 
-select * from t1 where v2 = '';
-ID, V1, V2
-2, noBlank, 
+select * from t1 where v = '';
+ID, V, D
+2, , noBlank
 !ok
 
-select * from t1 where v2 = ' ';
-ID, V1, V2
-3, oneBlank,  
+select * from t1 where v = ' ';
+ID, V, D
+3,  , oneBlank
 !ok
 
-select * from t1 where v2 = 'aa';
-ID, V1, V2
-1, a, aa
+select * from t1 where v = 'aa';
+ID, V, D
+1, aa, a
 !ok
 
-select * from t1 where v2 = 'aa ';
-ID, V1, V2
-4, ltrOneBlank, aa 
+select * from t1 where v = 'aa ';
+ID, V, D
+4, aa , ltrOneBlank
 !ok
 
 # Postgres returns false
