@@ -65,6 +65,7 @@ import java.math.BigDecimal;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Builder for relational expressions.
@@ -154,6 +155,11 @@ public class RelBuilder {
   /** Returns the type factory. */
   public RelDataTypeFactory getTypeFactory() {
     return cluster.getTypeFactory();
+  }
+
+  /** Returns the builder for {@link RexNode} expressions. */
+  public RexBuilder getRexBuilder() {
+    return cluster.getRexBuilder();
   }
 
   /** Creates a {@link ProtoRelBuilder}, a partially-created RelBuilder.
@@ -328,6 +334,18 @@ public class RelBuilder {
     return nodes.build();
   }
 
+  /** Creates an access to a field by name. */
+  public RexNode dot(RexNode node, String fieldName) {
+    final RexBuilder builder = cluster.getRexBuilder();
+    return builder.makeFieldAccess(node, fieldName, true);
+  }
+
+  /** Creates an access to a field by ordinal. */
+  public RexNode dot(RexNode node, int fieldOrdinal) {
+    final RexBuilder builder = cluster.getRexBuilder();
+    return builder.makeFieldAccess(node, fieldOrdinal);
+  }
+
   /** Creates a call to a scalar operator. */
   public RexNode call(SqlOperator operator, RexNode... operands) {
     final RexBuilder builder = cluster.getRexBuilder();
@@ -448,7 +466,7 @@ public class RelBuilder {
 
   /** Creates a group key. */
   public GroupKey groupKey(Iterable<? extends RexNode> nodes) {
-    return new GroupKeyImpl(ImmutableList.copyOf(nodes));
+    return new GroupKeyImpl(ImmutableList.copyOf(nodes), null);
   }
 
   /** Creates a group key of fields identified by ordinal. */
@@ -1007,6 +1025,20 @@ public class RelBuilder {
     }
   }
 
+  /** Clears the stack.
+   *
+   * <p>The builder's state is now the same as when it was created. */
+  public void clear() {
+    stack.clear();
+  }
+
+  protected String getAlias() {
+    final Frame frame = Stacks.peek(stack);
+    return frame.right.size() == 1
+        ? frame.right.get(0).left
+        : null;
+  }
+
   /** Information necessary to create a call to an aggregate function.
    *
    * @see RelBuilder#aggregateCall */
@@ -1017,14 +1049,30 @@ public class RelBuilder {
    *
    * @see RelBuilder#groupKey */
   public interface GroupKey {
+    /** Assigns an alias to this group key.
+     *
+     * <p>Used to assign field names in the {@code group} operation. */
+    GroupKey alias(String alias);
   }
 
   /** Implementation of {@link RelBuilder.GroupKey}. */
-  private static class GroupKeyImpl implements GroupKey {
-    private final ImmutableList<RexNode> nodes;
+  protected static class GroupKeyImpl implements GroupKey {
+    final ImmutableList<RexNode> nodes;
+    final String alias;
 
-    GroupKeyImpl(ImmutableList<RexNode> nodes) {
+    GroupKeyImpl(ImmutableList<RexNode> nodes, String alias) {
       this.nodes = nodes;
+      this.alias = alias;
+    }
+
+    @Override public String toString() {
+      return alias == null ? nodes.toString() : nodes + " as " + alias;
+    }
+
+    public GroupKey alias(String alias) {
+      return Objects.equals(this.alias, alias)
+          ? this
+          : new GroupKeyImpl(nodes, alias);
     }
   }
 
