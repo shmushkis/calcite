@@ -5084,7 +5084,7 @@ public class JdbcTest {
 
               // catalog
               assertEquals(
-                  "TABLE_CATALOG=null\n",
+                  "TABLE_CAT=null\n",
                   CalciteAssert.toString(
                       metaData.getCatalogs()));
 

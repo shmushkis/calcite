@@ -514,7 +514,7 @@ public class CalciteMetaImpl extends MetaImpl {
   public MetaResultSet getCatalogs() {
     return createResultSet(catalogs(),
         MetaCatalog.class,
-        "TABLE_CATALOG");
+        "TABLE_CAT");
   }
 
   public MetaResultSet getTableTypes() {

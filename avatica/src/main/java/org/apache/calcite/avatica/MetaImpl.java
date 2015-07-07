@@ -374,15 +374,15 @@ public abstract class MetaImpl implements Meta {
 
   /** Metadata describing a catalog. */
   public static class MetaCatalog implements Named {
-    public final String tableCatalog;
+    public final String tableCat;
 
     public MetaCatalog(
         String tableCatalog) {
-      this.tableCatalog = tableCatalog;
+      this.tableCat = tableCatalog;
     }
 
     public String getName() {
-      return tableCatalog;
+      return tableCat;
     }
   }
 
