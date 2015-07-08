@@ -26,6 +26,7 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.externalize.RelWriterImpl;
 import org.apache.calcite.rel.metadata.Metadata;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
@@ -339,6 +340,10 @@ public abstract class AbstractRelNode implements RelNode {
       int ordinalInParent,
       RelNode p) {
     throw Util.newInternal("replaceInput called on " + this);
+  }
+
+  public boolean isCyclic(RelSubset subset) {
+    return false;
   }
 
   public String toString() {

@@ -23,6 +23,7 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptQuery;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.metadata.Metadata;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
@@ -387,6 +388,23 @@ public interface RelNode extends RelOptNode, Cloneable {
    * this node's children
    */
   RelNode accept(RexShuttle shuttle);
+
+  /**
+   * Returns whether a relational expression is cyclic.
+   *
+   * <p>For example, {@code Project(Subset:1.1, $0: X, $1: Y)} is cyclic if
+   * it is a member of Subset:1.1 or Set:1. It is its own input, and therefore
+   * can never be implemented.
+   *
+   * <p>A set or subset that contains one or two cyclic members is not useless.
+   * The cyclic members can be removed and the planner will produce the same
+   * best plan with probably less effort.
+   *
+   * @param subset Subset that the relational expression is a member of
+   *
+   * @return Whether a relational expression has itself as an input
+   */
+  boolean isCyclic(RelSubset subset);
 }
 
 // End RelNode.java
