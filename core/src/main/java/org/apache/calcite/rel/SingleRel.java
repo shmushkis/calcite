@@ -18,6 +18,7 @@ package org.apache.calcite.rel;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 
@@ -82,6 +83,10 @@ public abstract class SingleRel extends AbstractRelNode {
       RelNode rel) {
     assert ordinalInParent == 0;
     this.input = rel;
+  }
+
+  @Override public boolean isCyclic(RelSubset subset) {
+    return input == subset || input == this;
   }
 
   protected RelDataType deriveRowType() {

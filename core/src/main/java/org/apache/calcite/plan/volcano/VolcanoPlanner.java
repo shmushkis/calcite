@@ -1020,8 +1020,9 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
     final RelSubset subset = getSubset(rel);
     if (subset != null) {
       if (equivRel != null) {
+        // equivSubset is null if equivRel were just removed because cyclic
         final RelSubset equivSubset = getSubset(equivRel);
-        if (subset.set != equivSubset.set) {
+        if (equivSubset != null && subset.set != equivSubset.set) {
           merge(equivSubset.set, subset.set);
         }
       }
@@ -1400,9 +1401,10 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
       final RelNode removed = mapDigestToRel.remove(oldKey);
       assert removed == rel;
       final String newDigest = rel.recomputeDigest();
-      LOGGER.finer(
-          "Rename #" + rel.getId() + " from '" + oldDigest
-          + "' to '" + newDigest + "'");
+      if (LOGGER.isLoggable(Level.FINER)) {
+        LOGGER.finer("Rename #" + rel.getId() + " from '" + oldDigest
+            + "' to '" + newDigest + "'");
+      }
       final Pair<String, RelDataType> key = key(rel);
       final RelNode equivRel = mapDigestToRel.put(key, rel);
       if (equivRel != null) {
@@ -1410,28 +1412,16 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
 
         // There's already an equivalent with the same name, and we
         // just knocked it out. Put it back, and forget about 'rel'.
-        LOGGER.finer(
-            "After renaming rel#" + rel.getId()
-            + ", it is now equivalent to rel#" + equivRel.getId());
+        if (LOGGER.isLoggable(Level.FINER)) {
+          LOGGER.finer("After renaming rel#" + rel.getId()
+              + ", it is now equivalent to rel#" + equivRel.getId());
+        }
         mapDigestToRel.put(key, equivRel);
 
         RelSubset equivRelSubset = getSubset(equivRel);
         ruleQueue.recompute(equivRelSubset, true);
 
-        // Remove back-links from children.
-        for (RelNode input : rel.getInputs()) {
-          ((RelSubset) input).set.parents.remove(rel);
-        }
-
-        // Remove rel from its subset. (This may leave the subset
-        // empty, but if so, that will be dealt with when the sets
-        // get merged.)
-        final RelSubset subset = mapRel2Subset.put(rel, equivRelSubset);
-        assert subset != null;
-        //boolean existed = subset.rels.remove(rel);
-        //assert existed : "rel was not known to its subset";
-        boolean existed = subset.set.rels.remove(rel);
-        assert existed : "rel was not known to its set";
+        final RelSubset subset = remove(rel);
         final RelSubset equivSubset = getSubset(equivRel);
         if (equivSubset != subset) {
           // The equivalent relational expression is in a different
@@ -1441,8 +1431,36 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
           assert equivSubset.set != subset.set;
           merge(equivSubset.set, subset.set);
         }
+      } else if (isTrivial(rel)) {
+        LOGGER.finer("After renaming rel#" + rel.getId()
+            + ", it is now cyclic; removing");
+        mapDigestToRel.remove(key);
+        remove(rel);
       }
     }
+  }
+
+  private boolean isTrivial(RelNode rel) {
+    final RelSubset subset = mapRel2Subset.get(rel);
+    return rel.isCyclic(subset);
+  }
+
+  private RelSubset remove(RelNode rel) {
+    ruleQueue.remove(rel);
+
+    // Remove back-links from children.
+    for (RelNode input : rel.getInputs()) {
+      ((RelSubset) input).set.parents.remove(rel);
+    }
+
+    // Remove rel from its subset. (This may leave the subset
+    // empty, but if so, that will be dealt with when the sets
+    // get merged.)
+    final RelSubset subset = mapRel2Subset.remove(rel);
+    assert subset != null;
+    boolean existed = subset.set.rels.remove(rel);
+    assert existed : "rel was not known to its set";
+    return subset;
   }
 
   /**
@@ -1828,8 +1846,10 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
     if ((set != subset.set)
         && (set != null)
         && (set.equivalentSet == null)) {
-      LOGGER.finer("Register #" + subset.getId() + " " + subset
-          + ", and merge sets");
+      if (LOGGER.isLoggable(Level.FINER)) {
+        LOGGER.finer("Register #" + subset.getId() + " " + subset
+            + ", and merge sets");
+      }
       merge(set, subset.set);
       registerCount++;
     }

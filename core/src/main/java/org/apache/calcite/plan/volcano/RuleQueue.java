@@ -41,14 +41,15 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Priority queue of relexps whose rules have not been called, and rule-matches
- * which have not yet been acted upon.
+ * Priority queue of relational expressions whose rules have not been called,
+ * and rule-matches that have not yet been acted upon.
  */
 class RuleQueue {
   //~ Static fields/initializers ---------------------------------------------
@@ -67,15 +68,14 @@ class RuleQueue {
   /**
    * The importance of each subset.
    */
-  final Map<RelSubset, Double> subsetImportances =
-      new HashMap<RelSubset, Double>();
+  final Map<RelSubset, Double> subsetImportances = new HashMap<>();
 
   /**
    * The set of RelSubsets whose importance is currently in an artificially
    * raised state. Typically this only includes RelSubsets which have only
    * logical RelNodes.
    */
-  final Set<RelSubset> boostedSubsets = new HashSet<RelSubset>();
+  final Set<RelSubset> boostedSubsets = new HashSet<>();
 
   /**
    * Map of {@link VolcanoPlannerPhase} to a list of rule-matches. Initially,
@@ -86,8 +86,7 @@ class RuleQueue {
    * work.
    */
   final Map<VolcanoPlannerPhase, PhaseMatchList> matchListMap =
-      new EnumMap<VolcanoPlannerPhase, PhaseMatchList>(
-          VolcanoPlannerPhase.class);
+      new EnumMap<>(VolcanoPlannerPhase.class);
 
   /**
    * Sorts rule-matches into decreasing order of importance.
@@ -107,15 +106,13 @@ class RuleQueue {
    * Maps a {@link VolcanoPlannerPhase} to a set of rule names.  Named rules
    * may be invoked in their corresponding phase.
    */
-  private final Map<VolcanoPlannerPhase, Set<String>> phaseRuleMapping;
+  private final Map<VolcanoPlannerPhase, Set<String>> phaseRuleMapping =
+      new EnumMap<>(VolcanoPlannerPhase.class);
 
   //~ Constructors -----------------------------------------------------------
 
   RuleQueue(VolcanoPlanner planner) {
     this.planner = planner;
-
-    phaseRuleMapping = new EnumMap<VolcanoPlannerPhase, Set<String>>(
-        VolcanoPlannerPhase.class);
 
     // init empty sets for all phases
     for (VolcanoPlannerPhase phase : VolcanoPlannerPhase.values()) {
@@ -168,6 +165,23 @@ class RuleQueue {
               getImportance(subset));
     }
     return importance;
+  }
+
+  /**
+   * Removes all references to a particular relational expression from the
+   * queue, including all matches.
+   */
+  public void remove(RelNode rel) {
+    for (PhaseMatchList phaseMatchList : matchListMap.values()) {
+      final ListIterator<VolcanoRuleMatch> listIterator =
+          phaseMatchList.list.listIterator();
+      while (listIterator.hasNext()) {
+        final VolcanoRuleMatch match = listIterator.next();
+        if (match.getRelList().contains(rel)) {
+          listIterator.remove();
+        }
+      }
+    }
   }
 
   /**
@@ -224,7 +238,7 @@ class RuleQueue {
     if (LOGGER.isLoggable(Level.FINER)) {
       LOGGER.finer("boostImportance(" + factor + ", " + subsets + ")");
     }
-    ArrayList<RelSubset> boostRemovals = new ArrayList<RelSubset>();
+    final List<RelSubset> boostRemovals = new ArrayList<>();
     Iterator<RelSubset> iter = boostedSubsets.iterator();
     while (iter.hasNext()) {
       RelSubset subset = iter.next();
@@ -535,7 +549,7 @@ class RuleQueue {
     //   Project(A, X = X + 0 + 0)
     //   Project(A, X = X + 0 + 0 + 0)
     // also in the same subset. They are valid but useless.
-    final List<RelSubset> subsets = new ArrayList<RelSubset>();
+    final List<RelSubset> subsets = new ArrayList<>();
     try {
       checkDuplicateSubsets(subsets, match.rule.getOperand(), match.rels);
     } catch (Util.FoundOne e) {
@@ -685,16 +699,16 @@ class RuleQueue {
      * list is sorted and the highest importance rule-match removed. It is
      * important for performance that this list remain mostly sorted.
      *
-     * <p>Use a hunkList because {@link java.util.ArrayList} does not implement
-     * remove(0) efficiently.</p>
+     * <p>We use a chunk-list because {@link java.util.ArrayList} does not
+     * implement remove(0) efficiently.</p>
      */
-    final List<VolcanoRuleMatch> list = new ChunkList<VolcanoRuleMatch>();
+    final List<VolcanoRuleMatch> list = new ChunkList<>();
 
     /**
      * A set of rule-match names contained in {@link #list}. Allows fast
      * detection of duplicate rule-matches.
      */
-    final Set<String> names = new HashSet<String>();
+    final Set<String> names = new HashSet<>();
 
     /**
      * Multi-map of RelSubset to VolcanoRuleMatches. Used to
