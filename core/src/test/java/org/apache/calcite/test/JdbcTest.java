@@ -1775,8 +1775,9 @@ public class JdbcTest {
     that.query("select case when deptno = 10 then null else 100 end as x\n"
         + "from (values (10), (20)) as t(deptno)")
         .returnsUnordered("X=null", "X=100");
-    that.query("select case when deptno = 10 then null else 'xy' end as x\n"
-        + "from (values (10), (20)) as t(deptno)")
+    that.query(
+        "select case when deptno = 10 then null else 'xy' end as x\n"
+            + "from (values (10), (20)) as t(deptno)")
         .returnsUnordered("X=null", "X=xy");
   }
 
@@ -1785,9 +1786,10 @@ public class JdbcTest {
   @Test public void testSelfJoin() {
     CalciteAssert.that()
         .with(CalciteAssert.Config.JDBC_FOODMART)
-        .query("select count(*) as c from (\n"
-            + "  select 1 from \"foodmart\".\"employee\" as e1\n"
-            + "  join \"foodmart\".\"employee\" as e2 using (\"position_title\"))")
+        .query(
+            "select count(*) as c from (\n"
+                + "  select 1 from \"foodmart\".\"employee\" as e1\n"
+                + "  join \"foodmart\".\"employee\" as e2 using (\"position_title\"))")
         .returns("C=247149\n");
   }
 
@@ -1832,7 +1834,8 @@ public class JdbcTest {
             + "from \"hr\".\"emps\" as e\n"
             + "left join \"hr\".\"depts\" as d\n"
             + "on e.\"deptno\" < d.\"deptno\"\n")
-        .returnsUnordered("empid=100; name=Marketing; name=Bill",
+        .returnsUnordered(
+            "empid=100; name=Marketing; name=Bill",
             "empid=100; name=HR; name=Bill",
             "empid=200; name=Marketing; name=Eric",
             "empid=200; name=HR; name=Eric",
@@ -1882,12 +1885,13 @@ public class JdbcTest {
             + "   ISNULL(\"customer\".\"country\") ASC,   \"customer\".\"country\" ASC,\n"
             + "   ISNULL(\"customer\".\"state_province\") ASC,   \"customer\".\"state_province\" ASC,\n"
             + "   ISNULL(\"customer\".\"city\") ASC,   \"customer\".\"city\" ASC")
-        .returns("+-------+---------------------+-----+------+------------+\n"
-            + "| c0    | c1                  | c2  | c3   | c4         |\n"
-            + "+-------+---------------------+-----+------+------------+\n"
-            + "| Drink | Alcoholic Beverages | USA | WA   | Bellingham |\n"
-            + "| Drink | Dairy               | USA | WA   | Bellingham |\n"
-            + "+-------+---------------------+-----+------+------------+");
+        .returns(
+            "+-------+---------------------+-----+------+------------+\n"
+                + "| c0    | c1                  | c2  | c3   | c4         |\n"
+                + "+-------+---------------------+-----+------+------------+\n"
+                + "| Drink | Alcoholic Beverages | USA | WA   | Bellingham |\n"
+                + "| Drink | Dairy               | USA | WA   | Bellingham |\n"
+                + "+-------+---------------------+-----+------+------------+");
   }
 
   /** Four-way join. Used to take 80 seconds. */
@@ -1895,42 +1899,42 @@ public class JdbcTest {
   @Test public void testJoinFiveWay() {
     CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
-        .query("select \"store\".\"store_country\" as \"c0\",\n"
-            + " \"time_by_day\".\"the_year\" as \"c1\",\n"
-            + " \"product_class\".\"product_family\" as \"c2\",\n"
-            + " count(\"sales_fact_1997\".\"product_id\") as \"m0\"\n"
-            + "from \"store\" as \"store\",\n"
-            + " \"sales_fact_1997\" as \"sales_fact_1997\",\n"
-            + " \"time_by_day\" as \"time_by_day\",\n"
-            + " \"product_class\" as \"product_class\",\n"
-            + " \"product\" as \"product\"\n"
-            + "where \"sales_fact_1997\".\"store_id\" = \"store\".\"store_id\"\n"
-            + "and \"store\".\"store_country\" = 'USA'\n"
-            + "and \"sales_fact_1997\".\"time_id\" = \"time_by_day\".\"time_id\"\n"
-            + "and \"time_by_day\".\"the_year\" = 1997\n"
-            + "and \"sales_fact_1997\".\"product_id\" = \"product\".\"product_id\"\n"
-            + "and \"product\".\"product_class_id\" = \"product_class\".\"product_class_id\"\n"
-            + "group by \"store\".\"store_country\",\n"
-            + " \"time_by_day\".\"the_year\",\n"
-            + " \"product_class\".\"product_family\"")
-        .explainContains(""
-            + "EnumerableAggregateRel(group=[{0, 1, 2}], m0=[COUNT($3)])\n"
-            + "  EnumerableCalcRel(expr#0..61=[{inputs}], c0=[$t19], c1=[$t4], c2=[$t46], product_id=[$t34])\n"
-            + "    EnumerableJoinRel(condition=[=($35, $0)], joinType=[inner])\n"
-            + "      EnumerableCalcRel(expr#0..9=[{inputs}], expr#10=[CAST($t4):INTEGER], expr#11=[1997], expr#12=[=($t10, $t11)], proj#0..9=[{exprs}], $condition=[$t12])\n"
-            + "        EnumerableTableScan(table=[[foodmart2, time_by_day]])\n"
-            + "      EnumerableCalcRel(expr#0..51=[{inputs}], proj#0..23=[{exprs}], product_id=[$t44], time_id=[$t45], customer_id=[$t46], promotion_id=[$t47], store_id0=[$t48], store_sales=[$t49], store_cost=[$t50], unit_sales=[$t51], product_class_id=[$t24], product_subcategory=[$t25], product_category=[$t26], product_department=[$t27], product_family=[$t28], product_class_id0=[$t29], product_id0=[$t30], brand_name=[$t31], product_name=[$t32], SKU=[$t33], SRP=[$t34], gross_weight=[$t35], net_weight=[$t36], recyclable_package=[$t37], low_fat=[$t38], units_per_case=[$t39], cases_per_pallet=[$t40], shelf_width=[$t41], shelf_height=[$t42], shelf_depth=[$t43])\n"
-            + "        EnumerableJoinRel(condition=[=($48, $0)], joinType=[inner])\n"
-            + "          EnumerableCalcRel(expr#0..23=[{inputs}], expr#24=['USA'], expr#25=[=($t9, $t24)], proj#0..23=[{exprs}], $condition=[$t25])\n"
-            + "            EnumerableTableScan(table=[[foodmart2, store]])\n"
-            + "          EnumerableCalcRel(expr#0..27=[{inputs}], proj#0..4=[{exprs}], product_class_id0=[$t13], product_id=[$t14], brand_name=[$t15], product_name=[$t16], SKU=[$t17], SRP=[$t18], gross_weight=[$t19], net_weight=[$t20], recyclable_package=[$t21], low_fat=[$t22], units_per_case=[$t23], cases_per_pallet=[$t24], shelf_width=[$t25], shelf_height=[$t26], shelf_depth=[$t27], product_id0=[$t5], time_id=[$t6], customer_id=[$t7], promotion_id=[$t8], store_id=[$t9], store_sales=[$t10], store_cost=[$t11], unit_sales=[$t12])\n"
-            + "            EnumerableJoinRel(condition=[=($13, $0)], joinType=[inner])\n"
-            + "              EnumerableTableScan(table=[[foodmart2, product_class]])\n"
-            + "              EnumerableJoinRel(condition=[=($0, $9)], joinType=[inner])\n"
-            + "                EnumerableTableScan(table=[[foodmart2, sales_fact_1997]])\n"
-            + "                EnumerableTableScan(table=[[foodmart2, product]])\n"
-            + "\n"
-            + "]>")
+        .query(
+            "select \"store\".\"store_country\" as \"c0\",\n"
+                + " \"time_by_day\".\"the_year\" as \"c1\",\n"
+                + " \"product_class\".\"product_family\" as \"c2\",\n"
+                + " count(\"sales_fact_1997\".\"product_id\") as \"m0\"\n"
+                + "from \"store\" as \"store\",\n"
+                + " \"sales_fact_1997\" as \"sales_fact_1997\",\n"
+                + " \"time_by_day\" as \"time_by_day\",\n"
+                + " \"product_class\" as \"product_class\",\n"
+                + " \"product\" as \"product\"\n"
+                + "where \"sales_fact_1997\".\"store_id\" = \"store\".\"store_id\"\n"
+                + "and \"store\".\"store_country\" = 'USA'\n"
+                + "and \"sales_fact_1997\".\"time_id\" = \"time_by_day\".\"time_id\"\n"
+                + "and \"time_by_day\".\"the_year\" = 1997\n"
+                + "and \"sales_fact_1997\".\"product_id\" = \"product\".\"product_id\"\n"
+                + "and \"product\".\"product_class_id\" = \"product_class\".\"product_class_id\"\n"
+                + "group by \"store\".\"store_country\",\n"
+                + " \"time_by_day\".\"the_year\",\n"
+                + " \"product_class\".\"product_family\"")
+        .explainContains(
+            "" + "EnumerableAggregateRel(group=[{0, 1, 2}], m0=[COUNT($3)])\n"
+                + "  EnumerableCalcRel(expr#0..61=[{inputs}], c0=[$t19], c1=[$t4], c2=[$t46], product_id=[$t34])\n"
+                + "    EnumerableJoinRel(condition=[=($35, $0)], joinType=[inner])\n"
+                + "      EnumerableCalcRel(expr#0..9=[{inputs}], expr#10=[CAST($t4):INTEGER], expr#11=[1997], expr#12=[=($t10, $t11)], proj#0..9=[{exprs}], $condition=[$t12])\n"
+                + "        EnumerableTableScan(table=[[foodmart2, time_by_day]])\n"
+                + "      EnumerableCalcRel(expr#0..51=[{inputs}], proj#0..23=[{exprs}], product_id=[$t44], time_id=[$t45], customer_id=[$t46], promotion_id=[$t47], store_id0=[$t48], store_sales=[$t49], store_cost=[$t50], unit_sales=[$t51], product_class_id=[$t24], product_subcategory=[$t25], product_category=[$t26], product_department=[$t27], product_family=[$t28], product_class_id0=[$t29], product_id0=[$t30], brand_name=[$t31], product_name=[$t32], SKU=[$t33], SRP=[$t34], gross_weight=[$t35], net_weight=[$t36], recyclable_package=[$t37], low_fat=[$t38], units_per_case=[$t39], cases_per_pallet=[$t40], shelf_width=[$t41], shelf_height=[$t42], shelf_depth=[$t43])\n"
+                + "        EnumerableJoinRel(condition=[=($48, $0)], joinType=[inner])\n"
+                + "          EnumerableCalcRel(expr#0..23=[{inputs}], expr#24=['USA'], expr#25=[=($t9, $t24)], proj#0..23=[{exprs}], $condition=[$t25])\n"
+                + "            EnumerableTableScan(table=[[foodmart2, store]])\n"
+                + "          EnumerableCalcRel(expr#0..27=[{inputs}], proj#0..4=[{exprs}], product_class_id0=[$t13], product_id=[$t14], brand_name=[$t15], product_name=[$t16], SKU=[$t17], SRP=[$t18], gross_weight=[$t19], net_weight=[$t20], recyclable_package=[$t21], low_fat=[$t22], units_per_case=[$t23], cases_per_pallet=[$t24], shelf_width=[$t25], shelf_height=[$t26], shelf_depth=[$t27], product_id0=[$t5], time_id=[$t6], customer_id=[$t7], promotion_id=[$t8], store_id=[$t9], store_sales=[$t10], store_cost=[$t11], unit_sales=[$t12])\n"
+                + "            EnumerableJoinRel(condition=[=($13, $0)], joinType=[inner])\n"
+                + "              EnumerableTableScan(table=[[foodmart2, product_class]])\n"
+                + "              EnumerableJoinRel(condition=[=($0, $9)], joinType=[inner])\n"
+                + "                EnumerableTableScan(table=[[foodmart2, sales_fact_1997]])\n"
+                + "                EnumerableTableScan(table=[[foodmart2, product]])\n"
+                + "\n" + "]>")
         .returns("+-------+---------------------+-----+------+------------+\n"
             + "| c0    | c1                  | c2  | c3   | c4         |\n"
             + "+-------+---------------------+-----+------+------------+\n"
@@ -2112,25 +2116,23 @@ public class JdbcTest {
               public Object apply(CalciteConnection a0) {
                 try {
                   final Statement statement = a0.createStatement();
-                  ResultSet resultSet =
-                      statement.executeQuery("select \"empid\",\n"
-                          + "  array[\n"
+                  ResultSet resultSet = statement.executeQuery(
+                      "select \"empid\",\n" + "  array[\n"
                           + "    array['x', 'y', 'z'],\n"
                           + "    array[\"name\"]] as a\n"
                           + "from \"hr\".\"emps\"");
                   assertThat(resultSet.next(), is(true));
                   assertThat(resultSet.getInt(1), equalTo(100));
-                  assertThat(resultSet.getString(2),
-                      equalTo("[[x, y, z], [Bill]]"));
+                  assertThat(
+                      resultSet.getString(2), equalTo("[[x, y, z], [Bill]]"));
                   final Array array = resultSet.getArray(2);
-                  assertThat(array.getBaseType(),
-                      equalTo(java.sql.Types.ARRAY));
-                  final Object[] arrayValues =
-                      (Object[]) array.getArray();
+                  assertThat(
+                      array.getBaseType(), equalTo(java.sql.Types.ARRAY));
+                  final Object[] arrayValues = (Object[]) array.getArray();
                   assertThat(arrayValues.length, equalTo(2));
                   final Array subArray = (Array) arrayValues[0];
-                  assertThat(subArray.getBaseType(),
-                      equalTo(java.sql.Types.VARCHAR));
+                  assertThat(
+                      subArray.getBaseType(), equalTo(java.sql.Types.VARCHAR));
                   final Object[] subArrayValues =
                       (Object[]) subArray.getArray();
                   assertThat(subArrayValues.length, equalTo(3));
@@ -2143,8 +2145,8 @@ public class JdbcTest {
                     final String string = subResultSet.getString(2);
                     fail("expected error, got " + string);
                   } catch (SQLException e) {
-                    assertThat(e.getMessage(),
-                        equalTo("invalid column ordinal: 2"));
+                    assertThat(
+                        e.getMessage(), equalTo("invalid column ordinal: 2"));
                   }
                   assertThat(subResultSet.next(), is(true));
                   assertThat(subResultSet.next(), is(true));
@@ -2318,19 +2320,20 @@ public class JdbcTest {
   @Ignore
   @Test public void testExplainJoin2() throws IOException {
     withFoodMartQuery(2482)
-        .explainContains(""
-            + "EnumerableSortRel(sort0=[$0], sort1=[$1], dir0=[Ascending-nulls-last], dir1=[Ascending-nulls-last])\n"
-            + "  EnumerableAggregateRel(group=[{0, 1}])\n"
-            + "    EnumerableCalcRel(expr#0..5=[{inputs}], c0=[$t4], c1=[$t1])\n"
-            + "      EnumerableJoinRel(condition=[=($3, $5)], joinType=[inner])\n"
-            + "        EnumerableCalcRel(expr#0..3=[{inputs}], store_id=[$t2], store_country=[$t3], store_id0=[$t0], month_of_year=[$t1])\n"
-            + "          EnumerableJoinRel(condition=[=($0, $2)], joinType=[inner])\n"
-            + "            EnumerableCalcRel(expr#0..10=[{inputs}], store_id=[$t2], month_of_year=[$t4])\n"
-            + "              EnumerableTableScan(table=[[foodmart2, agg_c_14_sales_fact_1997]])\n"
-            + "            EnumerableCalcRel(expr#0..23=[{inputs}], store_id=[$t0], store_country=[$t9])\n"
-            + "              EnumerableTableScan(table=[[foodmart2, store]])\n"
-            + "        EnumerableCalcRel(expr#0..9=[{inputs}], the_year=[$t4], month_of_year=[$t7])\n"
-            + "          EnumerableTableScan(table=[[foodmart2, time_by_day]])\n")
+        .explainContains(
+            ""
+                + "EnumerableSortRel(sort0=[$0], sort1=[$1], dir0=[Ascending-nulls-last], dir1=[Ascending-nulls-last])\n"
+                + "  EnumerableAggregateRel(group=[{0, 1}])\n"
+                + "    EnumerableCalcRel(expr#0..5=[{inputs}], c0=[$t4], c1=[$t1])\n"
+                + "      EnumerableJoinRel(condition=[=($3, $5)], joinType=[inner])\n"
+                + "        EnumerableCalcRel(expr#0..3=[{inputs}], store_id=[$t2], store_country=[$t3], store_id0=[$t0], month_of_year=[$t1])\n"
+                + "          EnumerableJoinRel(condition=[=($0, $2)], joinType=[inner])\n"
+                + "            EnumerableCalcRel(expr#0..10=[{inputs}], store_id=[$t2], month_of_year=[$t4])\n"
+                + "              EnumerableTableScan(table=[[foodmart2, agg_c_14_sales_fact_1997]])\n"
+                + "            EnumerableCalcRel(expr#0..23=[{inputs}], store_id=[$t0], store_country=[$t9])\n"
+                + "              EnumerableTableScan(table=[[foodmart2, store]])\n"
+                + "        EnumerableCalcRel(expr#0..9=[{inputs}], the_year=[$t4], month_of_year=[$t7])\n"
+                + "          EnumerableTableScan(table=[[foodmart2, time_by_day]])\n")
         .runs();
   }
 
@@ -2438,12 +2441,13 @@ public class JdbcTest {
     CalciteAssert.hr()
         .query(
             "select upper((case when \"empid\">\"deptno\"*10 then 'y' else null end)) T from \"hr\".\"emps\"")
-        .planContains("static final String "
-            + "$L4J$C$org_apache_calcite_runtime_SqlFunctions_upper_y_ = "
-            + "org.apache.calcite.runtime.SqlFunctions.upper(\"y\");")
-        .planContains("return current.empid <= current.deptno * 10 "
-            + "? (String) null "
-            + ": $L4J$C$org_apache_calcite_runtime_SqlFunctions_upper_y_;")
+        .planContains(
+            "static final String "
+                + "$L4J$C$org_apache_calcite_runtime_SqlFunctions_upper_y_ = "
+                + "org.apache.calcite.runtime.SqlFunctions.upper(\"y\");")
+        .planContains(
+            "return current.empid <= current.deptno * 10 " + "? (String) null "
+                + ": $L4J$C$org_apache_calcite_runtime_SqlFunctions_upper_y_;")
         .returns("T=null\n"
             + "T=null\n"
             + "T=Y\n"
@@ -2478,10 +2482,11 @@ public class JdbcTest {
         .planContains("static final boolean "
             + "$L4J$C$_org_apache_calcite_runtime_SqlFunctions_ne_sa_sa_ = "
             + "!$L4J$C$org_apache_calcite_runtime_SqlFunctions_ne_sa_sa_;")
-        .planContains("return inp2_ == null "
-            + "|| $L4J$C$_org_apache_calcite_runtime_SqlFunctions_ne_sa_sa_ ? (String) null"
-            + " : org.apache.calcite.runtime.SqlFunctions.substring(inp2_, "
-            + "current.deptno + 1);");
+        .planContains(
+            "return inp2_ == null "
+                + "|| $L4J$C$_org_apache_calcite_runtime_SqlFunctions_ne_sa_sa_ ? (String) null"
+                + " : org.apache.calcite.runtime.SqlFunctions.substring(inp2_, "
+                + "current.deptno + 1);");
   }
 
   @Test public void testReuseExpressionWhenNullChecking4() {
@@ -2513,23 +2518,18 @@ public class JdbcTest {
             + "org.apache.calcite.runtime.SqlFunctions.trim(true, true, \" \", "
             + "org.apache.calcite.runtime.SqlFunctions.substring(inp2_, "
             + "inp1_ * 0 + 1)), (v5 ? 4 : 5) - 2);")
-        .returns("T=ill\n"
-            + "T=ric\n"
-            + "T=ebastian\n"
-            + "T=heodore\n");
+        .returns(
+            "T=ill\n" + "T=ric\n" + "T=ebastian\n" + "T=heodore\n");
   }
 
   @Test public void testReuseExpressionWhenNullChecking5() {
     CalciteAssert.hr()
-        .query("select substring(trim(\n"
-            + "substring(\"name\",\n"
-            + "  \"deptno\"*0+case when user = 'sa' then 1 end)\n"
-            + "), case when \"empid\">\"deptno\" then 5\n" /* diff from 4 */
-            + "   else\n"
-            + "     case when \"deptno\"*8>8 then 5 end\n"
-            + "   end-2) T\n"
-            + "from\n"
-            + "\"hr\".\"emps\"")
+        .query(
+            "select substring(trim(\n" + "substring(\"name\",\n"
+                + "  \"deptno\"*0+case when user = 'sa' then 1 end)\n"
+                + "), case when \"empid\">\"deptno\" then 5\n" /* diff from 4 */
+                + "   else\n" + "     case when \"deptno\"*8>8 then 5 end\n"
+                + "   end-2) T\n" + "from\n" + "\"hr\".\"emps\"")
         .planContains(
             "final String inp2_ = current.name;")
         .planContains(
@@ -2615,8 +2615,7 @@ public class JdbcTest {
         .explainContains(
             "PLAN=EnumerableValues(tuples=[[{ 1, 'a  ' }, { 2, 'abc' }]])\n")
         .returnsUnordered(
-            "Q=1; Q=a  ",
-            "Q=2; Q=abc");
+            "Q=1; Q=a  ", "Q=2; Q=abc");
   }
 
   /**
@@ -2698,9 +2697,10 @@ public class JdbcTest {
     CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
         .query(s)
-        .explainContains("EnumerableAggregate(group=[{}], m0=[COUNT($0)])\n"
-            + "  EnumerableAggregate(group=[{7}])\n"
-            + "    EnumerableTableScan(table=[[foodmart2, sales_fact_1997]])")
+        .explainContains(
+            "EnumerableAggregate(group=[{}], m0=[COUNT($0)])\n"
+                + "  EnumerableAggregate(group=[{7}])\n"
+                + "    EnumerableTableScan(table=[[foodmart2, sales_fact_1997]])")
         .returns("m0=6\n");
   }
 
@@ -2791,26 +2791,28 @@ public class JdbcTest {
   /** Tests a simple IN query implemented as a semi-join. */
   @Test public void testSimpleIn() {
     CalciteAssert.hr()
-        .query("select * from \"hr\".\"depts\" where \"deptno\" in (\n"
-            + "  select \"deptno\" from \"hr\".\"emps\"\n"
-            + "  where \"empid\" < 150)")
-        .convertContains(""
-            + "LogicalProject(deptno=[$0], name=[$1], employees=[$2], location=[$3])\n"
-            + "  LogicalJoin(condition=[=($4, $5)], joinType=[inner])\n"
-            + "    LogicalProject($f0=[$0], $f1=[$1], $f2=[$2], $f3=[$3], $f4=[$0])\n"
-            + "      EnumerableTableScan(table=[[hr, depts]])\n"
-            + "    LogicalAggregate(group=[{0}])\n"
-            + "      LogicalProject(deptno=[$1])\n"
-            + "        LogicalFilter(condition=[<($0, 150)])\n"
-            + "          LogicalProject(empid=[$0], deptno=[$1])\n"
-            + "            EnumerableTableScan(table=[[hr, emps]])")
-        .explainContains(""
-            + "EnumerableCalc(expr#0..4=[{inputs}], proj#0..3=[{exprs}])\n"
-            + "  EnumerableSemiJoin(condition=[=($4, $6)], joinType=[inner])\n"
-            + "    EnumerableCalc(expr#0..3=[{inputs}], proj#0..3=[{exprs}], $f4=[$t0])\n"
-            + "      EnumerableTableScan(table=[[hr, depts]])\n"
-            + "    EnumerableCalc(expr#0..4=[{inputs}], expr#5=[150], expr#6=[<($t0, $t5)], proj#0..4=[{exprs}], $condition=[$t6])\n"
-            + "      EnumerableTableScan(table=[[hr, emps]])")
+        .query(
+            "select * from \"hr\".\"depts\" where \"deptno\" in (\n"
+                + "  select \"deptno\" from \"hr\".\"emps\"\n"
+                + "  where \"empid\" < 150)")
+        .convertContains(
+            ""
+                + "LogicalProject(deptno=[$0], name=[$1], employees=[$2], location=[$3])\n"
+                + "  LogicalJoin(condition=[=($4, $5)], joinType=[inner])\n"
+                + "    LogicalProject($f0=[$0], $f1=[$1], $f2=[$2], $f3=[$3], $f4=[$0])\n"
+                + "      EnumerableTableScan(table=[[hr, depts]])\n"
+                + "    LogicalAggregate(group=[{0}])\n"
+                + "      LogicalProject(deptno=[$1])\n"
+                + "        LogicalFilter(condition=[<($0, 150)])\n"
+                + "          LogicalProject(empid=[$0], deptno=[$1])\n"
+                + "            EnumerableTableScan(table=[[hr, emps]])")
+        .explainContains(
+            "" + "EnumerableCalc(expr#0..4=[{inputs}], proj#0..3=[{exprs}])\n"
+                + "  EnumerableSemiJoin(condition=[=($4, $6)], joinType=[inner])\n"
+                + "    EnumerableCalc(expr#0..3=[{inputs}], proj#0..3=[{exprs}], $f4=[$t0])\n"
+                + "      EnumerableTableScan(table=[[hr, depts]])\n"
+                + "    EnumerableCalc(expr#0..4=[{inputs}], expr#5=[150], expr#6=[<($t0, $t5)], proj#0..4=[{exprs}], $condition=[$t6])\n"
+                + "      EnumerableTableScan(table=[[hr, emps]])")
         .returnsUnordered(
             "deptno=10; name=Sales; employees=[Employee [empid: 100, deptno: 10, name: Bill], Employee [empid: 150, deptno: 10, name: Sebastian]]; location=Location [x: -122, y: 38]");
   }
@@ -2821,30 +2823,31 @@ public class JdbcTest {
   @Test public void testIn() {
     CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
-        .query("select \"time_by_day\".\"the_year\" as \"c0\",\n"
-            + " \"product_class\".\"product_family\" as \"c1\",\n"
-            + " \"customer\".\"country\" as \"c2\",\n"
-            + " \"customer\".\"state_province\" as \"c3\",\n"
-            + " \"customer\".\"city\" as \"c4\",\n"
-            + " sum(\"sales_fact_1997\".\"unit_sales\") as \"m0\"\n"
-            + "from \"time_by_day\" as \"time_by_day\",\n"
-            + " \"sales_fact_1997\" as \"sales_fact_1997\",\n"
-            + " \"product_class\" as \"product_class\",\n"
-            + " \"product\" as \"product\", \"customer\" as \"customer\"\n"
-            + "where \"sales_fact_1997\".\"time_id\" = \"time_by_day\".\"time_id\"\n"
-            + "and \"time_by_day\".\"the_year\" = 1997\n"
-            + "and \"sales_fact_1997\".\"product_id\" = \"product\".\"product_id\"\n"
-            + "and \"product\".\"product_class_id\" = \"product_class\".\"product_class_id\"\n"
-            + "and \"product_class\".\"product_family\" = 'Drink'\n"
-            + "and \"sales_fact_1997\".\"customer_id\" = \"customer\".\"customer_id\"\n"
-            + "and \"customer\".\"country\" = 'USA'\n"
-            + "and \"customer\".\"state_province\" = 'WA'\n"
-            + "and \"customer\".\"city\" in ('Anacortes', 'Ballard', 'Bellingham', 'Bremerton', 'Burien', 'Edmonds', 'Everett', 'Issaquah', 'Kirkland', 'Lynnwood', 'Marysville', 'Olympia', 'Port Orchard', 'Puyallup', 'Redmond', 'Renton', 'Seattle', 'Sedro Woolley', 'Spokane', 'Tacoma', 'Walla Walla', 'Yakima')\n"
-            + "group by \"time_by_day\".\"the_year\",\n"
-            + " \"product_class\".\"product_family\",\n"
-            + " \"customer\".\"country\",\n"
-            + " \"customer\".\"state_province\",\n"
-            + " \"customer\".\"city\"")
+        .query(
+            "select \"time_by_day\".\"the_year\" as \"c0\",\n"
+                + " \"product_class\".\"product_family\" as \"c1\",\n"
+                + " \"customer\".\"country\" as \"c2\",\n"
+                + " \"customer\".\"state_province\" as \"c3\",\n"
+                + " \"customer\".\"city\" as \"c4\",\n"
+                + " sum(\"sales_fact_1997\".\"unit_sales\") as \"m0\"\n"
+                + "from \"time_by_day\" as \"time_by_day\",\n"
+                + " \"sales_fact_1997\" as \"sales_fact_1997\",\n"
+                + " \"product_class\" as \"product_class\",\n"
+                + " \"product\" as \"product\", \"customer\" as \"customer\"\n"
+                + "where \"sales_fact_1997\".\"time_id\" = \"time_by_day\".\"time_id\"\n"
+                + "and \"time_by_day\".\"the_year\" = 1997\n"
+                + "and \"sales_fact_1997\".\"product_id\" = \"product\".\"product_id\"\n"
+                + "and \"product\".\"product_class_id\" = \"product_class\".\"product_class_id\"\n"
+                + "and \"product_class\".\"product_family\" = 'Drink'\n"
+                + "and \"sales_fact_1997\".\"customer_id\" = \"customer\".\"customer_id\"\n"
+                + "and \"customer\".\"country\" = 'USA'\n"
+                + "and \"customer\".\"state_province\" = 'WA'\n"
+                + "and \"customer\".\"city\" in ('Anacortes', 'Ballard', 'Bellingham', 'Bremerton', 'Burien', 'Edmonds', 'Everett', 'Issaquah', 'Kirkland', 'Lynnwood', 'Marysville', 'Olympia', 'Port Orchard', 'Puyallup', 'Redmond', 'Renton', 'Seattle', 'Sedro Woolley', 'Spokane', 'Tacoma', 'Walla Walla', 'Yakima')\n"
+                + "group by \"time_by_day\".\"the_year\",\n"
+                + " \"product_class\".\"product_family\",\n"
+                + " \"customer\".\"country\",\n"
+                + " \"customer\".\"state_province\",\n"
+                + " \"customer\".\"city\"")
         .returns(
             "c0=1997; c1=Drink; c2=USA; c3=WA; c4=Sedro Woolley; m0=58.0000\n");
   }
@@ -2938,13 +2941,13 @@ public class JdbcTest {
    * ORDER BY expression doesn't work with SELECT *</a>. */
   @Test public void testOrderStarByExpr() {
     CalciteAssert.hr()
-        .query("select * from \"hr\".\"emps\"\n"
-            + "order by - \"empid\"")
-        .explainContains(""
-            + "EnumerableCalc(expr#0..5=[{inputs}], proj#0..4=[{exprs}])\n"
-            + "  EnumerableSort(sort0=[$5], dir0=[ASC])\n"
-            + "    EnumerableCalc(expr#0..4=[{inputs}], expr#5=[-($t0)], proj#0..5=[{exprs}])\n"
-            + "      EnumerableTableScan(table=[[hr, emps]])")
+        .query(
+            "select * from \"hr\".\"emps\"\n" + "order by - \"empid\"")
+        .explainContains(
+            "" + "EnumerableCalc(expr#0..5=[{inputs}], proj#0..4=[{exprs}])\n"
+                + "  EnumerableSort(sort0=[$5], dir0=[ASC])\n"
+                + "    EnumerableCalc(expr#0..4=[{inputs}], expr#5=[-($t0)], proj#0..5=[{exprs}])\n"
+                + "      EnumerableTableScan(table=[[hr, emps]])")
         .returns(""
             + "empid=200; deptno=20; name=Eric; salary=8000.0; commission=500\n"
             + "empid=150; deptno=10; name=Sebastian; salary=7000.0; commission=null\n"
@@ -2954,10 +2957,11 @@ public class JdbcTest {
 
   @Test public void testOrderUnionStarByExpr() {
     CalciteAssert.hr()
-        .query("select * from \"hr\".\"emps\" where \"empid\" < 150\n"
-            + "union all\n"
-            + "select * from \"hr\".\"emps\" where \"empid\" > 150\n"
-            + "order by - \"empid\"")
+        .query(
+            "select * from \"hr\".\"emps\" where \"empid\" < 150\n"
+                + "union all\n"
+                + "select * from \"hr\".\"emps\" where \"empid\" > 150\n"
+                + "order by - \"empid\"")
         .returns(""
             + "empid=200; deptno=20; name=Eric; salary=8000.0; commission=500\n"
             + "empid=110; deptno=10; name=Theodore; salary=11500.0; commission=250\n"
@@ -2972,10 +2976,11 @@ public class JdbcTest {
             + "where \"customer_id\" < 5\n"
             + "order by cast(substring(\"postal_code\" from 3) as integer) desc")
         // ordered by last 3 digits (980, 674, 172, 057)
-        .returns("customer_id=3; postal_code=73980\n"
-            + "customer_id=4; postal_code=74674\n"
-            + "customer_id=2; postal_code=17172\n"
-            + "customer_id=1; postal_code=15057\n");
+        .returns(
+            "customer_id=3; postal_code=73980\n"
+                + "customer_id=4; postal_code=74674\n"
+                + "customer_id=2; postal_code=17172\n"
+                + "customer_id=1; postal_code=15057\n");
   }
 
   /** Tests ORDER BY ... DESC NULLS FIRST. */
@@ -2984,9 +2989,10 @@ public class JdbcTest {
         .with(CalciteAssert.Config.FOODMART_CLONE)
         .query("select \"store_id\", \"grocery_sqft\" from \"store\"\n"
             + "where \"store_id\" < 3 order by 2 desc nulls first")
-        .returns("store_id=0; grocery_sqft=null\n"
-            + "store_id=2; grocery_sqft=22271\n"
-            + "store_id=1; grocery_sqft=17475\n");
+        .returns(
+            "store_id=0; grocery_sqft=null\n"
+                + "store_id=2; grocery_sqft=22271\n"
+                + "store_id=1; grocery_sqft=17475\n");
   }
 
   /** Tests ORDER BY ... NULLS FIRST. */
@@ -3026,12 +3032,14 @@ public class JdbcTest {
   @Test public void testOrderByFetch() {
     CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
-        .query("select \"store_id\", \"grocery_sqft\" from \"store\"\n"
-            + "where \"store_id\" < 10\n"
-            + "order by 1 fetch first 5 rows only")
-        .explainContains("PLAN=EnumerableLimit(fetch=[5])\n"
-            + "  EnumerableCalc(expr#0..23=[{inputs}], expr#24=[10], expr#25=[<($t0, $t24)], store_id=[$t0], grocery_sqft=[$t16], $condition=[$t25])\n"
-            + "    EnumerableTableScan(table=[[foodmart2, store]])\n")
+        .query(
+            "select \"store_id\", \"grocery_sqft\" from \"store\"\n"
+                + "where \"store_id\" < 10\n"
+                + "order by 1 fetch first 5 rows only")
+        .explainContains(
+            "PLAN=EnumerableLimit(fetch=[5])\n"
+                + "  EnumerableCalc(expr#0..23=[{inputs}], expr#24=[10], expr#25=[<($t0, $t24)], store_id=[$t0], grocery_sqft=[$t16], $condition=[$t25])\n"
+                + "    EnumerableTableScan(table=[[foodmart2, store]])\n")
         .returns("store_id=0; grocery_sqft=null\n"
             + "store_id=1; grocery_sqft=17475\n"
             + "store_id=2; grocery_sqft=22271\n"
@@ -3043,9 +3051,10 @@ public class JdbcTest {
   @Test public void testOrderByOffsetFetch() {
     CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
-        .query("select \"store_id\", \"grocery_sqft\" from \"store\"\n"
-            + "where \"store_id\" < 10\n"
-            + "order by 1 offset 2 rows fetch next 5 rows only")
+        .query(
+            "select \"store_id\", \"grocery_sqft\" from \"store\"\n"
+                + "where \"store_id\" < 10\n"
+                + "order by 1 offset 2 rows fetch next 5 rows only")
         .returns("store_id=2; grocery_sqft=22271\n"
             + "store_id=3; grocery_sqft=24390\n"
             + "store_id=4; grocery_sqft=16844\n"
@@ -3075,8 +3084,8 @@ public class JdbcTest {
    * whole query to an empty rel. */
   @Test public void testLimitZero() {
     CalciteAssert.hr()
-        .query("select * from \"hr\".\"emps\"\n"
-            + "limit 0")
+        .query(
+            "select * from \"hr\".\"emps\"\n" + "limit 0")
         .returns("")
         .planContains(
             "return org.apache.calcite.linq4j.Linq4j.asEnumerable(new Object[] {})");
@@ -3085,11 +3094,12 @@ public class JdbcTest {
   /** Alternative formulation for {@link #testFetchStar()}. */
   @Test public void testLimitStar() {
     CalciteAssert.hr()
-        .query("select * from \"hr\".\"emps\"\n"
-            + "limit 2")
-        .returns(""
-            + "empid=100; deptno=10; name=Bill; salary=10000.0; commission=1000\n"
-            + "empid=200; deptno=20; name=Eric; salary=8000.0; commission=500\n");
+        .query(
+            "select * from \"hr\".\"emps\"\n" + "limit 2")
+        .returns(
+            ""
+                + "empid=100; deptno=10; name=Bill; salary=10000.0; commission=1000\n"
+                + "empid=200; deptno=20; name=Eric; salary=8000.0; commission=500\n");
   }
 
   /** Limit implemented using {@link Queryable#take}. Test case for
@@ -3114,21 +3124,23 @@ public class JdbcTest {
         .query(
             "select count(*) as c from \"foodmart\".\"store\" as p1 join \"foodmart\".\"store\" as p2 using (\"store_id\")")
         .returns("C=25\n")
-        .explainContains("JdbcToEnumerableConverter\n"
-            + "  JdbcAggregate(group=[{}], C=[COUNT()])\n"
-            + "    JdbcJoin(condition=[=($0, $1)], joinType=[inner])\n"
-            + "      JdbcProject(store_id=[$0])\n"
-            + "        JdbcTableScan(table=[[foodmart, store]])\n"
-            + "      JdbcProject(store_id=[$0])\n"
-            + "        JdbcTableScan(table=[[foodmart, store]])\n");
+        .explainContains(
+            "JdbcToEnumerableConverter\n"
+                + "  JdbcAggregate(group=[{}], C=[COUNT()])\n"
+                + "    JdbcJoin(condition=[=($0, $1)], joinType=[inner])\n"
+                + "      JdbcProject(store_id=[$0])\n"
+                + "        JdbcTableScan(table=[[foodmart, store]])\n"
+                + "      JdbcProject(store_id=[$0])\n"
+                + "        JdbcTableScan(table=[[foodmart, store]])\n");
   }
 
   /** Tests composite GROUP BY where one of the columns has NULL values. */
   @Test public void testGroupByNull() {
     CalciteAssert.hr()
-        .query("select \"deptno\", \"commission\", sum(\"salary\") s\n"
-            + "from \"hr\".\"emps\"\n"
-            + "group by \"deptno\", \"commission\"")
+        .query(
+            "select \"deptno\", \"commission\", sum(\"salary\") s\n"
+                + "from \"hr\".\"emps\"\n"
+                + "group by \"deptno\", \"commission\"")
         .returnsUnordered(
             "deptno=10; commission=null; S=7000.0",
             "deptno=20; commission=500; S=8000.0",
@@ -3173,8 +3185,8 @@ public class JdbcTest {
    * runtime</a>. */
   @Test public void testSelectDistinctStar() {
     CalciteAssert.hr()
-        .query("select distinct *\n"
-            + "from \"hr\".\"emps\"\n")
+        .query(
+            "select distinct *\n" + "from \"hr\".\"emps\"\n")
         .returnsCount(4)
         .planContains(".distinct(");
   }
@@ -3186,29 +3198,26 @@ public class JdbcTest {
         .query("select distinct \"empid\" > 140 as c, \"deptno\"\n"
             + "from \"hr\".\"emps\"\n")
         .returnsUnordered(
-            "C=false; deptno=10",
-            "C=true; deptno=10",
-            "C=true; deptno=20")
+            "C=false; deptno=10", "C=true; deptno=10", "C=true; deptno=20")
         .planContains(".distinct(");
   }
 
   /** Same result (and plan) as {@link #testSelectDistinct}. */
   @Test public void testGroupByNoAggregates() {
     CalciteAssert.hr()
-        .query("select \"deptno\"\n"
-            + "from \"hr\".\"emps\"\n"
-            + "group by \"deptno\"")
+        .query(
+            "select \"deptno\"\n" + "from \"hr\".\"emps\"\n"
+                + "group by \"deptno\"")
         .returnsUnordered(
-            "deptno=10",
-            "deptno=20");
+            "deptno=10", "deptno=20");
   }
 
   /** Same result (and plan) as {@link #testSelectDistinct}. */
   @Test public void testGroupByNoAggregatesAllColumns() {
     CalciteAssert.hr()
-        .query("select \"deptno\"\n"
-            + "from \"hr\".\"emps\"\n"
-            + "group by \"deptno\", \"empid\", \"name\", \"salary\", \"commission\"")
+        .query(
+            "select \"deptno\"\n" + "from \"hr\".\"emps\"\n"
+                + "group by \"deptno\", \"empid\", \"name\", \"salary\", \"commission\"")
         .returnsCount(4)
         .planContains(".distinct(");
   }
@@ -3216,10 +3225,9 @@ public class JdbcTest {
   /** Same result (and plan) as {@link #testSelectDistinct}. */
   @Test public void testGroupByMax1IsNull() {
     CalciteAssert.hr()
-        .query("select * from (\n"
-            + "select max(1) max_id\n"
-            + "from \"hr\".\"emps\" where 1=2\n"
-            + ") where max_id is null")
+        .query(
+            "select * from (\n" + "select max(1) max_id\n"
+                + "from \"hr\".\"emps\" where 1=2\n" + ") where max_id is null")
         .returnsUnordered(
             "MAX_ID=null");
   }
@@ -3248,10 +3256,10 @@ public class JdbcTest {
   @Test public void testHavingNot2() throws IOException {
     CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
-        .query("select 1\n"
-            + "from \"store\"\n"
-            + "group by \"store\".\"store_street_address\"\n"
-            + "having NOT (sum(\"store\".\"grocery_sqft\") < 20000)")
+        .query(
+            "select 1\n" + "from \"store\"\n"
+                + "group by \"store\".\"store_street_address\"\n"
+                + "having NOT (sum(\"store\".\"grocery_sqft\") < 20000)")
         .returnsCount(10);
   }
 
@@ -3263,13 +3271,9 @@ public class JdbcTest {
         .query("select \"day\"\n"
             + "from \"days\"\n"
             + "order by \"day\"")
-        .returns("day=1\n"
-            + "day=2\n"
-            + "day=3\n"
-            + "day=4\n"
-            + "day=5\n"
-            + "day=6\n"
-            + "day=7\n");
+        .returns(
+            "day=1\n" + "day=2\n" + "day=3\n" + "day=4\n" + "day=5\n"
+                + "day=6\n" + "day=7\n");
   }
 
   /** ORDER BY on a sort-key does not require a sort. */
@@ -3299,13 +3303,14 @@ public class JdbcTest {
   @Test public void testCountStar() {
     CalciteAssert.hr()
         .query("select count(*) c from \"hr\".\"emps\", \"hr\".\"depts\"")
-        .convertContains("LogicalAggregate(group=[{}], C=[COUNT()])\n"
-            + "  LogicalProject(DUMMY=[0])\n"
-            + "    LogicalJoin(condition=[true], joinType=[inner])\n"
-            + "      LogicalProject(DUMMY=[0])\n"
-            + "        EnumerableTableScan(table=[[hr, emps]])\n"
-            + "      LogicalProject(DUMMY=[0])\n"
-            + "        EnumerableTableScan(table=[[hr, depts]])");
+        .convertContains(
+            "LogicalAggregate(group=[{}], C=[COUNT()])\n"
+                + "  LogicalProject(DUMMY=[0])\n"
+                + "    LogicalJoin(condition=[true], joinType=[inner])\n"
+                + "      LogicalProject(DUMMY=[0])\n"
+                + "        EnumerableTableScan(table=[[hr, emps]])\n"
+                + "      LogicalProject(DUMMY=[0])\n"
+                + "        EnumerableTableScan(table=[[hr, depts]])");
   }
 
   /** Same result (and plan) as {@link #testSelectDistinct}. */
@@ -3323,18 +3328,16 @@ public class JdbcTest {
   /** Tests that SUM and AVG over empty set return null. COUNT returns 0. */
   @Test public void testAggregateEmpty() {
     CalciteAssert.hr()
-        .query("select\n"
-            + " count(*) as cs,\n"
-            + " count(\"deptno\") as c,\n"
-            + " sum(\"deptno\") as s,\n"
-            + " avg(\"deptno\") as a\n"
-            + "from \"hr\".\"emps\"\n"
-            + "where \"deptno\" < 0")
-        .explainContains(""
-            + "PLAN=EnumerableCalc(expr#0..1=[{inputs}], expr#2=[0], expr#3=[=($t0, $t2)], expr#4=[null], expr#5=[CASE($t3, $t4, $t1)], expr#6=[/($t5, $t0)], expr#7=[CAST($t6):JavaType(class java.lang.Integer)], CS=[$t0], C=[$t0], S=[$t5], A=[$t7])\n"
-            + "  EnumerableAggregate(group=[{}], CS=[COUNT()], agg#1=[$SUM0($1)])\n"
-            + "    EnumerableCalc(expr#0..4=[{inputs}], expr#5=[0], expr#6=[<($t1, $t5)], proj#0..4=[{exprs}], $condition=[$t6])\n"
-            + "      EnumerableTableScan(table=[[hr, emps]])\n")
+        .query(
+            "select\n" + " count(*) as cs,\n" + " count(\"deptno\") as c,\n"
+                + " sum(\"deptno\") as s,\n" + " avg(\"deptno\") as a\n"
+                + "from \"hr\".\"emps\"\n" + "where \"deptno\" < 0")
+        .explainContains(
+            ""
+                + "PLAN=EnumerableCalc(expr#0..1=[{inputs}], expr#2=[0], expr#3=[=($t0, $t2)], expr#4=[null], expr#5=[CASE($t3, $t4, $t1)], expr#6=[/($t5, $t0)], expr#7=[CAST($t6):JavaType(class java.lang.Integer)], CS=[$t0], C=[$t0], S=[$t5], A=[$t7])\n"
+                + "  EnumerableAggregate(group=[{}], CS=[COUNT()], agg#1=[$SUM0($1)])\n"
+                + "    EnumerableCalc(expr#0..4=[{inputs}], expr#5=[0], expr#6=[<($t1, $t5)], proj#0..4=[{exprs}], $condition=[$t6])\n"
+                + "      EnumerableTableScan(table=[[hr, emps]])\n")
         .returns("CS=0; C=0; S=null; A=null\n");
   }
 
@@ -3372,8 +3375,8 @@ public class JdbcTest {
   @Test public void testOrderByOnSortedTable() {
     CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
-        .query("select * from \"time_by_day\"\n"
-            + "order by \"time_id\"")
+        .query(
+            "select * from \"time_by_day\"\n" + "order by \"time_id\"")
         .explainContains(
             "PLAN=EnumerableTableScan(table=[[foodmart2, time_by_day]])\n");
   }
@@ -3382,12 +3385,13 @@ public class JdbcTest {
   @Test public void testOrderByOnSortedTable2() {
     CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
-        .query("select \"time_id\", \"the_date\" from \"time_by_day\"\n"
-            + "where \"time_id\" < 370\n"
-            + "order by \"time_id\"")
-        .returns("time_id=367; the_date=1997-01-01 00:00:00\n"
-            + "time_id=368; the_date=1997-01-02 00:00:00\n"
-            + "time_id=369; the_date=1997-01-03 00:00:00\n")
+        .query(
+            "select \"time_id\", \"the_date\" from \"time_by_day\"\n"
+                + "where \"time_id\" < 370\n" + "order by \"time_id\"")
+        .returns(
+            "time_id=367; the_date=1997-01-01 00:00:00\n"
+                + "time_id=368; the_date=1997-01-02 00:00:00\n"
+                + "time_id=369; the_date=1997-01-03 00:00:00\n")
         .explainContains(""
             + "PLAN=EnumerableCalc(expr#0..9=[{inputs}], expr#10=[370], expr#11=[<($t0, $t10)], proj#0..1=[{exprs}], $condition=[$t11])\n"
             + "  EnumerableTableScan(table=[[foodmart2, time_by_day]])\n\n");
@@ -3395,13 +3399,12 @@ public class JdbcTest {
 
   @Test public void testWithInsideWhereExists() {
     CalciteAssert.hr()
-        .query("select \"deptno\" from \"hr\".\"emps\"\n"
-            + "where exists (\n"
-            + "  with dept2 as (select * from \"hr\".\"depts\" where \"depts\".\"deptno\" >= \"emps\".\"deptno\")\n"
-            + "  select 1 from dept2 where \"deptno\" <= \"emps\".\"deptno\")")
-        .returnsUnordered("deptno=10",
-            "deptno=10",
-            "deptno=10");
+        .query(
+            "select \"deptno\" from \"hr\".\"emps\"\n" + "where exists (\n"
+                + "  with dept2 as (select * from \"hr\".\"depts\" where \"depts\".\"deptno\" >= \"emps\".\"deptno\")\n"
+                + "  select 1 from dept2 where \"deptno\" <= \"emps\".\"deptno\")")
+        .returnsUnordered(
+            "deptno=10", "deptno=10", "deptno=10");
   }
 
   @Test public void testWithOrderBy() {
@@ -3409,11 +3412,12 @@ public class JdbcTest {
         .query("with emp2 as (select * from \"hr\".\"emps\")\n"
             + "select * from emp2\n"
             + "order by \"deptno\" desc, \"empid\" desc")
-        .returns(""
-            + "empid=200; deptno=20; name=Eric; salary=8000.0; commission=500\n"
-            + "empid=150; deptno=10; name=Sebastian; salary=7000.0; commission=null\n"
-            + "empid=110; deptno=10; name=Theodore; salary=11500.0; commission=250\n"
-            + "empid=100; deptno=10; name=Bill; salary=10000.0; commission=1000\n");
+        .returns(
+            ""
+                + "empid=200; deptno=20; name=Eric; salary=8000.0; commission=500\n"
+                + "empid=150; deptno=10; name=Sebastian; salary=7000.0; commission=null\n"
+                + "empid=110; deptno=10; name=Theodore; salary=11500.0; commission=250\n"
+                + "empid=100; deptno=10; name=Bill; salary=10000.0; commission=1000\n");
   }
 
   /** Tests windowed aggregation. */
@@ -3440,33 +3444,26 @@ public class JdbcTest {
             "deptno=10; empid=110; S=21710.0; FIVE=5; M=10000.0; C=2",
             "deptno=10; empid=150; S=18760.0; FIVE=5; M=7000.0; C=2",
             "deptno=20; empid=200; S=8200.0; FIVE=5; M=8000.0; C=1")
-        .planContains(CalcitePrepareImpl.DEBUG
-            ? "_list.add(new Object[] {\n"
-            + "        row[0],\n" // box-unbox is optimized
-            + "        row[1],\n"
-            + "        row[2],\n"
-            + "        row[3],\n"
-            + "        COUNTa0w0,\n"
-            + "        $SUM0a1w0,\n"
-            + "        MINa2w0,\n"
-            + "        COUNTa3w0});"
-            : "_list.add(new Object[] {\n"
-                + "        row[0],\n" // box-unbox is optimized
-                + "        row[1],\n"
-                + "        row[2],\n"
-                + "        row[3],\n"
-                + "        a0w0,\n"
-                + "        a1w0,\n"
-                + "        a2w0,\n"
-                + "        a3w0});")
-        .planContains("return new Object[] {\n"
-            + "                  current[1],\n"
-            + "                  current[0],\n"
-            // Float.valueOf(SqlFunctions.toFloat(current[5])) comes from SUM0
-            + "                  org.apache.calcite.runtime.SqlFunctions.toLong(current[4]) > 0L ? Float.valueOf(org.apache.calcite.runtime.SqlFunctions.toFloat(current[5])) : (Float) null,\n"
-            + "                  5,\n"
-            + "                  current[6],\n"
-            + "                  current[7]};\n");
+        .planContains(
+            CalcitePrepareImpl.DEBUG
+                ? "_list.add(new Object[] {\n" + "        row[0],\n"
+                // box-unbox is optimized
+                + "        row[1],\n" + "        row[2],\n"
+                + "        row[3],\n" + "        COUNTa0w0,\n"
+                + "        $SUM0a1w0,\n" + "        MINa2w0,\n"
+                + "        COUNTa3w0});"
+                : "_list.add(new Object[] {\n" + "        row[0],\n"
+                    // box-unbox is optimized
+                    + "        row[1],\n" + "        row[2],\n"
+                    + "        row[3],\n" + "        a0w0,\n"
+                    + "        a1w0,\n" + "        a2w0,\n" + "        a3w0});")
+        .planContains(
+            "return new Object[] {\n" + "                  current[1],\n"
+                + "                  current[0],\n"
+                // Float.valueOf(SqlFunctions.toFloat(current[5])) comes from SUM0
+                + "                  org.apache.calcite.runtime.SqlFunctions.toLong(current[4]) > 0L ? Float.valueOf(org.apache.calcite.runtime.SqlFunctions.toFloat(current[5])) : (Float) null,\n"
+                + "                  5,\n" + "                  current[6],\n"
+                + "                  current[7]};\n");
   }
 
   /** Tests windowed aggregation with multiple windows.
@@ -3474,21 +3471,17 @@ public class JdbcTest {
    * Some windows have no PARTITION BY clause. */
   @Test public void testWinAgg2() {
     CalciteAssert.hr()
-        .query("select"
-            + " \"deptno\",\n"
-            + " \"empid\",\n"
-            + "sum(\"salary\" + \"empid\") over w as s,\n"
-            + " 5 as five,\n"
-            + " min(\"salary\") over w as m,\n"
-            + " count(*) over w as c,\n"
-            + " count(*) over w2 as c2,\n"
-            + " count(*) over w11 as c11,\n"
-            + " count(*) over w11dept as c11dept\n"
-            + "from \"hr\".\"emps\"\n"
-            + "window w as (order by \"empid\" rows 1 preceding),\n"
-            + " w2 as (order by \"empid\" rows 2 preceding),\n"
-            + " w11 as (order by \"empid\" rows between 1 preceding and 1 following),\n"
-            + " w11dept as (partition by \"deptno\" order by \"empid\" rows between 1 preceding and 1 following)")
+        .query(
+            "select" + " \"deptno\",\n" + " \"empid\",\n"
+                + "sum(\"salary\" + \"empid\") over w as s,\n" + " 5 as five,\n"
+                + " min(\"salary\") over w as m,\n" + " count(*) over w as c,\n"
+                + " count(*) over w2 as c2,\n" + " count(*) over w11 as c11,\n"
+                + " count(*) over w11dept as c11dept\n"
+                + "from \"hr\".\"emps\"\n"
+                + "window w as (order by \"empid\" rows 1 preceding),\n"
+                + " w2 as (order by \"empid\" rows 2 preceding),\n"
+                + " w11 as (order by \"empid\" rows between 1 preceding and 1 following),\n"
+                + " w11dept as (partition by \"deptno\" order by \"empid\" rows between 1 preceding and 1 following)")
         .typeIs(
             "[deptno INTEGER NOT NULL, empid INTEGER NOT NULL, S REAL, FIVE INTEGER NOT NULL, M REAL, C BIGINT NOT NULL, C2 BIGINT NOT NULL, C11 BIGINT NOT NULL, C11DEPT BIGINT NOT NULL]")
         // Check that optimizes for window whose PARTITION KEY is empty
@@ -3554,14 +3547,13 @@ public class JdbcTest {
   /** Tests for RANK and ORDER BY ... DESCENDING, NULLS FIRST, NULLS LAST. */
   @Test public void testWinAggRank() {
     CalciteAssert.hr()
-        .query("select  \"deptno\",\n"
-            + " \"empid\",\n"
-            + " \"commission\",\n"
-            + " rank() over (partition by \"deptno\" order by \"commission\" desc nulls first) as rcnf,\n"
-            + " rank() over (partition by \"deptno\" order by \"commission\" desc nulls last) as rcnl,\n"
-            + " rank() over (partition by \"deptno\" order by \"empid\") as r,\n"
-            + " rank() over (partition by \"deptno\" order by \"empid\" desc) as rd\n"
-            + "from \"hr\".\"emps\"")
+        .query(
+            "select  \"deptno\",\n" + " \"empid\",\n" + " \"commission\",\n"
+                + " rank() over (partition by \"deptno\" order by \"commission\" desc nulls first) as rcnf,\n"
+                + " rank() over (partition by \"deptno\" order by \"commission\" desc nulls last) as rcnl,\n"
+                + " rank() over (partition by \"deptno\" order by \"empid\") as r,\n"
+                + " rank() over (partition by \"deptno\" order by \"empid\" desc) as rd\n"
+                + "from \"hr\".\"emps\"")
         .typeIs(
             "[deptno INTEGER NOT NULL, empid INTEGER NOT NULL, commission INTEGER, RCNF INTEGER NOT NULL, RCNL INTEGER NOT NULL, R INTEGER NOT NULL, RD INTEGER NOT NULL]")
         .returnsUnordered(
@@ -3875,9 +3867,10 @@ public class JdbcTest {
    */
   @Test public void testLagInvalidOffsetArgument() {
     CalciteAssert.that()
-        .query("select t.*,\n"
-            + "  lag(rn, DATE '2014-06-20', 42) over (order by rn) l\n"
-            + "from " + START_OF_GROUP_DATA)
+        .query(
+            "select t.*,\n"
+                + "  lag(rn, DATE '2014-06-20', 42) over (order by rn) l\n"
+                + "from " + START_OF_GROUP_DATA)
         .throws_(
             "Cannot apply 'LAG' to arguments of type 'LAG(<INTEGER>, <DATE>, <INTEGER>)'");
   }
@@ -3887,8 +3880,9 @@ public class JdbcTest {
    */
   @Test public void testNtile1() {
     CalciteAssert.that()
-        .query("select rn, ntile(1) over (order by rn) l\n"
-            + " from " + START_OF_GROUP_DATA)
+        .query(
+            "select rn, ntile(1) over (order by rn) l\n" + " from "
+                + START_OF_GROUP_DATA)
         .typeIs(
             "[RN INTEGER NOT NULL, L INTEGER NOT NULL]")
         .returnsUnordered(
@@ -3948,8 +3942,9 @@ public class JdbcTest {
    */
   @Test public void testNtileNegativeArg() {
     CalciteAssert.that()
-        .query("select rn, ntile(-1) over (order by rn) l\n"
-            + " from " + START_OF_GROUP_DATA)
+        .query(
+            "select rn, ntile(-1) over (order by rn) l\n" + " from "
+                + START_OF_GROUP_DATA)
         .throws_(
             "Argument to function 'NTILE' must be a positive integer literal");
   }
@@ -3968,11 +3963,10 @@ public class JdbcTest {
   /** Tests for FIRST_VALUE */
   @Test public void testWinAggFirstValue() {
     CalciteAssert.hr()
-        .query("select  \"deptno\",\n"
-            + " \"empid\",\n"
-            + " \"commission\",\n"
-            + " first_value(\"commission\") over (partition by \"deptno\" order by \"empid\") as r\n"
-            + "from \"hr\".\"emps\"")
+        .query(
+            "select  \"deptno\",\n" + " \"empid\",\n" + " \"commission\",\n"
+                + " first_value(\"commission\") over (partition by \"deptno\" order by \"empid\") as r\n"
+                + "from \"hr\".\"emps\"")
         .typeIs(
             "[deptno INTEGER NOT NULL, empid INTEGER NOT NULL, commission INTEGER, R INTEGER]")
         .returnsUnordered(
@@ -4116,11 +4110,10 @@ public class JdbcTest {
     // Rows are deemed "equal to" the current row per the ORDER BY clause.
     // If there is no ORDER BY clause, CURRENT ROW has the same effect as
     // UNBOUNDED FOLLOWING; that is, no filtering effect at all.
-    checkOuter("select *,\n"
-            + " count(*) over (partition by deptno) as m1,\n"
+    checkOuter(
+        "select *,\n" + " count(*) over (partition by deptno) as m1,\n"
             + " count(*) over (partition by deptno order by ename) as m2,\n"
-            + " count(*) over () as m3\n"
-            + "from emp",
+            + " count(*) over () as m3\n" + "from emp",
         "ENAME=Adam ; DEPTNO=50; GENDER=M; M1=2; M2=1; M3=9",
         "ENAME=Alice; DEPTNO=30; GENDER=F; M1=2; M2=1; M3=9",
         "ENAME=Bob  ; DEPTNO=10; GENDER=M; M1=2; M2=1; M3=9",
@@ -4313,8 +4306,9 @@ public class JdbcTest {
   @Test public void testNotInEmptyQuery() {
     // RHS is empty, therefore returns all rows from emp, including the one
     // with deptno = NULL.
-    checkOuter("select deptno from emp where deptno not in (\n"
-        + "select deptno from dept where deptno = -1)",
+    checkOuter(
+        "select deptno from emp where deptno not in (\n"
+            + "select deptno from dept where deptno = -1)",
         "DEPTNO=null",
         "DEPTNO=10",
         "DEPTNO=10",
@@ -4414,7 +4408,8 @@ public class JdbcTest {
             + " (select \"name\" from \"hr\".\"depts\"\n"
             + "  where \"deptno\" = e.\"deptno\") as dname\n"
             + "from \"hr\".\"emps\" as e")
-        .returnsUnordered("empid=100; deptno=10; DNAME=Sales",
+        .returnsUnordered(
+            "empid=100; deptno=10; DNAME=Sales",
             "empid=110; deptno=10; DNAME=Sales",
             "empid=150; deptno=10; DNAME=Sales",
             "empid=200; deptno=20; DNAME=null");
@@ -4435,9 +4430,49 @@ public class JdbcTest {
         .returnsCount(0);
   }
 
-  @Test public void testLeftJoin() {
+  // Original test case. To be removed after the bug has been fixed.
+  @Test public void testHaving2() throws SQLException {
+    Connection connection =
+        DriverManager.getConnection("jdbc:calcite:");
+    CalciteConnection calciteConnection =
+        connection.unwrap(CalciteConnection.class);
+    SchemaPlus rootSchema = calciteConnection.getRootSchema();
+    rootSchema.add("hr", new ReflectiveSchema(new Hr2Schema()));
+
+    Statement statement = calciteConnection.createStatement();
+    ResultSet resultSet = statement.executeQuery(
+        "select d.\"deptno\", min(e.\"empid\") empid "
+            + "from \"hr\".\"emps\" as e "
+            + "join \"hr\".\"depts\" as d "
+            + "on e.\"deptno\" = d.\"deptno\" "
+            + "group by d.\"deptno\" "
+            + "having count(*) > 1");
+    while (resultSet.next()) {
+      int deptno = resultSet.getInt("deptno");
+      int minEmp = resultSet.getInt("empid");
+      System.out.println(deptno + "->" + minEmp);
+    }
+  }
+
+  @Test public void testHaving() throws SQLException {
     CalciteAssert.hr()
-        .query("select e.\"deptno\", d.\"deptno\"\n"
+        .query("select d.deptno, min(e.empid) as empid\n"
+                + "from (values (100, 'Bill', 1),\n"
+                + "  (200, 'Eric', 1),\n"
+                + "  (150, 'Sebastian', 3)) as e(empid, name, deptno)\n"
+                + "join (values (1, 'LeaderShip'),\n"
+                + "  (2, 'TestGroup'),\n"
+                + "  (3, 'Development')) as d(deptno, name)\n"
+                + "on e.deptno = d.deptno\n"
+                + "group by d.deptno\n"
+                + "having count(*) > 1")
+        .returnsUnordered(
+            "DEPTNO=1; EMPID=100");
+  }
+
+  @Test public void testLeftJoin() {
+    CalciteAssert.hr().query(
+        "select e.\"deptno\", d.\"deptno\"\n"
             + "from \"hr\".\"emps\" as e\n"
             + "  left join \"hr\".\"depts\" as d using (\"deptno\")")
         .returnsUnordered(
@@ -6454,6 +6489,41 @@ public class JdbcTest {
     public final Dependent[] locations = {
       new Dependent(10, "San Francisco"),
       new Dependent(20, "San Diego"),
+    };
+
+    public QueryableTable foo(int count) {
+      return generateStrings(count);
+    }
+
+    public TranslatableTable view(String s) {
+      return JdbcTest.view(s);
+    }
+  }
+
+  public static class Hr2Schema {
+    @Override public String toString() {
+      return "Hr2Schema";
+    }
+
+    public final Employee[] emps = {
+        new Employee(100, 1, "Bill", 10000, 1000),
+        new Employee(200, 1, "Eric", 8000, 500),
+        new Employee(150, 3, "Sebastian", 7000, null),
+    };
+    public final Department[] depts = {
+        new Department(1, "LeaderShip", Arrays.asList(emps[0], emps[2]),
+            new Location(-122, 38)),
+        new Department(2, "TestGroup", Collections.<Employee>emptyList(),
+            new Location(0, 52)),
+        new Department(3, "HR", Collections.singletonList(emps[1]), null),
+    };
+    public final Dependent[] dependents = {
+        new Dependent(10, "Michael"),
+        new Dependent(10, "Jane"),
+    };
+    public final Dependent[] locations = {
+        new Dependent(10, "San Francisco"),
+        new Dependent(20, "San Diego"),
     };
 
     public QueryableTable foo(int count) {

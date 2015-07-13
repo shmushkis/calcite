@@ -29,6 +29,7 @@ import org.junit.Test;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.sql.SQLException;
 
 /**
  * Unit test for {@link org.apache.calcite.sql2rel.SqlToRelConverter}.
@@ -148,6 +149,18 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
         "SELECT * FROM emp LEFT JOIN ("
             + "SELECT *, deptno * 5 as empno FROM dept) "
             + "USING (deptno,empno)",
+        "${plan}");
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-xxx">[CALCITE-xxx]
+   * NPE while translating USING on VALUES</a>. */
+  @Test public void testValuesUsing() throws SQLException {
+    check("select d.deptno, min(e.empid) as empid\n"
+            + "from (values (100, 'Bill', 1)) as e(empid, name, deptno)\n"
+            + "join (values (1, 'LeaderShip')) as d(deptno, name)\n"
+            + "  using (deptno)\n"
+            + "group by d.deptno",
         "${plan}");
   }
 
@@ -1198,7 +1211,7 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
   @Test public void testSubqueryLimitOne() {
     sql("select deptno\n"
         + "from EMP\n"
-        + "where deptno > (select deptno \n"
+        + "where deptno > (select deptno\n"
         + "from EMP order by deptno limit 1)")
         .convertsTo("${plan}");
   }
@@ -1222,10 +1235,10 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
    * Scan HAVING clause for sub-queries and IN-lists</a> relating to IN.
    */
   @Test public void testHavingAggrFunctionIn() {
-    sql("select deptno \n"
-        + "from emp \n"
-        + "group by deptno \n"
-        + "having sum(case when deptno in (1, 2) then 0 else 1 end) + \n"
+    sql("select deptno\n"
+        + "from emp\n"
+        + "group by deptno\n"
+        + "having sum(case when deptno in (1, 2) then 0 else 1 end) +\n"
         + "sum(case when deptno in (3, 4) then 0 else 1 end) > 10")
         .convertsTo("${plan}");
   }
@@ -1237,14 +1250,14 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
    * the HAVING clause.
    */
   @Test public void testHavingInSubqueryWithAggrFunction() {
-    sql("select sal \n"
-        + "from emp \n"
-        + "group by sal \n"
-        + "having sal in \n"
-            + "(select deptno \n"
-            + "from dept \n"
-            + "group by deptno \n"
-            + "having sum(deptno) > 0)")
+    sql("select sal\n"
+        + "from emp\n"
+        + "group by sal\n"
+        + "having sal in (\n"
+        + "  select deptno\n"
+        + "  from dept\n"
+        + "  group by deptno\n"
+        + "  having sum(deptno) > 0)")
         .convertsTo("${plan}");
   }
 

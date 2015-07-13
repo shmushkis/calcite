@@ -250,6 +250,14 @@ public class RelOptRulesTest extends RelOptTestBase {
   }
 
   /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-xxx">[CALCITE-xxx],
+   * Wrongly push count(*) past aggregate</a>. */
+  @Test public void testPushFilterPastAggThree() {
+    checkPlanning(FilterAggregateTransposeRule.INSTANCE,
+        "select deptno from emp group by deptno having count(*) > 1");
+  }
+
+  /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-448">[CALCITE-448],
    * FilterIntoJoinRule creates filters containing invalid RexInputRef</a>. */
   @Test public void testPushFilterPastProject() {
