@@ -21,20 +21,23 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexTransformer;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import com.google.common.collect.ImmutableList;
+
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.LinkedList;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -329,17 +332,66 @@ public class RexTransformerTest {
     RelDataType intType = typeFactory.createTypeWithNullability(nonNullIntType, true);
 
     // Non nullable RexNode with integer return type
-    RexNode sumZeroFunction = rexBuilder.makeCall(nonNullIntType, SqlStdOperatorTable.SUM0, new LinkedList<RexNode>());
+    RexNode sumZeroFunction =
+        rexBuilder.makeCall(nonNullIntType, SqlStdOperatorTable.SUM0,
+            new LinkedList<RexNode>());
 
     /* Pass nullable integer type, RexNode with non nullable integer type to ensureType()
      * along with 'false' flag to ignore nullability. Since both the types are the same
      * we expect to get the same RexNode back from ensureType() function. This isn't
      * the case instead we seem to be adding a cast on top of the RexNode.
      */
-    RexNode ensuredTypeSumZeroFunction = (rexBuilder.ensureType(intType, sumZeroFunction, false));
+    RexNode ensuredTypeSumZeroFunction = rexBuilder.ensureType(intType, sumZeroFunction, false);
 
     assertEquals(sumZeroFunction, ensuredTypeSumZeroFunction);
 
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-807">[CALCITE-807]
+   * RexBuilder.ensureType doesn't ensure type</a> that proves that existing
+   * functionality is correct. But the name of the {@code matchNullability}
+   * argument to {@link RexBuilder#ensureType(RelDataType, RexNode, boolean)}
+   * is very misleading and should be changed to {@code ignoreNullability}. */
+  @Test public void testEnsureTypeIgnoreNullability2() {
+    final RelDataType nonNullIntType =
+        typeFactory.createSqlType(SqlTypeName.INTEGER);
+    assertThat(nonNullIntType.getFullTypeString(), is("INTEGER NOT NULL"));
+
+    final RelDataType nonNullBigintType =
+        typeFactory.createSqlType(SqlTypeName.BIGINT);
+    assertThat(nonNullBigintType.getFullTypeString(), is("BIGINT NOT NULL"));
+
+    // Nullable BIGINT type
+    RelDataType bigintType =
+        typeFactory.createTypeWithNullability(nonNullBigintType, true);
+    assertThat(bigintType.getFullTypeString(), is("BIGINT"));
+
+    // Non nullable RexNode with integer return type
+    RexNode sumZeroFunction = rexBuilder.makeCall(nonNullIntType,
+        SqlStdOperatorTable.SUM0, ImmutableList.<RexNode>of());
+    assertThat(sumZeroFunction.getType().getFullTypeString(),
+        is("INTEGER NOT NULL"));
+
+    // Ignore nullability of target type.
+    // I.e. preserve the nullability of the expression,
+    // even though we are changing its type from INTEGER to BIGINT.
+    // Resulting expression has type BIGINT NOT NULL.
+    final boolean ignoreNullability = true;
+    RexNode ignore =
+        rexBuilder.ensureType(bigintType, sumZeroFunction, ignoreNullability);
+    assertThat(ignore.getType().getFullTypeString(),
+        is("BIGINT NOT NULL"));
+
+    // Do not ignore the nullability of target type.
+    // That is, honor the nullability of the target type.
+    // Resulting expression has type BIGINT (nulls allowed).
+    final boolean ignoreNullability2 = false;
+    RexNode honor =
+        rexBuilder.ensureType(bigintType, sumZeroFunction, ignoreNullability2);
+    assertThat(honor.getType(), is(bigintType));
+    assertThat(honor.getType().getFullTypeString(),
+        is("BIGINT"));
   }
 }
 
