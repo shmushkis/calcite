@@ -1399,6 +1399,10 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
       final Pair<String, RelDataType> oldKey =
           Pair.of(oldDigest, rel.getRowType());
       final RelNode removed = mapDigestToRel.remove(oldKey);
+      if (removed == null) {
+        return;
+      }
+      assert !isTrivial(rel);
       assert removed == rel;
       final String newDigest = rel.recomputeDigest();
       if (LOGGER.isLoggable(Level.FINER)) {
@@ -1446,6 +1450,7 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
   }
 
   private RelSubset remove(RelNode rel) {
+    mapDigestToRel.remove(key(rel));
     ruleQueue.remove(rel);
 
     // Remove back-links from children.
@@ -1546,7 +1551,11 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
         RelSubset newSubset = canonize(subset);
         if (newSubset != subset) {
           rel.replaceInput(i, newSubset);
-          if (subset.set != newSubset.set) {
+          if (isTrivial(rel)) {
+            LOGGER.finer("After renaming rel#" + rel.getId()
+                + ", it is now cyclic; removing");
+            remove(rel);
+          } else if (subset.set != newSubset.set) {
             subset.set.parents.remove(rel);
             newSubset.set.parents.add(rel);
           }
