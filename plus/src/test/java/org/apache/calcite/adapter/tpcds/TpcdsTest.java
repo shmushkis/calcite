@@ -42,7 +42,6 @@ import net.hydromatic.tpcds.query.Query;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Random;
 
@@ -251,7 +250,7 @@ public class TpcdsTest {
    *  order by i_item_id
    *          ,s_state
    *  LIMIT 100
-   * </pre></blockquote><code>
+   * </pre></blockquote>
    */
   @Test public void testQuery27Builder() throws Exception {
     final RelBuilder builder = RelBuilder.create(config().build());

@@ -65,20 +65,39 @@ public class AggregateJoinTransposeRule extends RelOptRule {
           LogicalJoin.class,
           RelFactories.DEFAULT_JOIN_FACTORY);
 
+  /** Extended instance of the rule that can push down aggregate functions. */
+  public static final AggregateJoinTransposeRule EXTENDED =
+      new AggregateJoinTransposeRule(LogicalAggregate.class,
+          RelFactories.DEFAULT_AGGREGATE_FACTORY,
+          LogicalJoin.class,
+          RelFactories.DEFAULT_JOIN_FACTORY, true);
+
   private final RelFactories.AggregateFactory aggregateFactory;
 
   private final RelFactories.JoinFactory joinFactory;
+
+  private final boolean allowFunctions;
 
   /** Creates an AggregateJoinTransposeRule. */
   public AggregateJoinTransposeRule(Class<? extends Aggregate> aggregateClass,
       RelFactories.AggregateFactory aggregateFactory,
       Class<? extends Join> joinClass,
       RelFactories.JoinFactory joinFactory) {
+    this(aggregateClass, aggregateFactory, joinClass, joinFactory, false);
+  }
+
+  /** Creates an AggregateJoinTransposeRule that may push down functions. */
+  public AggregateJoinTransposeRule(Class<? extends Aggregate> aggregateClass,
+      RelFactories.AggregateFactory aggregateFactory,
+      Class<? extends Join> joinClass,
+      RelFactories.JoinFactory joinFactory,
+      boolean allowFunctions) {
     super(
         operand(aggregateClass, null, Aggregate.IS_SIMPLE,
             operand(joinClass, any())));
     this.aggregateFactory = aggregateFactory;
     this.joinFactory = joinFactory;
+    this.allowFunctions = allowFunctions;
   }
 
   public void onMatch(RelOptRuleCall call) {
@@ -101,6 +120,10 @@ public class AggregateJoinTransposeRule extends RelOptRule {
     // If it is not an inner join, we do not push the
     // aggregate operator
     if (join.getJoinType() != JoinRelType.INNER) {
+      return;
+    }
+
+    if (!allowFunctions && !aggregate.getAggCallList().isEmpty()) {
       return;
     }
 

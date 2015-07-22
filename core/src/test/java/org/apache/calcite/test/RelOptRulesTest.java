@@ -1588,7 +1588,7 @@ public class RelOptRulesTest extends RelOptTestBase {
         .addRuleInstance(AggregateProjectMergeRule.INSTANCE)
         .build();
     final HepProgram program = new HepProgramBuilder()
-        .addRuleInstance(AggregateJoinTransposeRule.INSTANCE)
+        .addRuleInstance(AggregateJoinTransposeRule.EXTENDED)
         .build();
     final String sql = "select e.empno,d.deptno \n"
         + "from (select * from sales.emp where empno = 10) as e "
@@ -1602,7 +1602,7 @@ public class RelOptRulesTest extends RelOptTestBase {
         .addRuleInstance(AggregateProjectMergeRule.INSTANCE)
         .build();
     final HepProgram program = new HepProgramBuilder()
-        .addRuleInstance(AggregateJoinTransposeRule.INSTANCE)
+        .addRuleInstance(AggregateJoinTransposeRule.EXTENDED)
         .build();
     final String sql = "select e.empno,d.deptno \n"
         + "from (select * from sales.emp where empno = 10) as e "
@@ -1617,7 +1617,7 @@ public class RelOptRulesTest extends RelOptTestBase {
         .addRuleInstance(AggregateProjectMergeRule.INSTANCE)
         .build();
     final HepProgram program = new HepProgramBuilder()
-        .addRuleInstance(AggregateJoinTransposeRule.INSTANCE)
+        .addRuleInstance(AggregateJoinTransposeRule.EXTENDED)
         .build();
     final String sql = "select e.empno,d.deptno \n"
         + "from (select * from sales.emp where empno = 10) as e "
@@ -1632,7 +1632,7 @@ public class RelOptRulesTest extends RelOptTestBase {
         .addRuleInstance(AggregateProjectMergeRule.INSTANCE)
         .build();
     final HepProgram program = new HepProgramBuilder()
-        .addRuleInstance(AggregateJoinTransposeRule.INSTANCE)
+        .addRuleInstance(AggregateJoinTransposeRule.EXTENDED)
         .build();
     final String sql = "select e.empno,sum(sal) \n"
         + "from (select * from sales.emp where empno = 10) as e "
@@ -1647,7 +1647,7 @@ public class RelOptRulesTest extends RelOptTestBase {
         .addRuleInstance(AggregateProjectMergeRule.INSTANCE)
         .build();
     final HepProgram program = new HepProgramBuilder()
-        .addRuleInstance(AggregateJoinTransposeRule.INSTANCE)
+        .addRuleInstance(AggregateJoinTransposeRule.EXTENDED)
         .build();
     final String sql = "select e.empno,\n"
         + "  min(sal) as min_sal, min(e.deptno) as min_deptno,\n"
@@ -1666,7 +1666,7 @@ public class RelOptRulesTest extends RelOptTestBase {
         .addRuleInstance(AggregateProjectMergeRule.INSTANCE)
         .build();
     final HepProgram program = new HepProgramBuilder()
-        .addRuleInstance(AggregateJoinTransposeRule.INSTANCE)
+        .addRuleInstance(AggregateJoinTransposeRule.EXTENDED)
         .build();
     final String sql = "select d.deptno,\n"
         + "  sum(sal) as sum_sal, count(*) as c\n"
@@ -1683,7 +1683,7 @@ public class RelOptRulesTest extends RelOptTestBase {
         .addRuleInstance(AggregateProjectMergeRule.INSTANCE)
         .build();
     final HepProgram program = new HepProgramBuilder()
-        .addRuleInstance(AggregateJoinTransposeRule.INSTANCE)
+        .addRuleInstance(AggregateJoinTransposeRule.EXTENDED)
         .build();
     final String sql =
         "select count(*) from sales.emp join sales.dept using (deptno)";

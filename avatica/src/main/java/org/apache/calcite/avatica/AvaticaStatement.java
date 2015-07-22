@@ -127,7 +127,6 @@ public abstract class AvaticaStatement
   public ResultSet executeQuery(String sql) throws SQLException {
     checkNotPreparedOrCallable("executeQuery(String)");
     try {
-      System.out.println(sql);
       executeInternal(sql);
       if (openResultSet == null) {
         throw connection.helper.createException(

@@ -256,6 +256,7 @@ public class RelMdColumnUniqueness {
   }
 
   public Boolean areColumnsUnique(
+      boolean dummy, // prevent method from being used
       HepRelVertex rel,
       ImmutableBitSet columns,
       boolean ignoreNulls) {
@@ -266,6 +267,7 @@ public class RelMdColumnUniqueness {
   }
 
   public Boolean areColumnsUnique(
+      boolean dummy, // prevent method from being used
       RelSubset rel,
       ImmutableBitSet columns,
       boolean ignoreNulls) {
