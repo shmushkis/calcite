@@ -170,9 +170,28 @@ public class AggregateJoinTransposeRule extends RelOptRule {
       }
       final ImmutableBitSet belowAggregateKey =
           belowAggregateKeyNotShifted.shift(-offset);
-      final Boolean unique =
-          RelMetadataQuery.areColumnsUnique(joinInput, belowAggregateKey);
-      if (unique != null && unique) {
+      final boolean unique;
+      if (!allowFunctions) {
+        assert aggregate.getAggCallList().isEmpty();
+        // If there are no functions, it doesn't matter as much whether we
+        // aggregate the inputs before the join, because there will not be
+        // any functions experiencing a cartesian product effect.
+        //
+        // But finding out whether the input is already unique requires a call
+        // to areColumnsUnique that currently (until [CALCITE-794] "Detect
+        // cycles when computing statistics" is fixed) places a heavy load on
+        // the metadata system.
+        //
+        // So we choose to imagine the the input is already unique, which is
+        // untrue but harmless.
+        //
+        unique = true;
+      } else {
+        final Boolean unique0 =
+            RelMetadataQuery.areColumnsUnique(joinInput, belowAggregateKey);
+        unique = unique0 != null && unique0;
+      }
+      if (unique) {
         ++uniqueCount;
         side.aggregate = false;
         side.newInput = joinInput;

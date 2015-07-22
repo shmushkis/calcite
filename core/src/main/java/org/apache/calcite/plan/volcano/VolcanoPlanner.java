@@ -1079,7 +1079,6 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
     addRule(AggregateRemoveRule.INSTANCE);
     addRule(UnionToDistinctRule.INSTANCE);
     addRule(ProjectRemoveRule.INSTANCE);
-    System.out.println("xx");
     addRule(AggregateJoinTransposeRule.INSTANCE);
     addRule(AggregateProjectMergeRule.INSTANCE);
     addRule(CalcRemoveRule.INSTANCE);
