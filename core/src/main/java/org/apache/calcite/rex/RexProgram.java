@@ -874,6 +874,10 @@ public class RexProgram {
       return false;
     }
 
+    public Boolean visitSubQuery(RexSubQuery subQuery) {
+      return false; // REVIEW
+    }
+
     public Boolean visitCorrelVariable(RexCorrelVariable correlVariable) {
       // Correlating variables are constant WITHIN A RESTART, so that's
       // good enough.

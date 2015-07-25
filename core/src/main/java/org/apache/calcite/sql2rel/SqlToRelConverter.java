@@ -33,6 +33,7 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.RelShuttle;
+import org.apache.calcite.rel.SingleRel;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Collect;
@@ -75,6 +76,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexRangeRef;
 import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.rex.RexWindowBound;
@@ -244,6 +246,10 @@ public class SqlToRelConverter {
       new HashMap<>();
 
   public final RelOptTable.ViewExpander viewExpander;
+
+  /** Whether to expand sub-queries. If false, each sub-query becomes a
+   * {@link org.apache.calcite.rex.RexSubQuery}. */
+  private boolean expand = true;
 
   //~ Constructors -----------------------------------------------------------
   /**
@@ -1013,10 +1019,11 @@ public class SqlToRelConverter {
 
     case IN:
       call = (SqlBasicCall) subQuery.node;
-      final SqlNode[] operands = call.getOperands();
-
-      SqlNode leftKeyNode = operands[0];
-      query = operands[1];
+      query = call.operand(1);
+      if (!expand && !(query instanceof SqlNodeList)) {
+        return;
+      }
+      final SqlNode leftKeyNode = call.operand(0);
 
       final List<RexNode> leftKeys;
       switch (leftKeyNode.getKind()) {
@@ -1127,7 +1134,10 @@ public class SqlToRelConverter {
       // If there is no correlation, the expression is replaced with a
       // boolean indicating whether the subquery returned 0 or >= 1 row.
       call = (SqlBasicCall) subQuery.node;
-      query = call.getOperands()[0];
+      query = call.operand(0);
+      if (!expand) {
+        return;
+      }
       converted = convertExists(query, RelOptUtil.SubqueryType.EXISTS,
           subQuery.logic, true, null);
       assert !converted.right;
@@ -1140,8 +1150,11 @@ public class SqlToRelConverter {
     case SCALAR_QUERY:
       // Convert the subquery.  If it's non-correlated, convert it
       // to a constant expression.
+      if (!expand) {
+        return;
+      }
       call = (SqlBasicCall) subQuery.node;
-      query = call.getOperands()[0];
+      query = call.operand(0);
       converted = convertExists(query, RelOptUtil.SubqueryType.SCALAR,
           subQuery.logic, true, null);
       assert !converted.right;
@@ -1393,7 +1406,7 @@ public class SqlToRelConverter {
         assert rightVals instanceof SqlCall;
         final SqlBasicCall call = (SqlBasicCall) rightVals;
         assert (call.getOperator() instanceof SqlRowOperator)
-            && call.getOperands().length == leftKeys.size();
+            && call.operandCount() == leftKeys.size();
         rexComparison =
             RexUtil.composeConjunction(
                 rexBuilder,
@@ -1884,8 +1897,7 @@ public class SqlToRelConverter {
     final SqlNode[] operands;
     switch (from.getKind()) {
     case AS:
-      operands = ((SqlBasicCall) from).getOperands();
-      convertFrom(bb, operands[0]);
+      convertFrom(bb, ((SqlCall) from).operand(0));
       return;
 
     case WITH_ITEM:
@@ -2808,6 +2820,10 @@ public class SqlToRelConverter {
    */
   public boolean isTrimUnusedFields() {
     return trimUnusedFields;
+  }
+
+  public void setExpand(boolean expand) {
+    this.expand = expand;
   }
 
   /**
@@ -4013,6 +4029,54 @@ public class SqlToRelConverter {
       // expressions.
       final SqlKind kind = expr.getKind();
       final SubQuery subQuery;
+      if (!expand) {
+        final SqlCall call;
+        final SqlNode query;
+        RelNode rel;
+        switch (kind) {
+        case IN:
+          call = (SqlCall) expr;
+          query = call.operand(1);
+          if (!(query instanceof SqlNodeList)) {
+            rel = convertQueryRecursive(query, false, null);
+            final SqlNode operand = call.operand(0);
+            List<SqlNode> nodes;
+            switch (operand.getKind()) {
+            case ROW:
+              nodes = ((SqlCall) operand).getOperandList();
+              break;
+            default:
+              nodes = ImmutableList.of(operand);
+            }
+            final ImmutableList.Builder<RexNode> builder =
+                ImmutableList.builder();
+            for (SqlNode node : nodes) {
+              builder.add(convertExpression(node));
+            }
+            return RexSubQuery.in(rel, builder.build());
+          }
+          break;
+
+        case EXISTS:
+          call = (SqlCall) expr;
+          query = Iterables.getOnlyElement(call.getOperandList());
+          rel = convertQueryRecursive(query, false, null);
+          while (rel instanceof Project
+              || rel instanceof Sort
+              && ((Sort) rel).fetch == null
+              && ((Sort) rel).offset == null) {
+            rel = ((SingleRel) rel).getInput();
+          }
+          return RexSubQuery.exists(rel);
+
+        case SCALAR_QUERY:
+          call = (SqlCall) expr;
+          query = Iterables.getOnlyElement(call.getOperandList());
+          rel = convertQueryRecursive(query, false, null);
+          return RexSubQuery.scalar(rel);
+        }
+      }
+
       switch (kind) {
       case CURSOR:
       case IN:

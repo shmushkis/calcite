@@ -603,6 +603,14 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
         public boolean argumentMustBeScalar(int ordinal) {
           return false;
         }
+
+        @Override public boolean validRexOperands(int count, boolean fail) {
+          if (count != 0) {
+            assert !fail : "wrong operand count " + count + " for " + this;
+            return false;
+          }
+          return true;
+        }
       };
 
   public static final SqlPrefixOperator NOT =

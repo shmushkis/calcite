@@ -84,6 +84,14 @@ public class SqlInOperator extends SqlBinaryOperator {
     return isNotIn;
   }
 
+  @Override public boolean validRexOperands(int count, boolean fail) {
+    if (count == 0) {
+      assert !fail : "wrong operand count " + count + " for " + this;
+      return false;
+    }
+    return true;
+  }
+
   public RelDataType deriveType(
       SqlValidator validator,
       SqlValidatorScope scope,
