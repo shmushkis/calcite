@@ -4038,7 +4038,7 @@ public class SqlToRelConverter {
           call = (SqlCall) expr;
           query = call.operand(1);
           if (!(query instanceof SqlNodeList)) {
-            rel = convertQueryRecursive(query, false, null);
+            rel = convertQueryRecursive(query, false, null).project();
             final SqlNode operand = call.operand(0);
             List<SqlNode> nodes;
             switch (operand.getKind()) {
@@ -4060,7 +4060,7 @@ public class SqlToRelConverter {
         case EXISTS:
           call = (SqlCall) expr;
           query = Iterables.getOnlyElement(call.getOperandList());
-          rel = convertQueryRecursive(query, false, null);
+          rel = convertQueryRecursive(query, false, null).project();
           while (rel instanceof Project
               || rel instanceof Sort
               && ((Sort) rel).fetch == null
@@ -4072,7 +4072,7 @@ public class SqlToRelConverter {
         case SCALAR_QUERY:
           call = (SqlCall) expr;
           query = Iterables.getOnlyElement(call.getOperandList());
-          rel = convertQueryRecursive(query, false, null);
+          rel = convertQueryRecursive(query, false, null).project();
           return RexSubQuery.scalar(rel);
         }
       }

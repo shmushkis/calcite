@@ -742,6 +742,16 @@ public class RelBuilder {
     return project(ImmutableList.copyOf(nodes));
   }
 
+  /** Creates a {@link org.apache.calcite.rel.core.Project} of the given
+   * expressions, using the given field names. */
+  public RelBuilder project(List<RexNode> nodes, List<String> names) {
+    final RelNode project =
+        projectFactory.createProject(build(), ImmutableList.copyOf(nodes),
+            names);
+    push(project);
+    return this;
+  }
+
   /** Infers the alias of an expression.
    *
    * <p>If the expression was created by {@link #alias}, replaces the expression

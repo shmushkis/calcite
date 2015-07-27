@@ -75,6 +75,7 @@ import org.apache.calcite.rel.rules.SemiJoinRule;
 import org.apache.calcite.rel.rules.SortJoinTransposeRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
 import org.apache.calcite.rel.rules.SortUnionTransposeRule;
+import org.apache.calcite.rel.rules.SubQueryRemoveRule;
 import org.apache.calcite.rel.rules.TableScanRule;
 import org.apache.calcite.rel.rules.UnionToDistinctRule;
 import org.apache.calcite.rel.rules.ValuesReduceRule;
@@ -1929,6 +1930,104 @@ public class RelOptRulesTest extends RelOptTestBase {
             + "select * from sales.dept) using (deptno)\n"
             + "order by sal, name limit 10";
     checkPlanning(tester, preProgram, new HepPlanner(program), sql);
+  }
+
+  private Sql checkSubQuery(String sql) {
+    final HepProgram program = new HepProgramBuilder()
+        .addMatchLimit(1)
+        .addRuleInstance(SubQueryRemoveRule.PROJECT)
+        .build();
+    return sql(sql).with(new HepPlanner(program)).expand(false);
+  }
+
+  /** Tests expanding a sub-query, specifically an uncorrelated scalar
+   * sub-query in a project (SELECT clause). */
+  @Test public void testExpandProjectScalar() throws Exception {
+    final String sql = "select empno,\n"
+        + "  (select deptno from sales.emp where empno < 20) as d\n"
+        + "from sales.emp";
+    checkSubQuery(sql).check();
+  }
+
+  @Test public void testExpandProjectIn() throws Exception {
+    final String sql = "select empno,\n"
+        + "  deptno in (select deptno from sales.emp where empno < 20) as d\n"
+        + "from sales.emp";
+    checkSubQuery(sql).check();
+  }
+
+  @Test public void testExpandProjectInComposite() throws Exception {
+    final String sql = "select empno, (empno, deptno) in (\n"
+        + "    select empno, deptno from sales.emp where empno < 20) as d\n"
+        + "from sales.emp";
+    checkSubQuery(sql).check();
+  }
+
+  @Test public void testExpandProjectExists() throws Exception {
+    final String sql = "select empno,\n"
+        + "  exists (select deptno from sales.emp where empno < 20) as d\n"
+        + "from sales.emp";
+    checkSubQuery(sql).check();
+  }
+
+  @Test public void testExpandFilterScalar() throws Exception {
+    final String sql = "select empno\n"
+        + "from sales.emp\n"
+        + "where (select deptno from sales.emp where empno < 20)"
+        + " < (select deptno from sales.emp where empno > 100)";
+    checkSubQuery(sql).check();
+  }
+
+  @Test public void testExpandFilterIn() throws Exception {
+    final String sql = "select empno\n"
+        + "from sales.emp\n"
+        + "where deptno in (select deptno from sales.emp where empno < 20)";
+    checkSubQuery(sql).check();
+  }
+
+  @Test public void testExpandFilterInComposite() throws Exception {
+    final String sql = "select empno\n"
+        + "from sales.emp\n"
+        + "where (empno, deptno) in (\n"
+        + "  select empno, deptno from sales.emp where empno < 20)";
+    checkSubQuery(sql).check();
+  }
+
+  @Test public void testExpandFilterExists() throws Exception {
+    final String sql = "select empno\n"
+        + "from sales.emp\n"
+        + "where exists (select deptno from sales.emp where empno < 20)";
+    checkSubQuery(sql).check();
+  }
+
+  @Test public void testExpandJoinScalar() throws Exception {
+    final String sql = "select empno\n"
+        + "from sales.emp left join sales.dept\n"
+        + "on (select deptno from sales.emp where empno < 20)"
+        + " < (select deptno from sales.emp where empno > 100)";
+    checkSubQuery(sql).check();
+  }
+
+  @Test public void testExpandJoinIn() throws Exception {
+    final String sql = "select empno\n"
+        + "from sales.emp left join sales.dept\n"
+        + "on emp.deptno in (select deptno from sales.emp where empno < 20)";
+    checkSubQuery(sql).check();
+  }
+
+  @Test public void testExpandJoinInComposite() throws Exception {
+    final String sql = "select empno\n"
+        + "from sales.emp left join sales.dept\n"
+        + "on (emp.empno, dept.deptno) in (\n"
+        + "  select empno, deptno from sales.emp where empno < 20)";
+    checkSubQuery(sql).check();
+  }
+
+  @Test public void testExpandJoinExists() throws Exception {
+    final String sql = "select empno\n"
+        + "from sales.emp left join sales.dept\n"
+        + "on exists (select deptno from sales.emp where empno < 20)";
+    checkSubQuery(sql).check();
   }
 
 }
