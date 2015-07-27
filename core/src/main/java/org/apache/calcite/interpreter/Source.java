@@ -24,6 +24,8 @@ package org.apache.calcite.interpreter;
 public interface Source {
   /** Reads a row. Null means end of data. */
   Row receive();
+
+  void close();
 }
 
 // End Source.java
