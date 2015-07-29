@@ -1973,7 +1973,6 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).check();
   }
 
-  @Ignore("CALCITE-816")
   @Test public void testExpandProjectExists() throws Exception {
     final String sql = "select empno,\n"
         + "  exists (select deptno from sales.emp where empno < 20) as d\n"

@@ -115,6 +115,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       break;
 
     case IN:
+    case EXISTS:
       // Most general case, where the left and right keys might have nulls, and
       // caller requires 3-valued logic return.
       //
@@ -169,7 +170,11 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
 
       // Now the left join
       builder.push(e.rel);
-      final List<RexNode> fields = new ArrayList<>(builder.fields());
+      final List<RexNode> fields = new ArrayList<>();
+      switch (e.getKind()) {
+      case IN:
+        fields.addAll(builder.fields());
+      }
       fields.add(builder.alias(builder.literal(true), "i"));
       builder.project(fields);
       builder.distinct();
