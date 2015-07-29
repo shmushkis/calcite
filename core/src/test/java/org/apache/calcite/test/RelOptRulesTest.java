@@ -1936,6 +1936,7 @@ public class RelOptRulesTest extends RelOptTestBase {
     final HepProgram program = new HepProgramBuilder()
         .addMatchLimit(1)
         .addRuleInstance(SubQueryRemoveRule.PROJECT)
+        .addRuleInstance(SubQueryRemoveRule.FILTER)
         .build();
     return sql(sql).with(new HepPlanner(program)).expand(false);
   }
@@ -1984,33 +1985,34 @@ public class RelOptRulesTest extends RelOptTestBase {
   @Test public void testExpandFilterScalar() throws Exception {
     final String sql = "select empno\n"
         + "from sales.emp\n"
-        + "where (select deptno from sales.emp where empno < 20)"
-        + " < (select deptno from sales.emp where empno > 100)";
+        + "where (select deptno from sales.emp where empno < 20)\n"
+        + " < (select deptno from sales.emp where empno > 100)\n"
+        + "or emp.sal < 100";
     checkSubQuery(sql).check();
   }
 
-  @Ignore("CALCITE-816")
   @Test public void testExpandFilterIn() throws Exception {
     final String sql = "select empno\n"
         + "from sales.emp\n"
-        + "where deptno in (select deptno from sales.emp where empno < 20)";
+        + "where deptno in (select deptno from sales.emp where empno < 20)\n"
+        + "or emp.sal < 100";
     checkSubQuery(sql).check();
   }
 
-  @Ignore("CALCITE-816")
   @Test public void testExpandFilterInComposite() throws Exception {
     final String sql = "select empno\n"
         + "from sales.emp\n"
         + "where (empno, deptno) in (\n"
-        + "  select empno, deptno from sales.emp where empno < 20)";
+        + "  select empno, deptno from sales.emp where empno < 20)\n"
+        + "or emp.sal < 100";
     checkSubQuery(sql).check();
   }
 
-  @Ignore("CALCITE-816")
   @Test public void testExpandFilterExists() throws Exception {
     final String sql = "select empno\n"
         + "from sales.emp\n"
-        + "where exists (select deptno from sales.emp where empno < 20)";
+        + "where exists (select deptno from sales.emp where empno < 20)\n"
+        + "or emp.sal < 100";
     checkSubQuery(sql).check();
   }
 
@@ -2018,7 +2020,7 @@ public class RelOptRulesTest extends RelOptTestBase {
   @Test public void testExpandJoinScalar() throws Exception {
     final String sql = "select empno\n"
         + "from sales.emp left join sales.dept\n"
-        + "on (select deptno from sales.emp where empno < 20)"
+        + "on (select deptno from sales.emp where empno < 20)\n"
         + " < (select deptno from sales.emp where empno > 100)";
     checkSubQuery(sql).check();
   }

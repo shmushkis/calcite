@@ -1929,6 +1929,15 @@ public class RexUtil {
       }
       return null;
     }
+
+    public static RexSubQuery find(RexNode node) {
+      try {
+        node.accept(INSTANCE);
+        return null;
+      } catch (Util.FoundOne e) {
+        return (RexSubQuery) e.getNode();
+      }
+    }
   }
 }
 

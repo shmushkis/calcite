@@ -62,7 +62,20 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
           RelFactories.LOGICAL_BUILDER, "SubQueryRemoveRule:Project") {
         public void onMatch(RelOptRuleCall call) {
           final Project project = call.rel(0);
-          apply(call, project);
+          final RelBuilder builder = call.builder(protoBuilder);
+          final RexSubQuery e =
+              RexUtil.SubQueryFinder.find(project.getProjects());
+          assert e != null;
+          builder.push(project.getInput());
+          final RexNode target = apply(e, builder);
+          final RexShuttle shuttle = new RexShuttle() {
+            @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
+              return target;
+            }
+          };
+          builder.project(shuttle.apply(project.getProjects()),
+              project.getRowType().getFieldNames());
+          call.transformTo(builder.build());
         }
       };
 
@@ -72,8 +85,29 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
               any()),
           RelFactories.LOGICAL_BUILDER, "SubQueryRemoveRule:Filter") {
         public void onMatch(RelOptRuleCall call) {
-          final Project project = call.rel(0);
-          apply(call, project);
+          final Filter filter = call.rel(0);
+          final RelBuilder builder = call.builder(protoBuilder);
+          final RexSubQuery e =
+              RexUtil.SubQueryFinder.find(filter.getCondition());
+          assert e != null;
+          builder.push(filter.getInput());
+          final RexNode target = apply(e, builder);
+          final RexShuttle shuttle = new RexShuttle() {
+            @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
+              return target;
+            }
+          };
+          builder.filter(shuttle.apply(filter.getCondition()));
+          builder.project(fields(builder, filter.getRowType().getFieldCount()));
+          call.transformTo(builder.build());
+        }
+
+        private List<RexNode> fields(RelBuilder builder, int fieldCount) {
+          final List<RexNode> projects = new ArrayList<>();
+          for (int i = 0; i < fieldCount; i++) {
+            projects.add(builder.field(i));
+          }
+          return projects;
         }
       };
 
@@ -98,8 +132,19 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
     final RexSubQuery e = RexUtil.SubQueryFinder.find(project.getProjects());
     assert e != null;
     builder.push(project.getInput());
+    final RexNode target = apply(e, builder);
+    final RexShuttle shuttle = new RexShuttle() {
+      @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
+        return target;
+      }
+    };
+    builder.project(shuttle.apply(project.getProjects()),
+        project.getRowType().getFieldNames());
+    call.transformTo(builder.build());
+  }
+
+  protected RexNode apply(RexSubQuery e, RelBuilder builder) {
     final int leftCount = builder.peek().getRowType().getFieldCount();
-    final RexNode target;
     switch (e.getKind()) {
     case SCALAR_QUERY:
       builder.push(e.rel);
@@ -111,8 +156,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
                 null, builder.field(0)));
       }
       builder.join(JoinRelType.LEFT);
-      target = builder.field(leftCount);
-      break;
+      return builder.field(leftCount);
 
     case IN:
     case EXISTS:
@@ -211,20 +255,11 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
             builder.literal(null));
       }
       operands.add(builder.literal(false));
-      target = builder.call(SqlStdOperatorTable.CASE, operands.build());
-      break;
+      return builder.call(SqlStdOperatorTable.CASE, operands.build());
 
     default:
       throw new AssertionError(e.getKind());
     }
-    final RexShuttle shuttle = new RexShuttle() {
-      @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
-        return target;
-      }
-    };
-    builder.project(shuttle.apply(project.getProjects()),
-        project.getRowType().getFieldNames());
-    call.transformTo(builder.build());
   }
 }
 
