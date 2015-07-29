@@ -62,7 +62,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
           RelFactories.LOGICAL_BUILDER, "SubQueryRemoveRule:Project") {
         public void onMatch(RelOptRuleCall call) {
           final Project project = call.rel(0);
-          final RelBuilder builder = call.builder(protoBuilder);
+          final RelBuilder builder = call.builder();
           final RexSubQuery e =
               RexUtil.SubQueryFinder.find(project.getProjects());
           assert e != null;
@@ -86,7 +86,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
           RelFactories.LOGICAL_BUILDER, "SubQueryRemoveRule:Filter") {
         public void onMatch(RelOptRuleCall call) {
           final Filter filter = call.rel(0);
-          final RelBuilder builder = call.builder(protoBuilder);
+          final RelBuilder builder = call.builder();
           final RexSubQuery e =
               RexUtil.SubQueryFinder.find(filter.getCondition());
           assert e != null;
