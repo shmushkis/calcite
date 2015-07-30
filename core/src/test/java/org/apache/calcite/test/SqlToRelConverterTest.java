@@ -127,6 +127,20 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
         "${plan}");
   }
 
+  @Test public void testJoinOnInSubQuery() {
+    final String sql = "select * from emp left join dept\n"
+        + "on emp.empno = 1\n"
+        + "or dept.deptno in (select deptno from emp where empno > 5)";
+    sql(sql).expand(false).convertsTo("${plan}");
+  }
+
+  @Test public void testJoinOnExists() {
+    final String sql = "select * from emp left join dept\n"
+        + "on emp.empno = 1\n"
+        + "or exists (select deptno from emp where empno > dept.deptno + 5)";
+    sql(sql).expand(false).convertsTo("${plan}");
+  }
+
   @Test public void testJoinUsing() {
     check("SELECT * FROM emp JOIN dept USING (deptno)", "${plan}");
   }
@@ -635,7 +649,7 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
         + "  select 1 from dept2 where deptno <= emp.deptno)";
     sql(sql)
         .decorrelate(false)
-        .expand()
+        .expand(false)
         .convertsTo("${plan}");
   }
 
@@ -656,7 +670,7 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
         + "  select 1 from dept2 where deptno <= emp.deptno)";
     sql(sql)
         .decorrelate(true)
-        .expand()
+        .expand(false)
         .convertsTo("${plan}");
   }
 
@@ -675,7 +689,7 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
         + " select count(*) from dept2) as c\n"
         + "from emp";
     sql(sql)
-        .expand()
+        .expand(false)
         .convertsTo("${plan}");
   }
 
@@ -845,7 +859,7 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
     final String sql = "select empno from emp where deptno in"
         + " (select deptno from dept)";
     sql(sql)
-        .expand()
+        .expand(false)
         .convertsTo("${plan}");
   }
 
@@ -853,7 +867,7 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
     final String sql = "select empno from emp where (empno, deptno) in"
         + " (select deptno - 10, deptno from dept)";
     sql(sql)
-        .expand()
+        .expand(false)
         .convertsTo("${plan}");
   }
 
@@ -868,7 +882,7 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
     final String sql = "select empno from emp where deptno not in"
         + " (select deptno from dept)";
     sql(sql)
-        .expand()
+        .expand(false)
         .convertsTo("${plan}");
   }
 
@@ -891,7 +905,7 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
         + "  select case when true then deptno else null end from emp)\n"
         + "from dept";
     sql(sql)
-        .expand()
+        .expand(false)
         .convertsTo("${plan}");
   }
 
@@ -910,7 +924,7 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
         + "  select case when true then deptno else null end from dept)\n"
         + "from emp";
     sql(sql)
-        .expand()
+        .expand(false)
         .convertsTo("${plan}");
   }
 
@@ -929,7 +943,7 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
         + "  select deptno from dept)\n"
         + "from emp";
     sql(sql)
-        .expand()
+        .expand(false)
         .convertsTo("${plan}");
   }
 
@@ -1535,8 +1549,8 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
           .assertConvertsTo(sql, plan, false);
     }
 
-    public Sql expand() {
-      return new Sql(sql, false, decorrelate);
+    public Sql expand(boolean expand) {
+      return new Sql(sql, expand, decorrelate);
     }
 
     public Sql decorrelate(boolean decorrelate) {

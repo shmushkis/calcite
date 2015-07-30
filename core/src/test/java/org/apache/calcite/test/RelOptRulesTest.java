@@ -1934,9 +1934,9 @@ public class RelOptRulesTest extends RelOptTestBase {
 
   private Sql checkSubQuery(String sql) {
     final HepProgram program = new HepProgramBuilder()
-        .addMatchLimit(1)
         .addRuleInstance(SubQueryRemoveRule.PROJECT)
         .addRuleInstance(SubQueryRemoveRule.FILTER)
+        .addRuleInstance(SubQueryRemoveRule.JOIN)
         .build();
     return sql(sql).with(new HepPlanner(program)).expand(false);
   }
@@ -1981,7 +1981,6 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).check();
   }
 
-  @Ignore("CALCITE-816")
   @Test public void testExpandFilterScalar() throws Exception {
     final String sql = "select empno\n"
         + "from sales.emp\n"
@@ -2016,7 +2015,6 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).check();
   }
 
-  @Ignore("CALCITE-816")
   @Test public void testExpandJoinScalar() throws Exception {
     final String sql = "select empno\n"
         + "from sales.emp left join sales.dept\n"
@@ -2025,7 +2023,6 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).check();
   }
 
-  @Ignore("CALCITE-816")
   @Test public void testExpandJoinIn() throws Exception {
     final String sql = "select empno\n"
         + "from sales.emp left join sales.dept\n"
@@ -2033,7 +2030,6 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).check();
   }
 
-  @Ignore("CALCITE-816")
   @Test public void testExpandJoinInComposite() throws Exception {
     final String sql = "select empno\n"
         + "from sales.emp left join sales.dept\n"
@@ -2042,7 +2038,6 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).check();
   }
 
-  @Ignore("CALCITE-816")
   @Test public void testExpandJoinExists() throws Exception {
     final String sql = "select empno\n"
         + "from sales.emp left join sales.dept\n"

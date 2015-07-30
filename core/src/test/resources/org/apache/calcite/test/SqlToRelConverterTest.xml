@@ -2683,4 +2683,41 @@ LogicalProject(EXPR$0=[-($0, 10)], DEPTNO=[$0])
 ]]>
         </Resource>
     </TestCase>
+    <TestCase name="testJoinOnInSubQuery">
+        <Resource name="sql">
+            <![CDATA[select * from emp left join dept
+on emp.empno = 1
+or dept.deptno in (select deptno from emp where empno > 5)]]>
+        </Resource>
+        <Resource name="plan">
+            <![CDATA[
+LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8], DEPTNO0=[$9], NAME=[$10])
+  LogicalJoin(condition=[OR(=($0, 1), IN($9, {
+LogicalProject(DEPTNO=[$7])
+  LogicalFilter(condition=[>($0, 5)])
+    LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+}))], joinType=[left])
+    LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+    LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+]]>
+        </Resource>
+    </TestCase>
+    <TestCase name="testJoinOnExists">
+        <Resource name="sql">
+            <![CDATA[select * from emp left join dept
+on emp.empno = 1
+or exists (select deptno from emp where empno > dept.deptno + 5)]]>
+        </Resource>
+        <Resource name="plan">
+            <![CDATA[
+LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8], DEPTNO0=[$9], NAME=[$10])
+  LogicalJoin(condition=[OR(=($0, 1), EXISTS({
+LogicalFilter(condition=[>($0, +($cor0.DEPTNO, 5))])
+  LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+}))], joinType=[left])
+    LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+    LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+]]>
+        </Resource>
+    </TestCase>
 </Root>

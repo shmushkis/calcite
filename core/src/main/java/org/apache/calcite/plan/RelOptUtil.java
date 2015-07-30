@@ -3005,7 +3005,8 @@ public abstract class RelOptUtil {
     // Pushing sub-queries is OK in principle (if they don't reference both
     // sides of the join via correlating variables) but we'd rather not do it
     // yet.
-    if (!containsGet(joinCond)) {
+    if (!containsGet(joinCond)
+        && RexUtil.SubQueryFinder.find(joinCond) == null) {
       joinCond = pushDownEqualJoinConditions(
           joinCond, leftCount, rightCount, extraLeftExprs, extraRightExprs);
     }

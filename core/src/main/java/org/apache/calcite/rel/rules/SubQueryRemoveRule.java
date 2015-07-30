@@ -28,6 +28,7 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexCorrelVariable;
+import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSubQuery;
@@ -67,10 +68,11 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
               RexUtil.SubQueryFinder.find(project.getProjects());
           assert e != null;
           builder.push(project.getInput());
-          final RexNode target = apply(e, builder);
+          final int fieldCount = builder.peek().getRowType().getFieldCount();
+          final RexNode target = apply(e, builder, 1, fieldCount);
           final RexShuttle shuttle = new RexShuttle() {
             @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
-              return target;
+              return subQuery.equals(e) ? target : subQuery;
             }
           };
           builder.project(shuttle.apply(project.getProjects()),
@@ -91,23 +93,16 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
               RexUtil.SubQueryFinder.find(filter.getCondition());
           assert e != null;
           builder.push(filter.getInput());
-          final RexNode target = apply(e, builder);
+          final int fieldCount = builder.peek().getRowType().getFieldCount();
+          final RexNode target = apply(e, builder, 1, fieldCount);
           final RexShuttle shuttle = new RexShuttle() {
             @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
-              return target;
+              return subQuery.equals(e) ? target : subQuery;
             }
           };
           builder.filter(shuttle.apply(filter.getCondition()));
           builder.project(fields(builder, filter.getRowType().getFieldCount()));
           call.transformTo(builder.build());
-        }
-
-        private List<RexNode> fields(RelBuilder builder, int fieldCount) {
-          final List<RexNode> projects = new ArrayList<>();
-          for (int i = 0; i < fieldCount; i++) {
-            projects.add(builder.field(i));
-          }
-          return projects;
         }
       };
 
@@ -116,8 +111,23 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
           operand(Join.class, null, RexUtil.SubQueryFinder.JOIN_PREDICATE,
               any()), RelFactories.LOGICAL_BUILDER, "SubQueryRemoveRule:Join") {
         public void onMatch(RelOptRuleCall call) {
-          final Project project = call.rel(0);
-          apply(call, project);
+          final Join join = call.rel(0);
+          final RelBuilder builder = call.builder();
+          final RexSubQuery e =
+              RexUtil.SubQueryFinder.find(join.getCondition());
+          assert e != null;
+          builder.push(join.getLeft());
+          builder.push(join.getRight());
+          final int fieldCount = join.getRowType().getFieldCount();
+          final RexNode target = apply(e, builder, 2, fieldCount);
+          final RexShuttle shuttle = new RexShuttle() {
+            @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
+              return subQuery.equals(e) ? target : subQuery;
+            }
+          };
+          builder.join(join.getJoinType(), shuttle.apply(join.getCondition()));
+          builder.project(fields(builder, join.getRowType().getFieldCount()));
+          call.transformTo(builder.build());
         }
       };
 
@@ -127,24 +137,8 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
     super(operand, relBuilderFactory, description);
   }
 
-  protected void apply(final RelOptRuleCall call, Project project) {
-    final RelBuilder builder = call.builder();
-    final RexSubQuery e = RexUtil.SubQueryFinder.find(project.getProjects());
-    assert e != null;
-    builder.push(project.getInput());
-    final RexNode target = apply(e, builder);
-    final RexShuttle shuttle = new RexShuttle() {
-      @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
-        return target;
-      }
-    };
-    builder.project(shuttle.apply(project.getProjects()),
-        project.getRowType().getFieldNames());
-    call.transformTo(builder.build());
-  }
-
-  protected RexNode apply(RexSubQuery e, RelBuilder builder) {
-    final int leftCount = builder.peek().getRowType().getFieldCount();
+  protected RexNode apply(RexSubQuery e, RelBuilder builder, int inputCount,
+      int offset) {
     switch (e.getKind()) {
     case SCALAR_QUERY:
       builder.push(e.rel);
@@ -156,7 +150,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
                 null, builder.field(0)));
       }
       builder.join(JoinRelType.LEFT);
-      return builder.field(leftCount);
+      return field(builder, inputCount, offset);
 
     case IN:
     case EXISTS:
@@ -227,7 +221,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       for (Pair<RexNode, RexNode> pair
           : Pair.zip(e.getOperands(), builder.fields())) {
         conditions.add(
-            builder.equals(pair.left, RexUtil.shift(pair.right, leftCount)));
+            builder.equals(pair.left, RexUtil.shift(pair.right, offset)));
       }
       builder.join(JoinRelType.LEFT, builder.and(conditions));
 
@@ -260,6 +254,29 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
     default:
       throw new AssertionError(e.getKind());
     }
+  }
+
+  /** Returns a reference to a particular field, by offset, across several
+   * inputs on a {@link RelBuilder}'s stack. */
+  private RexInputRef field(RelBuilder builder, int inputCount, int offset) {
+    for (int inputOrdinal = 0;;) {
+      final RelNode r = builder.peek(inputCount, inputOrdinal);
+      if (offset < r.getRowType().getFieldCount()) {
+        return builder.field(inputCount, inputOrdinal, offset);
+      }
+      ++inputOrdinal;
+      offset -= r.getRowType().getFieldCount();
+    }
+  }
+
+  /** Returns a list of expressions that project the first {@code fieldCount}
+   * fields of the top input on a {@link RelBuilder}'s stack. */
+  private static List<RexNode> fields(RelBuilder builder, int fieldCount) {
+    final List<RexNode> projects = new ArrayList<>();
+    for (int i = 0; i < fieldCount; i++) {
+      projects.add(builder.field(i));
+    }
+    return projects;
   }
 }
 
