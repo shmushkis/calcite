@@ -909,6 +909,40 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
         .convertsTo("${plan}");
   }
 
+  @Test public void testInUncorrelatedSubqueryInHavingRex() {
+    final String sql = "select sum(sal) as s\n"
+        + "from emp\n"
+        + "group by deptno\n"
+        + "having count(*) > 2\n"
+        + "and deptno in (\n"
+        + "  select case when true then deptno else null end from emp)";
+    sql(sql).expand(false).convertsTo("${plan}");
+  }
+
+  @Test public void testUncorrelatedScalarSubqueryInOrderRex() {
+    final String sql = "select ename\n"
+        + "from emp\n"
+        + "order by (select case when true then deptno else null end from emp) desc,\n"
+        + "  ename";
+    sql(sql).expand(false).convertsTo("${plan}");
+  }
+
+  @Test public void testUncorrelatedScalarSubqueryInGroupOrderRex() {
+    final String sql = "select sum(sal) as s\n"
+        + "from emp\n"
+        + "group by deptno\n"
+        + "order by (select case when true then deptno else null end from emp) desc,\n"
+        + "  count(*)";
+    sql(sql).expand(false).convertsTo("${plan}");
+  }
+
+  @Test public void testUncorrelatedScalarSubqueryInAggregateRex() {
+    final String sql = "select sum((select min(deptno) from emp)) as s\n"
+        + "from emp\n"
+        + "group by deptno\n";
+    sql(sql).expand(false).convertsTo("${plan}");
+  }
+
   /** Plan should be as {@link #testInUncorrelatedSubqueryInSelect}, but with
    * an extra NOT. Both queries require 3-valued logic. */
   @Test public void testNotInUncorrelatedSubqueryInSelect() {

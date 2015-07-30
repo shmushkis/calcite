@@ -2720,4 +2720,86 @@ LogicalFilter(condition=[>($0, +($cor0.DEPTNO, 5))])
 ]]>
         </Resource>
     </TestCase>
+    <TestCase name="testInUncorrelatedSubqueryInHavingRex">
+        <Resource name="sql">
+            <![CDATA[select sum(sal) as s from emp
+group by deptno
+having count(*) > 2
+and deptno in (
+  select case when true then deptno else null end from emp)]]>
+        </Resource>
+        <Resource name="plan">
+            <![CDATA[
+LogicalProject(S=[$1])
+  LogicalFilter(condition=[AND(>($2, 2), IN($0, {
+LogicalProject(EXPR$0=[CASE(true, CAST($7):INTEGER, null)])
+  LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+}))])
+    LogicalAggregate(group=[{0}], S=[SUM($1)], agg#1=[COUNT()])
+      LogicalProject(DEPTNO=[$7], SAL=[$5])
+        LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+]]>
+        </Resource>
+    </TestCase>
+    <TestCase name="testUncorrelatedScalarSubqueryInGroupOrderRex">
+        <Resource name="sql">
+            <![CDATA[select sum(sal) as s
+from emp
+group by deptno
+order by (select case when true then deptno else null end from emp) desc,
+  count(*)]]>
+        </Resource>
+        <Resource name="plan">
+            <![CDATA[
+LogicalProject(S=[$0])
+  LogicalSort(sort0=[$1], sort1=[$2], dir0=[DESC], dir1=[ASC])
+    LogicalProject(S=[$1], EXPR$1=[$SCALAR_QUERY({
+LogicalProject(EXPR$0=[CASE(true, CAST($7):INTEGER, null)])
+  LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+})], EXPR$2=[$2])
+      LogicalAggregate(group=[{0}], S=[SUM($1)], agg#1=[COUNT()])
+        LogicalProject(DEPTNO=[$7], SAL=[$5])
+          LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+]]>
+        </Resource>
+    </TestCase>
+    <TestCase name="testUncorrelatedScalarSubqueryInOrderRex">
+        <Resource name="sql">
+            <![CDATA[select ename
+from emp
+order by (select case when true then deptno else null end from emp) desc,
+  ename]]>
+        </Resource>
+        <Resource name="plan">
+            <![CDATA[
+LogicalProject(ENAME=[$0])
+  LogicalSort(sort0=[$1], sort1=[$0], dir0=[DESC], dir1=[ASC])
+    LogicalProject(ENAME=[$1], EXPR$1=[$SCALAR_QUERY({
+LogicalProject(EXPR$0=[CASE(true, CAST($7):INTEGER, null)])
+  LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+})])
+      LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+]]>
+        </Resource>
+    </TestCase>
+    <TestCase name="testUncorrelatedScalarSubqueryInAggregateRex">
+        <Resource name="sql">
+            <![CDATA[select sum((select min(deptno) from emp)) as s
+from emp
+group by deptno
+]]>
+        </Resource>
+        <Resource name="plan">
+            <![CDATA[
+LogicalProject(S=[$1])
+  LogicalAggregate(group=[{0}], S=[SUM($1)])
+    LogicalProject(DEPTNO=[$7], $f1=[$SCALAR_QUERY({
+LogicalAggregate(group=[{}], EXPR$0=[MIN($0)])
+  LogicalProject(DEPTNO=[$7])
+    LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+})])
+      LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+]]>
+        </Resource>
+    </TestCase>
 </Root>
