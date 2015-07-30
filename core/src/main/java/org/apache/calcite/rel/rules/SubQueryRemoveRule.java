@@ -72,7 +72,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
           final RexNode target = apply(e, builder, 1, fieldCount);
           final RexShuttle shuttle = new RexShuttle() {
             @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
-              return subQuery.equals(e) ? target : subQuery;
+              return eq(subQuery, e) ? target : subQuery;
             }
           };
           builder.project(shuttle.apply(project.getProjects()),
@@ -97,7 +97,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
           final RexNode target = apply(e, builder, 1, fieldCount);
           final RexShuttle shuttle = new RexShuttle() {
             @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
-              return subQuery.equals(e) ? target : subQuery;
+              return eq(subQuery, e) ? target : subQuery;
             }
           };
           builder.filter(shuttle.apply(filter.getCondition()));
@@ -122,7 +122,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
           final RexNode target = apply(e, builder, 2, fieldCount);
           final RexShuttle shuttle = new RexShuttle() {
             @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
-              return subQuery.equals(e) ? target : subQuery;
+              return eq(subQuery, e) ? target : subQuery;
             }
           };
           builder.join(join.getJoinType(), shuttle.apply(join.getCondition()));
@@ -277,6 +277,10 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       projects.add(builder.field(i));
     }
     return projects;
+  }
+
+  private static boolean eq(RexNode e0, RexNode e1) {
+    return e0.equals(e1) || e0.toString().equals(e1.toString());
   }
 }
 

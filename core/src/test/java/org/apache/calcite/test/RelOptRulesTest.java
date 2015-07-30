@@ -2007,11 +2007,30 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).check();
   }
 
+  /** An EXISTS filter that can be converted into true/false. */
   @Test public void testExpandFilterExists() throws Exception {
     final String sql = "select empno\n"
         + "from sales.emp\n"
         + "where exists (select deptno from sales.emp where empno < 20)\n"
         + "or emp.sal < 100";
+    checkSubQuery(sql).check();
+  }
+
+  /** An EXISTS filter that can be converted into true/false/unknown. */
+  @Test public void testExpandFilterExists3Value() throws Exception {
+    final String sql = "select empno\n"
+        + "from sales.emp\n"
+        + "where empno\n"
+        + "  < case exists (select deptno from sales.emp where empno < 20)\n"
+        + "    when true then 10 when false then 20 else 30 end";
+    checkSubQuery(sql).check();
+  }
+
+  /** An EXISTS filter that can be converted into a semi-join. */
+  @Test public void testExpandFilterExistsSimple() throws Exception {
+    final String sql = "select empno\n"
+        + "from sales.emp\n"
+        + "where exists (select deptno from sales.emp where empno < 20)";
     checkSubQuery(sql).check();
   }
 
