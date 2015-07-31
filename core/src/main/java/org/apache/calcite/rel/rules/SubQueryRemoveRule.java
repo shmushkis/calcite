@@ -19,6 +19,7 @@ package org.apache.calcite.rel.rules;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.Filter;
@@ -27,6 +28,7 @@ import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.calcite.rex.LogicVisitor;
 import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
@@ -67,12 +69,15 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
           final RexSubQuery e =
               RexUtil.SubQueryFinder.find(project.getProjects());
           assert e != null;
+          final RelOptUtil.Logic logic =
+              LogicVisitor.find(RelOptUtil.Logic.TRUE_FALSE_UNKNOWN,
+                  project.getProjects(), e);
           builder.push(project.getInput());
           final int fieldCount = builder.peek().getRowType().getFieldCount();
-          final RexNode target = apply(e, builder, 1, fieldCount);
+          final RexNode target = apply(e, logic, builder, 1, fieldCount);
           final RexShuttle shuttle = new RexShuttle() {
             @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
-              return eq(subQuery, e) ? target : subQuery;
+              return RexUtil.eq(subQuery, e) ? target : subQuery;
             }
           };
           builder.project(shuttle.apply(project.getProjects()),
@@ -92,12 +97,15 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
           final RexSubQuery e =
               RexUtil.SubQueryFinder.find(filter.getCondition());
           assert e != null;
+          final RelOptUtil.Logic logic =
+              LogicVisitor.find(RelOptUtil.Logic.TRUE_FALSE,
+                  ImmutableList.of(filter.getCondition()), e);
           builder.push(filter.getInput());
           final int fieldCount = builder.peek().getRowType().getFieldCount();
-          final RexNode target = apply(e, builder, 1, fieldCount);
+          final RexNode target = apply(e, logic, builder, 1, fieldCount);
           final RexShuttle shuttle = new RexShuttle() {
             @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
-              return eq(subQuery, e) ? target : subQuery;
+              return RexUtil.eq(subQuery, e) ? target : subQuery;
             }
           };
           builder.filter(shuttle.apply(filter.getCondition()));
@@ -116,13 +124,16 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
           final RexSubQuery e =
               RexUtil.SubQueryFinder.find(join.getCondition());
           assert e != null;
+          final RelOptUtil.Logic logic =
+              LogicVisitor.find(RelOptUtil.Logic.TRUE_FALSE,
+                  ImmutableList.of(join.getCondition()), e);
           builder.push(join.getLeft());
           builder.push(join.getRight());
           final int fieldCount = join.getRowType().getFieldCount();
-          final RexNode target = apply(e, builder, 2, fieldCount);
+          final RexNode target = apply(e, logic, builder, 2, fieldCount);
           final RexShuttle shuttle = new RexShuttle() {
             @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
-              return eq(subQuery, e) ? target : subQuery;
+              return RexUtil.eq(subQuery, e) ? target : subQuery;
             }
           };
           builder.join(join.getJoinType(), shuttle.apply(join.getCondition()));
@@ -137,8 +148,8 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
     super(operand, relBuilderFactory, description);
   }
 
-  protected RexNode apply(RexSubQuery e, RelBuilder builder, int inputCount,
-      int offset) {
+  protected RexNode apply(RexSubQuery e, RelOptUtil.Logic logic,
+      RelBuilder builder, int inputCount, int offset) {
     switch (e.getKind()) {
     case SCALAR_QUERY:
       builder.push(e.rel);
@@ -196,7 +207,8 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       // but have not yet.
 
       // First, the cross join
-      if (e.getType().isNullable()) {
+      switch (logic) {
+      case TRUE_FALSE_UNKNOWN:
         builder.push(e.rel);
         builder.aggregate(builder.groupKey(),
             builder.count(false, "c"),
@@ -204,6 +216,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
                 builder.fields()));
         builder.as("ct");
         builder.join(JoinRelType.INNER);
+        break;
       }
 
       // Now the left join
@@ -232,21 +245,25 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
         }
       }
       final ImmutableList.Builder<RexNode> operands = ImmutableList.builder();
-      if (e.getType().isNullable()) {
+      switch (logic) {
+      case TRUE_FALSE_UNKNOWN:
         operands.add(
             builder.equals(builder.field("ct", "c"), builder.literal(0)),
             builder.literal(false));
+        break;
       }
       operands.add(builder.isNotNull(builder.field("dt", "i")),
           builder.literal(true));
       if (!keyIsNulls.isEmpty()) {
         operands.add(builder.or(keyIsNulls), builder.literal(null));
       }
-      if (e.getType().isNullable()) {
+      switch (logic) {
+      case TRUE_FALSE_UNKNOWN:
         operands.add(
             builder.call(SqlStdOperatorTable.LESS_THAN,
                 builder.field("ct", "ck"), builder.field("ct", "c")),
             builder.literal(null));
+        break;
       }
       operands.add(builder.literal(false));
       return builder.call(SqlStdOperatorTable.CASE, operands.build());
@@ -277,10 +294,6 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       projects.add(builder.field(i));
     }
     return projects;
-  }
-
-  private static boolean eq(RexNode e0, RexNode e1) {
-    return e0.equals(e1) || e0.toString().equals(e1.toString());
   }
 }
 

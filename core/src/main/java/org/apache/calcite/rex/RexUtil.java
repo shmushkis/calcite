@@ -1202,7 +1202,7 @@ public class RexUtil {
     Iterator<RexNode> iterator = targets.iterator();
     while (iterator.hasNext()) {
       RexNode next = iterator.next();
-      if (equivalent(next, e)) {
+      if (eq(next, e)) {
         ++count;
         iterator.remove();
       }
@@ -1210,11 +1210,12 @@ public class RexUtil {
     return count > 0;
   }
 
-  /** Returns whether two expressions are equivalent. */
-  private static boolean equivalent(RexNode e1, RexNode e2) {
-    // TODO: make broader;
-    // 1. 'x = y' should be equivalent to 'y = x'.
-    // 2. 'c2 and c1' should be equivalent to 'c1 and c2'.
+  /** Returns whether two {@link RexNode}s are structurally equal.
+   *
+   * <p>This method considers structure, not semantics. 'x &lt; y' is not
+   * equivalent to 'y &gt; x'.
+   */
+  public static boolean eq(RexNode e1, RexNode e2) {
     return e1 == e2 || e1.toString().equals(e2.toString());
   }
 

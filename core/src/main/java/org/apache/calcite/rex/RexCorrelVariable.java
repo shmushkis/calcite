@@ -41,6 +41,10 @@ public class RexCorrelVariable extends RexVariable {
     return visitor.visitCorrelVariable(this);
   }
 
+  public <R, P> R accept(RexBiVisitor<R, P> visitor, P arg) {
+    return visitor.visitCorrelVariable(this, arg);
+  }
+
   @Override public SqlKind getKind() {
     return SqlKind.CORREL_VARIABLE;
   }

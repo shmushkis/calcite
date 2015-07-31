@@ -85,6 +85,10 @@ public class RexSubQuery extends RexCall {
     return visitor.visitSubQuery(this);
   }
 
+  public <R, P> R accept(RexBiVisitor<R, P> visitor, P arg) {
+    return visitor.visitSubQuery(this, arg);
+  }
+
   @Override protected String computeDigest(boolean withType) {
     StringBuilder sb = new StringBuilder(op.getName());
     sb.append("(");

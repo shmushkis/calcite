@@ -107,6 +107,10 @@ public class RexCall extends RexNode {
     return visitor.visitCall(this);
   }
 
+  public <R, P> R accept(RexBiVisitor<R, P> visitor, P arg) {
+    return visitor.visitCall(this, arg);
+  }
+
   public RelDataType getType() {
     return type;
   }
