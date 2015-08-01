@@ -2038,6 +2038,15 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).check();
   }
 
+  /** An EXISTS filter that can be converted into a semi-join. */
+  @Test public void testExpandFilterExistsSimpleAnd() throws Exception {
+    final String sql = "select empno\n"
+        + "from sales.emp\n"
+        + "where exists (select deptno from sales.emp where empno < 20)\n"
+        + "and emp.sal < 100";
+    checkSubQuery(sql).check();
+  }
+
   @Test public void testExpandJoinScalar() throws Exception {
     final String sql = "select empno\n"
         + "from sales.emp left join sales.dept\n"

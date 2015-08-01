@@ -68,30 +68,39 @@ public class LogicVisitor implements RexBiVisitor<Logic, Logic> {
     node.accept(new LogicVisitor(seek, logicCollection), logic);
   }
 
-  public Logic visitCall(RexCall call, Logic arg) {
-    final Logic arg0 = arg;
+  public Logic visitCall(RexCall call, Logic logic) {
+    final Logic arg0 = logic;
     switch (call.getKind()) {
     case IS_NOT_NULL:
     case IS_NULL:
-      arg = Logic.TRUE_FALSE_UNKNOWN;
+      logic = Logic.TRUE_FALSE_UNKNOWN;
       break;
     case IS_TRUE:
     case IS_NOT_TRUE:
-      arg = Logic.UNKNOWN_AS_FALSE;
+      logic = Logic.UNKNOWN_AS_FALSE;
       break;
     case IS_FALSE:
     case IS_NOT_FALSE:
-      arg = Logic.UNKNOWN_AS_TRUE;
+      logic = Logic.UNKNOWN_AS_TRUE;
       break;
     case NOT:
-      arg = arg.negate();
+      logic = logic.negate();
       break;
     case CASE:
-      arg = Logic.TRUE_FALSE_UNKNOWN;
+      logic = Logic.TRUE_FALSE_UNKNOWN;
       break;
     }
+    switch (logic) {
+    case TRUE:
+      switch (call.getKind()) {
+      case AND:
+        break;
+      default:
+        logic = Logic.TRUE_FALSE;
+      }
+    }
     for (RexNode operand : call.operands) {
-      operand.accept(this, arg);
+      operand.accept(this, logic);
     }
     return end(call, arg0);
   }

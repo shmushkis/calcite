@@ -98,7 +98,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
               RexUtil.SubQueryFinder.find(filter.getCondition());
           assert e != null;
           final RelOptUtil.Logic logic =
-              LogicVisitor.find(RelOptUtil.Logic.TRUE_FALSE,
+              LogicVisitor.find(RelOptUtil.Logic.TRUE,
                   ImmutableList.of(filter.getCondition()), e);
           builder.push(filter.getInput());
           final int fieldCount = builder.peek().getRowType().getFieldCount();
@@ -125,7 +125,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
               RexUtil.SubQueryFinder.find(join.getCondition());
           assert e != null;
           final RelOptUtil.Logic logic =
-              LogicVisitor.find(RelOptUtil.Logic.TRUE_FALSE,
+              LogicVisitor.find(RelOptUtil.Logic.TRUE,
                   ImmutableList.of(join.getCondition()), e);
           builder.push(join.getLeft());
           builder.push(join.getRight());
@@ -205,6 +205,17 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       //   on e.deptno = dt.deptno
       //
       // but have not yet.
+      //
+      // If the logic is TRUE we can just kill the record if the condition
+      // evaluates to FALSE or UNKNOWN. Thus the query simplifies to an inner
+      // join:
+      //
+      // select e.deptno,
+      //   true
+      // from e
+      // inner join (select distinct deptno from emp) as dt
+      //   on e.deptno = dt.deptno
+      //
 
       // First, the cross join
       switch (logic) {
@@ -226,15 +237,26 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       case IN:
         fields.addAll(builder.fields());
       }
-      fields.add(builder.alias(builder.literal(true), "i"));
-      builder.project(fields);
-      builder.distinct();
+      switch (logic) {
+      case TRUE:
+        builder.aggregate(builder.groupKey(fields));
+        break;
+      default:
+        fields.add(builder.alias(builder.literal(true), "i"));
+        builder.project(fields);
+        builder.distinct();
+      }
       builder.as("dt");
       final List<RexNode> conditions = new ArrayList<>();
       for (Pair<RexNode, RexNode> pair
           : Pair.zip(e.getOperands(), builder.fields())) {
         conditions.add(
             builder.equals(pair.left, RexUtil.shift(pair.right, offset)));
+      }
+      switch (logic) {
+      case TRUE:
+        builder.join(JoinRelType.INNER, builder.and(conditions));
+        return builder.literal(true);
       }
       builder.join(JoinRelType.LEFT, builder.and(conditions));
 

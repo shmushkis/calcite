@@ -2971,6 +2971,7 @@ public abstract class RelOptUtil {
       case UNKNOWN_AS_FALSE:
         return UNKNOWN_AS_TRUE;
       case UNKNOWN_AS_TRUE:
+      case TRUE:
         return UNKNOWN_AS_FALSE;
       default:
         return this;
