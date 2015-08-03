@@ -28,6 +28,7 @@ import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.EquiJoin;
 import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -89,7 +90,7 @@ public class EnumerableMergeJoin extends EquiJoin implements EnumerableRel {
     try {
       return new EnumerableMergeJoin(getCluster(), traitSet, left, right,
           condition, joinInfo.leftKeys, joinInfo.rightKeys, joinType,
-          variablesStopped);
+          CorrelationId.names(variablesSet));
     } catch (InvalidRelException e) {
       // Semantic error not possible. Must be a bug. Convert to
       // internal error.

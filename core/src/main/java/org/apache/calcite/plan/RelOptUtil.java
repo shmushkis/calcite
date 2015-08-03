@@ -25,6 +25,7 @@ import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Calc;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -155,7 +156,7 @@ public abstract class RelOptUtil {
    * Returns a list of variables set by a relational expression or its
    * descendants.
    */
-  public static Set<String> getVariablesSet(RelNode rel) {
+  public static Set<CorrelationId> getVariablesSet(RelNode rel) {
     VariableSetVisitor visitor = new VariableSetVisitor();
     go(visitor, rel);
     return visitor.variables;
@@ -165,19 +166,18 @@ public abstract class RelOptUtil {
    * Returns a set of distinct variables set by <code>rel0</code> and used by
    * <code>rel1</code>.
    */
-  public static List<String> getVariablesSetAndUsed(
-      RelNode rel0,
+  public static List<CorrelationId> getVariablesSetAndUsed(RelNode rel0,
       RelNode rel1) {
-    Set<String> set = getVariablesSet(rel0);
+    Set<CorrelationId> set = getVariablesSet(rel0);
     if (set.size() == 0) {
       return ImmutableList.of();
     }
-    Set<String> used = getVariablesUsed(rel1);
+    Set<CorrelationId> used = getVariablesUsed(rel1);
     if (used.size() == 0) {
       return ImmutableList.of();
     }
-    final List<String> result = new ArrayList<>();
-    for (String s : set) {
+    final List<CorrelationId> result = new ArrayList<>();
+    for (CorrelationId s : set) {
       if (used.contains(s) && !result.contains(s)) {
         result.add(s);
       }
@@ -190,7 +190,7 @@ public abstract class RelOptUtil {
    * descendants. The set may contain duplicates. The item type is the same as
    * {@link org.apache.calcite.rex.RexVariable#getName}
    */
-  public static Set<String> getVariablesUsed(RelNode rel) {
+  public static Set<CorrelationId> getVariablesUsed(RelNode rel) {
     final VariableUsedVisitor vuv = new VariableUsedVisitor();
     RelShuttle visitor = new RelHomogeneousShuttle() {
       @Override public RelNode visit(RelNode other) {
@@ -3202,7 +3202,7 @@ public abstract class RelOptUtil {
 
   /** Visitor that finds all variables used but not stopped in an expression. */
   private static class VariableSetVisitor extends RelVisitor {
-    final Set<String> variables = new HashSet<>();
+    final Set<CorrelationId> variables = new HashSet<>();
 
     // implement RelVisitor
     public void visit(
@@ -3220,10 +3220,10 @@ public abstract class RelOptUtil {
 
   /** Visitor that finds all variables used in an expression. */
   public static class VariableUsedVisitor extends RexShuttle {
-    public final Set<String> variables = new LinkedHashSet<>();
+    public final Set<CorrelationId> variables = new LinkedHashSet<>();
 
     public RexNode visitCorrelVariable(RexCorrelVariable p) {
-      variables.add(p.getName());
+      variables.add(p.id);
       return p;
     }
   }

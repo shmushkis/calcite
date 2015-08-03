@@ -23,6 +23,7 @@ import org.apache.calcite.rel.RelInput;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelShuttle;
 import org.apache.calcite.rel.RelWriter;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -157,7 +158,7 @@ public final class LogicalJoin extends Join {
         right,
         conditionExpr,
         joinType,
-        this.variablesStopped,
+        CorrelationId.names(this.variablesSet),
         semiJoinDone,
         this.systemFieldList);
   }

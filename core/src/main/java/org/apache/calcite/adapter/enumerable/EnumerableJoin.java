@@ -93,7 +93,7 @@ public class EnumerableJoin extends EquiJoin implements EnumerableRel {
     try {
       return new EnumerableJoin(getCluster(), traitSet, left, right,
           condition, joinInfo.leftKeys, joinInfo.rightKeys, joinType,
-          variablesStopped);
+          getVariablesStopped());
     } catch (InvalidRelException e) {
       // Semantic error not possible. Must be a bug. Convert to
       // internal error.

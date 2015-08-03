@@ -305,7 +305,7 @@ public class JdbcRules {
         boolean semiJoinDone) {
       try {
         return new JdbcJoin(getCluster(), traitSet, left, right,
-            condition, joinType, variablesStopped);
+            condition, joinType, getVariablesStopped());
       } catch (InvalidRelException e) {
         // Semantic error not possible. Must be a bug. Convert to
         // internal error.

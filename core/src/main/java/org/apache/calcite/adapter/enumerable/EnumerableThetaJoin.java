@@ -27,6 +27,7 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.InvalidRelException;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
@@ -55,7 +56,7 @@ public class EnumerableThetaJoin extends Join implements EnumerableRel {
       boolean semiJoinDone) {
     try {
       return new EnumerableThetaJoin(getCluster(), traitSet, left, right,
-          condition, joinType, variablesStopped);
+          condition, joinType, CorrelationId.names(variablesSet));
     } catch (InvalidRelException e) {
       // Semantic error not possible. Must be a bug. Convert to
       // internal error.

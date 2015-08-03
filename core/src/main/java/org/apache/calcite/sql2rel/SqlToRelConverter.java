@@ -78,7 +78,6 @@ import org.apache.calcite.rex.RexRangeRef;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexUtil;
-import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.schema.ModifiableTable;
 import org.apache.calcite.schema.ModifiableView;
@@ -225,11 +224,8 @@ public class SqlToRelConverter {
   /**
    * Fields used in name resolution for correlated subqueries.
    */
-  private final Map<String, DeferredLookup> mapCorrelToDeferred =
+  private final Map<CorrelationId, DeferredLookup> mapCorrelToDeferred =
       new HashMap<>();
-  private int nextCorrel = 0;
-
-  private static final String CORREL_PREFIX = "$cor";
 
   /**
    * Stack of names of datasets requested by the <code>
@@ -2144,10 +2140,11 @@ public class SqlToRelConverter {
       JoinRelType joinType) {
     assert joinCond != null;
 
-    Set<String> correlatedVariables = RelOptUtil.getVariablesUsed(rightRel);
+    final Set<CorrelationId> correlatedVariables =
+        RelOptUtil.getVariablesUsed(rightRel);
     if (correlatedVariables.size() > 0) {
       final ImmutableBitSet.Builder requiredColumns = ImmutableBitSet.builder();
-      final List<String> correlNames = Lists.newArrayList();
+      final List<CorrelationId> correlNames = Lists.newArrayList();
 
       // All correlations must refer the same namespace since correlation
       // produces exactly one correlation source.
@@ -2155,8 +2152,9 @@ public class SqlToRelConverter {
       // DeferredLookups are not de-duplicated at create time.
       SqlValidatorNamespace prevNs = null;
 
-      for (String correlName : correlatedVariables) {
-        DeferredLookup lookup = mapCorrelToDeferred.get(correlName);
+      for (CorrelationId correlName : correlatedVariables) {
+        DeferredLookup lookup =
+            mapCorrelToDeferred.get(correlName);
         RexFieldAccess fieldAccess = lookup.getFieldAccess(correlName);
         String originalRelName = lookup.getOriginalRelName();
         String originalFieldName = fieldAccess.getField().getName();
@@ -2247,7 +2245,7 @@ public class SqlToRelConverter {
           rightRel = rightRel.accept(dedup);
         }
         LogicalCorrelate corr = LogicalCorrelate.create(leftRel, rightRel,
-            new CorrelationId(correlNames.get(0)), requiredColumns.build(),
+            correlNames.get(0), requiredColumns.build(),
             SemiJoinType.of(joinType));
         if (!joinCond.isAlwaysTrue()) {
           return RelOptUtil.createFilter(corr, joinCond);
@@ -2263,23 +2261,6 @@ public class SqlToRelConverter {
     return RelOptUtil.pushDownJoinConditions(originalJoin);
   }
 
-  private static boolean containsGet(RexNode node) {
-    try {
-      node.accept(
-          new RexVisitorImpl<Void>(true) {
-            @Override public Void visitCall(RexCall call) {
-              if (call.getOperator() == RexBuilder.GET_OPERATOR) {
-                throw Util.FoundOne.NULL;
-              }
-              return super.visitCall(call);
-            }
-          });
-      return false;
-    } catch (Util.FoundOne e) {
-      return true;
-    }
-  }
-
   /**
    * Determines whether a subquery is non-correlated. Note that a
    * non-correlated subquery can contain correlated references, provided those
@@ -2292,8 +2273,8 @@ public class SqlToRelConverter {
    * @return true if the subquery is non-correlated.
    */
   private boolean isSubQueryNonCorrelated(RelNode subq, Blackboard bb) {
-    Set<String> correlatedVariables = RelOptUtil.getVariablesUsed(subq);
-    for (String correlName : correlatedVariables) {
+    Set<CorrelationId> correlatedVariables = RelOptUtil.getVariablesUsed(subq);
+    for (CorrelationId correlName : correlatedVariables) {
       DeferredLookup lookup = mapCorrelToDeferred.get(correlName);
       String originalRelName = lookup.getOriginalRelName();
 
@@ -3248,9 +3229,9 @@ public class SqlToRelConverter {
       qualified = SqlQualified.create(null, 1, null, identifier);
     }
     RexNode e = bb.lookupExp(qualified);
-    final String correlationName;
+    final CorrelationId correlationName;
     if (e instanceof RexCorrelVariable) {
-      correlationName = ((RexCorrelVariable) e).getName();
+      correlationName = ((RexCorrelVariable) e).id;
     } else {
       correlationName = null;
     }
@@ -3265,10 +3246,9 @@ public class SqlToRelConverter {
     }
 
     if (null != correlationName) {
-      // REVIEW: make mapCorrelateVariableToRexNode map to RexFieldAccess
       assert e instanceof RexFieldAccess;
       final RexNode prev =
-          bb.mapCorrelateVariableToRexNode.put(correlationName, e);
+          bb.mapCorrelateToRex.put(correlationName, (RexFieldAccess) e);
       assert prev == null;
     }
     return e;
@@ -3618,16 +3598,6 @@ public class SqlToRelConverter {
     // ?
   }
 
-  private String createCorrel() {
-    int n = nextCorrel++;
-    return CORREL_PREFIX + n;
-  }
-
-  private int getCorrelOrdinal(String correlName) {
-    assert correlName.startsWith(CORREL_PREFIX);
-    return Integer.parseInt(correlName.substring(CORREL_PREFIX.length()));
-  }
-
   //~ Inner Classes ----------------------------------------------------------
 
   /**
@@ -3642,7 +3612,7 @@ public class SqlToRelConverter {
     private final Map<String, RexNode> nameToNodeMap;
     public RelNode root;
     private List<RelNode> inputs;
-    private final Map<String, RexNode> mapCorrelateVariableToRexNode =
+    private final Map<CorrelationId, RexFieldAccess> mapCorrelateToRex =
         new HashMap<>();
 
     final List<RelNode> cursors = new ArrayList<>();
@@ -3912,7 +3882,7 @@ public class SqlToRelConverter {
         assert isParent;
         DeferredLookup lookup =
             new DeferredLookup(this, qualified.identifier.names.get(0));
-        String correlName = createCorrel();
+        final CorrelationId correlName = cluster.createCorrel();
         mapCorrelToDeferred.put(correlName, lookup);
         final RelDataType rowType = foundNs.getRowType();
         return rexBuilder.makeCorrel(rowType, correlName);
@@ -4284,8 +4254,8 @@ public class SqlToRelConverter {
       this.originalRelName = originalRelName;
     }
 
-    public RexFieldAccess getFieldAccess(String name) {
-      return (RexFieldAccess) bb.mapCorrelateVariableToRexNode.get(name);
+    public RexFieldAccess getFieldAccess(CorrelationId name) {
+      return (RexFieldAccess) bb.mapCorrelateToRex.get(name);
     }
 
     public String getOriginalRelName() {

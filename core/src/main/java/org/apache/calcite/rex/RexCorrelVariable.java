@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.rex;
 
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlKind;
 
@@ -27,12 +28,15 @@ import org.apache.calcite.sql.SqlKind;
  * assigned a value, and the other side of the join is restarted.</p>
  */
 public class RexCorrelVariable extends RexVariable {
+  public final CorrelationId id;
+
   //~ Constructors -----------------------------------------------------------
 
   RexCorrelVariable(
-      String varName,
+      CorrelationId id,
       RelDataType type) {
-    super(varName, type);
+    super(id.getName(), type);
+    this.id = id;
   }
 
   //~ Methods ----------------------------------------------------------------

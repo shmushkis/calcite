@@ -18,12 +18,13 @@ package org.apache.calcite.sql2rel;
 
 import org.apache.calcite.rel.RelHomogeneousShuttle;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 
-import java.util.Set;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * Rewrites relations to ensure the same correlation is referenced by the same
@@ -37,27 +38,27 @@ public class DeduplicateCorrelateVariables extends RelHomogeneousShuttle {
    */
   private static class DeduplicateCorrelateVariablesShuttle extends RexShuttle {
     private final RexBuilder builder;
-    private final String canonical;
-    private final Set<String> altNames;
+    private final CorrelationId id;
+    private final ImmutableSet<CorrelationId> altIds;
 
     public DeduplicateCorrelateVariablesShuttle(RexBuilder builder,
-        String canonical, Set<String> altNames) {
+        CorrelationId canonical, ImmutableSet<CorrelationId> altIds) {
       this.builder = builder;
-      this.canonical = canonical;
-      this.altNames = altNames;
+      this.id = canonical;
+      this.altIds = altIds;
     }
 
     @Override public RexNode visitCorrelVariable(RexCorrelVariable variable) {
-      if (!altNames.contains(variable.getName())) {
+      if (!altIds.contains(variable.id)) {
         return variable;
       }
 
-      return builder.makeCorrel(variable.getType(), canonical);
+      return builder.makeCorrel(variable.getType(), id);
     }
   }
 
   public DeduplicateCorrelateVariables(RexBuilder builder,
-      String canonical, Set<String> altNames) {
+      CorrelationId canonical, ImmutableSet<CorrelationId> altNames) {
     dedupRex = new DeduplicateCorrelateVariablesShuttle(builder,
         canonical, altNames);
   }

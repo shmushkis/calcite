@@ -28,6 +28,7 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.AbstractRelNode;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.util.Util;
@@ -135,14 +136,6 @@ public class RelSubset extends AbstractRelNode {
     }
   }
 
-  public Set<String> getVariablesSet() {
-    return set.variablesPropagated;
-  }
-
-  public Set<String> getVariablesUsed() {
-    return set.variablesUsed;
-  }
-
   public RelNode getBest() {
     return best;
   }
@@ -163,7 +156,7 @@ public class RelSubset extends AbstractRelNode {
     }
   }
 
-  public void explain(RelWriter pw) {
+  @Override public void explain(RelWriter pw) {
     // Not a typical implementation of "explain". We don't gather terms &
     // values to be printed later. We actually do the work.
     String s = getDescription();
@@ -177,7 +170,7 @@ public class RelSubset extends AbstractRelNode {
     pw.done(input);
   }
 
-  protected String computeDigest() {
+  @Override protected String computeDigest() {
     StringBuilder digest = new StringBuilder("Subset#");
     digest.append(set.id);
     for (RelTrait trait : traitSet) {
@@ -277,13 +270,13 @@ public class RelSubset extends AbstractRelNode {
       }
     }
     set.addInternal(rel);
-    Set<String> variablesSet = RelOptUtil.getVariablesSet(rel);
-    Set<String> variablesStopped = rel.getVariablesStopped();
+    Set<CorrelationId> variablesSet = RelOptUtil.getVariablesSet(rel);
+    Set<CorrelationId> variablesStopped = rel.getVariablesSet();
     if (false) {
-      Set<String> variablesPropagated =
+      Set<CorrelationId> variablesPropagated =
           Util.minus(variablesSet, variablesStopped);
       assert set.variablesPropagated.containsAll(variablesPropagated);
-      Set<String> variablesUsed = RelOptUtil.getVariablesUsed(rel);
+      Set<CorrelationId> variablesUsed = RelOptUtil.getVariablesUsed(rel);
       assert set.variablesUsed.containsAll(variablesUsed);
     }
   }
@@ -376,12 +369,12 @@ public class RelSubset extends AbstractRelNode {
     }
   }
 
-  public void collectVariablesUsed(Set<String> variableSet) {
-    variableSet.addAll(getVariablesUsed());
+  @Override public void collectVariablesUsed(Set<CorrelationId> variableSet) {
+    variableSet.addAll(set.variablesUsed);
   }
 
-  public void collectVariablesSet(Set<String> variableSet) {
-    variableSet.addAll(getVariablesSet());
+  @Override public void collectVariablesSet(Set<CorrelationId> variableSet) {
+    variableSet.addAll(set.variablesPropagated);
   }
 
   /**

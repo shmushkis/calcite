@@ -435,7 +435,7 @@ public class Bindables {
         RelNode left, RelNode right, JoinRelType joinType,
         boolean semiJoinDone) {
       return new BindableJoin(getCluster(), traitSet, left, right,
-          conditionExpr, joinType, variablesStopped);
+          conditionExpr, joinType, getVariablesStopped());
     }
 
     public Class<Object[]> getElementType() {

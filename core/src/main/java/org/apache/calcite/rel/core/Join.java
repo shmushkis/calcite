@@ -32,6 +32,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -53,21 +54,26 @@ public abstract class Join extends BiRel {
   //~ Instance fields --------------------------------------------------------
 
   protected final RexNode condition;
-  protected final ImmutableSet<String> variablesStopped;
+  protected final ImmutableSet<CorrelationId> variablesSet;
 
   /**
    * Values must be of enumeration {@link JoinRelType}, except that
    * {@link JoinRelType#RIGHT} is disallowed.
    */
-  protected JoinRelType joinType;
+  protected final JoinRelType joinType;
 
   //~ Constructors -----------------------------------------------------------
+
+  // Next time we need to change the constructor of Join, let's change the
+  // "Set<String> variablesStopped" parameter to
+  // "Set<CorrelationId> variablesSet". At that point we would deprecate
+  // RelNode.getVariablesStopped().
 
   /**
    * Creates a Join.
    *
    * @param cluster          Cluster
-   * @param traits           Traits
+   * @param traitSet         Trait set
    * @param left             Left input
    * @param right            Right input
    * @param condition        Join condition
@@ -78,18 +84,16 @@ public abstract class Join extends BiRel {
    */
   protected Join(
       RelOptCluster cluster,
-      RelTraitSet traits,
+      RelTraitSet traitSet,
       RelNode left,
       RelNode right,
       RexNode condition,
       JoinRelType joinType,
       Set<String> variablesStopped) {
-    super(cluster, traits, left, right);
-    this.condition = condition;
-    this.variablesStopped = ImmutableSet.copyOf(variablesStopped);
-    assert joinType != null;
-    assert condition != null;
-    this.joinType = joinType;
+    super(cluster, traitSet, left, right);
+    this.condition = Preconditions.checkNotNull(condition);
+    this.variablesSet = CorrelationId.setOf(variablesStopped);
+    this.joinType = Preconditions.checkNotNull(joinType);
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -173,13 +177,12 @@ public abstract class Join extends BiRel {
     return product * RelMetadataQuery.getSelectivity(joinRel, condition);
   }
 
-  // implement RelNode
-  public double getRows() {
+  @Override public double getRows() {
     return estimateJoinedRows(this, condition);
   }
 
-  public Set<String> getVariablesStopped() {
-    return variablesStopped;
+  @Override public Set<CorrelationId> getVariablesSet() {
+    return variablesSet;
   }
 
   public RelWriter explainTerms(RelWriter pw) {
@@ -295,14 +298,14 @@ public abstract class Join extends BiRel {
         == (systemFieldList.size()
         + leftType.getFieldCount()
         + rightType.getFieldCount()));
-    List<String> nameList = new ArrayList<String>();
-    List<RelDataType> typeList = new ArrayList<RelDataType>();
+    List<String> nameList = new ArrayList<>();
+    final List<RelDataType> typeList = new ArrayList<>();
 
     // use a hashset to keep track of the field names; this is needed
     // to ensure that the contains() call to check for name uniqueness
     // runs in constant time; otherwise, if the number of fields is large,
     // doing a contains() on a list can be expensive
-    HashSet<String> uniqueNameList = new HashSet<String>();
+    final HashSet<String> uniqueNameList = new HashSet<>();
     addFields(systemFieldList, typeList, nameList, uniqueNameList);
     addFields(leftType.getFieldList(), typeList, nameList, uniqueNameList);
     if (rightType != null) {

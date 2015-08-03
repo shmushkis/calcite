@@ -174,8 +174,8 @@ public abstract class Correlate extends BiRel {
     return requiredColumns;
   }
 
-  @Override public Set<String> getVariablesStopped() {
-    return ImmutableSet.of(correlationId.getName());
+  @Override public Set<CorrelationId> getVariablesSet() {
+    return ImmutableSet.of(correlationId);
   }
 
   @Override public RelOptCost computeSelfCost(RelOptPlanner planner) {
