@@ -38,6 +38,7 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Collect;
 import org.apache.calcite.rel.core.CorrelationId;
+import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -48,6 +49,7 @@ import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Uncollect;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
+import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalIntersect;
 import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.logical.LogicalMinus;
@@ -974,11 +976,23 @@ public class SqlToRelConverter {
     final RexNode convertedWhere = bb.convertExpression(newWhere);
 
     // only allocate filter if the condition is not TRUE
-    if (!convertedWhere.isAlwaysTrue()) {
-      bb.setRoot(
-          RelOptUtil.createFilter(bb.root, convertedWhere),
-          false);
+    if (convertedWhere.isAlwaysTrue()) {
+      return;
     }
+
+    final RelNode filter = RelOptUtil.createFilter(bb.root, convertedWhere);
+    final RelNode r;
+    final CorrelationUse p = getCorrelationUse(bb, filter);
+    if (p != null) {
+      assert p.r instanceof Filter;
+      Filter f = (Filter) p.r;
+      r = LogicalFilter.create(f.getInput(), f.getCondition(),
+          ImmutableSet.of(p.id));
+    } else {
+      r = filter;
+    }
+
+    bb.setRoot(r, false);
   }
 
   private void replaceSubqueries(
@@ -2140,118 +2154,14 @@ public class SqlToRelConverter {
       JoinRelType joinType) {
     assert joinCond != null;
 
-    final Set<CorrelationId> correlatedVariables =
-        RelOptUtil.getVariablesUsed(rightRel);
-    if (correlatedVariables.size() > 0) {
-      final ImmutableBitSet.Builder requiredColumns = ImmutableBitSet.builder();
-      final List<CorrelationId> correlNames = Lists.newArrayList();
-
-      // All correlations must refer the same namespace since correlation
-      // produces exactly one correlation source.
-      // The same source might be referenced by different variables since
-      // DeferredLookups are not de-duplicated at create time.
-      SqlValidatorNamespace prevNs = null;
-
-      for (CorrelationId correlName : correlatedVariables) {
-        DeferredLookup lookup =
-            mapCorrelToDeferred.get(correlName);
-        RexFieldAccess fieldAccess = lookup.getFieldAccess(correlName);
-        String originalRelName = lookup.getOriginalRelName();
-        String originalFieldName = fieldAccess.getField().getName();
-
-        int[] nsIndexes = {-1};
-        final SqlValidatorScope[] ancestorScopes = {null};
-        SqlValidatorNamespace foundNs =
-            lookup.bb.scope.resolve(
-                ImmutableList.of(originalRelName),
-                ancestorScopes,
-                nsIndexes);
-
-        assert foundNs != null;
-        assert nsIndexes.length == 1;
-
-        int childNamespaceIndex = nsIndexes[0];
-
-        SqlValidatorScope ancestorScope = ancestorScopes[0];
-        boolean correlInCurrentScope = ancestorScope == bb.scope;
-
-        if (!correlInCurrentScope) {
-          continue;
-        }
-
-        if (prevNs == null) {
-          prevNs = foundNs;
-        } else {
-          assert prevNs == foundNs : "All correlation variables should resolve"
-              + " to the same namespace."
-              + " Prev ns=" + prevNs
-              + ", new ns=" + foundNs;
-        }
-
-        int namespaceOffset = 0;
-        if (childNamespaceIndex > 0) {
-          // If not the first child, need to figure out the width
-          // of output types from all the preceding namespaces
-          assert ancestorScope instanceof ListScope;
-          List<SqlValidatorNamespace> children =
-              ((ListScope) ancestorScope).getChildren();
-
-          for (int i = 0; i < childNamespaceIndex; i++) {
-            SqlValidatorNamespace child = children.get(i);
-            namespaceOffset +=
-                child.getRowType().getFieldCount();
-          }
-        }
-
-        RelDataTypeField field =
-            catalogReader.field(foundNs.getRowType(), originalFieldName);
-        int pos = namespaceOffset + field.getIndex();
-
-        assert field.getType()
-            == lookup.getFieldAccess(correlName).getField().getType();
-
-        assert pos != -1;
-
-        if (bb.mapRootRelToFieldProjection.containsKey(bb.root)) {
-          // bb.root is an aggregate and only projects group by
-          // keys.
-          Map<Integer, Integer> exprProjection =
-              bb.mapRootRelToFieldProjection.get(bb.root);
-
-          // subquery can reference group by keys projected from
-          // the root of the outer relation.
-          if (exprProjection.containsKey(pos)) {
-            pos = exprProjection.get(pos);
-          } else {
-            // correl not grouped
-            throw Util.newInternal(
-                "Identifier '" + originalRelName + "."
-                + originalFieldName + "' is not a group expr");
-          }
-        }
-
-        requiredColumns.set(pos);
-        correlNames.add(correlName);
+    final CorrelationUse p = getCorrelationUse(bb, rightRel);
+    if (p != null) {
+      LogicalCorrelate corr = LogicalCorrelate.create(leftRel, p.r,
+          p.id, p.requiredColumns, SemiJoinType.of(joinType));
+      if (!joinCond.isAlwaysTrue()) {
+        return RelOptUtil.createFilter(corr, joinCond);
       }
-
-      if (!correlNames.isEmpty()) {
-        if (correlNames.size() > 1) {
-          // The same table was referenced more than once.
-          // So we deduplicate
-          RelShuttle dedup =
-              new DeduplicateCorrelateVariables(rexBuilder,
-                  correlNames.get(0),
-                  ImmutableSet.copyOf(Util.skip(correlNames)));
-          rightRel = rightRel.accept(dedup);
-        }
-        LogicalCorrelate corr = LogicalCorrelate.create(leftRel, rightRel,
-            correlNames.get(0), requiredColumns.build(),
-            SemiJoinType.of(joinType));
-        if (!joinCond.isAlwaysTrue()) {
-          return RelOptUtil.createFilter(corr, joinCond);
-        }
-        return corr;
-      }
+      return corr;
     }
 
     final Join originalJoin =
@@ -2259,6 +2169,120 @@ public class SqlToRelConverter {
             joinCond, joinType, ImmutableSet.<String>of(), false);
 
     return RelOptUtil.pushDownJoinConditions(originalJoin);
+  }
+
+  private CorrelationUse getCorrelationUse(Blackboard bb, final RelNode r0) {
+    final Set<CorrelationId> correlatedVariables =
+        RelOptUtil.getVariablesUsed(r0);
+    if (correlatedVariables.isEmpty()) {
+      return null;
+    }
+    final ImmutableBitSet.Builder requiredColumns = ImmutableBitSet.builder();
+    final List<CorrelationId> correlNames = Lists.newArrayList();
+
+    // All correlations must refer the same namespace since correlation
+    // produces exactly one correlation source.
+    // The same source might be referenced by different variables since
+    // DeferredLookups are not de-duplicated at create time.
+    SqlValidatorNamespace prevNs = null;
+
+    for (CorrelationId correlName : correlatedVariables) {
+      DeferredLookup lookup =
+          mapCorrelToDeferred.get(correlName);
+      RexFieldAccess fieldAccess = lookup.getFieldAccess(correlName);
+      String originalRelName = lookup.getOriginalRelName();
+      String originalFieldName = fieldAccess.getField().getName();
+
+      int[] nsIndexes = {-1};
+      final SqlValidatorScope[] ancestorScopes = {null};
+      SqlValidatorNamespace foundNs =
+          lookup.bb.scope.resolve(
+              ImmutableList.of(originalRelName),
+              ancestorScopes,
+              nsIndexes);
+
+      assert foundNs != null;
+      assert nsIndexes.length == 1;
+
+      int childNamespaceIndex = nsIndexes[0];
+
+      SqlValidatorScope ancestorScope = ancestorScopes[0];
+      boolean correlInCurrentScope = ancestorScope == bb.scope;
+
+      if (!correlInCurrentScope) {
+        continue;
+      }
+
+      if (prevNs == null) {
+        prevNs = foundNs;
+      } else {
+        assert prevNs == foundNs : "All correlation variables should resolve"
+            + " to the same namespace."
+            + " Prev ns=" + prevNs
+            + ", new ns=" + foundNs;
+      }
+
+      int namespaceOffset = 0;
+      if (childNamespaceIndex > 0) {
+        // If not the first child, need to figure out the width
+        // of output types from all the preceding namespaces
+        assert ancestorScope instanceof ListScope;
+        List<SqlValidatorNamespace> children =
+            ((ListScope) ancestorScope).getChildren();
+
+        for (int i = 0; i < childNamespaceIndex; i++) {
+          SqlValidatorNamespace child = children.get(i);
+          namespaceOffset +=
+              child.getRowType().getFieldCount();
+        }
+      }
+
+      RelDataTypeField field =
+          catalogReader.field(foundNs.getRowType(), originalFieldName);
+      int pos = namespaceOffset + field.getIndex();
+
+      assert field.getType()
+          == lookup.getFieldAccess(correlName).getField().getType();
+
+      assert pos != -1;
+
+      if (bb.mapRootRelToFieldProjection.containsKey(bb.root)) {
+        // bb.root is an aggregate and only projects group by
+        // keys.
+        Map<Integer, Integer> exprProjection =
+            bb.mapRootRelToFieldProjection.get(bb.root);
+
+        // subquery can reference group by keys projected from
+        // the root of the outer relation.
+        if (exprProjection.containsKey(pos)) {
+          pos = exprProjection.get(pos);
+        } else {
+          // correl not grouped
+          throw new AssertionError("Identifier '" + originalRelName + "."
+              + originalFieldName + "' is not a group expr");
+        }
+      }
+
+      requiredColumns.set(pos);
+      correlNames.add(correlName);
+    }
+
+    if (correlNames.isEmpty()) {
+      // None of the correlating variables originated in this scope.
+      return null;
+    }
+
+    RelNode r = r0;
+    if (correlNames.size() > 1) {
+      // The same table was referenced more than once.
+      // So we deduplicate
+      RelShuttle dedup =
+          new DeduplicateCorrelateVariables(rexBuilder,
+              correlNames.get(0),
+              ImmutableSet.copyOf(Util.skip(correlNames)));
+      r = r0.accept(dedup);
+    }
+    return new CorrelationUse(correlNames.get(0), requiredColumns.build(), r);
   }
 
   /**
@@ -4930,6 +4954,21 @@ public class SqlToRelConverter {
       }
 
       return call.getOperator().acceptCall(this, call);
+    }
+  }
+
+  /** Use of a row as a correlating variable by a given relational
+   * expression. */
+  private static class CorrelationUse {
+    private final CorrelationId id;
+    private final ImmutableBitSet requiredColumns;
+    private final RelNode r;
+
+    CorrelationUse(CorrelationId id, ImmutableBitSet requiredColumns,
+        RelNode r) {
+      this.id = id;
+      this.requiredColumns = requiredColumns;
+      this.r = r;
     }
   }
 }

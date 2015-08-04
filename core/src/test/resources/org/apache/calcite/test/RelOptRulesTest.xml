@@ -4752,4 +4752,25 @@ LogicalProject(EMPNO=[$0])
 ]]>
         </Resource>
     </TestCase>
+    <TestCase name="testWhereInCorrelated">
+        <Resource name="sql">
+            <![CDATA[select empno from emp as e
+join dept as d using (deptno)
+where e.sal in (
+  select e2.sal from emp as e2 where e2.deptno > e.deptno)]]>
+        </Resource>
+        <Resource name="planBefore">
+            <![CDATA[
+LogicalProject(EMPNO=[$0])
+  LogicalFilter(condition=[IN($5, {
+LogicalProject(SAL=[$5])
+  LogicalFilter(condition=[>($7, $cor0.DEPTNO)])
+    LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+})], variablesSet=[[$cor0]])
+    LogicalJoin(condition=[=($7, $9)], joinType=[inner])
+      LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+      LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+]]>
+        </Resource>
+    </TestCase>
 </Root>

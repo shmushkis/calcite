@@ -106,7 +106,7 @@ import static org.junit.Assert.assertTrue;
  * translated into relational algebra and then fed into a
  * {@link org.apache.calcite.plan.hep.HepPlanner}. The planner fires the rule on
  * every
- * pattern match in a depth-first left-to-right preorder traversal of the tree
+ * pattern match in a depth-first left-to-right pre-order traversal of the tree
  * for as long as the rule continues to succeed in applying its transform. (For
  * rules which call transformTo more than once, only the last result is used.)
  * The plan before and after "optimization" is diffed against a .ref file using
@@ -331,13 +331,11 @@ public class RelOptRulesTest extends RelOptTestBase {
           }
         };
     final FilterJoinRule join =
-        new FilterJoinRule.JoinConditionPushRule(
-            RelFactories.DEFAULT_FILTER_FACTORY,
-            RelFactories.DEFAULT_PROJECT_FACTORY, predicate);
+        new FilterJoinRule.JoinConditionPushRule(RelFactories.LOGICAL_BUILDER,
+            predicate);
     final FilterJoinRule filterOnJoin =
         new FilterJoinRule.FilterIntoJoinRule(true,
-            RelFactories.DEFAULT_FILTER_FACTORY,
-            RelFactories.DEFAULT_PROJECT_FACTORY, predicate);
+            RelFactories.LOGICAL_BUILDER, predicate);
     final HepProgram program =
         HepProgram.builder()
             .addGroupBegin()
@@ -2074,6 +2072,14 @@ public class RelOptRulesTest extends RelOptTestBase {
     final String sql = "select empno\n"
         + "from sales.emp left join sales.dept\n"
         + "on exists (select deptno from sales.emp where empno < 20)";
+    checkSubQuery(sql).check();
+  }
+
+  @Test public void testWhereInCorrelated() {
+    final String sql = "select empno from emp as e\n"
+        + "join dept as d using (deptno)\n"
+        + "where e.sal in (\n"
+        + "  select e2.sal from emp as e2 where e2.deptno > e.deptno)";
     checkSubQuery(sql).check();
   }
 

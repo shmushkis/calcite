@@ -116,7 +116,7 @@ public final class LogicalCalc extends Calc {
 
   @Override public void collectVariablesUsed(Set<CorrelationId> variableSet) {
     final RelOptUtil.VariableUsedVisitor vuv =
-        new RelOptUtil.VariableUsedVisitor();
+        new RelOptUtil.VariableUsedVisitor(null);
     for (RexNode expr : program.getExprList()) {
       expr.accept(vuv);
     }
