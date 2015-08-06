@@ -4587,7 +4587,9 @@ public class JdbcTest {
    * use as scratch space during development. */
   // Do not add '@Ignore'; just remember not to commit changes to dummy.oq
   @Test public void testRunDummy() throws Exception {
+    Prepare.THREAD_EXPAND.set(false);
     checkRun("sql/dummy.oq");
+    Prepare.THREAD_EXPAND.set(true);
   }
 
   @Test public void testRunAgg() throws Exception {

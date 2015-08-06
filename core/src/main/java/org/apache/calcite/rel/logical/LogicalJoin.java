@@ -29,6 +29,7 @@ import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexNode;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -96,9 +97,8 @@ public final class LogicalJoin extends Join {
       ImmutableList<RelDataTypeField> systemFieldList) {
     super(cluster, traitSet, left, right, condition, joinType,
         variablesStopped);
-    assert systemFieldList != null;
     this.semiJoinDone = semiJoinDone;
-    this.systemFieldList = systemFieldList;
+    this.systemFieldList = Preconditions.checkNotNull(systemFieldList);
   }
 
   @Deprecated // to be removed before 2.0

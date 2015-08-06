@@ -16,8 +16,6 @@
  */
 package org.apache.calcite.rel.logical;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
@@ -35,7 +33,9 @@ import org.apache.calcite.rel.metadata.RelMdCollation;
 import org.apache.calcite.rel.metadata.RelMdDistribution;
 import org.apache.calcite.rex.RexNode;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.List;
 import java.util.Set;

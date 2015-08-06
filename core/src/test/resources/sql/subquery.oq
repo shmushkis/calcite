@@ -275,4 +275,20 @@ GROUP BY emp.deptno;
 
 !ok
 
+# Correlated IN sub-query in WHERE clause of JOIN
+select empno from "scott".emp as e
+join "scott".dept as d using (deptno)
+where e.sal in (
+  select e2.sal from "scott".emp as e2 where e2.deptno > e.deptno);
+!ok
+!plan
+
+# Correlated NOT IN sub-query in WHERE clause of JOIN
+select empno from "scott".emp as e /*noexpand*/
+join "scott".dept as d using (deptno)
+where e.sal not in (
+  select e2.sal from "scott".emp as e2 where e2.deptno > e.deptno);
+!ok
+!plan
+
 # End subquery.oq

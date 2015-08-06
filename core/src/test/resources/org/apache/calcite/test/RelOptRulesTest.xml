@@ -4772,5 +4772,20 @@ LogicalProject(SAL=[$5])
       LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
 ]]>
         </Resource>
+        <Resource name="planAfter">
+            <![CDATA[
+LogicalProject(EMPNO=[$0])
+  LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8], DEPTNO0=[$9], NAME=[$10])
+    LogicalFilter(condition=[=($5, $11)])
+      LogicalCorrelate(correlation=[$cor0], joinType=[INNER], requiredColumns=[{7}])
+        LogicalJoin(condition=[=($7, $9)], joinType=[inner])
+          LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+          LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+        LogicalAggregate(group=[{0}])
+          LogicalProject(SAL=[$5])
+            LogicalFilter(condition=[>($7, $cor0.DEPTNO)])
+              LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+]]>
+        </Resource>
     </TestCase>
 </Root>

@@ -54,7 +54,9 @@ import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectToCalcRule;
 import org.apache.calcite.rel.rules.SemiJoinRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
+import org.apache.calcite.rel.rules.SubQueryRemoveRule;
 import org.apache.calcite.rel.rules.TableScanRule;
+import org.apache.calcite.sql2rel.RelDecorrelator;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -97,6 +99,13 @@ public class Programs {
   /** Program that converts filters and projects to {@link Calc}s. */
   public static final Program CALC_PROGRAM =
       hep(CALC_RULES, true, new DefaultRelMetadataProvider());
+
+  /** Program that expands sub-queries. */
+  public static final Program SUB_QUERY_PROGRAM =
+      hep(
+          ImmutableList.of((RelOptRule) SubQueryRemoveRule.FILTER,
+              SubQueryRemoveRule.PROJECT,
+              SubQueryRemoveRule.JOIN), true, new DefaultRelMetadataProvider());
 
   public static final ImmutableSet<RelOptRule> RULE_SET =
       ImmutableSet.of(
@@ -258,6 +267,7 @@ public class Programs {
 
   /** Returns the standard program used by Prepare. */
   public static Program standard() {
+
     final Program program1 =
         new Program() {
           public RelNode run(RelOptPlanner planner, RelNode rel,
@@ -276,11 +286,13 @@ public class Programs {
           }
         };
 
-    // Second planner pass to do physical "tweaks". This the first time that
-    // EnumerableCalcRel is introduced.
-    final Program program2 = CALC_PROGRAM;
+    return sequence(SUB_QUERY_PROGRAM,
+        new DecorrelateProgram(),
+        program1,
 
-    return sequence(program1, program2);
+        // Second planner pass to do physical "tweaks". This the first time that
+        // EnumerableCalcRel is introduced.
+        CALC_PROGRAM);
   }
 
   /** Program backed by a {@link RuleSet}. */
@@ -318,9 +330,19 @@ public class Programs {
     public RelNode run(RelOptPlanner planner, RelNode rel,
         RelTraitSet requiredOutputTraits) {
       for (Program program : programs) {
+        System.out.println(RelOptUtil.toString(rel));
         rel = program.run(planner, rel, requiredOutputTraits);
       }
+      System.out.println(RelOptUtil.toString(rel));
       return rel;
+    }
+  }
+
+  /** Program that de-correlates a query. */
+  private static class DecorrelateProgram implements Program {
+    public RelNode run(RelOptPlanner planner, RelNode rel,
+        RelTraitSet requiredOutputTraits) {
+      return RelDecorrelator.decorrelateQuery(rel);
     }
   }
 }

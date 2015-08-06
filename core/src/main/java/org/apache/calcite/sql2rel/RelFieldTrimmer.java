@@ -434,8 +434,9 @@ public class RelFieldTrimmer implements ReflectiveVisitor {
     RexNode newConditionExpr =
         conditionExpr.accept(shuttle);
 
-    relBuilder.push(newInput);
-    relBuilder.filter(newConditionExpr);
+    // Use copy rather than relBuilder so that correlating variables get set.
+    relBuilder.push(
+        filter.copy(filter.getTraitSet(), newInput, newConditionExpr));
 
     // The result has the same mapping as the input gave us. Sometimes we
     // return fields that the consumer didn't ask for, because the filter

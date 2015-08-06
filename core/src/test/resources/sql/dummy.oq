@@ -15,9 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-!use post
-values 1;
-EXPR$0
-1
+!use scott
+# Correlated NOT IN sub-query in WHERE clause of JOIN
+select empno from "scott".emp as e /*noexpand*/
+join "scott".dept as d using (deptno)
+where e.sal in (
+  select e2.sal from "scott".emp as e2 where e2.deptno > e.deptno);
 !ok
+!plan
+
 # End dummy.oq

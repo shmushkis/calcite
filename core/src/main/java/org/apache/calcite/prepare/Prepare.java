@@ -88,6 +88,16 @@ public abstract class Prepare {
         }
       };
 
+  /** Temporary, while CALCITE-816 is under development.
+   *
+   * @see org.apache.calcite.util.Util#deprecated(Object, boolean) */
+  public static final ThreadLocal<Boolean> THREAD_EXPAND =
+      new ThreadLocal<Boolean>() {
+        @Override protected Boolean initialValue() {
+          return true;
+        }
+      };
+
   public Prepare(CalcitePrepare.Context context, CatalogReader catalogReader,
       Convention resultConvention) {
     assert context != null;
@@ -210,6 +220,7 @@ public abstract class Prepare {
 
     SqlToRelConverter sqlToRelConverter =
         getSqlToRelConverter(validator, catalogReader);
+    sqlToRelConverter.setExpand(THREAD_EXPAND.get());
 
     SqlExplain sqlExplain = null;
     if (sqlQuery.getKind() == SqlKind.EXPLAIN) {

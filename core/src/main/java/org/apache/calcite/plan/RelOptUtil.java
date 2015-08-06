@@ -85,7 +85,9 @@ import org.apache.calcite.util.mapping.Mappings;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -204,8 +206,9 @@ public abstract class RelOptUtil {
 
   /**
    * Returns a set of variables used in an expression, including in sub-queries.
-   @see Util#deprecated(Object, boolean)  */
-   public static Set<CorrelationId> getVariablesUsed(RexNode node) {
+   *
+   * @see Util#deprecated(Object, boolean)  */
+  public static Set<CorrelationId> getVariablesUsed(RexNode node) {
     final CorrelationCollector visitor = new CorrelationCollector();
     node.accept(
         new RexVisitorImpl<Void>(true) {
@@ -2948,6 +2951,21 @@ public abstract class RelOptUtil {
     return projectFactory.createProject(rel, exprList, outputNameList);
   }
 
+  /** Finds which columns of a correlation variable are used within a
+   * relational expression. */
+  public static ImmutableBitSet correlationColumns(CorrelationId id,
+      RelNode rel) {
+    final CorrelationCollector collector = new CorrelationCollector();
+    rel.accept(collector);
+    final ImmutableBitSet.Builder builder = ImmutableBitSet.builder();
+    for (int field : collector.vuv.variableFields.get(id)) {
+      if (field >= 0) {
+        builder.set(field);
+      }
+    }
+    return builder.build();
+  }
+
   /** Policies for handling two- and three-valued boolean logic. */
   public enum Logic {
     /** Three-valued boolean logic. */
@@ -3231,15 +3249,27 @@ public abstract class RelOptUtil {
   /** Visitor that finds all variables used in an expression. */
   public static class VariableUsedVisitor extends RexShuttle {
     public final Set<CorrelationId> variables = new LinkedHashSet<>();
+    public final Multimap<CorrelationId, Integer> variableFields =
+        LinkedHashMultimap.create();
     private final RelShuttle relShuttle;
 
     public VariableUsedVisitor(RelShuttle relShuttle) {
       this.relShuttle = relShuttle;
     }
 
-    public RexNode visitCorrelVariable(RexCorrelVariable p) {
+    @Override public RexNode visitCorrelVariable(RexCorrelVariable p) {
       variables.add(p.id);
+      variableFields.put(p.id, -1);
       return p;
+    }
+
+    @Override public RexNode visitFieldAccess(RexFieldAccess fieldAccess) {
+      if (fieldAccess.getReferenceExpr() instanceof RexCorrelVariable) {
+        final RexCorrelVariable v =
+            (RexCorrelVariable) fieldAccess.getReferenceExpr();
+        variableFields.put(v.id, fieldAccess.getField().getIndex());
+      }
+      return super.visitFieldAccess(fieldAccess);
     }
 
     @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
@@ -3510,6 +3540,9 @@ public abstract class RelOptUtil {
     }
   }
 
+  /** Shuttle that finds correlation variables inside a given relational
+   * expression, including those that are inside
+   * {@link RexSubQuery sub-queries}. */
   private static class CorrelationCollector extends RelHomogeneousShuttle {
     private final VariableUsedVisitor vuv = new VariableUsedVisitor(this);
 
