@@ -23,6 +23,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.rex.RexSubQuery;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -33,39 +34,64 @@ import com.google.common.collect.ImmutableSet;
 public class DeduplicateCorrelateVariables extends RelHomogeneousShuttle {
   private final RexShuttle dedupRex;
 
-  /**
-   * Replaces alternative names of correlation variable to its canonical name.
-   */
-  private static class DeduplicateCorrelateVariablesShuttle extends RexShuttle {
-    private final RexBuilder builder;
-    private final CorrelationId id;
-    private final ImmutableSet<CorrelationId> altIds;
-
-    public DeduplicateCorrelateVariablesShuttle(RexBuilder builder,
-        CorrelationId canonical, ImmutableSet<CorrelationId> altIds) {
-      this.builder = builder;
-      this.id = canonical;
-      this.altIds = altIds;
-    }
-
-    @Override public RexNode visitCorrelVariable(RexCorrelVariable variable) {
-      if (!altIds.contains(variable.id)) {
-        return variable;
-      }
-
-      return builder.makeCorrel(variable.getType(), id);
-    }
+  /** Creates a DeduplicateCorrelateVariables. */
+  private DeduplicateCorrelateVariables(RexBuilder builder,
+      CorrelationId canonicalId, ImmutableSet<CorrelationId> alternateIds) {
+    dedupRex = new DeduplicateCorrelateVariablesShuttle(builder,
+        canonicalId, alternateIds, this);
   }
 
-  public DeduplicateCorrelateVariables(RexBuilder builder,
-      CorrelationId canonical, ImmutableSet<CorrelationId> altNames) {
-    dedupRex = new DeduplicateCorrelateVariablesShuttle(builder,
-        canonical, altNames);
+  /**
+   * Rewrites a relational expression, replacing alternate correlation variables
+   * with a canonical correlation variable.
+   */
+  public static RelNode go(RexBuilder builder, CorrelationId canonicalId,
+      Iterable<? extends CorrelationId> alternateIds, RelNode r) {
+    return r.accept(
+        new DeduplicateCorrelateVariables(builder, canonicalId,
+            ImmutableSet.copyOf(alternateIds)));
   }
 
   @Override public RelNode visit(RelNode other) {
     RelNode next = super.visit(other);
     return next.accept(dedupRex);
+  }
+
+  /**
+   * Replaces alternative names of correlation variable to its canonical name.
+   */
+  private static class DeduplicateCorrelateVariablesShuttle extends RexShuttle {
+    private final RexBuilder builder;
+    private final CorrelationId canonicalId;
+    private final ImmutableSet<CorrelationId> alternateIds;
+    private final DeduplicateCorrelateVariables shuttle;
+
+    private DeduplicateCorrelateVariablesShuttle(RexBuilder builder,
+        CorrelationId canonicalId, ImmutableSet<CorrelationId> alternateIds,
+        DeduplicateCorrelateVariables shuttle) {
+      this.builder = builder;
+      this.canonicalId = canonicalId;
+      this.alternateIds = alternateIds;
+      this.shuttle = shuttle;
+    }
+
+    @Override public RexNode visitCorrelVariable(RexCorrelVariable variable) {
+      if (!alternateIds.contains(variable.id)) {
+        return variable;
+      }
+
+      return builder.makeCorrel(variable.getType(), canonicalId);
+    }
+
+    @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
+      if (shuttle != null) {
+        RelNode r = subQuery.rel.accept(shuttle); // look inside sub-queries
+        if (r != subQuery.rel) {
+          subQuery = subQuery.clone(r);
+        }
+      }
+      return super.visitSubQuery(subQuery);
+    }
   }
 }
 

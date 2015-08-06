@@ -102,9 +102,13 @@ public class RexSubQuery extends RexCall {
     return sb.toString();
   }
 
-  @Override public RexCall clone(RelDataType type, List<RexNode> operands) {
+  @Override public RexSubQuery clone(RelDataType type, List<RexNode> operands) {
     return new RexSubQuery(type, getOperator(),
         ImmutableList.copyOf(operands), rel);
+  }
+
+  public RexSubQuery clone(RelNode rel) {
+    return new RexSubQuery(type, getOperator(), operands, rel);
   }
 }
 

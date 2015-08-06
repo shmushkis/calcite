@@ -32,7 +32,6 @@ import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.RelShuttle;
 import org.apache.calcite.rel.SingleRel;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
@@ -2276,11 +2275,8 @@ public class SqlToRelConverter {
     if (correlNames.size() > 1) {
       // The same table was referenced more than once.
       // So we deduplicate
-      RelShuttle dedup =
-          new DeduplicateCorrelateVariables(rexBuilder,
-              correlNames.get(0),
-              ImmutableSet.copyOf(Util.skip(correlNames)));
-      r = r0.accept(dedup);
+      r = DeduplicateCorrelateVariables.go(rexBuilder, correlNames.get(0),
+          Util.skip(correlNames), r0);
     }
     return new CorrelationUse(correlNames.get(0), requiredColumns.build(), r);
   }

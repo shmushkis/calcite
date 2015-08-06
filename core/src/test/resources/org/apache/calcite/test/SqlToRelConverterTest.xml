@@ -2563,9 +2563,9 @@ LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$
   LogicalFilter(condition=[EXISTS({
 LogicalFilter(condition=[<=($0, $cor1.DEPTNO)])
   LogicalProject(DEPTNO=[$0], NAME=[$1])
-    LogicalFilter(condition=[>=($0, $cor0.DEPTNO)])
+    LogicalFilter(condition=[>=($0, $cor1.DEPTNO)])
       LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
-})])
+})], variablesSet=[[$cor1]])
     LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 ]]>
         </Resource>
@@ -2661,9 +2661,9 @@ LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$
   LogicalFilter(condition=[EXISTS({
 LogicalFilter(condition=[<=($0, $cor1.DEPTNO)])
   LogicalProject(DEPTNO=[$0], NAME=[$1])
-    LogicalFilter(condition=[>=($0, $cor0.DEPTNO)])
+    LogicalFilter(condition=[>=($0, $cor1.DEPTNO)])
       LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
-})])
+})], variablesSet=[[$cor1]])
     LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 ]]>
         </Resource>
@@ -2722,7 +2722,8 @@ LogicalFilter(condition=[>($0, +($cor0.DEPTNO, 5))])
     </TestCase>
     <TestCase name="testInUncorrelatedSubqueryInHavingRex">
         <Resource name="sql">
-            <![CDATA[select sum(sal) as s from emp
+            <![CDATA[select sum(sal) as s
+from emp
 group by deptno
 having count(*) > 2
 and deptno in (
