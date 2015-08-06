@@ -560,7 +560,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
     if (plannerFactories.isEmpty()) {
       throw new AssertionError("no planner factories");
     }
-    RuntimeException exception = new RuntimeException();
+    RuntimeException exception = Util.FoundOne.NULL;
     for (Function1<Context, RelOptPlanner> plannerFactory : plannerFactories) {
       final RelOptPlanner planner = plannerFactory.apply(context);
       if (planner == null) {
