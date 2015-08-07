@@ -63,6 +63,7 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
+import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
@@ -607,6 +608,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
         x,
         columns,
         cursorFactory,
+        ImmutableList.<RelCollation>of(),
         -1,
         new Bindable<T>() {
           public Enumerable<T> bind(DataContext dataContext) {
@@ -742,6 +744,9 @@ public class CalcitePrepareImpl implements CalcitePrepare {
         preparingStmt.resultConvention == BindableConvention.INSTANCE
             ? Meta.CursorFactory.ARRAY
             : Meta.CursorFactory.deduce(columns, resultClazz),
+        preparedResult instanceof Prepare.PreparedResultImpl
+            ? ((Prepare.PreparedResultImpl) preparedResult).collations
+            : ImmutableList.<RelCollation>of(),
         maxRowCount,
         bindable);
   }
@@ -1085,6 +1090,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
           resultType,
           parameterRowType,
           fieldOrigins,
+          ImmutableList.copyOf(collations),
           rootRel,
           mapTableModOp(isDml, sqlKind),
           isDml) {
