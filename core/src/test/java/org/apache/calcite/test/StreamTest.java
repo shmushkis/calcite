@@ -342,12 +342,16 @@ public class StreamTest {
       return Linq4j.asEnumerable(new Iterable<Object[]>() {
         @Override public Iterator<Object[]> iterator() {
           return new Iterator<Object[]>() {
-            @Override public boolean hasNext() {
+            public boolean hasNext() {
               return true;
             }
 
-            @Override public Object[] next() {
+            public Object[] next() {
               return ROW_GENERATOR.apply();
+            }
+
+            public void remove() {
+              throw new UnsupportedOperationException();
             }
           };
         }
