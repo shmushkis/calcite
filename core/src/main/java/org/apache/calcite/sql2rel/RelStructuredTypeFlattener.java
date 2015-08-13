@@ -25,6 +25,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.Collect;
 import org.apache.calcite.rel.core.CorrelationId;
+import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.core.Sample;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Uncollect;
@@ -386,16 +387,14 @@ public class RelStructuredTypeFlattener implements ReflectiveVisitor {
 
   public void rewriteRel(LogicalFilter rel) {
     RelNode newRel =
-        RelOptUtil.createFilter(
-            getNewForOldRel(rel.getInput()),
+        RelOptUtil.createFilter(getNewForOldRel(rel.getInput()),
             rel.getCondition().accept(new RewriteRexShuttle()));
     setNewForOldRel(rel, newRel);
   }
 
   public void rewriteRel(LogicalJoin rel) {
     LogicalJoin newRel =
-        LogicalJoin.create(
-            getNewForOldRel(rel.getLeft()),
+        LogicalJoin.create(getNewForOldRel(rel.getLeft()),
             getNewForOldRel(rel.getRight()),
             rel.getCondition().accept(new RewriteRexShuttle()),
             rel.getJoinType(),
@@ -421,6 +420,10 @@ public class RelStructuredTypeFlattener implements ReflectiveVisitor {
             newPos.build(),
             rel.getJoinType());
     setNewForOldRel(rel, newRel);
+  }
+
+  public void rewriteRel(Root rel) {
+    rewriteGeneric(rel);
   }
 
   public void rewriteRel(Collect rel) {

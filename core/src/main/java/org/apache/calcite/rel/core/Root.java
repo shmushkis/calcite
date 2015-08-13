@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.rel.core;
 
+import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -26,10 +27,15 @@ import org.apache.calcite.rel.RelInput;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.SingleRel;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.util.Pair;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 import java.util.List;
 
@@ -100,15 +106,38 @@ public class Root extends SingleRel {
     return new Root(input.getCluster(), traitSet, input, fields, collation);
   }
 
+  @Override protected RelDataType deriveRowType() {
+    final RelDataTypeFactory.FieldInfoBuilder builder =
+        getCluster().getTypeFactory().builder();
+    final List<RelDataTypeField> inputFields =
+        getInput().getRowType().getFieldList();
+    for (Pair<Integer, String> field : fields) {
+      builder.add(field.right, inputFields.get(field.left).getType());
+    }
+    return builder.build();
+  }
+
   public RelOptCost computeSelfCost(RelOptPlanner planner) {
     return planner.getCostFactory().makeTinyCost();
   }
 
   public RelWriter explainTerms(RelWriter pw) {
-    return super.explainTerms(pw)
-        .item("fields", Pair.left(fields))
-        .item("names", Pair.right(fields))
-        .item("collation", collation);
+    super.explainTerms(pw);
+    final List<String> exps = Lists.transform(fields,
+        new Function<Pair<Integer, String>, String>() {
+          public String apply(Pair<Integer, String> input) {
+            return "$" + input.left;
+          }
+        });
+    if (pw.nest()) {
+      pw.item("fields", Pair.right(fields));
+      pw.item("exprs", exps);
+    } else {
+      for (Ord<String> field : Ord.zip(Pair.right(fields))) {
+        pw.item(field.e, exps.get(field.i));
+      }
+    }
+    return pw.item("collation", collation);
   }
 }
 
