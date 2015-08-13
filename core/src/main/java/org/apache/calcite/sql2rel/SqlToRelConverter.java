@@ -41,6 +41,7 @@ import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
+import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.core.Sample;
 import org.apache.calcite.rel.core.Uncollect;
 import org.apache.calcite.rel.logical.LogicalAggregate;
@@ -798,21 +799,14 @@ public class SqlToRelConverter {
     // If extra expressions were added to the project list for sorting,
     // add another project to remove them.
     if (orderExprList.size() > 0) {
-      final List<RexNode> exprs = new ArrayList<>();
+      final List<Pair<Integer, String>> fields = new ArrayList<>();
       final RelDataType rowType = bb.root.getRowType();
       final int fieldCount =
           rowType.getFieldCount() - orderExprList.size();
       for (int i = 0; i < fieldCount; i++) {
-        exprs.add(rexBuilder.makeInputRef(bb.root, i));
+        fields.add(Pair.of(i, rowType.getFieldNames().get(i)));
       }
-      bb.setRoot(
-          new LogicalProject(
-              cluster,
-              cluster.traitSetOf(RelCollations.PRESERVE),
-              bb.root,
-              exprs,
-              cluster.getTypeFactory().createStructType(
-                  rowType.getFieldList().subList(0, fieldCount))),
+      bb.setRoot(Root.create(bb.root, fields, collation),
           false);
     }
   }
