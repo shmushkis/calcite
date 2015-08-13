@@ -24,6 +24,7 @@ import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.RelFactories;
@@ -423,9 +424,9 @@ public class RelOptRulesTest extends RelOptTestBase {
     }
 
     final SqlNode validatedQuery = validator.validate(sqlQuery);
-    RelNode rel =
+    RelRoot root =
         converter.convertQuery(validatedQuery, false, true);
-    rel = converter.decorrelate(sqlQuery, rel);
+    root = root.withRel(converter.decorrelate(sqlQuery, root.rel));
 
     final HepProgram program =
         HepProgram.builder()
@@ -436,14 +437,14 @@ public class RelOptRulesTest extends RelOptTestBase {
             .build();
 
     HepPlanner planner = new HepPlanner(program);
-    planner.setRoot(rel);
-    rel = planner.findBestExp();
+    planner.setRoot(root.rel);
+    root = root.withRel(planner.findBestExp());
 
-    String planBefore = NL + RelOptUtil.toString(rel);
+    String planBefore = NL + RelOptUtil.toString(root.rel);
     diffRepos.assertEquals("planBefore", "${planBefore}", planBefore);
     converter.setTrimUnusedFields(true);
-    rel = converter.trimUnusedFields(false, rel);
-    String planAfter = NL + RelOptUtil.toString(rel);
+    root = root.withRel(converter.trimUnusedFields(false, root.rel));
+    String planAfter = NL + RelOptUtil.toString(root.rel);
     diffRepos.assertEquals("planAfter", "${planAfter}", planAfter);
   }
 
@@ -857,7 +858,7 @@ public class RelOptRulesTest extends RelOptTestBase {
         .build();
 
     // Remove the executor
-    tester.convertSqlToRel("values 1").getCluster().getPlanner()
+    tester.convertSqlToRel("values 1").rel.getCluster().getPlanner()
         .setExecutor(null);
 
     // Rule should not fire, but there should be no NPE
@@ -1473,7 +1474,8 @@ public class RelOptRulesTest extends RelOptTestBase {
         .build();
     HepPlanner planner = new HepPlanner(program);
 
-    RelNode relInitial = tester.convertSqlToRel(sql);
+    final RelRoot root = tester.convertSqlToRel(sql);
+    final RelNode relInitial = root.rel;
 
     assertTrue(relInitial != null);
 
@@ -1487,9 +1489,9 @@ public class RelOptRulesTest extends RelOptTestBase {
         new CachingRelMetadataProvider(plannerChain, planner));
 
     planner.setRoot(relInitial);
-    RelNode relAfter = planner.findBestExp();
+    RelNode relBefore = planner.findBestExp();
 
-    String planBefore = NL + RelOptUtil.toString(relAfter);
+    String planBefore = NL + RelOptUtil.toString(relBefore);
     diffRepos.assertEquals("planBefore", "${planBefore}", planBefore);
 
     HepProgram program2 = new HepProgramBuilder()
@@ -1503,8 +1505,8 @@ public class RelOptRulesTest extends RelOptTestBase {
         .build();
     HepPlanner planner2 = new HepPlanner(program2);
     planner.registerMetadataProviders(list);
-    planner2.setRoot(relAfter);
-    relAfter = planner2.findBestExp();
+    planner2.setRoot(relBefore);
+    RelNode relAfter = planner2.findBestExp();
 
     String planAfter = NL + RelOptUtil.toString(relAfter);
     diffRepos.assertEquals("planAfter", "${planAfter}", planAfter);
