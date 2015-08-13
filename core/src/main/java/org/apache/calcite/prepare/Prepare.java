@@ -94,7 +94,7 @@ public abstract class Prepare {
   public static final ThreadLocal<Boolean> THREAD_EXPAND =
       new ThreadLocal<Boolean>() {
         @Override protected Boolean initialValue() {
-          return true;
+          return false;
         }
       };
 
@@ -352,6 +352,7 @@ public abstract class Prepare {
         getSqlToRelConverter(
             getSqlValidator(), catalogReader);
     converter.setTrimUnusedFields(shouldTrim(root.rel));
+    converter.setExpand(THREAD_EXPAND.get());
     final boolean ordered = !root.collation.getFieldCollations().isEmpty();
     final boolean dml = SqlKind.DML.contains(root.kind);
     return root.withRel(converter.trimUnusedFields(dml || ordered, root.rel));

@@ -2820,7 +2820,10 @@ public class SqlToRelConverter {
    * @return Whether to trim unused fields
    */
   public boolean isTrimUnusedFields() {
-    return trimUnusedFields;
+    // To work around [CALCITE-842] "Decorrelator gets field offsets confused if
+    // fields have been trimmed", if expansion is disabled, trim fields after
+    // expansion and decorrelation.
+    return trimUnusedFields && expand;
   }
 
   public void setExpand(boolean expand) {

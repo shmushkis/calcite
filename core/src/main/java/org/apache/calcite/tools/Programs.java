@@ -57,6 +57,8 @@ import org.apache.calcite.rel.rules.SortProjectTransposeRule;
 import org.apache.calcite.rel.rules.SubQueryRemoveRule;
 import org.apache.calcite.rel.rules.TableScanRule;
 import org.apache.calcite.sql2rel.RelDecorrelator;
+import org.apache.calcite.sql2rel.RelFieldTrimmer;
+import org.apache.calcite.sql2rel.SqlToRelConverter;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -288,6 +290,7 @@ public class Programs {
 
     return sequence(SUB_QUERY_PROGRAM,
         new DecorrelateProgram(),
+        new TrimFieldsProgram(),
         program1,
 
         // Second planner pass to do physical "tweaks". This the first time that
@@ -330,19 +333,31 @@ public class Programs {
     public RelNode run(RelOptPlanner planner, RelNode rel,
         RelTraitSet requiredOutputTraits) {
       for (Program program : programs) {
-        System.out.println(RelOptUtil.toString(rel));
         rel = program.run(planner, rel, requiredOutputTraits);
       }
-      System.out.println(RelOptUtil.toString(rel));
       return rel;
     }
   }
 
-  /** Program that de-correlates a query. */
+  /** Program that de-correlates a query.
+   *
+   * <p>To work around
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-842">[CALCITE-842]
+   * Decorrelator gets field offsets confused if fields have been trimmed</a>,
+   * disable field-trimming in {@link SqlToRelConverter}, and run
+   * {@link TrimFieldsProgram} after this program. */
   private static class DecorrelateProgram implements Program {
     public RelNode run(RelOptPlanner planner, RelNode rel,
         RelTraitSet requiredOutputTraits) {
       return RelDecorrelator.decorrelateQuery(rel);
+    }
+  }
+
+  /** Program that trims fields. */
+  private static class TrimFieldsProgram implements Program {
+    public RelNode run(RelOptPlanner planner, RelNode rel,
+        RelTraitSet requiredOutputTraits) {
+      return new RelFieldTrimmer(null).trim(rel);
     }
   }
 }
