@@ -148,14 +148,13 @@ public class RelOptRulesTest extends RelOptTestBase {
     HepPlanner hepPlanner = new HepPlanner(builder.build());
     hepPlanner.addRule(ProjectToWindowRule.PROJECT);
 
-    checkPlanning(tester,
-        preProgram,
-        hepPlanner,
-        "select count(*) over(partition by empno order by sal) as count1,\n"
-            + "count(*) over(partition by deptno order by sal) as count2, \n"
-            + "sum(deptno) over(partition by empno order by sal) as sum1, \n"
-            + "sum(deptno) over(partition by deptno order by sal) as sum2 \n"
-            + "from emp");
+    final String sql = "select\n"
+        + " count(*) over(partition by empno order by sal) as count1,\n"
+        + " count(*) over(partition by deptno order by sal) as count2,\n"
+        + " sum(deptno) over(partition by empno order by sal) as sum1,\n"
+        + " sum(deptno) over(partition by deptno order by sal) as sum2\n"
+        + "from emp";
+    checkPlanning(tester, preProgram, hepPlanner, sql);
   }
 
   @Test public void testUnionToDistinctRule() {
@@ -1334,6 +1333,10 @@ public class RelOptRulesTest extends RelOptTestBase {
 
   @Test public void testPushSumCountStarGroupingSetsThroughUnion() throws
       Exception {
+    basePushAggThroughUnion();
+  }
+
+  @Test public void testPushCountFilterThroughUnion() throws Exception {
     basePushAggThroughUnion();
   }
 
