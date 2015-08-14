@@ -45,6 +45,9 @@ public class EnumerableRules {
   private EnumerableRules() {
   }
 
+  public static final EnumerableRootRule ENUMERABLE_ROOT_RULE =
+      new EnumerableRootRule();
+
   public static final EnumerableProjectRule ENUMERABLE_PROJECT_RULE =
       new EnumerableProjectRule();
 

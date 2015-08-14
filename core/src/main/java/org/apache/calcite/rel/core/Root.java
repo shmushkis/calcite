@@ -30,6 +30,7 @@ import org.apache.calcite.rel.SingleRel;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Pair;
 
 import com.google.common.base.Function;
@@ -51,17 +52,27 @@ import java.util.List;
  *   <li>Field names (duplicates allowed)</li>
  *   <li>Sort order (may reference fields that are not projected)</li>
  * </ul>
+ *
+ * <p>TODO:
+ * <ul>
+ *   <li>Remove {@link org.apache.calcite.prepare.Prepare#collations}
+ *   <li>Look at uses of
+ *   {@link org.apache.calcite.sql2rel.SqlToRelConverter#isUnordered}
+ *   <li>Remove {@link org.apache.calcite.rel.RelCollations#PRESERVE}
+ *   <li>Add a test like InterpreterTest.testInterpretProjectFilterValues
+ *   where an interpretable needs a root
+ * </ul>
  */
-public class Root extends SingleRel {
-  private final ImmutableList<Pair<Integer, String>> fields;
-  private final RelCollation collation;
+public abstract class Root extends SingleRel {
+  public final ImmutableList<Pair<Integer, String>> fields;
+  public final RelCollation collation;
 
   /**
    * Creates a Root.
    *
-   * @param cluster  Cluster that this relational expression belongs to
-   * @param traitSet Traits of this relational expression
-   * @param input    Input relational expression
+   * @param cluster   Cluster that this relational expression belongs to
+   * @param traitSet  Traits of this relational expression
+   * @param input     Input relational expression
    * @param fields    Field references and names
    * @param collation Fields of underlying relational expression sorted on
    */
@@ -81,13 +92,11 @@ public class Root extends SingleRel {
         RelCollationTraitDef.INSTANCE.canonize(input.getCollation()));
   }
 
-  public static Root create(RelNode input, List<Pair<Integer, String>> fields,
-      RelCollation collation) {
-    return new Root(input.getCluster(), input.getTraitSet(), input,
-        fields, collation);
-  }
-
   //~ Methods ----------------------------------------------------------------
+
+  public static RelNode strip(RelNode rel) {
+    return rel instanceof Root ? rel.getInput(0) : rel;
+  }
 
   @Override public final RelNode copy(RelTraitSet traitSet,
       List<RelNode> inputs) {
@@ -102,9 +111,7 @@ public class Root extends SingleRel {
    *
    * @see #copy(RelTraitSet, List)
    */
-  public Root copy(RelTraitSet traitSet, RelNode input) {
-    return new Root(input.getCluster(), traitSet, input, fields, collation);
-  }
+  public abstract Root copy(RelTraitSet traitSet, RelNode input);
 
   @Override protected RelDataType deriveRowType() {
     final RelDataTypeFactory.FieldInfoBuilder builder =
@@ -129,15 +136,41 @@ public class Root extends SingleRel {
             return "$" + input.left;
           }
         });
-    if (pw.nest()) {
-      pw.item("fields", Pair.right(fields));
-      pw.item("exprs", exps);
-    } else {
-      for (Ord<String> field : Ord.zip(Pair.right(fields))) {
-        pw.item(field.e, exps.get(field.i));
+    if (!isNameTrivial() || !isRefTrivial()) {
+      if (pw.nest()) {
+        pw.itemIf("fields", Pair.right(fields), !isNameTrivial());
+        pw.itemIf("exprs", exps, !isRefTrivial());
+      } else {
+        for (Ord<String> field : Ord.zip(Pair.right(fields))) {
+          pw.item(field.e, exps.get(field.i));
+        }
       }
     }
-    return pw.item("collation", collation);
+    return pw.itemIf("collation", collation, !isCollationTrivial());
+  }
+
+  protected boolean isNameTrivial() {
+    final RelDataType inputRowType = input.getRowType();
+    return Pair.right(fields).equals(inputRowType.getFieldNames());
+  }
+
+  protected boolean isRefTrivial() {
+    final RelDataType inputRowType = input.getRowType();
+    final List<Integer> list =
+        ImmutableIntList.identity(inputRowType.getFieldCount());
+    return list.equals(Pair.left(fields));
+  }
+
+  protected boolean isCollationTrivial() {
+    final List<RelCollation> collations = input.getTraitSet()
+        .getTraits(RelCollationTraitDef.INSTANCE);
+    return collations != null
+        && collations.size() == 1
+        && collations.get(0).equals(collation);
+  }
+
+  public boolean isTrivial() {
+    return isNameTrivial() && isRefTrivial() && isCollationTrivial();
   }
 }
 

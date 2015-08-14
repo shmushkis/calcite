@@ -33,6 +33,7 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.core.SemiJoin;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.logical.LogicalAggregate;
@@ -130,7 +131,7 @@ public class RelMetadataTest extends SqlToRelTestBase {
     RelNode rel = tester.convertSqlToRel(sql);
     DefaultRelMetadataProvider provider = new DefaultRelMetadataProvider();
     rel.getCluster().setMetadataProvider(provider);
-    return rel;
+    return Root.strip(rel);
   }
 
   private void checkPercentageOriginalRows(String sql, double expected) {

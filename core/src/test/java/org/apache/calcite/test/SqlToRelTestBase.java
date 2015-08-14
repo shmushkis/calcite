@@ -30,6 +30,7 @@ import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -606,7 +607,7 @@ public abstract class SqlToRelTestBase {
       // NOTE jvs 28-Mar-2006:  insert leading newline so
       // that plans come out nicely stacked instead of first
       // line immediately after CDATA start
-      String actual = NL + RelOptUtil.toString(rel);
+      String actual = NL + RelOptUtil.toString(Root.strip(rel));
       diffRepos.assertEquals("plan", plan, actual);
     }
 

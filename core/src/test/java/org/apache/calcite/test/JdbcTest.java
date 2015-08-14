@@ -2941,7 +2941,7 @@ public class JdbcTest {
         .query("select * from \"hr\".\"emps\"\n"
             + "order by - \"empid\"")
         .explainContains(""
-            + "EnumerableCalc(expr#0..5=[{inputs}], proj#0..4=[{exprs}])\n"
+            + "EnumerableRoot(empid=[$0], deptno=[$1], name=[$2], salary=[$3], commission=[$4])\n"
             + "  EnumerableSort(sort0=[$5], dir0=[ASC])\n"
             + "    EnumerableCalc(expr#0..4=[{inputs}], expr#5=[-($t0)], proj#0..5=[{exprs}])\n"
             + "      EnumerableTableScan(table=[[hr, emps]])")

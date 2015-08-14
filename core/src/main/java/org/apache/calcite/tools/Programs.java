@@ -29,6 +29,7 @@ import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.prepare.CalcitePrepareImpl;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
@@ -97,6 +98,14 @@ public class Programs {
   /** Program that converts filters and projects to calcs. */
   public static final Program CALC_PROGRAM =
       hep(CALC_RULES, true, new DefaultRelMetadataProvider());
+
+  /** Program that convert a {@link Root} to an
+   * {@link org.apache.calcite.adapter.enumerable.EnumerableProject}. */
+  public static final Program ROOT_PROGRAM =
+      hep(
+          ImmutableList.of(EnumerableRules.ENUMERABLE_ROOT_RULE,
+              EnumerableRules.ENUMERABLE_CALC_RULE),
+          true, new DefaultRelMetadataProvider());
 
   public static final ImmutableSet<RelOptRule> RULE_SET =
       ImmutableSet.of(
@@ -167,8 +176,8 @@ public class Programs {
   }
 
   /** Creates a program that executes a list of rules in a HEP planner. */
-  public static Program hep(ImmutableList<RelOptRule> rules, boolean noDag,
-      RelMetadataProvider metadataProvider) {
+  public static Program hep(Iterable<? extends RelOptRule> rules,
+      boolean noDag, RelMetadataProvider metadataProvider) {
     final HepProgramBuilder builder = HepProgram.builder();
     for (RelOptRule rule : rules) {
       builder.addRuleInstance(rule);
@@ -279,7 +288,26 @@ public class Programs {
     // EnumerableCalcRel is introduced.
     final Program program2 = CALC_PROGRAM;
 
-    return sequence(program1, program2);
+    return wrapRoot(sequence(program1, program2));
+  }
+
+  /** Returns a program that deals with a {@link Root}, if it exists. */
+  private static Program wrapRoot(final Program program) {
+    return new Program() {
+      public RelNode run(RelOptPlanner planner, RelNode rel,
+          RelTraitSet requiredOutputTraits) {
+        if (rel instanceof Root) {
+          final Root root = (Root) rel;
+          final RelNode r =
+              run(planner, root.getInput(),
+                  requiredOutputTraits.plus(root.collation));
+          final RelNode r2 = root.copy(root.getTraitSet(), r);
+          return ROOT_PROGRAM.run(planner, r2, requiredOutputTraits);
+        } else {
+          return program.run(planner, rel, requiredOutputTraits);
+        }
+      }
+    };
   }
 
   /** Program backed by a {@link RuleSet}. */

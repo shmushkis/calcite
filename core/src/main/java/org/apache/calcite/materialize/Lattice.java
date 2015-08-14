@@ -25,6 +25,7 @@ import org.apache.calcite.prepare.CalcitePrepareImpl;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.JoinRelType;
+import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.logical.LogicalProject;
@@ -178,6 +179,7 @@ public class Lattice {
 
   private static boolean populate(List<RelNode> nodes, List<int[][]> tempLinks,
       RelNode rel) {
+    rel = Root.strip(rel);
     if (nodes.isEmpty() && rel instanceof LogicalProject) {
       return populate(nodes, tempLinks, ((LogicalProject) rel).getInput());
     }

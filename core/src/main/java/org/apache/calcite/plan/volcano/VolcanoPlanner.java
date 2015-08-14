@@ -47,7 +47,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.convert.Converter;
 import org.apache.calcite.rel.convert.ConverterRule;
-import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
@@ -327,9 +326,6 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
   }
 
   public void setRoot(RelNode rel) {
-    if (rel instanceof Root) {
-      rel = ((Root) rel).getInput();
-    }
     this.root = registerImpl(rel, null);
     if (this.originalRoot == null) {
       this.originalRoot = rel;

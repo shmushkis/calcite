@@ -28,6 +28,7 @@ import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.prepare.CalcitePrepareImpl;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelVisitor;
+import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.rules.CalcSplitRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
 import org.apache.calcite.rel.rules.ProjectTableScanRule;
@@ -72,7 +73,7 @@ public class Interpreter extends AbstractEnumerable<Object[]> {
         new JaninoRexCompiler(rootRel.getCluster().getRexBuilder());
     final RelNode rel = optimize(rootRel);
     final Compiler compiler = new Nodes.CoreCompiler(this);
-    this.rootRel = compiler.visitRoot(rel);
+    this.rootRel = compiler.visitRoot(Root.strip(rel));
   }
 
   private RelNode optimize(RelNode rootRel) {

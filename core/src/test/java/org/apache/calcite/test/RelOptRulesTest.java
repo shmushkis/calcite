@@ -27,6 +27,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.RelFactories;
+import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.metadata.CachingRelMetadataProvider;
 import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
@@ -1487,9 +1488,9 @@ public class RelOptRulesTest extends RelOptTestBase {
         new CachingRelMetadataProvider(plannerChain, planner));
 
     planner.setRoot(relInitial);
-    RelNode relAfter = planner.findBestExp();
+    RelNode relBefore = planner.findBestExp();
 
-    String planBefore = NL + RelOptUtil.toString(relAfter);
+    String planBefore = NL + RelOptUtil.toString(Root.strip(relBefore));
     diffRepos.assertEquals("planBefore", "${planBefore}", planBefore);
 
     HepProgram program2 = new HepProgramBuilder()
@@ -1503,10 +1504,10 @@ public class RelOptRulesTest extends RelOptTestBase {
         .build();
     HepPlanner planner2 = new HepPlanner(program2);
     planner.registerMetadataProviders(list);
-    planner2.setRoot(relAfter);
-    relAfter = planner2.findBestExp();
+    planner2.setRoot(relBefore);
+    RelNode relAfter = planner2.findBestExp();
 
-    String planAfter = NL + RelOptUtil.toString(relAfter);
+    String planAfter = NL + RelOptUtil.toString(Root.strip(relAfter));
     diffRepos.assertEquals("planAfter", "${planAfter}", planAfter);
   }
 
