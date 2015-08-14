@@ -21,6 +21,7 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelInput;
@@ -58,6 +59,7 @@ import java.util.List;
  *   <li>Remove {@link org.apache.calcite.prepare.Prepare#collations}
  *   <li>Look at uses of
  *   {@link org.apache.calcite.sql2rel.SqlToRelConverter#isUnordered}
+ *   and write apologetic comment
  *   <li>Remove {@link org.apache.calcite.rel.RelCollations#PRESERVE}
  *   <li>Add a test like InterpreterTest.testInterpretProjectFilterValues
  *   where an interpretable needs a root

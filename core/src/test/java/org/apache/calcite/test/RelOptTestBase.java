@@ -23,6 +23,7 @@ import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
@@ -100,7 +101,8 @@ abstract class RelOptTestBase extends SqlToRelTestBase {
       String sql) {
     final DiffRepository diffRepos = getDiffRepos();
     String sql2 = diffRepos.expand("sql", sql);
-    RelNode relInitial = tester.convertSqlToRel(sql2);
+    final RelRoot root = tester.convertSqlToRel(sql2);
+    final RelNode relInitial = root.rel;
 
     assertTrue(relInitial != null);
 

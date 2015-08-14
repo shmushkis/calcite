@@ -24,6 +24,7 @@ import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.RelFactories;
@@ -424,9 +425,9 @@ public class RelOptRulesTest extends RelOptTestBase {
     }
 
     final SqlNode validatedQuery = validator.validate(sqlQuery);
-    RelNode rel =
+    RelRoot root =
         converter.convertQuery(validatedQuery, false, true);
-    rel = converter.decorrelate(sqlQuery, rel);
+    root = root.copy(converter.decorrelate(sqlQuery, root.rel));
 
     final HepProgram program =
         HepProgram.builder()
@@ -437,14 +438,14 @@ public class RelOptRulesTest extends RelOptTestBase {
             .build();
 
     HepPlanner planner = new HepPlanner(program);
-    planner.setRoot(rel);
-    rel = planner.findBestExp();
+    planner.setRoot(root.rel);
+    root = root.copy(planner.findBestExp());
 
-    String planBefore = NL + RelOptUtil.toString(rel);
+    String planBefore = NL + RelOptUtil.toString(root.rel);
     diffRepos.assertEquals("planBefore", "${planBefore}", planBefore);
     converter.setTrimUnusedFields(true);
-    rel = converter.trimUnusedFields(false, rel);
-    String planAfter = NL + RelOptUtil.toString(rel);
+    root = root.copy(converter.trimUnusedFields(false, root.rel));
+    String planAfter = NL + RelOptUtil.toString(root.rel);
     diffRepos.assertEquals("planAfter", "${planAfter}", planAfter);
   }
 
@@ -858,7 +859,7 @@ public class RelOptRulesTest extends RelOptTestBase {
         .build();
 
     // Remove the executor
-    tester.convertSqlToRel("values 1").getCluster().getPlanner()
+    tester.convertSqlToRel("values 1").rel.getCluster().getPlanner()
         .setExecutor(null);
 
     // Rule should not fire, but there should be no NPE
@@ -1474,7 +1475,8 @@ public class RelOptRulesTest extends RelOptTestBase {
         .build();
     HepPlanner planner = new HepPlanner(program);
 
-    RelNode relInitial = tester.convertSqlToRel(sql);
+    final RelRoot root = tester.convertSqlToRel(sql);
+    final RelNode relInitial = root.rel;
 
     assertTrue(relInitial != null);
 

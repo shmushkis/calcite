@@ -31,6 +31,7 @@ import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.RelShuttle;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
@@ -50,7 +51,6 @@ import org.apache.calcite.rel.logical.LogicalIntersect;
 import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.logical.LogicalMinus;
 import org.apache.calcite.rel.logical.LogicalProject;
-import org.apache.calcite.rel.logical.LogicalRoot;
 import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.logical.LogicalTableFunctionScan;
 import org.apache.calcite.rel.logical.LogicalTableModify;
@@ -58,6 +58,7 @@ import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.metadata.RelColumnMapping;
+import org.apache.calcite.rel.stream.Delta;
 import org.apache.calcite.rel.stream.LogicalDelta;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -427,26 +428,36 @@ public class SqlToRelConverter {
   }
 
   private void checkConvertedType(SqlNode query, RelNode result) {
-    if (!query.isA(SqlKind.DML)) {
-      // Verify that conversion from SQL to relational algebra did
-      // not perturb any type information.  (We can't do this if the
-      // SQL statement is something like an INSERT which has no
-      // validator type information associated with its result,
-      // hence the namespace check above.)
-      RelDataType convertedRowType = result.getRowType();
-      if (!checkConvertedRowType(query, convertedRowType)) {
-        RelDataType validatedRowType =
-            validator.getValidatedNodeType(query);
-        validatedRowType = uniquifyFields(validatedRowType);
-        throw Util.newInternal("Conversion to relational algebra failed to "
-            + "preserve datatypes:\n"
-            + "validated type:\n"
-            + validatedRowType.getFullTypeString()
-            + "\nconverted type:\n"
-            + convertedRowType.getFullTypeString()
-            + "\nrel:\n"
-            + RelOptUtil.toString(result));
-      }
+    if (query.isA(SqlKind.DML)) {
+      return;
+    }
+    // Verify that conversion from SQL to relational algebra did
+    // not perturb any type information.  (We can't do this if the
+    // SQL statement is something like an INSERT which has no
+    // validator type information associated with its result,
+    // hence the namespace check above.)
+    final List<RelDataTypeField> validatedFields =
+        validator.getValidatedNodeType(query).getFieldList();
+    final RelDataType validatedRowType =
+        validator.getTypeFactory().createStructType(
+            Pair.right(validatedFields),
+            SqlValidatorUtil.uniquify(Pair.left(validatedFields)));
+
+    final List<RelDataTypeField> convertedFields =
+        result.getRowType().getFieldList().subList(0, validatedFields.size());
+    final RelDataType convertedRowType =
+        validator.getTypeFactory().createStructType(convertedFields);
+
+    if (!RelOptUtil.equal("validated row type", validatedRowType,
+        "converted row type", convertedRowType, false)) {
+      throw Util.newInternal("Conversion to relational algebra failed to "
+          + "preserve datatypes:\n"
+          + "validated type:\n"
+          + validatedRowType.getFullTypeString()
+          + "\nconverted type:\n"
+          + convertedRowType.getFullTypeString()
+          + "\nrel:\n"
+          + RelOptUtil.toString(result));
     }
   }
 
@@ -541,7 +552,7 @@ public class SqlToRelConverter {
    *                        will become a JDBC result set; <code>false</code> if
    *                        the query will be part of a view.
    */
-  public RelNode convertQuery(
+  public RelRoot convertQuery(
       SqlNode query,
       final boolean needsValidation,
       final boolean top) {
@@ -549,26 +560,16 @@ public class SqlToRelConverter {
       query = validator.validate(query);
     }
 
+    final RelDataType validatedRowType = validator.getValidatedNodeType(query);
+    RelCollation collation = RelCollations.EMPTY;
     RelNode result = convertQueryRecursive(query, top, null);
     if (top) {
       if (isStream(query)) {
         result = new LogicalDelta(cluster, result.getTraitSet(), result);
       }
       if (!query.isA(SqlKind.DML)) {
-        final RelCollation collation;
-        if (isUnordered(query)) {
-          collation = RelCollations.EMPTY;
-        } else {
+        if (!isUnordered(query)) {
           collation = requiredCollation(result);
-        }
-        final RelDataType rowType = validator.getValidatedNodeType(query);
-        final List<Integer> projects =
-            ImmutableIntList.identity(rowType.getFieldCount());
-        LogicalRoot root =
-            LogicalRoot.create(result,
-                Pair.zip(projects, rowType.getFieldNames()), collation);
-        if (!root.isTrivial()) {
-          result = root;
         }
       }
     }
@@ -584,7 +585,12 @@ public class SqlToRelConverter {
               SqlExplainLevel.EXPPLAN_ATTRIBUTES));
     }
 
-    return result;
+    final List<Integer> projects =
+        ImmutableIntList.identity(validatedRowType.getFieldCount());
+    final List<Pair<Integer, String>> fields =
+        Pair.zip(projects, validatedRowType.getFieldNames());
+    return new RelRoot(result, validator.getValidatedNodeType(query),
+        query.getKind(), fields, collation);
   }
 
   private RelCollation requiredCollation(RelNode r) {
@@ -594,6 +600,8 @@ public class SqlToRelConverter {
       }
       if (r instanceof Project) {
         r = ((Project) r).getInput();
+      } else if (r instanceof Delta) {
+        r = ((Delta) r).getInput();
       } else {
         throw new AssertionError();
       }
@@ -618,22 +626,6 @@ public class SqlToRelConverter {
     default:
       return true;
     }
-  }
-
-  protected boolean checkConvertedRowType(
-      SqlNode query,
-      RelDataType convertedRowType) {
-    RelDataType validatedRowType = validator.getValidatedNodeType(query);
-    validatedRowType = uniquifyFields(validatedRowType);
-
-    return RelOptUtil.equal("validated row type", validatedRowType,
-        "converted row type", convertedRowType, false);
-  }
-
-  protected RelDataType uniquifyFields(RelDataType rowType) {
-    return validator.getTypeFactory().createStructType(
-        RelOptUtil.getFieldTypeList(rowType),
-        SqlValidatorUtil.uniquify(rowType.getFieldNames()));
   }
 
   /**
@@ -2066,7 +2058,7 @@ public class SqlToRelConverter {
       datasetStack.push(sampleName);
       SqlCall cursorCall = call.operand(1);
       SqlNode query = cursorCall.operand(0);
-      RelNode converted = convertQuery(query, false, false);
+      RelNode converted = convertQuery(query, false, false).rel;
       bb.setRoot(converted, false);
       datasetStack.pop();
       return;
@@ -2990,9 +2982,7 @@ public class SqlToRelConverter {
         return cluster;
       }
 
-      public RelNode expandView(
-          RelDataType rowType,
-          String queryString,
+      public RelRoot expandView(RelDataType rowType, String queryString,
           List<String> schemaPath) {
         return viewExpander.expandView(rowType, queryString, schemaPath);
       }
@@ -3307,7 +3297,7 @@ public class SqlToRelConverter {
     final SqlCall cursorCall = (SqlCall) subQuery.node;
     assert cursorCall.operandCount() == 1;
     SqlNode query = cursorCall.operand(0);
-    RelNode converted = convertQuery(query, false, false);
+    RelNode converted = convertQuery(query, false, false).rel;
     int iCursor = bb.cursors.size();
     bb.cursors.add(converted);
     subQuery.expr =
@@ -3341,7 +3331,6 @@ public class SqlToRelConverter {
       if (op == SqlStdOperatorTable.MULTISET_VALUE) {
         final SqlNodeList list =
             new SqlNodeList(call.getOperandList(), call.getParserPosition());
-//                assert bb.scope instanceof SelectScope : bb.scope;
         CollectNamespace nss =
             (CollectNamespace) validator.getNamespace(call);
         Blackboard usedBb;
@@ -3361,7 +3350,8 @@ public class SqlToRelConverter {
             multisetType.getComponentType());
         input = convertQueryOrInList(usedBb, list, null);
       } else {
-        input = convertQuery(call.operand(0), false, true);
+        final RelRoot root = convertQuery(call.operand(0), false, true);
+        input = root.rel;
       }
 
       if (lastList.size() > 0) {
@@ -3527,7 +3517,7 @@ public class SqlToRelConverter {
    * Converts a WITH sub-query into a relational expression.
    */
   public RelNode convertWith(SqlWith with) {
-    return convertQuery(with.body, false, false);
+    return convertQuery(with.body, false, false).rel;
   }
 
   /**

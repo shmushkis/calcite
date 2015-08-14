@@ -30,6 +30,7 @@ import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.type.RelDataType;
@@ -125,7 +126,7 @@ public abstract class SqlToRelTestBase {
      * @param sql SQL statement
      * @return Relational expression, never null
      */
-    RelNode convertSqlToRel(String sql);
+    RelRoot convertSqlToRel(String sql);
 
     SqlNode parseQuery(String sql) throws Exception;
 
@@ -464,7 +465,7 @@ public abstract class SqlToRelTestBase {
       this.catalogReaderFactory = catalogReaderFactory;
     }
 
-    public RelNode convertSqlToRel(String sql) {
+    public RelRoot convertSqlToRel(String sql) {
       Util.pre(sql != null, "sql != null");
       final SqlNode sqlQuery;
       try {
@@ -485,20 +486,20 @@ public abstract class SqlToRelTestBase {
               typeFactory);
       converter.setTrimUnusedFields(true);
       final SqlNode validatedQuery = validator.validate(sqlQuery);
-      RelNode rel =
+      RelRoot root =
           converter.convertQuery(validatedQuery, false, true);
-      assert rel != null;
+      assert root != null;
       if (enableDecorrelate || enableTrim) {
-        rel = converter.flattenTypes(rel, true);
+        root = root.copy(converter.flattenTypes(root.rel, true));
       }
       if (enableDecorrelate) {
-        rel = converter.decorrelate(sqlQuery, rel);
+        root = root.copy(converter.decorrelate(sqlQuery, root.rel));
       }
       if (enableTrim) {
         converter.setTrimUnusedFields(true);
-        rel = converter.trimUnusedFields(false, rel);
+        root = root.copy(converter.trimUnusedFields(false, root.rel));
       }
-      return rel;
+      return root;
     }
 
     protected SqlToRelConverter createSqlToRelConverter(
@@ -592,7 +593,7 @@ public abstract class SqlToRelTestBase {
         String plan,
         boolean trim) {
       String sql2 = getDiffRepos().expand("sql", sql);
-      RelNode rel = convertSqlToRel(sql2);
+      RelNode rel = convertSqlToRel(sql2).project();
 
       assertTrue(rel != null);
       assertValid(rel);

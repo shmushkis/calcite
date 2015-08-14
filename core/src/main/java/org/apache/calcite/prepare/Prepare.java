@@ -30,6 +30,7 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.type.RelDataType;
@@ -50,6 +51,7 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.Util;
 import org.apache.calcite.util.trace.CalciteTimingTracer;
 import org.apache.calcite.util.trace.CalciteTrace;
 
@@ -102,7 +104,7 @@ public abstract class Prepare {
   protected abstract PreparedResult createPreparedExplanation(
       RelDataType resultType,
       RelDataType parameterRowType,
-      RelNode rootRel,
+      RelRoot root,
       boolean explainAsXml,
       SqlExplainLevel detailLevel);
 
@@ -175,13 +177,10 @@ public abstract class Prepare {
   /**
    * Implements a physical query plan.
    *
-   * @param rowType original row type returned by query validator
-   * @param rootRel root of the relational expression.
-   * @param sqlKind SqlKind of the original statement.
+   * @param root Root of the relational expression tree
    * @return an executable plan
    */
-  protected abstract PreparedResult implement(
-      RelDataType rowType, RelNode rootRel, SqlKind sqlKind);
+  protected abstract PreparedResult implement(RelRoot root);
 
   public PreparedResult prepareSql(
       SqlNode sqlQuery,
@@ -223,9 +222,9 @@ public abstract class Prepare {
       sqlToRelConverter.setIsExplain(sqlExplain.getDynamicParamCount());
     }
 
-    RelNode rootRel =
+    RelRoot root =
         sqlToRelConverter.convertQuery(sqlQuery, needsValidation, true);
-    Hook.CONVERTED.run(rootRel);
+    Hook.CONVERTED.run(root.rel);
 
     if (timingTracer != null) {
       timingTracer.traceTime("end sql2rel");
@@ -236,8 +235,9 @@ public abstract class Prepare {
     // ordered == !collations.isEmpty().
     ordered = !SqlToRelConverter.isUnordered(sqlQuery);
     assert collations.isEmpty();
-    if (rootRel instanceof Sort) {
-      collations.add(((Sort) rootRel).getCollation());
+    if (root.rel instanceof Sort) {
+      Util.deprecated(null, false);
+      collations.add(((Sort) root.rel).getCollation());
     }
 
     final RelDataType resultType = validator.getValidatedNodeType(sqlQuery);
@@ -258,24 +258,24 @@ public abstract class Prepare {
             resultType, parameterRowType, null, explainAsXml, detailLevel);
       case LOGICAL:
         return createPreparedExplanation(
-            null, parameterRowType, rootRel, explainAsXml, detailLevel);
+            null, parameterRowType, root, explainAsXml, detailLevel);
       default:
       }
     }
 
     // Structured type flattening, view expansion, and plugging in physical
     // storage.
-    rootRel = flattenTypes(rootRel, true);
+    root = root.copy(flattenTypes(root.rel, true));
 
     if (this.context.config().forceDecorrelate()) {
       // Subquery decorrelation.
-      rootRel = decorrelate(sqlToRelConverter, sqlQuery, rootRel);
+      root = root.copy(decorrelate(sqlToRelConverter, sqlQuery, root.rel));
     }
 
     // Trim unused fields.
-    rootRel = trimUnusedFields(rootRel);
+    root = trimUnusedFields(root);
 
-    Hook.TRIMMED.run(rootRel);
+    Hook.TRIMMED.run(root.rel);
 
     // Display physical plan after decorrelation.
     if (sqlExplain != null) {
@@ -285,13 +285,13 @@ public abstract class Prepare {
       switch (explainDepth) {
       case PHYSICAL:
       default:
-        rootRel = optimize(rootRel, materializations, lattices);
+        root = root.copy(optimize(root.rel, materializations, lattices));
         return createPreparedExplanation(
-            null, parameterRowType, rootRel, explainAsXml, detailLevel);
+            null, parameterRowType, root, explainAsXml, detailLevel);
       }
     }
 
-    rootRel = optimize(rootRel, materializations, lattices);
+    root = root.copy(optimize(root.rel, materializations, lattices));
 
     if (timingTracer != null) {
       timingTracer.traceTime("end optimization");
@@ -300,14 +300,10 @@ public abstract class Prepare {
     // For transformation from DML -> DML, use result of rewrite
     // (e.g. UPDATE -> MERGE).  For anything else (e.g. CALL -> SELECT),
     // use original kind.
-    SqlKind kind = sqlQuery.getKind();
-    if (!kind.belongsTo(SqlKind.DML)) {
-      kind = sqlNodeOriginal.getKind();
+    if (!root.kind.belongsTo(SqlKind.DML)) {
+      root = root.withKind(sqlNodeOriginal.getKind());
     }
-    return implement(
-        resultType,
-        rootRel,
-        kind);
+    return implement(root);
   }
 
   protected LogicalTableModify.Operation mapTableModOp(
@@ -350,15 +346,15 @@ public abstract class Prepare {
    * expression that projects
    * only the columns required by its consumer.
    *
-   * @param rootRel Relational expression that is at the root of the tree
+   * @param root Root of relational expression tree
    * @return Trimmed relational expression
    */
-  protected RelNode trimUnusedFields(RelNode rootRel) {
+  protected RelRoot trimUnusedFields(RelRoot root) {
     final SqlToRelConverter converter =
         getSqlToRelConverter(
             getSqlValidator(), catalogReader);
-    converter.setTrimUnusedFields(shouldTrim(rootRel));
-    return converter.trimUnusedFields(ordered, rootRel);
+    converter.setTrimUnusedFields(shouldTrim(root.rel));
+    return root.copy(converter.trimUnusedFields(ordered, root.rel));
   }
 
   private boolean shouldTrim(RelNode rootRel) {
@@ -377,9 +373,7 @@ public abstract class Prepare {
    * @param schemaPath List of schema names wherein to find referenced tables
    * @return Relational expression
    */
-  public RelNode expandView(
-      RelDataType rowType,
-      String queryString,
+  public RelRoot expandView(RelDataType rowType, String queryString,
       List<String> schemaPath) {
     throw new UnsupportedOperationException();
   }
@@ -413,28 +407,28 @@ public abstract class Prepare {
       implements PreparedResult {
     private final RelDataType rowType;
     private final RelDataType parameterRowType;
-    private final RelNode rel;
+    private final RelRoot root;
     private final boolean asXml;
     private final SqlExplainLevel detailLevel;
 
     public PreparedExplain(
         RelDataType rowType,
         RelDataType parameterRowType,
-        RelNode rel,
+        RelRoot root,
         boolean asXml,
         SqlExplainLevel detailLevel) {
       this.rowType = rowType;
       this.parameterRowType = parameterRowType;
-      this.rel = rel;
+      this.root = root;
       this.asXml = asXml;
       this.detailLevel = detailLevel;
     }
 
     public String getCode() {
-      if (rel == null) {
+      if (root == null) {
         return RelOptUtil.dumpType(rowType);
       } else {
-        return RelOptUtil.dumpPlan("", rel, asXml, detailLevel);
+        return RelOptUtil.dumpPlan("", root.rel, asXml, detailLevel);
       }
     }
 
@@ -453,10 +447,6 @@ public abstract class Prepare {
     public List<List<String>> getFieldOrigins() {
       return Collections.singletonList(
           Collections.<String>nCopies(4, null));
-    }
-
-    public RelNode getRel() {
-      return rel;
     }
 
     public abstract Bindable getBindable();

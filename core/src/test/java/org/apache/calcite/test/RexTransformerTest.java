@@ -69,7 +69,7 @@ public class RexTransformerTest {
   private static RelNode toRel(String sql) {
     final SqlToRelTestBase test = new SqlToRelTestBase() {
     };
-    return test.createTester().convertSqlToRel(sql);
+    return test.createTester().convertSqlToRel(sql).rel;
   }
 
   @Before public void setUp() {
