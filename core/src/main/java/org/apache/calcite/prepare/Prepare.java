@@ -111,19 +111,19 @@ public abstract class Prepare {
   /**
    * Optimizes a query plan.
    *
-   * @param rootRel root of a relational expression
+   * @param root Root of relational expression tree
    * @param materializations Tables known to be populated with a given query
    * @param lattices Lattices
    * @return an equivalent optimized relational expression
    */
-  protected RelNode optimize(final RelNode rootRel,
+  protected RelRoot optimize(final RelRoot root,
       final List<Materialization> materializations,
       final List<CalciteSchema.LatticeEntry> lattices) {
-    final RelOptPlanner planner = rootRel.getCluster().getPlanner();
+    final RelOptPlanner planner = root.rel.getCluster().getPlanner();
 
-    planner.setRoot(rootRel);
+    planner.setRoot(root.rel);
 
-    final RelTraitSet desiredTraits = getDesiredRootTraitSet(rootRel);
+    final RelTraitSet desiredTraits = getDesiredRootTraitSet(root);
     final Program program = getProgram();
 
     final DataContext dataContext = context.getDataContext();
@@ -146,14 +146,14 @@ public abstract class Prepare {
           new RelOptLattice(lattice.getLattice(), starRelOptTable));
     }
 
-    final RelNode rootRel4 = program.run(planner, rootRel, desiredTraits);
+    final RelNode rootRel4 = program.run(planner, root.rel, desiredTraits);
     if (LOGGER.isLoggable(Level.FINE)) {
       LOGGER.fine(
           "Plan after physical tweaks: "
           + RelOptUtil.toString(rootRel4, SqlExplainLevel.ALL_ATTRIBUTES));
     }
 
-    return rootRel4;
+    return root.copy(rootRel4);
   }
 
   private Program getProgram() {
@@ -168,10 +168,12 @@ public abstract class Prepare {
     return Programs.standard();
   }
 
-  protected RelTraitSet getDesiredRootTraitSet(RelNode rootRel) {
+  protected RelTraitSet getDesiredRootTraitSet(RelRoot root) {
     // Make sure non-CallingConvention traits, if any, are preserved
-    return rootRel.getTraitSet()
-        .replace(resultConvention).simplify();
+    return root.rel.getTraitSet()
+        .replace(resultConvention)
+        .replace(root.collation)
+        .simplify();
   }
 
   /**
@@ -285,13 +287,13 @@ public abstract class Prepare {
       switch (explainDepth) {
       case PHYSICAL:
       default:
-        root = root.copy(optimize(root.rel, materializations, lattices));
+        root = optimize(root, materializations, lattices);
         return createPreparedExplanation(
             null, parameterRowType, root, explainAsXml, detailLevel);
       }
     }
 
-    root = root.copy(optimize(root.rel, materializations, lattices));
+    root = optimize(root, materializations, lattices);
 
     if (timingTracer != null) {
       timingTracer.traceTime("end optimization");

@@ -364,11 +364,10 @@ public class PlannerTest {
         + "from emps "
         + "order by emps.deptno) "
         + "order by deptno",
-        "EnumerableRoot(empid=[$0], collation=[[1]])\n"
-        + "  EnumerableProject(empid=[$0], deptno=[$1])\n"
-        + "    EnumerableSort(sort0=[$1], dir0=[ASC])\n"
-        + "      EnumerableProject(empid=[$0], deptno=[$1], name=[$2], salary=[$3], commission=[$4])\n"
-        + "        EnumerableTableScan(table=[[hr, emps]])\n");
+        "EnumerableProject(empid=[$0], deptno=[$1])\n"
+        + "  EnumerableSort(sort0=[$1], dir0=[ASC])\n"
+        + "    EnumerableProject(empid=[$0], deptno=[$1], name=[$2], salary=[$3], commission=[$4])\n"
+        + "      EnumerableTableScan(table=[[hr, emps]])\n");
   }
 
   /** Unit test that parses, validates, converts and
@@ -380,11 +379,10 @@ public class PlannerTest {
         + "from emps "
         + "order by emps.deptno) "
         + "order by deptno",
-        "EnumerableRoot(EXPR$0=[$0], collation=[[1]])\n"
-        + "  EnumerableProject(EXPR$0=[+($0, $1)], deptno=[$1])\n"
-        + "    EnumerableSort(sort0=[$1], dir0=[ASC])\n"
-        + "      EnumerableProject(empid=[$0], deptno=[$1])\n"
-        + "        EnumerableTableScan(table=[[hr, emps]])\n");
+        "EnumerableProject(EXPR$0=[+($0, $1)], deptno=[$1])\n"
+        + "  EnumerableSort(sort0=[$1], dir0=[ASC])\n"
+        + "    EnumerableProject(empid=[$0], deptno=[$1])\n"
+        + "      EnumerableTableScan(table=[[hr, emps]])\n");
   }
 
   /** Tests that outer order by is not removed since window function
@@ -461,12 +459,11 @@ public class PlannerTest {
         .replace(EnumerableConvention.INSTANCE);
     RelNode transform = planner.transform(0, traitSet, convert);
     assertThat(toString(transform),
-        equalTo("EnumerableRoot(empid=[$0])\n"
-            + "  EnumerableSort(sort0=[$1], dir0=[ASC])\n"
-            + "    EnumerableProject(empid=[$0], deptno=[$1])\n"
-            + "      EnumerableSort(sort0=[$1], dir0=[ASC])\n"
-            + "        EnumerableProject(empid=[$0], deptno=[$1], name=[$2], salary=[$3], commission=[$4])\n"
-            + "          EnumerableTableScan(table=[[hr, emps]])\n"));
+        equalTo("EnumerableSort(sort0=[$1], dir0=[ASC])\n"
+            + "  EnumerableProject(empid=[$0], deptno=[$1])\n"
+            + "    EnumerableSort(sort0=[$1], dir0=[ASC])\n"
+            + "      EnumerableProject(empid=[$0], deptno=[$1], name=[$2], salary=[$3], commission=[$4])\n"
+            + "        EnumerableTableScan(table=[[hr, emps]])\n"));
   }
 
   /** Unit test that parses, validates, converts and plans. Planner is

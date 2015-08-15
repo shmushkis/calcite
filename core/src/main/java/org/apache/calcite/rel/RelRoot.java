@@ -21,8 +21,8 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.mapping.Mappings;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -75,17 +75,39 @@ public class RelRoot {
   /** Returns the root relational expression, creating a {@link LogicalProject}
    * if necessary to remove fields that are not needed. */
   public RelNode project() {
-    final List<Integer> list =
-        ImmutableIntList.identity(rel.getRowType().getFieldCount());
-    if (!list.equals(Pair.left(fields)) && !SqlKind.DML.contains(kind)) {
-      final List<RexNode> projects = new ArrayList<>();
-      final RexBuilder rexBuilder = rel.getCluster().getRexBuilder();
-      for (Pair<Integer, String> field : fields) {
-        projects.add(rexBuilder.makeInputRef(rel, field.left));
-      }
-      return LogicalProject.create(rel, projects, Pair.right(fields));
+    if (isRefTrivial()) {
+      return rel;
     }
-    return rel;
+    final List<RexNode> projects = new ArrayList<>();
+    final RexBuilder rexBuilder = rel.getCluster().getRexBuilder();
+    for (Pair<Integer, String> field : fields) {
+      projects.add(rexBuilder.makeInputRef(rel, field.left));
+    }
+    return LogicalProject.create(rel, projects, Pair.right(fields));
+  }
+
+  public boolean isNameTrivial() {
+    final RelDataType inputRowType = rel.getRowType();
+    return Pair.right(fields).equals(inputRowType.getFieldNames());
+  }
+
+  public boolean isRefTrivial() {
+    if (SqlKind.DML.contains(kind)) {
+      // DML statements return a single count column.
+      // The validated type is of the SELECT.
+      // Still, we regard the mapping as trivial.
+      return true;
+    }
+    final RelDataType inputRowType = rel.getRowType();
+    return Mappings.isIdentity(Pair.left(fields), inputRowType.getFieldCount());
+  }
+
+  public boolean isCollationTrivial() {
+    final List<RelCollation> collations = rel.getTraitSet()
+        .getTraits(RelCollationTraitDef.INSTANCE);
+    return collations != null
+        && collations.size() == 1
+        && collations.get(0).equals(collation);
   }
 }
 

@@ -21,7 +21,6 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelInput;
@@ -31,8 +30,8 @@ import org.apache.calcite.rel.SingleRel;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.mapping.Mappings;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -158,9 +157,7 @@ public abstract class Root extends SingleRel {
 
   protected boolean isRefTrivial() {
     final RelDataType inputRowType = input.getRowType();
-    final List<Integer> list =
-        ImmutableIntList.identity(inputRowType.getFieldCount());
-    return list.equals(Pair.left(fields));
+    return Mappings.isIdentity(Pair.left(fields), inputRowType.getFieldCount());
   }
 
   protected boolean isCollationTrivial() {

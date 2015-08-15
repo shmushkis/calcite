@@ -18,6 +18,7 @@ package org.apache.calcite.prepare;
 
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.enumerable.EnumerableBindable;
+import org.apache.calcite.adapter.enumerable.EnumerableCalc;
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.adapter.enumerable.EnumerableInterpretable;
 import org.apache.calcite.adapter.enumerable.EnumerableInterpreterRule;
@@ -95,6 +96,7 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.runtime.Bindable;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.runtime.Typed;
@@ -596,7 +598,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
         getColumnMetaDataList(typeFactory, x, x, origins);
     final Meta.CursorFactory cursorFactory =
         Meta.CursorFactory.deduce(columns, null);
-    return new CalciteSignature<T>(
+    return new CalciteSignature<>(
         sql,
         ImmutableList.<AvaticaParameter>of(),
         ImmutableMap.<String, Object>of(),
@@ -690,7 +692,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
           preparingStmt.prepareQueryable(queryable, x);
     }
 
-    final List<AvaticaParameter> parameters = new ArrayList<AvaticaParameter>();
+    final List<AvaticaParameter> parameters = new ArrayList<>();
     final RelDataType parameterRowType = preparedResult.getParameterRowType();
     for (RelDataTypeField field : parameterRowType.getFieldList()) {
       RelDataType type = field.getType();
@@ -734,7 +736,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
   private List<ColumnMetaData> getColumnMetaDataList(
       JavaTypeFactory typeFactory, RelDataType x, RelDataType jdbcType,
       List<List<String>> originList) {
-    final List<ColumnMetaData> columns = new ArrayList<ColumnMetaData>();
+    final List<ColumnMetaData> columns = new ArrayList<>();
     for (Ord<RelDataTypeField> pair : Ord.zip(jdbcType.getFieldList())) {
       final RelDataTypeField field = pair.e;
       final RelDataType type = field.getType();
@@ -961,7 +963,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
 
       final List<Materialization> materializations = ImmutableList.of();
       final List<CalciteSchema.LatticeEntry> lattices = ImmutableList.of();
-      root = root.copy(optimize(root.rel, materializations, lattices));
+      root = optimize(root, materializations, lattices);
 
       if (timingTracer != null) {
         timingTracer.traceTime("end optimization");
@@ -1046,15 +1048,26 @@ public class CalcitePrepareImpl implements CalcitePrepare {
     }
 
     @Override protected PreparedResult implement(RelRoot root) {
-      final RelDataType rowType = root.validatedRowType;
       RelDataType resultType = root.rel.getRowType();
       boolean isDml = root.kind.belongsTo(SqlKind.DML);
       final Bindable bindable;
       if (resultConvention == BindableConvention.INSTANCE) {
         bindable = Interpreters.bindable(root.rel);
       } else {
+        EnumerableRel enumerable = (EnumerableRel) root.rel;
+        if (!root.isRefTrivial()) {
+          final List<RexNode> projects = new ArrayList<>();
+          final RexBuilder rexBuilder = enumerable.getCluster().getRexBuilder();
+          for (int field : Pair.left(root.fields)) {
+            projects.add(rexBuilder.makeInputRef(enumerable, field));
+          }
+          RexProgram program = RexProgram.create(enumerable.getRowType(),
+              projects, null, root.validatedRowType, rexBuilder);
+          enumerable = EnumerableCalc.create(enumerable, program);
+        }
+
         bindable = EnumerableInterpretable.toBindable(internalParameters,
-            context.spark(), (EnumerableRel) root.rel, prefer);
+            context.spark(), enumerable, prefer);
       }
 
       if (timingTracer != null) {
@@ -1132,7 +1145,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
 
     public List<RexNode> toRexList(BlockStatement statement) {
       final List<Expression> simpleList = simpleList(statement);
-      final List<RexNode> list = new ArrayList<RexNode>();
+      final List<RexNode> list = new ArrayList<>();
       for (Expression expression1 : simpleList) {
         list.add(toRex(expression1));
       }
@@ -1217,7 +1230,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
     }
 
     private List<RexNode> toRex(List<Expression> expressions) {
-      ArrayList<RexNode> list = new ArrayList<RexNode>();
+      final List<RexNode> list = new ArrayList<>();
       for (Expression expression : expressions) {
         list.add(toRex(expression));
       }

@@ -617,6 +617,8 @@ public class SqlToRelConverter {
     switch (query.getKind()) {
     case SELECT:
       return ((SqlSelect) query).getOrderList() == null;
+    case WITH:
+      return isUnordered(((SqlWith) query).body);
     case ORDER_BY:
     case INSERT:
     case UPDATE:
