@@ -195,8 +195,8 @@ public class PlannerImpl implements Planner {
     sqlToRelConverter.enableTableAccessConversion(false);
     root =
         sqlToRelConverter.convertQuery(validatedSqlNode, false, true);
-    root = root.copy(sqlToRelConverter.flattenTypes(root.rel, true));
-    root = root.copy(RelDecorrelator.decorrelateQuery(root.rel));
+    root = root.withRel(sqlToRelConverter.flattenTypes(root.rel, true));
+    root = root.withRel(RelDecorrelator.decorrelateQuery(root.rel));
     state = State.STATE_5_CONVERTED;
     return root;
   }
@@ -231,8 +231,8 @@ public class PlannerImpl implements Planner {
       sqlToRelConverter.enableTableAccessConversion(false);
 
       root = sqlToRelConverter.convertQuery(validatedSqlNode, true, false);
-      root = root.copy(sqlToRelConverter.flattenTypes(root.rel, true));
-      root = root.copy(RelDecorrelator.decorrelateQuery(root.rel));
+      root = root.withRel(sqlToRelConverter.flattenTypes(root.rel, true));
+      root = root.withRel(RelDecorrelator.decorrelateQuery(root.rel));
 
       return PlannerImpl.this.root;
     }

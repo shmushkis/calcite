@@ -31,7 +31,6 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexExecutorImpl;
@@ -51,7 +50,6 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.Pair;
-import org.apache.calcite.util.Util;
 import org.apache.calcite.util.trace.CalciteTimingTracer;
 import org.apache.calcite.util.trace.CalciteTrace;
 
@@ -59,7 +57,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
@@ -81,7 +78,6 @@ public abstract class Prepare {
   protected final Convention resultConvention;
   protected CalciteTimingTracer timingTracer;
   protected List<List<String>> fieldOrigins;
-  protected final List<RelCollation> collations = new ArrayList<>();
   protected boolean ordered;
   protected RelDataType parameterRowType;
 
@@ -153,7 +149,7 @@ public abstract class Prepare {
           + RelOptUtil.toString(rootRel4, SqlExplainLevel.ALL_ATTRIBUTES));
     }
 
-    return root.copy(rootRel4);
+    return root.withRel(rootRel4);
   }
 
   private Program getProgram() {
@@ -235,12 +231,9 @@ public abstract class Prepare {
     // A query can have 0 collations and still be ordered (if it is ordered
     // on a non-projected expression). But otherwise,
     // ordered == !collations.isEmpty().
-    ordered = !SqlToRelConverter.isUnordered(sqlQuery);
-    assert collations.isEmpty();
-    if (root.rel instanceof Sort) {
-      Util.deprecated(null, false);
-      collations.add(((Sort) root.rel).getCollation());
-    }
+    ordered = SqlToRelConverter.isOrdered(sqlQuery);
+    final boolean ordered2 = !root.collation.getFieldCollations().isEmpty();
+    assert ordered == ordered2 : "q: " + sqlQuery + ", c: " + root.collation;
 
     final RelDataType resultType = validator.getValidatedNodeType(sqlQuery);
     fieldOrigins = validator.getFieldOrigins(sqlQuery);
@@ -267,11 +260,11 @@ public abstract class Prepare {
 
     // Structured type flattening, view expansion, and plugging in physical
     // storage.
-    root = root.copy(flattenTypes(root.rel, true));
+    root = root.withRel(flattenTypes(root.rel, true));
 
     if (this.context.config().forceDecorrelate()) {
       // Subquery decorrelation.
-      root = root.copy(decorrelate(sqlToRelConverter, sqlQuery, root.rel));
+      root = root.withRel(decorrelate(sqlToRelConverter, sqlQuery, root.rel));
     }
 
     // Trim unused fields.
@@ -356,7 +349,9 @@ public abstract class Prepare {
         getSqlToRelConverter(
             getSqlValidator(), catalogReader);
     converter.setTrimUnusedFields(shouldTrim(root.rel));
-    return root.copy(converter.trimUnusedFields(ordered, root.rel));
+    final boolean ordered2 = !root.collation.getFieldCollations().isEmpty();
+    final boolean dml = SqlKind.DML.contains(root.kind);
+    return root.withRel(converter.trimUnusedFields(dml || ordered, root.rel));
   }
 
   private boolean shouldTrim(RelNode rootRel) {

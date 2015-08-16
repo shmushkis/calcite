@@ -939,11 +939,11 @@ public class CalcitePrepareImpl implements CalcitePrepare {
           new LixToRelTranslator(cluster, CalcitePreparingStmt.this)
               .translate(queryable);
       final RelDataType rowType = rel.getRowType();
-      RelRoot root =
-          new RelRoot(rel, resultType, SqlKind.SELECT,
-              Pair.zip(ImmutableIntList.identity(rowType.getFieldCount()),
-                  rowType.getFieldNames()),
-              RelCollations.EMPTY);
+      final List<Pair<Integer, String>> fields =
+          Pair.zip(ImmutableIntList.identity(rowType.getFieldCount()),
+              rowType.getFieldNames());
+      RelRoot root = new RelRoot(rel, resultType, SqlKind.SELECT, fields,
+          RelCollations.EMPTY);
 
       if (timingTracer != null) {
         timingTracer.traceTime("end sql2rel");
@@ -956,7 +956,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
 
       // Structured type flattening, view expansion, and plugging in
       // physical storage.
-      root = root.copy(flattenTypes(root.rel, true));
+      root = root.withRel(flattenTypes(root.rel, true));
 
       // Trim unused fields.
       root = trimUnusedFields(root);
@@ -1082,7 +1082,9 @@ public class CalcitePrepareImpl implements CalcitePrepare {
           resultType,
           parameterRowType,
           fieldOrigins,
-          ImmutableList.copyOf(collations),
+          root.collation.getFieldCollations().isEmpty()
+              ? ImmutableList.<RelCollation>of()
+              : ImmutableList.of(root.collation),
           root.rel,
           mapTableModOp(isDml, root.kind),
           isDml) {

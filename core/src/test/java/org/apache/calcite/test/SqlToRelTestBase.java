@@ -490,14 +490,14 @@ public abstract class SqlToRelTestBase {
           converter.convertQuery(validatedQuery, false, true);
       assert root != null;
       if (enableDecorrelate || enableTrim) {
-        root = root.copy(converter.flattenTypes(root.rel, true));
+        root = root.withRel(converter.flattenTypes(root.rel, true));
       }
       if (enableDecorrelate) {
-        root = root.copy(converter.decorrelate(sqlQuery, root.rel));
+        root = root.withRel(converter.decorrelate(sqlQuery, root.rel));
       }
       if (enableTrim) {
         converter.setTrimUnusedFields(true);
-        root = root.copy(converter.trimUnusedFields(false, root.rel));
+        root = root.withRel(converter.trimUnusedFields(false, root.rel));
       }
       return root;
     }

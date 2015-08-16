@@ -427,7 +427,7 @@ public class RelOptRulesTest extends RelOptTestBase {
     final SqlNode validatedQuery = validator.validate(sqlQuery);
     RelRoot root =
         converter.convertQuery(validatedQuery, false, true);
-    root = root.copy(converter.decorrelate(sqlQuery, root.rel));
+    root = root.withRel(converter.decorrelate(sqlQuery, root.rel));
 
     final HepProgram program =
         HepProgram.builder()
@@ -439,12 +439,12 @@ public class RelOptRulesTest extends RelOptTestBase {
 
     HepPlanner planner = new HepPlanner(program);
     planner.setRoot(root.rel);
-    root = root.copy(planner.findBestExp());
+    root = root.withRel(planner.findBestExp());
 
     String planBefore = NL + RelOptUtil.toString(root.rel);
     diffRepos.assertEquals("planBefore", "${planBefore}", planBefore);
     converter.setTrimUnusedFields(true);
-    root = root.copy(converter.trimUnusedFields(false, root.rel));
+    root = root.withRel(converter.trimUnusedFields(false, root.rel));
     String planAfter = NL + RelOptUtil.toString(root.rel);
     diffRepos.assertEquals("planAfter", "${planAfter}", planAfter);
   }

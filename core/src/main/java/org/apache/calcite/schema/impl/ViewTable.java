@@ -125,7 +125,7 @@ public class ViewTable
     try {
       RelRoot root = preparingStmt.expandView(rowType, queryString, schemaPath);
 
-      root = root.copy(RelOptUtil.createCastRel(root.rel, rowType, true));
+      root = root.withRel(RelOptUtil.createCastRel(root.rel, rowType, true));
       //rel = viewExpander.flattenTypes(rel, false);
       return root;
     } catch (Throwable e) {

@@ -105,6 +105,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSampleSpec;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSelectKeyword;
@@ -514,7 +515,10 @@ public class SqlToRelConverter {
       final List<RelCollation> collations =
           rootRel.getTraitSet().getTraits(RelCollationTraitDef.INSTANCE);
       rootRel = trimmer.trim(rootRel);
-      if (!ordered && collations != null) {
+      if (!ordered
+          && collations != null
+          && !collations.isEmpty()
+          && !collations.equals(ImmutableList.of(RelCollations.EMPTY))) {
         final RelTraitSet traitSet = rootRel.getTraitSet()
             .replace(RelCollationTraitDef.INSTANCE, collations);
         rootRel = rootRel.copy(traitSet, rootRel.getInputs());
@@ -560,17 +564,16 @@ public class SqlToRelConverter {
       query = validator.validate(query);
     }
 
-    final RelDataType validatedRowType = validator.getValidatedNodeType(query);
-    RelCollation collation = RelCollations.EMPTY;
-    RelNode result = convertQueryRecursive(query, top, null);
+    RelNode result = convertQueryRecursive(query, top, null).rel;
     if (top) {
       if (isStream(query)) {
         result = new LogicalDelta(cluster, result.getTraitSet(), result);
       }
-      if (!query.isA(SqlKind.DML)) {
-        if (!isUnordered(query)) {
-          collation = requiredCollation(result);
-        }
+    }
+    RelCollation collation = RelCollations.EMPTY;
+    if (!query.isA(SqlKind.DML)) {
+      if (isOrdered(query)) {
+        collation = requiredCollation(result);
       }
     }
     checkConvertedType(query, result);
@@ -585,27 +588,22 @@ public class SqlToRelConverter {
               SqlExplainLevel.EXPPLAN_ATTRIBUTES));
     }
 
-    final List<Integer> projects =
-        ImmutableIntList.identity(validatedRowType.getFieldCount());
-    final List<Pair<Integer, String>> fields =
-        Pair.zip(projects, validatedRowType.getFieldNames());
-    return new RelRoot(result, validator.getValidatedNodeType(query),
-        query.getKind(), fields, collation);
+    final RelDataType validatedRowType = validator.getValidatedNodeType(query);
+    return RelRoot.of(result, validatedRowType, query.getKind())
+        .withCollation(collation);
   }
 
   private RelCollation requiredCollation(RelNode r) {
-    for (;;) {
-      if (r instanceof Sort) {
-        return ((Sort) r).collation;
-      }
-      if (r instanceof Project) {
-        r = ((Project) r).getInput();
-      } else if (r instanceof Delta) {
-        r = ((Delta) r).getInput();
-      } else {
-        throw new AssertionError();
-      }
+    if (r instanceof Sort) {
+      return ((Sort) r).collation;
     }
+    if (r instanceof Project) {
+      return requiredCollation(((Project) r).getInput());
+    }
+    if (r instanceof Delta) {
+      return requiredCollation(((Delta) r).getInput());
+    }
+    throw new AssertionError();
   }
 
   private static boolean isStream(SqlNode query) {
@@ -613,20 +611,17 @@ public class SqlToRelConverter {
         && ((SqlSelect) query).isKeywordPresent(SqlSelectKeyword.STREAM);
   }
 
-  public static boolean isUnordered(SqlNode query) {
+  public static boolean isOrdered(SqlNode query) {
     switch (query.getKind()) {
     case SELECT:
-      return ((SqlSelect) query).getOrderList() == null;
+      return ((SqlSelect) query).getOrderList() != null
+          && ((SqlSelect) query).getOrderList().size() > 0;
     case WITH:
-      return isUnordered(((SqlWith) query).body);
+      return isOrdered(((SqlWith) query).body);
     case ORDER_BY:
-    case INSERT:
-    case UPDATE:
-    case DELETE:
-    case MERGE:
-      return false;
+      return ((SqlOrderBy) query).orderList.size() > 0;
     default:
-      return true;
+      return false;
     }
   }
 
@@ -1493,7 +1488,7 @@ public class SqlToRelConverter {
           false,
           targetRowType);
     } else {
-      return convertQueryRecursive(seek, false, null);
+      return convertQueryRecursive(seek, false, null).project();
     }
   }
 
@@ -2012,7 +2007,7 @@ public class SqlToRelConverter {
     case INTERSECT:
     case EXCEPT:
     case UNION:
-      final RelNode rel = convertQueryRecursive(from, false, null);
+      final RelNode rel = convertQueryRecursive(from, false, null).project();
       bb.setRoot(rel, true);
       return;
 
@@ -2819,29 +2814,28 @@ public class SqlToRelConverter {
    * @param targetRowType Target row type, or null
    * @return Relational expression
    */
-  protected RelNode convertQueryRecursive(
-      SqlNode query,
-      boolean top,
+  protected RelRoot convertQueryRecursive(SqlNode query, boolean top,
       RelDataType targetRowType) {
-    switch (query.getKind()) {
+    final SqlKind kind = query.getKind();
+    switch (kind) {
     case SELECT:
-      return convertSelect((SqlSelect) query, top);
+      return RelRoot.of(convertSelect((SqlSelect) query, top), kind);
     case INSERT:
-      return convertInsert((SqlInsert) query);
+      return RelRoot.of(convertInsert((SqlInsert) query), kind);
     case DELETE:
-      return convertDelete((SqlDelete) query);
+      return RelRoot.of(convertDelete((SqlDelete) query), kind);
     case UPDATE:
-      return convertUpdate((SqlUpdate) query);
+      return RelRoot.of(convertUpdate((SqlUpdate) query), kind);
     case MERGE:
-      return convertMerge((SqlMerge) query);
+      return RelRoot.of(convertMerge((SqlMerge) query), kind);
     case UNION:
     case INTERSECT:
     case EXCEPT:
-      return convertSetOp((SqlCall) query);
+      return RelRoot.of(convertSetOp((SqlCall) query), kind);
     case WITH:
-      return convertWith((SqlWith) query);
+      return convertWith((SqlWith) query, top);
     case VALUES:
-      return convertValues((SqlCall) query, targetRowType);
+      return RelRoot.of(convertValues((SqlCall) query, targetRowType), kind);
     default:
       throw Util.newInternal("not a query: " + query);
     }
@@ -2855,8 +2849,10 @@ public class SqlToRelConverter {
    * @return Relational expression
    */
   protected RelNode convertSetOp(SqlCall call) {
-    final RelNode left = convertQueryRecursive(call.operand(0), false, null);
-    final RelNode right = convertQueryRecursive(call.operand(1), false, null);
+    final RelNode left =
+        convertQueryRecursive(call.operand(0), false, null).project();
+    final RelNode right =
+        convertQueryRecursive(call.operand(1), false, null).project();
     boolean all = false;
     if (call.getOperator() instanceof SqlSetOperator) {
       all = ((SqlSetOperator) (call.getOperator())).isAll();
@@ -2895,8 +2891,7 @@ public class SqlToRelConverter {
         validator.getValidatedNodeType(call);
     assert targetRowType != null;
     RelNode sourceRel =
-        convertQueryRecursive(
-            call.getSource(), false, targetRowType);
+        convertQueryRecursive(call.getSource(), false, targetRowType).project();
     RelNode massagedRel = convertColumnList(call, sourceRel);
 
     return createModify(targetTable, massagedRel);
@@ -3518,8 +3513,8 @@ public class SqlToRelConverter {
   /**
    * Converts a WITH sub-query into a relational expression.
    */
-  public RelNode convertWith(SqlWith with) {
-    return convertQuery(with.body, false, false).rel;
+  public RelRoot convertWith(SqlWith with, boolean top) {
+    return convertQuery(with.body, false, top);
   }
 
   /**

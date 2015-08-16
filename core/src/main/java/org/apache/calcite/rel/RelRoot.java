@@ -21,6 +21,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.mapping.Mappings;
 
@@ -56,8 +57,22 @@ public class RelRoot {
     this.collation = Preconditions.checkNotNull(collation);
   }
 
+  /** Creates a simple RelRoot. */
+  public static RelRoot of(RelNode rel, SqlKind kind) {
+    return of(rel, rel.getRowType(), kind);
+  }
+
+  /** Creates a simple RelRoot. */
+  public static RelRoot of(RelNode rel, RelDataType rowType, SqlKind kind) {
+    final ImmutableIntList refs =
+        ImmutableIntList.identity(rowType.getFieldCount());
+    final List<String> names = rowType.getFieldNames();
+    return new RelRoot(rel, rowType, kind, Pair.zip(refs, names),
+        RelCollations.EMPTY);
+  }
+
   /** Creates a copy of this RelRoot, assigning a {@link RelNode}. */
-  public RelRoot copy(RelNode rel) {
+  public RelRoot withRel(RelNode rel) {
     if (rel == this.rel) {
       return this;
     }
@@ -69,6 +84,10 @@ public class RelRoot {
     if (kind == this.kind) {
       return this;
     }
+    return new RelRoot(rel, validatedRowType, kind, fields, collation);
+  }
+
+  public RelRoot withCollation(RelCollation collation) {
     return new RelRoot(rel, validatedRowType, kind, fields, collation);
   }
 

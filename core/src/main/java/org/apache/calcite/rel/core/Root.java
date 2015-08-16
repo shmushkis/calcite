@@ -57,8 +57,8 @@ import java.util.List;
  * <ul>
  *   <li>Remove {@link org.apache.calcite.prepare.Prepare#collations}
  *   <li>Look at uses of
- *   {@link org.apache.calcite.sql2rel.SqlToRelConverter#isUnordered}
- *   and write apologetic comment
+ *   {@link org.apache.calcite.sql2rel.SqlToRelConverter#isOrdered}
+ *   and write apologetic comment, especially concerning DML
  *   <li>Remove {@link org.apache.calcite.rel.RelCollations#PRESERVE}
  *   <li>Add a test like InterpreterTest.testInterpretProjectFilterValues
  *   where an interpretable needs a root
