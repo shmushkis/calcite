@@ -19,7 +19,6 @@ package org.apache.calcite.test;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
@@ -379,7 +378,7 @@ public class RexTransformerTest {
         + "ON CAST(a.empno AS int) <> b.deptno";
 
     final RelNode relNode = toRel(sql);
-    final LogicalProject project = (LogicalProject) Root.strip(relNode);
+    final LogicalProject project = (LogicalProject) relNode;
     final LogicalJoin join = (LogicalJoin) project.getInput(0);
     final List<RexNode> leftJoinKeys = new ArrayList<>();
     final List<RexNode> rightJoinKeys = new ArrayList<>();

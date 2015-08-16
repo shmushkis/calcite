@@ -593,19 +593,6 @@ public class SqlToRelConverter {
         .withCollation(collation);
   }
 
-  private RelCollation requiredCollation(RelNode r) {
-    if (r instanceof Sort) {
-      return ((Sort) r).collation;
-    }
-    if (r instanceof Project) {
-      return requiredCollation(((Project) r).getInput());
-    }
-    if (r instanceof Delta) {
-      return requiredCollation(((Delta) r).getInput());
-    }
-    throw new AssertionError();
-  }
-
   private static boolean isStream(SqlNode query) {
     return query instanceof SqlSelect
         && ((SqlSelect) query).isKeywordPresent(SqlSelectKeyword.STREAM);
@@ -623,6 +610,19 @@ public class SqlToRelConverter {
     default:
       return false;
     }
+  }
+
+  private RelCollation requiredCollation(RelNode r) {
+    if (r instanceof Sort) {
+      return ((Sort) r).collation;
+    }
+    if (r instanceof Project) {
+      return requiredCollation(((Project) r).getInput());
+    }
+    if (r instanceof Delta) {
+      return requiredCollation(((Delta) r).getInput());
+    }
+    throw new AssertionError();
   }
 
   /**
@@ -3668,6 +3668,7 @@ public class SqlToRelConverter {
      *                      for a leaf node, say
      * @param nameToNodeMap Map which translates the expression to map a
      *                      given parameter into, if translating expressions;
+     *                      null otherwise
      * @param top           Whether this is the root of the query
      */
     protected Blackboard(SqlValidatorScope scope,

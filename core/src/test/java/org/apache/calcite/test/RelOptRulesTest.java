@@ -28,7 +28,6 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.RelFactories;
-import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.metadata.CachingRelMetadataProvider;
 import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
@@ -1492,7 +1491,7 @@ public class RelOptRulesTest extends RelOptTestBase {
     planner.setRoot(relInitial);
     RelNode relBefore = planner.findBestExp();
 
-    String planBefore = NL + RelOptUtil.toString(Root.strip(relBefore));
+    String planBefore = NL + RelOptUtil.toString(relBefore);
     diffRepos.assertEquals("planBefore", "${planBefore}", planBefore);
 
     HepProgram program2 = new HepProgramBuilder()
@@ -1509,7 +1508,7 @@ public class RelOptRulesTest extends RelOptTestBase {
     planner2.setRoot(relBefore);
     RelNode relAfter = planner2.findBestExp();
 
-    String planAfter = NL + RelOptUtil.toString(Root.strip(relAfter));
+    String planAfter = NL + RelOptUtil.toString(relAfter);
     diffRepos.assertEquals("planAfter", "${planAfter}", planAfter);
   }
 

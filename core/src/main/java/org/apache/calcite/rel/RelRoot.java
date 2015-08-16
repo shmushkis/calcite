@@ -33,6 +33,44 @@ import java.util.List;
 
 /**
  * Root of a tree of {@link RelNode}.
+ *
+ * <p>One important reason that RelRoot exists is to deal with queries like
+ *
+ * <blockquote><code>SELECT name
+ * FROM emp
+ * ORDER BY empno DESC</code></blockquote>
+ *
+ * <p>Calcite knows that the result must be sorted, but cannot represent its
+ * sort order as a collation, because {@code empno} is not a field in the
+ * result.
+ *
+ * <p>Instead we represent this as
+ *
+ * <blockquote><code>RelRoot: {
+ *   rel: Sort($1 DESC)
+ *          Project(name, empno)
+ *            TableScan(EMP)
+ *   fields: [0]
+ *   collation: [1 DESC]
+ * }</code></blockquote>
+ *
+ * <p>Note that the {@code empno} field is present in the result, but the
+ * {@code fields} mask tells the consumer to throw it away.
+ *
+ * <p>Another use case is queries like this:
+ *
+ * <blockquote><code>SELECT name AS n, name AS n2, empno AS n
+ * FROM emp</code></blockquote>
+ *
+ * <p>The there are multiple uses of the {@code name} field. and there are
+ * multiple columns aliased as {@code n}. You can represent this as
+ *
+ * <blockquote><code>RelRoot: {
+ *   rel: Project(name, empno)
+ *          TableScan(EMP)
+ *   fields: [(0, "n"), (0, "n2"), (1, "n")]
+ *   collation: []
+ * }</code></blockquote>
  */
 public class RelRoot {
   public final RelNode rel;

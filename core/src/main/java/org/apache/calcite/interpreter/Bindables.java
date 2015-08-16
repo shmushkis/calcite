@@ -41,7 +41,6 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.core.Root;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Union;
@@ -67,7 +66,6 @@ import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.ImmutableIntList;
-import org.apache.calcite.util.Pair;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -84,9 +82,6 @@ public class Bindables {
 
   public static final RelOptRule BINDABLE_TABLE_SCAN_RULE =
       new BindableTableScanRule();
-
-  public static final RelOptRule BINDABLE_ROOT_RULE =
-      new BindableRootRule();
 
   public static final RelOptRule BINDABLE_FILTER_RULE =
       new BindableFilterRule();
@@ -117,7 +112,6 @@ public class Bindables {
       ImmutableList.of(
           NoneToBindableConverterRule.INSTANCE,
           BINDABLE_TABLE_SCAN_RULE,
-          BINDABLE_ROOT_RULE,
           BINDABLE_FILTER_RULE,
           BINDABLE_PROJECT_RULE,
           BINDABLE_SORT_RULE,
@@ -399,56 +393,6 @@ public class Bindables {
 
     public Node implement(InterpreterImplementor implementor) {
       return new SortNode(implementor.interpreter, this);
-    }
-  }
-
-  /**
-   * Rule to convert an {@link org.apache.calcite.rel.core.Root} to a
-   * {@link org.apache.calcite.interpreter.Bindables.BindableRoot}.
-   */
-  private static class BindableRootRule extends ConverterRule {
-    private BindableRootRule() {
-      super(Root.class, Convention.NONE, BindableConvention.INSTANCE,
-          "BindableRootRule");
-    }
-
-    public RelNode convert(RelNode rel) {
-      final Root root = (Root) rel;
-      final RelTraitSet traitSet =
-          root.getTraitSet().replace(BindableConvention.INSTANCE);
-      final RelNode input = root.getInput();
-      final RelNode newInput = convert(input,
-          input.getTraitSet().replace(BindableConvention.INSTANCE));
-      return new BindableRoot(rel.getCluster(), traitSet, newInput, root.fields,
-          root.collation);
-    }
-  }
-
-  /** Implementation of {@link org.apache.calcite.rel.core.Root}
-   * bindable calling convention. */
-  public static class BindableRoot extends Root implements BindableRel {
-    public BindableRoot(RelOptCluster cluster, RelTraitSet traitSet,
-        RelNode input, List<Pair<Integer, String>> fields,
-        RelCollation collation) {
-      super(cluster, traitSet, input, fields, collation);
-      assert getConvention() instanceof BindableConvention;
-      assert getConvention() == input.getConvention();
-    }
-
-    @Override public Root copy(RelTraitSet traitSet, RelNode input) {
-      return new BindableRoot(getCluster(), traitSet, input, fields, collation);
-    }
-
-    public Class<Object[]> getElementType() {
-      return Object[].class;
-    }
-
-    public Enumerable<Object[]> bind(DataContext dataContext) {
-      return help(dataContext, this);
-    }
-
-    public Node implement(InterpreterImplementor implementor) {
-      return ((BindableRel) input).implement(implementor);
     }
   }
 

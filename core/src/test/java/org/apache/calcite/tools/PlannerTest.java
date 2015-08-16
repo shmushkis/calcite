@@ -417,7 +417,6 @@ public class PlannerTest {
     RuleSet ruleSet =
         RuleSets.ofList(
             SortRemoveRule.INSTANCE,
-            EnumerableRules.ENUMERABLE_ROOT_RULE,
             EnumerableRules.ENUMERABLE_PROJECT_RULE,
             EnumerableRules.ENUMERABLE_WINDOW_RULE,
             EnumerableRules.ENUMERABLE_SORT_RULE,
@@ -443,7 +442,6 @@ public class PlannerTest {
   @Test public void testDuplicateSortPlanWORemoveSortRule() throws Exception {
     RuleSet ruleSet =
         RuleSets.ofList(
-            EnumerableRules.ENUMERABLE_ROOT_RULE,
             EnumerableRules.ENUMERABLE_PROJECT_RULE,
             EnumerableRules.ENUMERABLE_SORT_RULE);
     Planner planner = getPlanner(null, Programs.of(ruleSet));

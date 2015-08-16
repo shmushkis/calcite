@@ -29,7 +29,7 @@ import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.prepare.CalcitePrepareImpl;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Root;
+import org.apache.calcite.rel.core.Calc;
 import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
@@ -62,7 +62,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -95,17 +94,9 @@ public class Programs {
           FilterCalcMergeRule.INSTANCE,
           ProjectCalcMergeRule.INSTANCE);
 
-  /** Program that converts filters and projects to calcs. */
+  /** Program that converts filters and projects to {@link Calc}s. */
   public static final Program CALC_PROGRAM =
       hep(CALC_RULES, true, new DefaultRelMetadataProvider());
-
-  /** Program that convert a {@link Root} to an
-   * {@link org.apache.calcite.adapter.enumerable.EnumerableProject}. */
-  public static final Program ROOT_PROGRAM =
-      hep(
-          ImmutableList.of(EnumerableRules.ENUMERABLE_ROOT_RULE,
-              EnumerableRules.ENUMERABLE_CALC_RULE),
-          true, new DefaultRelMetadataProvider());
 
   public static final ImmutableSet<RelOptRule> RULE_SET =
       ImmutableSet.of(
@@ -166,7 +157,7 @@ public class Programs {
   }
 
   /** Creates a program from a list of rules. */
-  public static Program ofRules(Collection<RelOptRule> rules) {
+  public static Program ofRules(Iterable<? extends RelOptRule> rules) {
     return of(RuleSets.ofList(rules));
   }
 
@@ -214,7 +205,8 @@ public class Programs {
    * {@link org.apache.calcite.rel.rules.MultiJoin} and
    * {@link org.apache.calcite.rel.rules.LoptOptimizeJoinRule})
    * if there are 6 or more joins (7 or more relations). */
-  public static Program heuristicJoinOrder(final Collection<RelOptRule> rules,
+  public static Program heuristicJoinOrder(
+      final Iterable<? extends RelOptRule> rules,
       final boolean bushy, final int minJoinCount) {
     return new Program() {
       public RelNode run(RelOptPlanner planner, RelNode rel,
@@ -288,26 +280,7 @@ public class Programs {
     // EnumerableCalcRel is introduced.
     final Program program2 = CALC_PROGRAM;
 
-    return wrapRoot(sequence(program1, program2));
-  }
-
-  /** Returns a program that deals with a {@link Root}, if it exists. */
-  private static Program wrapRoot(final Program program) {
-    return new Program() {
-      public RelNode run(RelOptPlanner planner, RelNode rel,
-          RelTraitSet requiredOutputTraits) {
-        if (rel instanceof Root) {
-          final Root root = (Root) rel;
-          final RelNode r =
-              run(planner, root.getInput(),
-                  requiredOutputTraits.plus(root.collation));
-          final RelNode r2 = root.copy(root.getTraitSet(), r);
-          return ROOT_PROGRAM.run(planner, r2, requiredOutputTraits);
-        } else {
-          return program.run(planner, rel, requiredOutputTraits);
-        }
-      }
-    };
+    return sequence(program1, program2);
   }
 
   /** Program backed by a {@link RuleSet}. */

@@ -126,7 +126,6 @@ public class ViewTable
       RelRoot root = preparingStmt.expandView(rowType, queryString, schemaPath);
 
       root = root.withRel(RelOptUtil.createCastRel(root.rel, rowType, true));
-      //rel = viewExpander.flattenTypes(rel, false);
       return root;
     } catch (Throwable e) {
       throw Util.newInternal(
