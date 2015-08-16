@@ -78,7 +78,6 @@ public abstract class Prepare {
   protected final Convention resultConvention;
   protected CalciteTimingTracer timingTracer;
   protected List<List<String>> fieldOrigins;
-  protected boolean ordered;
   protected RelDataType parameterRowType;
 
   // temporary. for testing.
@@ -228,13 +227,6 @@ public abstract class Prepare {
       timingTracer.traceTime("end sql2rel");
     }
 
-    // A query can have 0 collations and still be ordered (if it is ordered
-    // on a non-projected expression). But otherwise,
-    // ordered == !collations.isEmpty().
-    ordered = SqlToRelConverter.isOrdered(sqlQuery);
-    final boolean ordered2 = !root.collation.getFieldCollations().isEmpty();
-    assert ordered == ordered2 : "q: " + sqlQuery + ", c: " + root.collation;
-
     final RelDataType resultType = validator.getValidatedNodeType(sqlQuery);
     fieldOrigins = validator.getFieldOrigins(sqlQuery);
     assert fieldOrigins.size() == resultType.getFieldCount();
@@ -349,7 +341,7 @@ public abstract class Prepare {
         getSqlToRelConverter(
             getSqlValidator(), catalogReader);
     converter.setTrimUnusedFields(shouldTrim(root.rel));
-    final boolean ordered2 = !root.collation.getFieldCollations().isEmpty();
+    final boolean ordered = !root.collation.getFieldCollations().isEmpty();
     final boolean dml = SqlKind.DML.contains(root.kind);
     return root.withRel(converter.trimUnusedFields(dml || ordered, root.rel));
   }

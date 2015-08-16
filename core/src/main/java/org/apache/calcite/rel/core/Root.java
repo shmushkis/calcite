@@ -55,13 +55,6 @@ import java.util.List;
  *
  * <p>TODO:
  * <ul>
- *   <li>Remove {@link org.apache.calcite.prepare.Prepare#collations}
- *   <li>Look at uses of
- *   {@link org.apache.calcite.sql2rel.SqlToRelConverter#isOrdered}
- *   and write apologetic comment, especially concerning DML
- *   <li>Remove {@link org.apache.calcite.rel.RelCollations#PRESERVE}
- *   <li>Add a test like InterpreterTest.testInterpretProjectFilterValues
- *   where an interpretable needs a root
  * </ul>
  */
 public abstract class Root extends SingleRel {
