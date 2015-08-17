@@ -2854,13 +2854,12 @@ public class JdbcTest {
             + "  where \"empid\" < 150)")
         .convertContains(""
             + "LogicalProject(deptno=[$0], name=[$1], employees=[$2], location=[$3])\n"
-            + "  LogicalJoin(condition=[=($0, $4)], joinType=[inner])\n"
-            + "    EnumerableTableScan(table=[[hr, depts]])\n"
-            + "    LogicalAggregate(group=[{0}])\n"
-            + "      LogicalProject(deptno=[$1])\n"
-            + "        LogicalFilter(condition=[<($0, 150)])\n"
-            + "          LogicalProject(empid=[$0], deptno=[$1])\n"
-            + "            EnumerableTableScan(table=[[hr, emps]])")
+            + "  LogicalFilter(condition=[IN($0, {\n"
+            + "LogicalProject(deptno=[$1])\n"
+            + "  LogicalFilter(condition=[<($0, 150)])\n"
+            + "    EnumerableTableScan(table=[[hr, emps]])\n"
+            + "})])\n"
+            + "    EnumerableTableScan(table=[[hr, depts]])")
         .explainContains(""
             + "EnumerableSemiJoin(condition=[=($0, $5)], joinType=[inner])\n"
             + "  EnumerableTableScan(table=[[hr, depts]])\n"
@@ -3353,12 +3352,10 @@ public class JdbcTest {
     CalciteAssert.hr()
         .query("select count(*) c from \"hr\".\"emps\", \"hr\".\"depts\"")
         .convertContains("LogicalAggregate(group=[{}], C=[COUNT()])\n"
-            + "  LogicalProject(DUMMY=[0])\n"
+            + "  LogicalProject($f0=[0])\n"
             + "    LogicalJoin(condition=[true], joinType=[inner])\n"
-            + "      LogicalProject(DUMMY=[0])\n"
-            + "        EnumerableTableScan(table=[[hr, emps]])\n"
-            + "      LogicalProject(DUMMY=[0])\n"
-            + "        EnumerableTableScan(table=[[hr, depts]])");
+            + "      EnumerableTableScan(table=[[hr, emps]])\n"
+            + "      EnumerableTableScan(table=[[hr, depts]])");
   }
 
   /** Same result (and plan) as {@link #testSelectDistinct}. */
@@ -4214,10 +4211,9 @@ public class JdbcTest {
               + "from \"hr\".\"emps\"\n"
               + "where \"empid\" > 10")
           .convertContains(""
-              + "LogicalProject(name=[$2], EXPR$1=[+(COUNT($3) OVER (PARTITION BY $1 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING), 1)])\n"
+              + "LogicalProject(name=[$2], EXPR$1=[+(COUNT($4) OVER (PARTITION BY $1 RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING), 1)])\n"
               + "  LogicalFilter(condition=[>($0, 10)])\n"
-              + "    LogicalProject(empid=[$0], deptno=[$1], name=[$2], commission=[$4])\n"
-              + "      EnumerableTableScan(table=[[hr, emps]])\n");
+              + "    EnumerableTableScan(table=[[hr, emps]])\n");
     } finally {
       Prepare.THREAD_TRIM.set(false);
     }
