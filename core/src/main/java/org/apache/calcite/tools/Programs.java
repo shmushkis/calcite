@@ -17,6 +17,7 @@
 package org.apache.calcite.tools;
 
 import org.apache.calcite.adapter.enumerable.EnumerableRules;
+import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.interpreter.NoneToBindableConverterRule;
 import org.apache.calcite.plan.RelOptCostImpl;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -349,7 +350,12 @@ public class Programs {
   private static class DecorrelateProgram implements Program {
     public RelNode run(RelOptPlanner planner, RelNode rel,
         RelTraitSet requiredOutputTraits) {
-      return RelDecorrelator.decorrelateQuery(rel);
+      final CalciteConnectionConfig config =
+          planner.getContext().unwrap(CalciteConnectionConfig.class);
+      if (config != null && config.forceDecorrelate()) {
+        return RelDecorrelator.decorrelateQuery(rel);
+      }
+      return rel;
     }
   }
 
