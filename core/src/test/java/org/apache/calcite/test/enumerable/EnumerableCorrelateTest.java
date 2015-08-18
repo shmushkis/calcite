@@ -52,11 +52,11 @@ public class EnumerableCorrelateTest {
         .query(
             "select empid, name from emps e where exists (select 1 from depts d where d.deptno=e.deptno)")
         .explainContains(""
-            + "EnumerableCalc(expr#0..4=[{inputs}], empid=[$t0], name=[$t2])\n"
+            + "EnumerableCalc(expr#0..5=[{inputs}], empid=[$t0], name=[$t2])\n"
             + "  EnumerableCorrelate(correlation=[$cor0], joinType=[INNER], requiredColumns=[{1}])\n"
             + "    EnumerableTableScan(table=[[s, emps]])\n"
-            + "    EnumerableAggregate(group=[{}])\n"
-            + "      EnumerableCalc(expr#0..3=[{inputs}], expr#4=[$cor0], expr#5=[$t4.deptno], expr#6=[=($t0, $t5)], proj#0..3=[{exprs}], $condition=[$t6])\n"
+            + "    EnumerableAggregate(group=[{0}])\n"
+            + "      EnumerableCalc(expr#0..3=[{inputs}], expr#4=[true], expr#5=[$cor0], expr#6=[$t5.deptno], expr#7=[=($t0, $t6)], i=[$t4], $condition=[$t7])\n"
             + "        EnumerableTableScan(table=[[s, depts]])")
         .returnsUnordered(
             "empid=100; name=Bill",

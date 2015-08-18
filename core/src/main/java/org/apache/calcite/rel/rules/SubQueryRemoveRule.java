@@ -79,11 +79,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
           final int fieldCount = builder.peek().getRowType().getFieldCount();
           final RexNode target = apply(e, ImmutableSet.<CorrelationId>of(),
               logic, builder, 1, fieldCount);
-          final RexShuttle shuttle = new RexShuttle() {
-            @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
-              return RexUtil.eq(subQuery, e) ? target : subQuery;
-            }
-          };
+          final RexShuttle shuttle = new ReplaceSubQueryShuttle(e, target);
           builder.project(shuttle.apply(project.getProjects()),
               project.getRowType().getFieldNames());
           call.transformTo(builder.build());
@@ -108,11 +104,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
           final int fieldCount = builder.peek().getRowType().getFieldCount();
           final RexNode target = apply(e, filter.getVariablesSet(), logic,
               builder, 1, fieldCount);
-          final RexShuttle shuttle = new RexShuttle() {
-            @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
-              return RexUtil.eq(subQuery, e) ? target : subQuery;
-            }
-          };
+          final RexShuttle shuttle = new ReplaceSubQueryShuttle(e, target);
           builder.filter(shuttle.apply(filter.getCondition()));
           builder.project(fields(builder, filter.getRowType().getFieldCount()));
           call.transformTo(builder.build());
@@ -137,11 +129,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
           final int fieldCount = join.getRowType().getFieldCount();
           final RexNode target = apply(e, ImmutableSet.<CorrelationId>of(),
               logic, builder, 2, fieldCount);
-          final RexShuttle shuttle = new RexShuttle() {
-            @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
-              return RexUtil.eq(subQuery, e) ? target : subQuery;
-            }
-          };
+          final RexShuttle shuttle = new ReplaceSubQueryShuttle(e, target);
           builder.join(join.getJoinType(), shuttle.apply(join.getCondition()));
           builder.project(fields(builder, join.getRowType().getFieldCount()));
           call.transformTo(builder.build());
@@ -246,7 +234,12 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       }
       switch (logic) {
       case TRUE:
-        builder.aggregate(builder.groupKey(fields));
+        if (fields.isEmpty()) {
+          builder.project(builder.alias(builder.literal(true), "i"));
+          builder.aggregate(builder.groupKey(0));
+        } else {
+          builder.aggregate(builder.groupKey(fields));
+        }
         break;
       default:
         fields.add(builder.alias(builder.literal(true), "i"));
@@ -323,6 +316,23 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       projects.add(builder.field(i));
     }
     return projects;
+  }
+
+  /** Shuttle that replaces occurrences of a given
+   * {@link org.apache.calcite.rex.RexSubQuery} with a replacement
+   * expression. */
+  private static class ReplaceSubQueryShuttle extends RexShuttle {
+    private final RexSubQuery subQuery;
+    private final RexNode replacement;
+
+    public ReplaceSubQueryShuttle(RexSubQuery subQuery, RexNode replacement) {
+      this.subQuery = subQuery;
+      this.replacement = replacement;
+    }
+
+    @Override public RexNode visitSubQuery(RexSubQuery subQuery) {
+      return RexUtil.eq(subQuery, this.subQuery) ? replacement : subQuery;
+    }
   }
 }
 

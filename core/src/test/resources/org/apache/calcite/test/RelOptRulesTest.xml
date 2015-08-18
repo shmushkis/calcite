@@ -4389,13 +4389,15 @@ LogicalFilter(condition=[<($0, 20)])
         <Resource name="planAfter">
             <![CDATA[
 LogicalProject(EMPNO=[$0])
-  LogicalJoin(condition=[true], joinType=[left])
-    LogicalTableScan(table=[[CATALOG, SALES, EMP]])
-    LogicalJoin(condition=[true], joinType=[inner])
-      LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
-      LogicalAggregate(group=[{}])
-        LogicalFilter(condition=[<($0, 20)])
-          LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+  LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8], DEPTNO0=[$9], NAME=[$10])
+    LogicalJoin(condition=[true], joinType=[left])
+      LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+      LogicalJoin(condition=[true], joinType=[inner])
+        LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+        LogicalAggregate(group=[{0}])
+          LogicalProject(i=[true])
+            LogicalFilter(condition=[<($0, 20)])
+              LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 ]]>
         </Resource>
     </TestCase>
@@ -4715,11 +4717,13 @@ LogicalFilter(condition=[<($0, 20)])
         <Resource name="planAfter">
             <![CDATA[
 LogicalProject(EMPNO=[$0])
-  LogicalJoin(condition=[true], joinType=[inner])
-    LogicalTableScan(table=[[CATALOG, SALES, EMP]])
-    LogicalAggregate(group=[{}])
-      LogicalFilter(condition=[<($0, 20)])
-        LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+  LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8])
+    LogicalJoin(condition=[true], joinType=[inner])
+      LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+      LogicalAggregate(group=[{0}])
+        LogicalProject(i=[true])
+          LogicalFilter(condition=[<($0, 20)])
+            LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 ]]>
         </Resource>
     </TestCase>
@@ -4743,12 +4747,14 @@ LogicalFilter(condition=[<($0, 20)])
         <Resource name="planAfter">
             <![CDATA[
 LogicalProject(EMPNO=[$0])
-  LogicalFilter(condition=[<($5, 100)])
-    LogicalJoin(condition=[true], joinType=[inner])
-      LogicalTableScan(table=[[CATALOG, SALES, EMP]])
-      LogicalAggregate(group=[{}])
-        LogicalFilter(condition=[<($0, 20)])
-          LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+  LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8])
+    LogicalFilter(condition=[<($5, 100)])
+      LogicalJoin(condition=[true], joinType=[inner])
+        LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+        LogicalAggregate(group=[{0}])
+          LogicalProject(i=[true])
+            LogicalFilter(condition=[<($0, 20)])
+              LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 ]]>
         </Resource>
     </TestCase>

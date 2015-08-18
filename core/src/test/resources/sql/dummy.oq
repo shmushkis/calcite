@@ -16,12 +16,25 @@
 # limitations under the License.
 #
 !use scott
-# Correlated NOT IN sub-query in WHERE clause of JOIN
-select empno from "scott".emp as e
-join "scott".dept as d using (deptno)
-where e.sal in (
-  select e2.sal from "scott".emp as e2 where e2.deptno > e.deptno);
-!ok
+# [HIVE-7362]
+# Just checking that HAVING-EXISTS works.
+with src (key, "value")
+  as (select * from (values (1, 'a'), (2, 'z')) as t(key, "value"))
+select b.key, count(*) as c
+from src b
+group by b.key
+having exists
+  (select a.key
+  from src a
+  where a.key = b.key and a."value" > 'val_9');
 !plan
++-----+---+
+| KEY | C |
++-----+---+
+|   2 | 1 |
++-----+---+
+(1 row)
+
+!ok
 
 # End dummy.oq

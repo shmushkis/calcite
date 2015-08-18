@@ -92,7 +92,7 @@ public abstract class SqlToRelTestBase {
   }
 
   protected Tester createTester() {
-    return new TesterImpl(getDiffRepos(), true, false, true, null);
+    return new TesterImpl(getDiffRepos(), false, false, true, null);
   }
 
   /**

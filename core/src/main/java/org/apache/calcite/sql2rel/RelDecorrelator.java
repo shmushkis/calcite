@@ -58,6 +58,7 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.sql.SqlExplainLevel;
@@ -74,12 +75,14 @@ import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.ReflectUtil;
 import org.apache.calcite.util.ReflectiveVisitDispatcher;
 import org.apache.calcite.util.ReflectiveVisitor;
+import org.apache.calcite.util.Stacks;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.mapping.Mappings;
 import org.apache.calcite.util.trace.CalciteTrace;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -178,7 +181,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
    * {@link org.apache.calcite.rel.logical.LogicalCorrelate} instances removed
    */
   public static RelNode decorrelateQuery(RelNode rootRel) {
-    final CorelMap corelMap = CorelMap.build(rootRel);
+    final CorelMap corelMap = new CorelMapBuilder().build(rootRel);
     if (!corelMap.hasCorrelation()) {
       return rootRel;
     }
@@ -211,7 +214,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
   private void setCurrent(RelNode root, LogicalCorrelate corRel) {
     currentRel = corRel;
     if (corRel != null) {
-      cm = CorelMap.build(Util.first(root, corRel));
+      cm = new CorelMapBuilder().build(Util.first(root, corRel));
     }
   }
 
@@ -265,7 +268,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
           LogicalCorrelate oldCor = (LogicalCorrelate) oldNode;
           CorrelationId c = oldCor.getCorrelationId();
           if (cm.mapCorVarToCorRel.get(c) == oldNode) {
-            cm.mapCorVarToCorRel.put(c, (LogicalCorrelate) newNode);
+            cm.mapCorVarToCorRel.put(c, newNode);
           }
 
           if (generatedCorRels.contains(oldNode)) {
@@ -298,9 +301,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     HepPlanner planner = createPlanner(program);
 
     planner.setRoot(root);
-    RelNode newRootRel = planner.findBestExp();
-
-    return newRootRel;
+    return planner.findBestExp();
   }
 
   protected RexNode decorrelateExpr(RexNode exp) {
@@ -2563,16 +2564,16 @@ public class RelDecorrelator implements ReflectiveVisitor {
    * </ol> */
   private static class CorelMap {
     private final Multimap<RelNode, Correlation> mapRefRelToCorVar;
-    private final SortedMap<CorrelationId, LogicalCorrelate> mapCorVarToCorRel;
+    private final SortedMap<CorrelationId, RelNode> mapCorVarToCorRel;
     private final Map<RexFieldAccess, Correlation> mapFieldAccessToCorVar;
 
     // TODO: create immutable copies of all maps
     private CorelMap(Multimap<RelNode, Correlation> mapRefRelToCorVar,
-        SortedMap<CorrelationId, LogicalCorrelate> mapCorVarToCorRel,
+        SortedMap<CorrelationId, RelNode> mapCorVarToCorRel,
         Map<RexFieldAccess, Correlation> mapFieldAccessToCorVar) {
       this.mapRefRelToCorVar = mapRefRelToCorVar;
       this.mapCorVarToCorRel = mapCorVarToCorRel;
-      this.mapFieldAccessToCorVar = mapFieldAccessToCorVar;
+      this.mapFieldAccessToCorVar = ImmutableMap.copyOf(mapFieldAccessToCorVar);
     }
 
     @Override public String toString() {
@@ -2600,99 +2601,10 @@ public class RelDecorrelator implements ReflectiveVisitor {
     /** Creates a CorelMap with given contents. */
     public static CorelMap of(
         SortedSetMultimap<RelNode, Correlation> mapRefRelToCorVar,
-        SortedMap<CorrelationId, LogicalCorrelate> mapCorVarToCorRel,
+        SortedMap<CorrelationId, RelNode> mapCorVarToCorRel,
         Map<RexFieldAccess, Correlation> mapFieldAccessToCorVar) {
       return new CorelMap(mapRefRelToCorVar, mapCorVarToCorRel,
           mapFieldAccessToCorVar);
-    }
-
-    /** Creates a CorelMap by iterating over a {@link RelNode} tree. */
-    public static CorelMap build(RelNode rel) {
-      final SortedMap<CorrelationId, LogicalCorrelate> mapCorVarToCorRel =
-          new TreeMap<CorrelationId, LogicalCorrelate>();
-
-      final SortedSetMultimap<RelNode, Correlation> mapRefRelToCorVar =
-          Multimaps.newSortedSetMultimap(
-              Maps.<RelNode, Collection<Correlation>>newHashMap(),
-              new Supplier<TreeSet<Correlation>>() {
-                public TreeSet<Correlation> get() {
-                  Bug.upgrade("use MultimapBuilder when we're on Guava-16");
-                  return Sets.newTreeSet();
-                }
-              });
-
-      final Map<RexFieldAccess, Correlation> mapFieldAccessToCorVar =
-          new HashMap<RexFieldAccess, Correlation>();
-
-      final Holder<Integer> offset = Holder.of(0);
-      final int[] corrIdGenerator = new int[1];
-      final RelShuttleImpl shuttle = new RelShuttleImpl() {
-        @Override public RelNode visit(LogicalJoin join) {
-          join.getCondition().accept(rexVisitor(join));
-          return visitJoin(join);
-        }
-
-        @Override protected RelNode visitChild(RelNode parent, int i,
-            RelNode child) {
-          return super.visitChild(parent, i, stripHep(child));
-        }
-
-        @Override public RelNode visit(LogicalCorrelate correlate) {
-          mapCorVarToCorRel.put(correlate.getCorrelationId(), correlate);
-          return visitJoin(correlate);
-        }
-
-        private RelNode visitJoin(BiRel join) {
-          final int x = offset.get();
-          visitChild(join, 0, join.getLeft());
-          offset.set(x + join.getLeft().getRowType().getFieldCount());
-          visitChild(join, 1, join.getRight());
-          offset.set(x);
-          return join;
-        }
-
-        @Override public RelNode visit(final LogicalFilter filter) {
-          filter.getCondition().accept(rexVisitor(filter));
-          return super.visit(filter);
-        }
-
-        @Override public RelNode visit(LogicalProject project) {
-          for (RexNode node : project.getProjects()) {
-            node.accept(rexVisitor(project));
-          }
-          return super.visit(project);
-        }
-
-        private RexVisitorImpl<Void> rexVisitor(final RelNode rel) {
-          return new RexVisitorImpl<Void>(true) {
-            @Override public Void visitFieldAccess(RexFieldAccess fieldAccess) {
-              final RexNode ref = fieldAccess.getReferenceExpr();
-              if (ref instanceof RexCorrelVariable) {
-                final RexCorrelVariable var = (RexCorrelVariable) ref;
-                final Correlation correlation =
-                    new Correlation(
-                        new CorrelationId(var.getName()),
-                        fieldAccess.getField().getIndex(),
-                        corrIdGenerator[0]++);
-                mapFieldAccessToCorVar.put(fieldAccess, correlation);
-                mapRefRelToCorVar.put(rel, correlation);
-              }
-              return super.visitFieldAccess(fieldAccess);
-            }
-          };
-        }
-      };
-      stripHep(rel).accept(shuttle);
-      return new CorelMap(mapRefRelToCorVar, mapCorVarToCorRel,
-          mapFieldAccessToCorVar);
-    }
-
-    private static RelNode stripHep(RelNode rel) {
-      if (rel instanceof HepRelVertex) {
-        HepRelVertex hepRelVertex = (HepRelVertex) rel;
-        rel = hepRelVertex.getCurrentRel();
-      }
-      return rel;
     }
 
     /**
@@ -2702,6 +2614,132 @@ public class RelDecorrelator implements ReflectiveVisitor {
      */
     public boolean hasCorrelation() {
       return !mapCorVarToCorRel.isEmpty();
+    }
+  }
+
+  /** Builds a {@link org.apache.calcite.sql2rel.RelDecorrelator.CorelMap}. */
+  private static class CorelMapBuilder extends RelShuttleImpl {
+    final SortedMap<CorrelationId, RelNode> mapCorVarToCorRel =
+        new TreeMap<>();
+
+    final SortedSetMultimap<RelNode, Correlation> mapRefRelToCorVar =
+        Multimaps.newSortedSetMultimap(
+            Maps.<RelNode, Collection<Correlation>>newHashMap(),
+            new Supplier<TreeSet<Correlation>>() {
+              public TreeSet<Correlation> get() {
+                Bug.upgrade("use MultimapBuilder when we're on Guava-16");
+                return Sets.newTreeSet();
+              }
+            });
+
+    final Map<RexFieldAccess, Correlation> mapFieldAccessToCorVar =
+        new HashMap<>();
+
+    final Holder<Integer> offset = Holder.of(0);
+    int corrIdGenerator = 0;
+
+    final List<RelNode> stack = new ArrayList<>();
+
+    /** Creates a CorelMap by iterating over a {@link RelNode} tree. */
+    CorelMap build(RelNode rel) {
+      stripHep(rel).accept(this);
+      return new CorelMap(mapRefRelToCorVar, mapCorVarToCorRel,
+          mapFieldAccessToCorVar);
+    }
+
+    @Override public RelNode visit(LogicalJoin join) {
+      try {
+        Stacks.push(stack, join);
+        join.getCondition().accept(rexVisitor(join));
+      } finally {
+        Stacks.pop(stack, join);
+      }
+      return visitJoin(join);
+    }
+
+    @Override protected RelNode visitChild(RelNode parent, int i,
+        RelNode child) {
+      return super.visitChild(parent, i, stripHep(child));
+    }
+
+    @Override public RelNode visit(LogicalCorrelate correlate) {
+      mapCorVarToCorRel.put(correlate.getCorrelationId(), correlate);
+      return visitJoin(correlate);
+    }
+
+    private RelNode visitJoin(BiRel join) {
+      final int x = offset.get();
+      visitChild(join, 0, join.getLeft());
+      offset.set(x + join.getLeft().getRowType().getFieldCount());
+      visitChild(join, 1, join.getRight());
+      offset.set(x);
+      return join;
+    }
+
+    @Override public RelNode visit(final LogicalFilter filter) {
+      try {
+        Stacks.push(stack, filter);
+        filter.getCondition().accept(rexVisitor(filter));
+      } finally {
+        Stacks.pop(stack, filter);
+      }
+      return super.visit(filter);
+    }
+
+    @Override public RelNode visit(LogicalProject project) {
+      try {
+        Stacks.push(stack, project);
+        for (RexNode node : project.getProjects()) {
+          node.accept(rexVisitor(project));
+        }
+      } finally {
+        Stacks.pop(stack, project);
+      }
+      return super.visit(project);
+    }
+
+    private RexVisitorImpl<Void> rexVisitor(final RelNode rel) {
+      return new RexVisitorImpl<Void>(true) {
+        @Override public Void visitFieldAccess(RexFieldAccess fieldAccess) {
+          final RexNode ref = fieldAccess.getReferenceExpr();
+          if (ref instanceof RexCorrelVariable) {
+            final RexCorrelVariable var = (RexCorrelVariable) ref;
+            final Correlation correlation =
+                new Correlation(var.id,
+                    fieldAccess.getField().getIndex(),
+                    corrIdGenerator++);
+            mapFieldAccessToCorVar.put(fieldAccess, correlation);
+            mapRefRelToCorVar.put(rel, correlation);
+            if (!mapCorVarToCorRel.containsKey(var.id)) {
+              mapCorVarToCorRel.put(var.id, Stacks.peek(stack));
+            }
+          }
+          return super.visitFieldAccess(fieldAccess);
+        }
+
+        @Override public Void visitCorrelVariable(RexCorrelVariable var) {
+          final Correlation correlation =
+              new Correlation(var.id, -1, corrIdGenerator++);
+          mapRefRelToCorVar.put(rel, correlation);
+          if (!mapCorVarToCorRel.containsKey(var.id)) {
+            mapCorVarToCorRel.put(var.id, Stacks.peek(stack));
+          }
+          return super.visitCorrelVariable(var);
+        }
+
+        @Override public Void visitSubQuery(RexSubQuery subQuery) {
+          subQuery.rel.accept(CorelMapBuilder.this);
+          return super.visitSubQuery(subQuery);
+        }
+      };
+    }
+
+    private static RelNode stripHep(RelNode rel) {
+      if (rel instanceof HepRelVertex) {
+        HepRelVertex hepRelVertex = (HepRelVertex) rel;
+        rel = hepRelVertex.getCurrentRel();
+      }
+      return rel;
     }
   }
 }

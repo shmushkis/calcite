@@ -760,7 +760,8 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
 
   @Test public void testCollectionTableWithCursorParam() {
     tester.withDecorrelation(false).assertConvertsTo(
-        "select * from table(dedup(" + "cursor(select ename from emp),"
+        "select * from table(dedup("
+            + "cursor(select ename from emp),"
             + " cursor(select name from dept), 'NAME'))",
         "${plan}");
   }
