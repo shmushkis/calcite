@@ -36,6 +36,7 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.JoinRelType;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
@@ -471,13 +472,19 @@ public class RelDecorrelator implements ReflectiveVisitor {
     List<RelDataTypeField> newChildOutput =
         newChildRel.getRowType().getFieldList();
 
-    int newPos;
+    int newPos = 0;
 
     // oldChildRel has the original group by keys in the front.
-    for (newPos = 0; newPos < oldGroupKeyCount; newPos++) {
-      int newChildPos = childMapOldToNewOutputPos.get(newPos);
+    for (int i = 0; i < oldGroupKeyCount; i++) {
+      if (isConstant(newChildRel, i)) {
+        // Exclude constants. Aggregate({true}) occurs because Aggregate({})
+        // would generate 1 row even when applied to an empty table.
+        continue;
+      }
+      int newChildPos = childMapOldToNewOutputPos.get(i);
       projects.add(RexInputRef.of2(newChildPos, newChildOutput));
       mapNewChildToProjOutputPos.put(newChildPos, newPos);
+      newPos++;
     }
 
     SortedMap<Correlation, Integer> mapCorVarToOutputPos = Maps.newTreeMap();
@@ -606,6 +613,12 @@ public class RelDecorrelator implements ReflectiveVisitor {
           newAggregate,
           mapCorVarToOutputPos);
     }
+  }
+
+  /** Returns whether an output field of a relational expression is constant. */
+  private boolean isConstant(RelNode rel, int i) {
+    return rel instanceof Project
+        && ((Project) rel).getProjects().get(i) instanceof RexLiteral;
   }
 
   /**
@@ -2710,14 +2723,17 @@ public class RelDecorrelator implements ReflectiveVisitor {
                     corrIdGenerator++);
             mapFieldAccessToCorVar.put(fieldAccess, correlation);
             mapRefRelToCorVar.put(rel, correlation);
+/*
             if (!mapCorVarToCorRel.containsKey(var.id)) {
               mapCorVarToCorRel.put(var.id, Stacks.peek(stack));
             }
+*/
           }
           return super.visitFieldAccess(fieldAccess);
         }
 
-        @Override public Void visitCorrelVariable(RexCorrelVariable var) {
+        //@ Override
+        public Void visitCorrelVariable_(RexCorrelVariable var) {
           final Correlation correlation =
               new Correlation(var.id, -1, corrIdGenerator++);
           mapRefRelToCorVar.put(rel, correlation);

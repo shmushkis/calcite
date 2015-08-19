@@ -4031,6 +4031,7 @@ public class SqlToRelConverter {
           call = (SqlCall) expr;
           query = call.operand(1);
           if (!(query instanceof SqlNodeList)) {
+            final SqlInOperator op = (SqlInOperator) call.getOperator();
             root = convertQueryRecursive(query, false, null);
             final SqlNode operand = call.operand(0);
             List<SqlNode> nodes;
@@ -4046,7 +4047,10 @@ public class SqlToRelConverter {
             for (SqlNode node : nodes) {
               builder.add(convertExpression(node));
             }
-            return RexSubQuery.in(root.rel, builder.build());
+            final RexSubQuery in = RexSubQuery.in(root.rel, builder.build());
+            return op.isNotIn()
+                ? rexBuilder.makeCall(SqlStdOperatorTable.NOT, in)
+                : in;
           }
           break;
 
