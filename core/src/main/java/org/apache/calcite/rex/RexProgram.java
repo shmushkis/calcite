@@ -41,6 +41,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * A collection of expressions which read inputs, compute output expressions,
@@ -350,8 +351,8 @@ public class RexProgram {
           "field type mismatch: " + rowType + " vs. " + outputRowType);
     }
     final List<RelDataTypeField> fields = rowType.getFieldList();
-    final List<RexLocalRef> projectRefs = new ArrayList<RexLocalRef>();
-    final List<RexInputRef> refs = new ArrayList<RexInputRef>();
+    final List<RexLocalRef> projectRefs = new ArrayList<>();
+    final List<RexInputRef> refs = new ArrayList<>();
     for (int i = 0; i < fields.size(); i++) {
       final RexInputRef ref = RexInputRef.of(i, fields);
       refs.add(ref);
@@ -474,15 +475,15 @@ public class RexProgram {
         return false;
       }
     }
-    for (int i = 0; i < projects.size(); i++) {
-      projects.get(i).accept(checker);
+    for (RexLocalRef project : projects) {
+      project.accept(checker);
       if (checker.failCount > 0) {
         assert !fail;
         return false;
       }
     }
-    for (int i = 0; i < exprs.size(); i++) {
-      exprs.get(i).accept(checker);
+    for (RexNode expr : exprs) {
+      expr.accept(checker);
       if (checker.failCount > 0) {
         assert !fail;
         return false;
@@ -525,10 +526,7 @@ public class RexProgram {
    * @return expanded form
    */
   public RexNode expandLocalRef(RexLocalRef ref) {
-    // TODO jvs 19-Apr-2006:  assert that ref is part of
-    // this program
-    ExpansionShuttle shuttle = new ExpansionShuttle();
-    return ref.accept(shuttle);
+    return ref.accept(new ExpansionShuttle(exprs));
   }
 
   /** Splits this program into a list of project expressions and a list of
@@ -554,7 +552,7 @@ public class RexProgram {
    * mutable.
    */
   public List<RelCollation> getCollations(List<RelCollation> inputCollations) {
-    List<RelCollation> outputCollations = new ArrayList<RelCollation>(1);
+    List<RelCollation> outputCollations = new ArrayList<>(1);
     deduceCollations(
         outputCollations,
         inputRowType.getFieldCount(), projects,
@@ -582,8 +580,7 @@ public class RexProgram {
     }
   loop:
     for (RelCollation collation : inputCollations) {
-      final ArrayList<RelFieldCollation> fieldCollations =
-          new ArrayList<RelFieldCollation>(0);
+      final List<RelFieldCollation> fieldCollations = new ArrayList<>(0);
       for (RelFieldCollation fieldCollation : collation.getFieldCollations()) {
         final int source = fieldCollation.getFieldIndex();
         final int target = targets[source];
@@ -755,8 +752,8 @@ public class RexProgram {
    *
    * @return set of correlation variable names
    */
-  public HashSet<String> getCorrelVariableNames() {
-    final HashSet<String> paramIdSet = new HashSet<String>();
+  public Set<String> getCorrelVariableNames() {
+    final Set<String> paramIdSet = new HashSet<>();
     RexUtil.apply(
         new RexVisitorImpl<Void>(true) {
           public Void visitCorrelVariable(
@@ -779,8 +776,7 @@ public class RexProgram {
    * @return whether in canonical form
    */
   public boolean isNormalized(boolean fail, RexBuilder rexBuilder) {
-    final RexProgram normalizedProgram =
-        RexProgramBuilder.normalize(rexBuilder, this);
+    final RexProgram normalizedProgram = normalize(rexBuilder, false);
     String normalized = normalizedProgram.toString();
     String string = toString();
     if (!normalized.equals(string)) {
@@ -791,6 +787,24 @@ public class RexProgram {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Creates a simplified/normalized copy of this program.
+   *
+   * @param rexBuilder Rex builder
+   * @param simplify Whether to simplify (in addition to normalizing)
+   * @return Normalized program
+   */
+  public RexProgram normalize(RexBuilder rexBuilder, boolean simplify) {
+    // Normalize program by creating program builder from the program, then
+    // converting to a program. getProgram does not need to normalize
+    // because the builder was normalized on creation.
+    assert isValid(true);
+    final RexProgramBuilder builder =
+        RexProgramBuilder.create(rexBuilder, inputRowType, exprs, projects,
+            condition, outputRowType, true, simplify);
+    return builder.getProgram(false);
   }
 
   //~ Inner Classes ----------------------------------------------------------
@@ -843,9 +857,15 @@ public class RexProgram {
    * A RexShuttle used in the implementation of
    * {@link RexProgram#expandLocalRef}.
    */
-  private class ExpansionShuttle extends RexShuttle {
+  static class ExpansionShuttle extends RexShuttle {
+    private final List<RexNode> exprs;
+
+    public ExpansionShuttle(List<RexNode> exprs) {
+      this.exprs = exprs;
+    }
+
     public RexNode visitLocalRef(RexLocalRef localRef) {
-      RexNode tree = getExprList().get(localRef.getIndex());
+      RexNode tree = exprs.get(localRef.getIndex());
       return tree.accept(this);
     }
   }
@@ -930,7 +950,7 @@ public class RexProgram {
     }
 
     public RexNode visitCall(RexCall call) {
-      final List<RexNode> newOperands = new ArrayList<RexNode>();
+      final List<RexNode> newOperands = new ArrayList<>();
       for (RexNode operand : call.getOperands()) {
         newOperands.add(operand.accept(this));
       }

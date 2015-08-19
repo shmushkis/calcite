@@ -1847,7 +1847,7 @@ public class RexImpTable {
             negate == seek,
             translator.translate(
                 operands.get(0),
-                seek ? NullAs.FALSE : NullAs.TRUE));
+                negate == seek ? NullAs.TRUE : NullAs.FALSE));
       }
     }
   }

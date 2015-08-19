@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 !use scott
+!if (false) {
 # [HIVE-7362]
 # Just checking that HAVING-EXISTS works.
 with src (key, "value")
@@ -36,5 +37,6 @@ having exists
 (1 row)
 
 !ok
+!}
 
 # End dummy.oq
