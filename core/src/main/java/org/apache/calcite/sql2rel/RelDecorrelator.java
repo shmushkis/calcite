@@ -1009,7 +1009,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // Change correlator rel into a join.
     // Join all the correlated variables produced by this correlator rel
     // with the values generated and propagated from the right input
-    RexNode condition = rexBuilder.makeLiteral(true);
+    List<RexNode> conditions = new ArrayList<>();
     final List<RelDataTypeField> newLeftOutput =
         newLeftRel.getRowType().getFieldList();
     int newLeftFieldCount = newLeftOutput.size();
@@ -1027,22 +1027,13 @@ public class RelDecorrelator implements ReflectiveVisitor {
       }
       newLeftPos = leftChildMapOldToNewOutputPos.get(corVar.field);
       newRightPos = rightChildMapCorVarToOutputPos.get(corVar);
-      RexNode equi =
+      conditions.add(
           rexBuilder.makeCall(
               SqlStdOperatorTable.EQUALS,
               RexInputRef.of(newLeftPos, newLeftOutput),
               new RexInputRef(
                   newLeftFieldCount + newRightPos,
-                  newRightOutput.get(newRightPos).getType()));
-      if (condition == rexBuilder.makeLiteral(true)) {
-        condition = equi;
-      } else {
-        condition =
-            rexBuilder.makeCall(
-                SqlStdOperatorTable.AND,
-                condition,
-                equi);
-      }
+                  newRightOutput.get(newRightPos).getType())));
 
       // remove this cor var from output position mapping
       mapCorVarToOutputPos.remove(corVar);
@@ -1082,10 +1073,11 @@ public class RelDecorrelator implements ReflectiveVisitor {
           rightChildMapOldToNewOutputPos.get(i) + newLeftFieldCount);
     }
 
-    final Set<String> variablesStopped = Collections.emptySet();
+    final RexNode condition =
+        RexUtil.composeConjunction(rexBuilder, conditions, false);
     RelNode newRel =
         LogicalJoin.create(newLeftRel, newRightRel, condition,
-            rel.getJoinType().toJoinType(), variablesStopped);
+            rel.getJoinType().toJoinType(), ImmutableSet.<String>of());
 
     mapOldToNewRel.put(rel, newRel);
     mapNewRelToMapOldToNewOutputPos.put(newRel, mapOldToNewOutputPos);
