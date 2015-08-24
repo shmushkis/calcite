@@ -25,6 +25,7 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.rules.ReduceExpressionsRule;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeFamily;
@@ -1241,6 +1242,14 @@ public class RexUtil {
       return simplifyNot(rexBuilder, (RexCall) e);
     case CASE:
       return simplifyCase(rexBuilder, (RexCall) e);
+    }
+    if (e instanceof RexCall && false) {
+      RexCall e2 = ReduceExpressionsRule.pushPredicateIntoCase((RexCall) e);
+      if (e2 != e) {
+        return simplify(rexBuilder, e2);
+      }
+    }
+    switch (e.getKind()) {
     case IS_NULL:
     case IS_NOT_NULL:
     case IS_TRUE:
@@ -1255,6 +1264,11 @@ public class RexUtil {
 
   private static RexNode simplifyNot(RexBuilder rexBuilder, RexCall call) {
     final RexNode a = call.getOperands().get(0);
+    switch (a.getKind()) {
+    case NOT:
+      // NOT NOT x ==> x
+      return simplify(rexBuilder, ((RexCall) a).getOperands().get(0));
+    }
     final SqlKind negateKind = a.getKind().negate();
     if (a.getKind() != negateKind) {
       return simplify(rexBuilder,
@@ -1267,15 +1281,30 @@ public class RexUtil {
   private static RexNode simplifyIs(RexBuilder rexBuilder, RexCall call) {
     final SqlKind kind = call.getKind();
     final RexNode a = call.getOperands().get(0);
-    switch (kind) {
-    case IS_NULL:
-    case IS_NOT_NULL:
-      if (!a.getType().isNullable()) {
+    if (!a.getType().isNullable()) {
+      switch (kind) {
+      case IS_NULL:
+      case IS_NOT_NULL:
+        // x IS NULL ==> FALSE (if x is not nullable)
+        // x IS NOT NULL ==> TRUE (if x is not nullable)
         return rexBuilder.makeLiteral(kind == SqlKind.IS_NOT_NULL);
+      case IS_TRUE:
+      case IS_NOT_FALSE:
+        // x IS TRUE ==> x (if x is not nullable)
+        // x IS NOT FALSE ==> x (if x is not nullable)
+        return simplify(rexBuilder, a);
+      case IS_FALSE:
+      case IS_NOT_TRUE:
+        // x IS NOT TRUE ==> NOT x (if x is not nullable)
+        // x IS FALSE ==> NOT x (if x is not nullable)
+        return simplify(rexBuilder,
+            rexBuilder.makeCall(SqlStdOperatorTable.NOT, a));
       }
     }
     switch (a.getKind()) {
     case NOT:
+      // NOT x IS TRUE ==> x IS NOT TRUE
+      // Similarly for IS NOT TRUE, IS FALSE, etc.
       return simplify(rexBuilder,
           rexBuilder.makeCall(op(kind.negate()),
               ((RexCall) a).getOperands().get(0)));
