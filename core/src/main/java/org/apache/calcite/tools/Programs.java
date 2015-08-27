@@ -31,6 +31,7 @@ import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.prepare.CalcitePrepareImpl;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Calc;
+import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
@@ -363,7 +364,9 @@ public class Programs {
   private static class TrimFieldsProgram implements Program {
     public RelNode run(RelOptPlanner planner, RelNode rel,
         RelTraitSet requiredOutputTraits) {
-      return new RelFieldTrimmer(null).trim(rel);
+      final RelBuilder relBuilder =
+          RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
+      return new RelFieldTrimmer(null, relBuilder).trim(rel);
     }
   }
 }
