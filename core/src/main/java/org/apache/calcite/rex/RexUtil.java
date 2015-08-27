@@ -1243,7 +1243,7 @@ public class RexUtil {
     case CASE:
       return simplifyCase(rexBuilder, (RexCall) e);
     }
-    if (e instanceof RexCall && false) {
+    if (e instanceof RexCall && Util.discard(false)) {
       RexCall e2 = ReduceExpressionsRule.pushPredicateIntoCase((RexCall) e);
       if (e2 != e) {
         return simplify(rexBuilder, e2);

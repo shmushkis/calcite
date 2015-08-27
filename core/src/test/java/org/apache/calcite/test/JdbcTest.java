@@ -4167,11 +4167,12 @@ public class JdbcTest {
     // Rows are deemed "equal to" the current row per the ORDER BY clause.
     // If there is no ORDER BY clause, CURRENT ROW has the same effect as
     // UNBOUNDED FOLLOWING; that is, no filtering effect at all.
-    checkOuter("select *,\n"
-            + " count(*) over (partition by deptno) as m1,\n"
-            + " count(*) over (partition by deptno order by ename) as m2,\n"
-            + " count(*) over () as m3\n"
-            + "from emp",
+    final String sql = "select *,\n"
+        + " count(*) over (partition by deptno) as m1,\n"
+        + " count(*) over (partition by deptno order by ename) as m2,\n"
+        + " count(*) over () as m3\n"
+        + "from emp";
+    withEmpDept(sql).returnsUnordered(
         "ENAME=Adam ; DEPTNO=50; GENDER=M; M1=2; M2=1; M3=9",
         "ENAME=Alice; DEPTNO=30; GENDER=F; M1=2; M2=1; M3=9",
         "ENAME=Bob  ; DEPTNO=10; GENDER=M; M1=2; M2=1; M3=9",
@@ -4364,33 +4365,42 @@ public class JdbcTest {
   @Test public void testNotInEmptyQuery() {
     // RHS is empty, therefore returns all rows from emp, including the one
     // with deptno = NULL.
-    checkOuter("select deptno from emp where deptno not in (\n"
-        + "select deptno from dept where deptno = -1)",
-        "DEPTNO=null",
-        "DEPTNO=10",
-        "DEPTNO=10",
-        "DEPTNO=20",
-        "DEPTNO=30",
-        "DEPTNO=30",
-        "DEPTNO=50",
-        "DEPTNO=50",
-        "DEPTNO=60");
+    final String sql = "select deptno from emp where deptno not in (\n"
+        + "select deptno from dept where deptno = -1)";
+    withEmpDept(sql)
+        .explainContains("EnumerableCalc(expr#0..2=[{inputs}], "
+            + "expr#3=[IS NOT NULL($t2)], expr#4=[true], "
+            + "expr#5=[IS NULL($t0)], expr#6=[null], expr#7=[false], "
+            + "expr#8=[CASE($t3, $t4, $t5, $t6, $t7)], expr#9=[NOT($t8)], "
+            + "EXPR$1=[$t0], $condition=[$t9])")
+        .returnsUnordered("DEPTNO=null",
+            "DEPTNO=10",
+            "DEPTNO=10",
+            "DEPTNO=20",
+            "DEPTNO=30",
+            "DEPTNO=30",
+            "DEPTNO=50",
+            "DEPTNO=50",
+            "DEPTNO=60");
   }
 
   @Test public void testNotInQuery() {
     // None of the rows from RHS is NULL.
-    checkOuter("select deptno from emp where deptno not in (\n"
-        + "select deptno from dept)",
-        "DEPTNO=50",
-        "DEPTNO=50",
-        "DEPTNO=60");
+    final String sql = "select deptno from emp where deptno not in (\n"
+        + "select deptno from dept)";
+    withEmpDept(sql)
+        .returnsUnordered("DEPTNO=50",
+            "DEPTNO=50",
+            "DEPTNO=60");
   }
 
   @Test public void testNotInQueryWithNull() {
     // There is a NULL on the RHS, and '10 not in (20, null)' yields unknown
     // (similarly for every other value of deptno), so no rows are returned.
-    checkOuter("select deptno from emp where deptno not in (\n"
-        + "select deptno from emp)");
+    final String sql = "select deptno from emp where deptno not in (\n"
+        + "select deptno from emp)";
+    withEmpDept(sql)
+        .returnsCount(0);
   }
 
   @Test public void testTrim() {
@@ -4529,8 +4539,9 @@ public class JdbcTest {
    * join conditions in various flavors of outer join. Results are verified
    * against MySQL (except full join, which MySQL does not support). */
   @Test public void testVariousOuter() {
-    checkOuter(
-        "select * from emp join dept on emp.deptno = dept.deptno",
+    final String sql =
+        "select * from emp join dept on emp.deptno = dept.deptno";
+    withEmpDept(sql).returnsUnordered(
         "ENAME=Alice; DEPTNO=30; GENDER=F; DEPTNO0=30; DNAME=Engineering",
         "ENAME=Bob  ; DEPTNO=10; GENDER=M; DEPTNO0=10; DNAME=Sales      ",
         "ENAME=Eric ; DEPTNO=20; GENDER=M; DEPTNO0=20; DNAME=Marketing  ",
@@ -4538,7 +4549,7 @@ public class JdbcTest {
         "ENAME=Susan; DEPTNO=30; GENDER=F; DEPTNO0=30; DNAME=Engineering");
   }
 
-  private void checkOuter(String sql, String... lines) {
+  private CalciteAssert.AssertQuery withEmpDept(String sql) {
     // Append a 'WITH' clause that supplies EMP and DEPT tables like this:
     //
     // drop table emp;
@@ -4558,7 +4569,7 @@ public class JdbcTest {
     // insert into dept values (20, 'Marketing');
     // insert into dept values (30, 'Engineering');
     // insert into dept values (40, 'Empty');
-    CalciteAssert.that()
+    return CalciteAssert.that()
         .query("with\n"
             + "  emp(ename, deptno, gender) as (values\n"
             + "    ('Jane', 10, 'F'),\n"
@@ -4575,8 +4586,7 @@ public class JdbcTest {
             + "    (20, 'Marketing'),\n"
             + "    (30, 'Engineering'),\n"
             + "    (40, 'Empty'))\n"
-            + sql)
-        .returnsUnordered(lines);
+            + sql);
   }
 
   /** Runs the dummy script, which is checked in empty but which you may
