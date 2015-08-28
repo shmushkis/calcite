@@ -1843,11 +1843,8 @@ public class RexImpTable {
         return translator.translate(operands.get(0),
             negate ? NullAs.IS_NOT_NULL : NullAs.IS_NULL);
       } else {
-        return maybeNegate(
-            negate == seek,
-            translator.translate(
-                operands.get(0),
-                negate == seek ? NullAs.TRUE : NullAs.FALSE));
+        return maybeNegate(negate,
+            translator.translate(operands.get(0), NullAs.FALSE));
       }
     }
   }
