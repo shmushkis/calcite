@@ -2997,9 +2997,9 @@ public abstract class RelOptUtil {
     public Logic negate() {
       switch (this) {
       case UNKNOWN_AS_FALSE:
+      case TRUE:
         return UNKNOWN_AS_TRUE;
       case UNKNOWN_AS_TRUE:
-      case TRUE:
         return UNKNOWN_AS_FALSE;
       default:
         return this;

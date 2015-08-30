@@ -215,6 +215,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       // First, the cross join
       switch (logic) {
       case TRUE_FALSE_UNKNOWN:
+      case UNKNOWN_AS_TRUE:
         builder.push(e.rel);
         builder.aggregate(builder.groupKey(),
             builder.count(false, "c"),
@@ -222,6 +223,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
                 builder.fields()));
         builder.as("ct");
         builder.join(JoinRelType.INNER);
+        offset += 2;
         break;
       }
 
@@ -269,6 +271,7 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       final ImmutableList.Builder<RexNode> operands = ImmutableList.builder();
       switch (logic) {
       case TRUE_FALSE_UNKNOWN:
+      case UNKNOWN_AS_TRUE:
         operands.add(
             builder.equals(builder.field("ct", "c"), builder.literal(0)),
             builder.literal(false));
@@ -279,12 +282,16 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       if (!keyIsNulls.isEmpty()) {
         operands.add(builder.or(keyIsNulls), builder.literal(null));
       }
+      Boolean b = true;
       switch (logic) {
       case TRUE_FALSE_UNKNOWN:
+        b = null;
+        // fall through
+      case UNKNOWN_AS_TRUE:
         operands.add(
             builder.call(SqlStdOperatorTable.LESS_THAN,
                 builder.field("ct", "ck"), builder.field("ct", "c")),
-            builder.literal(null));
+            builder.literal(b));
         break;
       }
       operands.add(builder.literal(false));

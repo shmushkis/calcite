@@ -388,9 +388,9 @@ public class RexTransformerTest {
     assertThat(deduceLogic(and(x, and(y, z)), z, Logic.TRUE), is(Logic.TRUE));
     assertThat(deduceLogic(and(x, not(y)), x, Logic.TRUE), is(Logic.TRUE));
     assertThat(deduceLogic(and(x, not(y)), y, Logic.TRUE),
-        is(Logic.UNKNOWN_AS_FALSE));
+        is(Logic.UNKNOWN_AS_TRUE));
     assertThat(deduceLogic(and(x, not(and(y, z))), z, Logic.TRUE),
-        is(Logic.UNKNOWN_AS_FALSE));
+        is(Logic.UNKNOWN_AS_TRUE));
     assertThat(deduceLogic(or(x, y), x, Logic.TRUE), is(Logic.TRUE_FALSE));
   }
 
