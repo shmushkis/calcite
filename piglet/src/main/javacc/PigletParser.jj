@@ -190,6 +190,8 @@ Stmt stmt() :
     (
       s = loadStmt(target)
     |
+      s = valuesStmt(target)
+    |
       s = distinctStmt(target)
     |
       s = limitStmt(target)
@@ -239,6 +241,41 @@ LoadStmt loadStmt(final Identifier target) :
 {
   <LOAD> name = stringLiteral() <SEMICOLON> {
     return new LoadStmt(pos3(target), target, name);
+  }
+}
+
+ValuesStmt valuesStmt(final Identifier target) :
+{
+  final List<List<Node>> tupleList;
+  final Schema schema;
+}
+{
+  <VALUES> tupleList = tupleListMaybeEmpty()
+  <AS> schema = schema() <SEMICOLON> {
+    return new ValuesStmt(pos3(target), target, schema, tupleList);
+  }
+}
+
+/** Parses a tuple list.
+ * The list may be empty.
+ * Each tuple is a list of at least one expression. */
+List<List<Node>> tupleListMaybeEmpty() :
+{
+  final ImmutableList.Builder<List<Node>> tupleList = ImmutableList.builder();
+  List<Node> tuple;
+}
+{
+  [
+    tuple = tuple() {
+      tupleList.add(tuple);
+    }
+    (
+      <COMMA> tuple = tuple() {
+        tupleList.add(tuple);
+      }
+    )*
+  ] {
+    return tupleList.build();
   }
 }
 
@@ -412,7 +449,7 @@ GroupStmt groupStmt(final Identifier target) :
   |
     <BY>
     (
-      <LPAREN> keys = expCommaList() <RPAREN>
+      keys = tuple()
     |
       exp = exp() {
         keys = ImmutableList.of(exp);
@@ -424,35 +461,194 @@ GroupStmt groupStmt(final Identifier target) :
   }
 }
 
+/** Parses a schema. */
+Schema schema() :
+{
+  final SqlParserPos pos;
+  final ImmutableList.Builder<FieldSchema> list = ImmutableList.builder();
+  FieldSchema fieldSchema;
+}
+{
+  <LPAREN> {
+    pos = pos();
+  }
+  fieldSchema = fieldSchema() {
+    list.add(fieldSchema);
+  }
+  (
+    <COMMA> fieldSchema = fieldSchema() {
+      list.add(fieldSchema);
+    }
+  )*
+  <RPAREN> {
+    return new Schema(pos2(pos), list.build());
+  }
+}
+
+FieldSchema fieldSchema() :
+{
+  final Identifier identifier;
+  final Type type;
+}
+{
+  identifier = simpleIdentifier() <COLON> type = type() {
+    return new FieldSchema(pos3(identifier), identifier, type);
+  }
+}
+
+/** Parses a Type. */
+Type type() :
+{
+  String s;
+}
+{
+  s = identifier() {
+    return new Type(pos(), s);
+  }
+}
+
 /** Parses an expression. */
 Node exp() :
 {
   final Node e;
 }
 {
-  e = exp10() {
+  e = exp1() {
     return e;
   }
 }
 
+/** Parses an expression of precedence 1: OR. */
+Node exp1() :
+{
+  Node e;
+  Node f;
+}
+{
+  e = exp2()
+  (
+    <OR> f = exp2() {
+      e = new Call(pos3(e), Op.OR, e, f);
+    }
+  )* {
+    return e;
+  }
+}
+
+/** Parses an expression of precedence 2: AND. */
+Node exp2() :
+{
+  Node e;
+  Node f;
+}
+{
+  e = exp3()
+  (
+    <AND> f = exp3() {
+      e = new Call(pos3(e), Op.AND, e, f);
+    }
+  )* {
+    return e;
+  }
+}
+
+/** Parses an expression of precedence 3: NOT. */
+Node exp3() :
+{
+  final Node e;
+  final SqlParserPos p;
+}
+{
+  (
+    <NOT> {
+      p = pos();
+    }
+    e = exp3() {
+      return new Call(pos2(p), Op.NOT, e);
+    }
+  |
+    e = exp4() {
+      return e;
+    }
+  )
+}
+
+/** Parses an expression of precedence 4: relational operators (==, !=, <, <=,
+ * >, >=). */
+Node exp4() :
+{
+  Node e;
+  Node f;
+}
+{
+  e = exp5()
+  (
+    <EQEQ> f = exp5() {
+      e = new Call(pos3(e), Op.EQ, e, f);
+    }
+  |
+    <GT> f = exp5() {
+      e = new Call(pos3(e), Op.GT, e, f);
+    }
+  |
+    <LT> f = exp5() {
+      e = new Call(pos3(e), Op.LT, e, f);
+    }
+  |
+    <GE> f = exp5() {
+      e = new Call(pos3(e), Op.GTE, e, f);
+    }
+  |
+    <LE> f = exp5() {
+      e = new Call(pos3(e), Op.LTE, e, f);
+    }
+  )* {
+    return e;
+  }
+}
+
+/** Parses an expression of precedence 5: +, -. */
+Node exp5() :
+{
+  Node e;
+  Node f;
+}
+{
+  e = exp10()
+  (
+    <PLUS> f = exp10() {
+      e = new Call(pos3(e), Op.PLUS, e, f);
+    }
+  |
+    <MINUS> f = exp10() {
+      e = new Call(pos3(e), Op.PLUS, e, f);
+    }
+  )* {
+    return e;
+  }
+}
+
+/** Parses an expression of precedence 10: . */
 Node exp10() :
 {
   Node e;
-  final Node f;
+  Node f;
 }
 {
-  e = exp0()
-  [
+  e = atom()
+  (
     <DOT>
-    f = exp0() {
+    f = atom() {
       e = new Call(pos3(e), Op.DOT, e, f);
     }
-  ] {
+  )* {
     return e;
   }
 }
 
-Node exp0() :
+/** Parses an atomic expression, effectively an expression of infinite
+  * precedence. */
+Node atom() :
 {
   final Node e;
 }
@@ -461,11 +657,14 @@ Node exp0() :
     e = literal()
   |
     e = simpleIdentifier()
+  |
+    <LPAREN> e = exp() <RPAREN>
   ) {
     return e;
   }
 }
 
+/** A non-empty list of expressions. */
 List<Node> expCommaList() :
 {
   final List<Node> list = Lists.newArrayList();
@@ -481,6 +680,18 @@ List<Node> expCommaList() :
     }
   )* {
     return list;
+  }
+}
+
+/** Parses a tuple. A tuple is a list of one or more expressions surrounded by
+ * parentheses. */
+List<Node> tuple() :
+{
+  final List<Node> expList;
+}
+{
+  <LPAREN> expList = expCommaList() <RPAREN> {
+    return expList;
   }
 }
 
@@ -504,9 +715,17 @@ NumericLiteral unsignedNumericLiteral() :
 {
 }
 {
-  <UNSIGNED_INTEGER_LITERAL> {
-    return Literal.createExactNumeric(token.image, pos());
-  }
+  (
+    <UNSIGNED_INTEGER_LITERAL> {
+      return Literal.createExactNumeric(token.image, pos());
+    }
+  |
+    <FLOAT_LITERAL> {
+      assert token.image.endsWith("F");
+      final String x = token.image.substring(0, token.image.length() - 1);
+      return Literal.createExactNumeric(x, pos());
+    }
+  )
 }
 
 /** Parses a numeric literal (can be signed) */
@@ -579,7 +798,9 @@ Identifier simpleIdentifier() :
 <DEFAULT, DQID, BTID> TOKEN :
 {
   < ALL: "ALL" >
+| < AND: "AND" >
 | < ASC: "ASC" >
+| < AS: "AS" >
 | < BY: "BY" >
 | < DESC: "DESC" >
 | < DESCRIBE: "DESCRIBE" >
@@ -590,8 +811,11 @@ Identifier simpleIdentifier() :
 | < GENERATE: "GENERATE" >
 | < GROUP: "GROUP" >
 | < LOAD: "LOAD" >
-| < ORDER: "ORDER" >
 | < LIMIT: "LIMIT" >
+| < NOT: "NOT" >
+| < ORDER: "ORDER" >
+| < OR: "OR" >
+| < VALUES: "VALUES" >
 }
 
 /** Parses a non-reserved keyword for use as an identifier. */
@@ -601,6 +825,7 @@ String commonNonReservedKeyWord() :
 {
   (
     <ALL>
+  | <AND>
   | <ASC>
   | <BY>
   | <DESC>
@@ -612,7 +837,10 @@ String commonNonReservedKeyWord() :
   | <GROUP>
   | <LIMIT>
   | <LOAD>
+  | <NOT>
+  | <OR>
   | <ORDER>
+  | <VALUES>
   ) {
     return unquotedIdentifier();
   }
@@ -623,6 +851,8 @@ String commonNonReservedKeyWord() :
 <DEFAULT, DQID, BTID> TOKEN :
 {
     < UNSIGNED_INTEGER_LITERAL: (["0"-"9"])+ >
+    |
+    < FLOAT_LITERAL: (["0"-"9"])+ "." (["0"-"9"])+ "F" >
     |
     < APPROX_NUMERIC_LITERAL:
     (<UNSIGNED_INTEGER_LITERAL> | <DECIMAL_NUMERIC_LITERAL>) <EXPONENT> >
@@ -688,13 +918,14 @@ String commonNonReservedKeyWord() :
 <DEFAULT, DQID, BTID> TOKEN :
 {
     < EQ: "=" >
+    | < EQEQ: "==" >
     | < GT: ">" >
     | < LT: "<" >
     | < HOOK: "?" >
     | < COLON: ":" >
     | < LE: "<=" >
     | < GE: ">=" >
-    | < NE: "<>" >
+    | < NE: "!=" >
     | < PLUS: "+" >
     | < MINUS: "-" >
     | < STAR: "*" >

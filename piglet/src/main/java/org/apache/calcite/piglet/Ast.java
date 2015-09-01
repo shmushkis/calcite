@@ -116,7 +116,7 @@ public class Ast {
   public enum Op {
     DESCRIBE, DISTINCT, DUMP, LITERAL, LOAD, FOREACH, IDENTIFIER, FILTER,
     SCHEMA, TYPE, FIELD_SCHEMA, FOREACH_NESTED, LIMIT, ORDER, GROUP, PROGRAM,
-    DOT;
+    DOT, VALUES, EQ, NE, GT, LT, GTE, LTE, PLUS, MINUS, AND, OR, NOT
   }
 
   /** Abstract base class for parse tree node. */
@@ -154,6 +154,22 @@ public class Ast {
     public LoadStmt(SqlParserPos pos, Identifier target, Literal name) {
       super(pos, Op.LOAD, target);
       this.name = Preconditions.checkNotNull(name);
+    }
+  }
+
+  /** Parse tree node for VALUES statement.
+   *
+   * <p>VALUES is an extension to Pig, inspired by SQL's VALUES clause.
+   */
+  public static class ValuesStmt extends Assignment {
+    final List<List<Node>> tupleList;
+    final Schema schema;
+
+    public ValuesStmt(SqlParserPos pos, Identifier target, Schema schema,
+        List<List<Node>> tupleList) {
+      super(pos, Op.VALUES, target);
+      this.schema = schema;
+      this.tupleList = ImmutableList.copyOf(tupleList);
     }
   }
 
@@ -432,7 +448,7 @@ public class Ast {
     final Identifier id;
     final Type type;
 
-    protected FieldSchema(SqlParserPos pos, Identifier id, Type type) {
+    public FieldSchema(SqlParserPos pos, Identifier id, Type type) {
       super(pos, Op.FIELD_SCHEMA);
       this.id = Preconditions.checkNotNull(id);
       this.type = Preconditions.checkNotNull(type);
@@ -449,9 +465,9 @@ public class Ast {
   public static class Schema extends Node {
     final List<FieldSchema> fieldSchemaList;
 
-    protected Schema(SqlParserPos pos, List<FieldSchema> fieldSchemaList) {
+    public Schema(SqlParserPos pos, List<FieldSchema> fieldSchemaList) {
       super(pos, Op.SCHEMA);
-      this.fieldSchemaList = fieldSchemaList;
+      this.fieldSchemaList = ImmutableList.copyOf(fieldSchemaList);
     }
   }
 
@@ -459,7 +475,7 @@ public class Ast {
   public static class Type extends Node {
     final String name;
 
-    protected Type(SqlParserPos pos, String name) {
+    public Type(SqlParserPos pos, String name) {
       super(pos, Op.TYPE);
       this.name = name;
     }

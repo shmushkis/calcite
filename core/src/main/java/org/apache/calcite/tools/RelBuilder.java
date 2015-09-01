@@ -799,7 +799,7 @@ public class RelBuilder {
    *
    * <p>If there are zero rows, or if all values of a any column are
    * null, this method cannot deduce the type of columns. For these cases,
-   * call {@link #values(RelDataType, Iterable)}.
+   * call {@link #values(Iterable, RelDataType)}.
    *
    * @param fieldNames Field names
    * @param values Values
@@ -839,7 +839,7 @@ public class RelBuilder {
       rowTypeBuilder.add(name, type);
     }
     final RelDataType rowType = rowTypeBuilder.build();
-    return values(rowType, tupleList);
+    return values(tupleList, rowType);
   }
 
   private ImmutableList<ImmutableList<RexLiteral>> tupleList(int columnCount,
@@ -892,15 +892,38 @@ public class RelBuilder {
    * cannot, such as all values of a column being null, or there being zero
    * rows.
    *
-   * @param rowType Row type
    * @param tupleList Tuple list
+   * @param rowType Row type
    */
-  protected RelBuilder values(RelDataType rowType,
-      Iterable<ImmutableList<RexLiteral>> tupleList) {
-    RelNode values = valuesFactory.createValues(cluster, rowType,
-        ImmutableList.copyOf(tupleList));
+  public RelBuilder values(Iterable<? extends List<RexLiteral>> tupleList,
+      RelDataType rowType) {
+    RelNode values =
+        valuesFactory.createValues(cluster, rowType, copy(tupleList));
     push(values);
     return this;
+  }
+
+  /** Converts an iterable of lists into an immutable list of immutable lists
+   * with the same contents. Returns the same object if possible. */
+  private static <E> ImmutableList<ImmutableList<E>>
+  copy(Iterable<? extends List<E>> tupleList) {
+    final ImmutableList.Builder<ImmutableList<E>> builder =
+        ImmutableList.builder();
+    int changeCount = 0;
+    for (List<E> literals : tupleList) {
+      final ImmutableList<E> literals2 =
+          ImmutableList.copyOf(literals);
+      builder.add(literals2);
+      if (literals != literals2) {
+        ++changeCount;
+      }
+    }
+    if (changeCount == 0) {
+      // don't make a copy if we don't have to
+      //noinspection unchecked
+      return (ImmutableList<ImmutableList<E>>) tupleList;
+    }
+    return builder.build();
   }
 
   /** Creates a limit without a sort. */

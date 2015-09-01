@@ -17,11 +17,19 @@
 package org.apache.calcite.piglet;
 
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.PigRelBuilder;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.Pair;
+
+import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,6 +57,12 @@ public class Handler {
       final Ast.LoadStmt load = (Ast.LoadStmt) node;
       builder.scan((String) load.name.value);
       register(load.target.value);
+      return this;
+    case VALUES:
+      final Ast.ValuesStmt values = (Ast.ValuesStmt) node;
+      final RelDataType rowType = toType(values.schema);
+      builder.values(tuples(values, rowType), rowType);
+      register(values.target.value);
       return this;
     case FOREACH:
       final Ast.ForeachStmt foreach = (Ast.ForeachStmt) node;
@@ -145,9 +159,70 @@ public class Handler {
       }
       return this;
     case DUMP:
+      final Ast.DumpStmt dump = (Ast.DumpStmt) node;
+      final RelNode relNode = map.get(dump.relation.value);
+      dump(relNode);
       return this; // nothing to do; contains no algebra
     default:
       throw new AssertionError("unknown operation " + node.op);
+    }
+  }
+
+  /** Executes a relational expression and prints the output.
+   *
+   * <p>The default implementation does nothing.
+   *
+   * @param rel Relational expression
+   */
+  protected void dump(RelNode rel) {
+  }
+
+  private ImmutableList<ImmutableList<RexLiteral>>
+  tuples(Ast.ValuesStmt valuesStmt, RelDataType rowType) {
+    final ImmutableList.Builder<ImmutableList<RexLiteral>> listBuilder =
+        ImmutableList.builder();
+    for (List<Ast.Node> nodeList : valuesStmt.tupleList) {
+      listBuilder.add(tuple(nodeList, rowType));
+    }
+    return listBuilder.build();
+  }
+
+  private ImmutableList<RexLiteral> tuple(List<Ast.Node> nodeList,
+      RelDataType rowType) {
+    final ImmutableList.Builder<RexLiteral> listBuilder =
+        ImmutableList.builder();
+    for (Pair<Ast.Node, RelDataTypeField> pair
+        : Pair.zip(nodeList, rowType.getFieldList())) {
+      final Ast.Node node = pair.left;
+      if (node instanceof Ast.Literal) {
+        listBuilder.add(
+            (RexLiteral) builder.getRexBuilder().makeLiteral(
+                ((Ast.Literal) node).value, pair.right.getType(), false));
+      } else {
+        throw new IllegalArgumentException("not a literal: " + node);
+      }
+    }
+    return listBuilder.build();
+  }
+
+  private RelDataType toType(Ast.Schema schema) {
+    final RelDataTypeFactory.FieldInfoBuilder typeBuilder =
+        builder.getTypeFactory().builder();
+    for (Ast.FieldSchema fieldSchema : schema.fieldSchemaList) {
+      typeBuilder.add(fieldSchema.id.value, toType(fieldSchema.type));
+    }
+    return typeBuilder.build();
+  }
+
+  private RelDataType toType(Ast.Type type) {
+    final RelDataTypeFactory typeFactory = builder.getTypeFactory();
+    switch (type.name) {
+    case "int":
+      return typeFactory.createSqlType(SqlTypeName.INTEGER);
+    case "float":
+      return typeFactory.createSqlType(SqlTypeName.REAL);
+    default:
+      return typeFactory.createSqlType(SqlTypeName.VARCHAR);
     }
   }
 
@@ -172,6 +247,7 @@ public class Handler {
   }
 
   private RexNode toRex(Ast.Node exp) {
+    final Ast.Call call;
     switch (exp.op) {
     case LITERAL:
       return builder.literal(((Ast.Literal) exp).value);
@@ -183,13 +259,63 @@ public class Handler {
       }
       return builder.field(value);
     case DOT:
-      final Ast.Call call = (Ast.Call) exp;
+      call = (Ast.Call) exp;
       final RexNode left = toRex(call.operands.get(0));
       final Ast.Identifier right = (Ast.Identifier) call.operands.get(1);
       return builder.dot(left, right.value);
+    case EQ:
+    case NE:
+    case GT:
+    case GTE:
+    case LT:
+    case LTE:
+    case AND:
+    case OR:
+    case NOT:
+    case PLUS:
+    case MINUS:
+      call = (Ast.Call) exp;
+      return builder.call(op(exp.op), toRex(call.operands));
     default:
       throw new AssertionError("unknown op " + exp.op);
     }
+  }
+
+  private static SqlOperator op(Ast.Op op) {
+    switch (op) {
+    case EQ:
+      return SqlStdOperatorTable.EQUALS;
+    case NE:
+      return SqlStdOperatorTable.NOT_EQUALS;
+    case GT:
+      return SqlStdOperatorTable.GREATER_THAN;
+    case GTE:
+      return SqlStdOperatorTable.GREATER_THAN_OR_EQUAL;
+    case LT:
+      return SqlStdOperatorTable.LESS_THAN;
+    case LTE:
+      return SqlStdOperatorTable.LESS_THAN_OR_EQUAL;
+    case AND:
+      return SqlStdOperatorTable.AND;
+    case OR:
+      return SqlStdOperatorTable.OR;
+    case NOT:
+      return SqlStdOperatorTable.NOT;
+    case PLUS:
+      return SqlStdOperatorTable.PLUS;
+    case MINUS:
+      return SqlStdOperatorTable.MINUS;
+    default:
+      throw new AssertionError("unknown: " + op);
+    }
+  }
+
+  private ImmutableList<RexNode> toRex(Iterable<Ast.Node> operands) {
+    final ImmutableList.Builder<RexNode> builder = ImmutableList.builder();
+    for (Ast.Node operand : operands) {
+      builder.add(toRex(operand));
+    }
+    return builder.build();
   }
 
   /** Assigns the current relational expression to a given name. */

@@ -16,34 +16,22 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.piglet.Ast;
-import org.apache.calcite.piglet.Handler;
 import org.apache.calcite.piglet.parser.ParseException;
-import org.apache.calcite.piglet.parser.PigletParser;
-
-import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.tools.PigRelBuilder;
 
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.StringReader;
-
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-
 /** Unit tests for Piglet. */
 public class PigletTest {
-  private Ast.Program parseProgram(String s) throws ParseException {
-    return new PigletParser(new StringReader(s)).stmtListEof();
+  private static Fluent pig(String pig) {
+    return new Fluent(pig);
   }
 
   @Test public void testParseLoad() throws ParseException {
     final String s = "A = LOAD 'Emp';";
-    Ast.Program x = parseProgram(s);
     final String expected = "{op: PROGRAM, stmts: [\n"
         + "  {op: LOAD, target: A, name: Emp}]}";
-    assertThat(Ast.toString(x), is(expected));
+    pig(s).parseContains(expected);
   }
 
   /** Tests parsing and un-parsing all kinds of operators. */
@@ -66,7 +54,6 @@ public class PigletTest {
         + "H = GROUP G ALL;\n"
         + "I = GROUP H BY e;\n"
         + "J = GROUP I BY (e1, e2);\n";
-    Ast.Program x = parseProgram(s);
     final String expected = "{op: PROGRAM, stmts: [\n"
         + "  {op: LOAD, target: A, name: Emp},\n"
         + "  {op: DESCRIBE, relation: A},\n"
@@ -91,40 +78,43 @@ public class PigletTest {
         + "  {op: GROUP, target: J, source: I, keys: [\n"
         + "    e1,\n"
         + "    e2]}]}";
-    assertThat(Ast.toString(x), is(expected));
+    pig(s).parseContains(expected);
   }
 
   @Test public void testScan() throws ParseException {
     final String s = "A = LOAD 'EMP';";
-    Ast.Program x = parseProgram(s);
-    final PigRelBuilder builder =
-        PigRelBuilder.create(PigRelBuilderTest.config().build());
-    new Handler(builder).handle(x);
     final String expected = "LogicalTableScan(table=[[scott, EMP]])\n";
-    assertThat(RelOptUtil.toString(builder.peek()), is(expected));
+    pig(s).explainContains(expected);
   }
 
   @Test public void testDump() throws ParseException {
     final String s = "A = LOAD 'DEPT';\n"
         + "DUMP A;";
-    Ast.Program x = parseProgram(s);
-    final PigRelBuilder builder =
-        PigRelBuilder.create(PigRelBuilderTest.config().build());
-    new Handler(builder).handle(x);
     final String expected = "LogicalTableScan(table=[[scott, DEPT]])\n";
-    assertThat(RelOptUtil.toString(builder.peek()), is(expected));
+    final String out = "(10,ACCOUNTING,NEW YORK)\n"
+        + "(20,RESEARCH,DALLAS)\n"
+        + "(30,SALES,CHICAGO)\n"
+        + "(40,OPERATIONS,BOSTON)\n";
+    pig(s).explainContains(expected).returns(out);
+  }
+
+  /** VALUES is an extension to Pig. You can achieve the same effect in standard
+   * Pig by creating a text file. */
+  @Test public void testDumpValues() throws ParseException {
+    final String s = "A = VALUES (1, 'a'), (2, 'b') AS (x: int, y: string);\n"
+        + "DUMP A;";
+    final String expected =
+        "LogicalValues(tuples=[[{ 1, 'a' }, { 2, 'b' }]])\n";
+    final String out = "(1,a)\n(2,b)\n";
+    pig(s).explainContains(expected).returns(out);
   }
 
   @Test public void testForeach() throws ParseException {
     final String s = "A = LOAD 'DEPT';\n"
         + "B = FOREACH A GENERATE DNAME, $2;";
-    Ast.Program x = parseProgram(s);
-    final PigRelBuilder builder =
-        PigRelBuilder.create(PigRelBuilderTest.config().build());
-    new Handler(builder).handle(x);
     final String expected = "LogicalProject(DNAME=[$1], LOC=[$2])\n"
         + "  LogicalTableScan(table=[[scott, DEPT]])\n";
-    assertThat(RelOptUtil.toString(builder.peek()), is(expected));
+    pig(s).explainContains(expected);
   }
 
   @Ignore // foreach nested not implemented yet
@@ -136,76 +126,164 @@ public class PigletTest {
         + "  E = LIMIT D 3;\n"
         + "  GENERATE E.DEPTNO, E.EMPNO;\n"
         + "}";
-    Ast.Program x = parseProgram(s);
-    final PigRelBuilder builder =
-        PigRelBuilder.create(PigRelBuilderTest.config().build());
-    new Handler(builder).handle(x);
     final String expected = "LogicalProject(DNAME=[$1], LOC=[$2])\n"
         + "  LogicalTableScan(table=[[scott, DEPT]])\n";
-    assertThat(RelOptUtil.toString(builder.peek()), is(expected));
+    pig(s).explainContains(expected);
   }
 
   @Test public void testGroup() throws ParseException {
     final String s = "A = LOAD 'EMP';\n"
         + "B = GROUP A BY DEPTNO;";
-    Ast.Program x = parseProgram(s);
-    final PigRelBuilder builder =
-        PigRelBuilder.create(PigRelBuilderTest.config().build());
-    new Handler(builder).handle(x);
     final String expected = ""
         + "LogicalAggregate(group=[{7}], A=[COLLECT($0, $1, $2, $3, $4, $5, $6, $7)])\n"
         + "  LogicalTableScan(table=[[scott, EMP]])\n";
-    assertThat(RelOptUtil.toString(builder.peek()), is(expected));
+    pig(s).explainContains(expected);
+  }
+
+  @Ignore("COLLECT not implemented")
+  @Test public void testGroupExample() throws ParseException {
+    final String pre = "A = VALUES ('John',18,4.0F),\n"
+        + "('Mary',19,3.8F),\n"
+        + "('Bill',20,3.9F),\n"
+        + "('Joe',18,3.8F) AS (name:chararray,age:int,gpa:float);\n";
+    final String b = pre
+        + "B = GROUP A BY age;\n"
+        + "DUMP B;\n";
+    final String expected = "(18,{(John,18,4.0F),(Joe,18,3.8F)})\n"
+        + "(19,{(Mary,19,3.8F)})\n"
+        + "(20,{(Bill,20,3.9F)})\n";
+    pig(b).returns(expected);
+  }
+
+  @Test public void testDistinctExample() throws ParseException {
+    final String pre = "A = VALUES (8,3,4),\n"
+        + "(1,2,3),\n"
+        + "(4,3,3),\n"
+        + "(4,3,3),\n"
+        + "(1,2,3) AS (a1:int,a2:int,a3:int);\n";
+    final String x = pre
+        + "X = DISTINCT A;\n"
+        + "DUMP X;\n";
+    final String expected = "(1,2,3)\n"
+        + "(4,3,3)\n"
+        + "(8,3,4)\n";
+    pig(x).returns(expected);
   }
 
   @Test public void testFilter() throws ParseException {
     final String s = "A = LOAD 'DEPT';\n"
         + "B = FILTER A BY DEPTNO;";
-    Ast.Program x = parseProgram(s);
-    final PigRelBuilder builder =
-        PigRelBuilder.create(PigRelBuilderTest.config().build());
-    new Handler(builder).handle(x);
     final String expected = "LogicalFilter(condition=[$0])\n"
         + "  LogicalTableScan(table=[[scott, DEPT]])\n";
-    assertThat(RelOptUtil.toString(builder.peek()), is(expected));
+    pig(s).explainContains(expected);
+  }
+
+  @Test public void testFilterExample() throws ParseException {
+    final String pre = "A = VALUES (1,2,3),\n"
+        + "(4,2,1),\n"
+        + "(8,3,4),\n"
+        + "(4,3,3),\n"
+        + "(7,2,5),\n"
+        + "(8,4,3) AS (f1:int,f2:int,f3:int);\n";
+
+    final String x = pre
+        + "X = FILTER A BY f3 == 3;\n"
+        + "DUMP X;\n";
+    final String expected = "(1,2,3)\n"
+        + "(4,3,3)\n"
+        + "(8,4,3)\n";
+    pig(x).returns(expected);
+
+    final String x2 = pre
+        + "X2 = FILTER A BY (f1 == 8) OR (NOT (f2+f3 > f1));\n"
+        + "DUMP X2;\n";
+    final String expected2 = "(4,2,1)\n"
+        + "(8,3,4)\n"
+        + "(7,2,5)\n"
+        + "(8,4,3)\n";
+    pig(x2).returns(expected2);
   }
 
   @Test public void testLimit() throws ParseException {
     final String s = "A = LOAD 'DEPT';\n"
         + "B = LIMIT A 3;";
-    Ast.Program x = parseProgram(s);
-    final PigRelBuilder builder =
-        PigRelBuilder.create(PigRelBuilderTest.config().build());
-    new Handler(builder).handle(x);
     final String expected = "LogicalSort(fetch=[3])\n"
         + "  LogicalTableScan(table=[[scott, DEPT]])\n";
-    assertThat(RelOptUtil.toString(builder.peek()), is(expected));
+    pig(s).explainContains(expected);
+  }
+
+  @Test public void testLimitExample() throws ParseException {
+    final String pre = "A = VALUES (1,2,3),\n"
+        + "(4,2,1),\n"
+        + "(8,3,4),\n"
+        + "(4,3,3),\n"
+        + "(7,2,5),\n"
+        + "(8,4,3) AS (f1:int,f2:int,f3:int);\n";
+
+    final String x = pre
+        + "X = LIMIT A 3;\n"
+        + "DUMP X;\n";
+    final String expected = "(1,2,3)\n"
+        + "(4,2,1)\n"
+        + "(8,3,4)\n";
+    pig(x).returns(expected);
+
+    final String x2 = pre
+        + "B = ORDER A BY f1 DESC, f2 ASC;\n"
+        + "X2 = LIMIT B 3;\n"
+        + "DUMP X2;\n";
+    final String expected2 = "(8,3,4)\n"
+        + "(8,4,3)\n"
+        + "(7,2,5)\n";
+    pig(x2).returns(expected2);
   }
 
   @Test public void testOrder() throws ParseException {
     final String s = "A = LOAD 'DEPT';\n"
         + "B = ORDER A BY DEPTNO DESC, DNAME;";
-    Ast.Program x = parseProgram(s);
-    final PigRelBuilder builder =
-        PigRelBuilder.create(PigRelBuilderTest.config().build());
-    new Handler(builder).handle(x);
     final String expected = ""
         + "LogicalSort(sort0=[$0], sort1=[$1], dir0=[DESC], dir1=[ASC])\n"
         + "  LogicalTableScan(table=[[scott, DEPT]])\n";
-    assertThat(RelOptUtil.toString(builder.peek()), is(expected));
+    pig(s).explainContains(expected);
   }
 
   @Test public void testOrderStar() throws ParseException {
     final String s = "A = LOAD 'DEPT';\n"
         + "B = ORDER A BY * DESC;";
-    Ast.Program x = parseProgram(s);
-    final PigRelBuilder builder =
-        PigRelBuilder.create(PigRelBuilderTest.config().build());
-    new Handler(builder).handle(x);
     final String expected = ""
         + "LogicalSort(sort0=[$0], sort1=[$1], sort2=[$2], dir0=[DESC], dir1=[DESC], dir2=[DESC])\n"
         + "  LogicalTableScan(table=[[scott, DEPT]])\n";
-    assertThat(RelOptUtil.toString(builder.peek()), is(expected));
+    pig(s).explainContains(expected);
+  }
+
+  @Test public void testOrderExample() throws ParseException {
+    final String pre = "A = VALUES (1,2,3),\n"
+        + "(4,2,1),\n"
+        + "(8,3,4),\n"
+        + "(4,3,3),\n"
+        + "(7,2,5),\n"
+        + "(8,4,3) AS (a1:int,a2:int,a3:int);\n";
+
+    final String x = pre
+        + "X = ORDER A BY a3 DESC;\n"
+        + "DUMP X;\n";
+    final String expected = "(7,2,5)\n"
+        + "(8,3,4)\n"
+        + "(1,2,3)\n"
+        + "(4,3,3)\n"
+        + "(8,4,3)\n"
+        + "(4,2,1)\n";
+    pig(x).returns(expected);
+  }
+
+  /** VALUES is an extension to Pig. You can achieve the same effect in standard
+   * Pig by creating a text file. */
+  @Test public void testValues() throws ParseException {
+    final String s = "A = VALUES (1, 'a'), (2, 'b') AS (x: int, y: string);\n"
+        + "DUMP A;";
+    final String expected =
+        "LogicalValues(tuples=[[{ 1, 'a' }, { 2, 'b' }]])\n";
+    pig(s).explainContains(expected);
   }
 }
 
