@@ -285,6 +285,16 @@ public class PigletTest {
         "LogicalValues(tuples=[[{ 1, 'a' }, { 2, 'b' }]])\n";
     pig(s).explainContains(expected);
   }
+
+  @Test public void testValuesNested() throws ParseException {
+    final String s = "A = VALUES (1, {('a', true), ('b', false)}),\n"
+        + " (2, {})\n"
+        + "AS (x: int, y: bag {tuple(a: string, b: boolean)});\n"
+        + "DUMP A;";
+    final String expected =
+        "LogicalValues(tuples=[[{ 1, [['a', true], ['b', false]] }, { 2, [] }]])\n";
+    pig(s).explainContains(expected);
+  }
 }
 
 // End PigletTest.java
