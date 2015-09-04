@@ -1843,8 +1843,42 @@ public class RexImpTable {
         return translator.translate(operands.get(0),
             negate ? NullAs.IS_NOT_NULL : NullAs.IS_NULL);
       } else {
-        return maybeNegate(negate,
-            translator.translate(operands.get(0), NullAs.FALSE));
+        switch (0) {
+        case 0:
+          // 5 failures in JdbcTest:
+          //   testNotExistsCorrelated
+          //   testRunScalar
+          //   testRunSubquery
+          //   testScalarSubquery
+          //   testRunMisc
+          // 2 failures in CalciteSqlOperatorTest
+          //   testIsNotTrueOperator
+          //   testIsNotFalseOperator
+          return maybeNegate(
+              negate == seek,
+              translator.translate(
+                  operands.get(0),
+                  negate == seek ? NullAs.TRUE : NullAs.FALSE));
+        case 1:
+          // 11 failures in JdbcTest:
+          //   testNotExistsCorrelated
+          //   testRunScalar
+          //   testRunSubquery
+          //   testScalarSubquery
+          //   testRunMisc
+          //   testWhereNot
+          //   testHavingNot2
+          //   testNotInQueryWithNull
+          // ReflectiveSchemaTest.testJavaBoolean ("is not false" fails)
+          // CalciteSqlOperatorTest succeeds
+          return maybeNegate(negate,
+              translator.translate(operands.get(0), NullAs.FALSE));
+        default:
+          // testNotIn, testNotExistsCorrelated, testNotInEmptyQuery,
+          // testWhereNullable, testPreparedStatement, testTrimFieldsOver
+          return maybeNegate(negate,
+              translator.translate(operands.get(0), NullAs.TRUE));
+        }
       }
     }
   }

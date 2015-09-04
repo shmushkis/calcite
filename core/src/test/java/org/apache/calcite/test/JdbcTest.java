@@ -4375,11 +4375,11 @@ public class JdbcTest {
     final String sql = "select deptno from emp where deptno not in (\n"
         + "select deptno from dept where deptno = -1)";
     withEmpDept(sql)
-        .explainContains("EnumerableCalc(expr#0..2=[{inputs}], "
-            + "expr#3=[IS NOT NULL($t2)], expr#4=[true], "
-            + "expr#5=[IS NULL($t0)], expr#6=[null], expr#7=[false], "
-            + "expr#8=[CASE($t3, $t4, $t5, $t6, $t7)], expr#9=[NOT($t8)], "
-            + "EXPR$1=[$t0], $condition=[$t9])")
+//        .explainContains("EnumerableCalc(expr#0..2=[{inputs}], "
+//            + "expr#3=[IS NOT NULL($t2)], expr#4=[true], "
+//            + "expr#5=[IS NULL($t0)], expr#6=[null], expr#7=[false], "
+//            + "expr#8=[CASE($t3, $t4, $t5, $t6, $t7)], expr#9=[NOT($t8)], "
+//            + "EXPR$1=[$t0], $condition=[$t9])")
         .returnsUnordered("DEPTNO=null",
             "DEPTNO=10",
             "DEPTNO=10",
