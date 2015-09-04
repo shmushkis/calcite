@@ -140,7 +140,7 @@ public class PigletTest {
     pig(s).explainContains(expected);
   }
 
-  @Ignore("COLLECT not implemented")
+  @Ignore("only collect first column, should collect a struct")
   @Test public void testGroupExample() throws ParseException {
     final String pre = "A = VALUES ('John',18,4.0F),\n"
         + "('Mary',19,3.8F),\n"
