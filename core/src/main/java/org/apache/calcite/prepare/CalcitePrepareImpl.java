@@ -135,6 +135,7 @@ import com.google.common.collect.Maps;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.sql.DatabaseMetaData;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -816,7 +817,19 @@ public class CalcitePrepareImpl implements CalcitePrepare {
           avaticaType(typeFactory, type.getComponentType(), null);
       return ColumnMetaData.array(componentType, typeName, rep);
     } else {
-      return ColumnMetaData.scalar(getTypeOrdinal(type), typeName, rep);
+      final int typeOrdinal = getTypeOrdinal(type);
+      switch (typeOrdinal) {
+      case Types.STRUCT:
+        final List<ColumnMetaData> columns = new ArrayList<>();
+        for (RelDataTypeField field : type.getFieldList()) {
+          columns.add(
+              metaData(typeFactory, field.getIndex(), field.getName(),
+                  field.getType(), null, null));
+        }
+        return ColumnMetaData.struct(columns);
+      default:
+        return ColumnMetaData.scalar(typeOrdinal, typeName, rep);
+      }
     }
   }
 
