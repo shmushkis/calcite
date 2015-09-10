@@ -35,6 +35,7 @@ import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.CorrelationId;
+import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
@@ -726,26 +727,22 @@ public class RelDecorrelator implements ReflectiveVisitor {
       Iterable<Correlation> correlations,
       int valueGenFieldOffset,
       SortedMap<Correlation, Integer> mapCorVarToOutputPos) {
-    RelNode resultRel = null;
+    final Map<RelNode, List<Integer>> mapNewInputRelToOutputPos =
+        new HashMap<>();
 
-    Map<RelNode, List<Integer>> mapNewInputRelToOutputPos = Maps.newHashMap();
-
-    Map<RelNode, Integer> mapNewInputRelToNewOffset = Maps.newHashMap();
-
-    RelNode oldInputRel;
-    RelNode newInputRel;
-    List<Integer> newLocalOutputPosList;
+    final Map<RelNode, Integer> mapNewInputRelToNewOffset = new HashMap<>();
 
     // inputRel provides the definition of a correlated variable.
     // Add to map all the referenced positions(relative to each input rel)
     for (Correlation corVar : correlations) {
-      int oldCorVarOffset = corVar.field;
+      final int oldCorVarOffset = corVar.field;
 
-      oldInputRel = cm.mapCorVarToCorRel.get(corVar.corr).getInput(0);
+      final RelNode oldInputRel = getCorRel(corVar);
       assert oldInputRel != null;
-      newInputRel = mapOldToNewRel.get(oldInputRel);
+      final RelNode newInputRel = mapOldToNewRel.get(oldInputRel);
       assert newInputRel != null;
 
+      final List<Integer> newLocalOutputPosList;
       if (!mapNewInputRelToOutputPos.containsKey(newInputRel)) {
         newLocalOutputPosList = Lists.newArrayList();
       } else {
@@ -757,7 +754,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
           mapNewRelToMapOldToNewOutputPos.get(newInputRel);
       assert mapOldToNewOutputPos != null;
 
-      int newCorVarOffset = mapOldToNewOutputPos.get(oldCorVarOffset);
+      final int newCorVarOffset = mapOldToNewOutputPos.get(oldCorVarOffset);
 
       // Add all unique positions referenced.
       if (!newLocalOutputPosList.contains(newCorVarOffset)) {
@@ -773,12 +770,13 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // To make sure the plan does not change in terms of join order,
     // join these rels based on their occurrence in cor var list which
     // is sorted.
-    Set<RelNode> joinedInputRelSet = Sets.newHashSet();
+    final Set<RelNode> joinedInputRelSet = Sets.newHashSet();
 
+    RelNode resultRel = null;
     for (Correlation corVar : correlations) {
-      oldInputRel = cm.mapCorVarToCorRel.get(corVar.corr).getInput(0);
+      final RelNode oldInputRel = getCorRel(corVar);
       assert oldInputRel != null;
-      newInputRel = mapOldToNewRel.get(oldInputRel);
+      final RelNode newInputRel = mapOldToNewRel.get(oldInputRel);
       assert newInputRel != null;
 
       if (!joinedInputRelSet.contains(newInputRel)) {
@@ -808,25 +806,27 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // the join output, leaving room for valueGenFieldOffset because
     // valueGenerators are joined with the original left input of the rel
     // referencing correlated variables.
-    int newOutputPos;
-    int newLocalOutputPos;
     for (Correlation corVar : correlations) {
       // The first child of a correlatorRel is always the rel defining
       // the correlated variables.
-      newInputRel =
-          mapOldToNewRel.get(cm.mapCorVarToCorRel.get(corVar.corr).getInput(0));
-      newLocalOutputPosList = mapNewInputRelToOutputPos.get(newInputRel);
+      final RelNode oldInputRel = getCorRel(corVar);
+      assert oldInputRel != null;
+      final RelNode newInputRel = mapOldToNewRel.get(oldInputRel);
+      assert newInputRel != null;
 
-      Map<Integer, Integer> mapOldToNewOutputPos =
+      final List<Integer> newLocalOutputPosList =
+          mapNewInputRelToOutputPos.get(newInputRel);
+
+      final Map<Integer, Integer> mapOldToNewOutputPos =
           mapNewRelToMapOldToNewOutputPos.get(newInputRel);
       assert mapOldToNewOutputPos != null;
 
-      newLocalOutputPos = mapOldToNewOutputPos.get(corVar.field);
+      final int newLocalOutputPos = mapOldToNewOutputPos.get(corVar.field);
 
       // newOutputPos is the index of the cor var in the referenced
       // position list plus the offset of referenced position list of
       // each newInputRel.
-      newOutputPos =
+      final int newOutputPos =
           newLocalOutputPosList.indexOf(newLocalOutputPos)
               + mapNewInputRelToNewOffset.get(newInputRel)
               + valueGenFieldOffset;
@@ -838,6 +838,15 @@ public class RelDecorrelator implements ReflectiveVisitor {
     }
 
     return resultRel;
+  }
+
+  private RelNode getCorRel(Correlation corVar) {
+    final RelNode r = cm.mapCorVarToCorRel.get(corVar.corr);
+    RelNode r2 = r.getInput(0);
+    if (r2 instanceof Join) {
+      r2 = r2.getInput(0);
+    }
+    return r2;
   }
 
   private void decorrelateInputWithValueGenerator(
