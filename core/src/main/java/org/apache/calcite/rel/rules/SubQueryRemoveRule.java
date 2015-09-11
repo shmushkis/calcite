@@ -212,11 +212,17 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       //   on e.deptno = dt.deptno
       //
 
+      builder.push(e.rel);
+      final List<RexNode> fields = new ArrayList<>();
+      switch (e.getKind()) {
+      case IN:
+        fields.addAll(builder.fields());
+      }
+
       // First, the cross join
       switch (logic) {
       case TRUE_FALSE_UNKNOWN:
       case UNKNOWN_AS_TRUE:
-        builder.push(e.rel);
         builder.aggregate(builder.groupKey(),
             builder.count(false, "c"),
             builder.aggregateCall(SqlStdOperatorTable.COUNT, false, null, "ck",
@@ -224,16 +230,11 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
         builder.as("ct");
         builder.join(JoinRelType.INNER);
         offset += 2;
+        builder.push(e.rel);
         break;
       }
 
       // Now the left join
-      builder.push(e.rel);
-      final List<RexNode> fields = new ArrayList<>();
-      switch (e.getKind()) {
-      case IN:
-        fields.addAll(builder.fields());
-      }
       switch (logic) {
       case TRUE:
         if (fields.isEmpty()) {

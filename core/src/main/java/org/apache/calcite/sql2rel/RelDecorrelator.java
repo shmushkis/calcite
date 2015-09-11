@@ -73,6 +73,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.Bug;
 import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.ReflectUtil;
 import org.apache.calcite.util.ReflectiveVisitDispatcher;
@@ -376,7 +377,24 @@ public class RelDecorrelator implements ReflectiveVisitor {
       mapOldToNewOutputPos.put(i, i);
     }
     mapOldToNewRel.put(rel, newRel);
-    mapNewRelToMapOldToNewOutputPos.put(newRel, mapOldToNewOutputPos);
+    putOutputMap(newRel, mapOldToNewOutputPos);
+  }
+
+  private Map<Integer, Integer> putOutputMap(RelNode newRel,
+      Map<Integer, Integer> mapOldToNewOutputPos) {
+    assert allLessThan(mapOldToNewOutputPos.keySet(),
+        newRel.getRowType().getFieldCount(), Litmus.THROW);
+    return mapNewRelToMapOldToNewOutputPos.put(newRel, mapOldToNewOutputPos);
+  }
+
+  private boolean allLessThan(Collection<Integer> integers, int limit,
+      Litmus ret) {
+    for (int value : integers) {
+      if (value >= limit) {
+        return ret.fail("value out of range");
+      }
+    }
+    return ret.succeed();
   }
 
   /**
@@ -426,7 +444,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     mapOldToNewRel.put(rel, newRel);
 
     // Sort does not change input ordering
-    mapNewRelToMapOldToNewOutputPos.put(newRel, childMapOldToNewOutputPos);
+    putOutputMap(newRel, childMapOldToNewOutputPos);
   }
 
   /**
@@ -551,7 +569,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     }
 
     mapOldToNewRel.put(oldChildRel, newProjectRel);
-    mapNewRelToMapOldToNewOutputPos.put(newProjectRel, combinedMap);
+    putOutputMap(newProjectRel, combinedMap);
 
     if (produceCorVar) {
       mapNewRelToMapCorVarToOutputPos.put(
@@ -605,7 +623,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
 
     mapOldToNewRel.put(rel, newAggregate);
 
-    mapNewRelToMapOldToNewOutputPos.put(newAggregate, combinedMap);
+    putOutputMap(newAggregate, combinedMap);
 
     if (produceCorVar) {
       // LogicalAggregate does not change input ordering so corVars will be
@@ -702,9 +720,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
         RelOptUtil.createProject(newChildRel, projects, false);
 
     mapOldToNewRel.put(rel, newProjectRel);
-    mapNewRelToMapOldToNewOutputPos.put(
-        newProjectRel,
-        mapOldToNewOutputPos);
+    putOutputMap(newProjectRel, mapOldToNewOutputPos);
 
     if (produceCorVar) {
       mapNewRelToMapCorVarToOutputPos.put(
@@ -892,7 +908,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // LogicalJoin or LogicalFilter does not change the old input ordering. All
     // input fields from newLeftInput(i.e. the original input to the old
     // LogicalFilter) are in the output and in the same position.
-    mapNewRelToMapOldToNewOutputPos.put(joinRel, childMapOldToNewOutputPos);
+    putOutputMap(joinRel, childMapOldToNewOutputPos);
   }
 
   /**
@@ -953,9 +969,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     mapOldToNewRel.put(rel, newFilterRel);
 
     // Filter does not change the input ordering.
-    mapNewRelToMapOldToNewOutputPos.put(
-        newFilterRel,
-        childMapOldToNewOutputPos);
+    putOutputMap(newFilterRel, childMapOldToNewOutputPos);
 
     if (produceCorVar) {
       // filter rel does not permute the input all corvars produced by
@@ -1089,7 +1103,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
             rel.getJoinType().toJoinType(), ImmutableSet.<String>of());
 
     mapOldToNewRel.put(rel, newRel);
-    mapNewRelToMapOldToNewOutputPos.put(newRel, mapOldToNewOutputPos);
+    putOutputMap(newRel, mapOldToNewOutputPos);
 
     if (!mapCorVarToOutputPos.isEmpty()) {
       mapNewRelToMapCorVarToOutputPos.put(newRel, mapCorVarToOutputPos);
@@ -1175,7 +1189,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
       }
     }
     mapOldToNewRel.put(rel, newRel);
-    mapNewRelToMapOldToNewOutputPos.put(newRel, mapOldToNewOutputPos);
+    putOutputMap(newRel, mapOldToNewOutputPos);
 
     if (!mapCorVarToOutputPos.isEmpty()) {
       mapNewRelToMapCorVarToOutputPos.put(newRel, mapCorVarToOutputPos);
