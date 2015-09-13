@@ -32,12 +32,13 @@ import java.sql.Date;
 import java.sql.NClob;
 import java.sql.Ref;
 import java.sql.SQLXML;
+import java.sql.Struct;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -77,6 +78,11 @@ public abstract class AbstractCursor implements Cursor {
     // Create an accessor appropriate to the underlying type; the accessor
     // can convert to any type in the same family.
     Getter getter = createGetter(ordinal);
+    return createAccessor(columnMetaData, getter, localCalendar, factory);
+  }
+
+  protected Accessor createAccessor(ColumnMetaData columnMetaData,
+      Getter getter, Calendar localCalendar, ArrayImpl.Factory factory) {
     switch (columnMetaData.type.rep) {
     case NUMBER:
       switch (columnMetaData.type.id) {
@@ -164,10 +170,17 @@ public abstract class AbstractCursor implements Cursor {
         throw new AssertionError("bad " + columnMetaData.type.rep);
       }
     case Types.ARRAY:
-      return new ArrayAccessor(getter,
-          ((ColumnMetaData.ArrayType) columnMetaData.type).component, factory);
-    case Types.JAVA_OBJECT:
+      final ColumnMetaData.ArrayType arrayType =
+          (ColumnMetaData.ArrayType) columnMetaData.type;
+      final SlotGetter componentGetter = new SlotGetter();
+      final Accessor componentAccessor =
+          createAccessor(ColumnMetaData.dummy(arrayType.component, true),
+              componentGetter, localCalendar, factory);
+      return new ArrayAccessor(getter, arrayType.component, componentAccessor,
+          componentGetter, factory);
     case Types.STRUCT:
+      return new StructAccessor(getter);
+    case Types.JAVA_OBJECT:
     case Types.OTHER: // e.g. map
       if (columnMetaData.type.name.startsWith("INTERVAL_")) {
         int end = columnMetaData.type.name.indexOf("(");
@@ -340,6 +353,10 @@ public abstract class AbstractCursor implements Cursor {
 
     public Array getArray() {
       throw cannotConvert("Array");
+    }
+
+    public Struct getStruct() {
+      throw cannotConvert("Struct");
     }
 
     public Date getDate(Calendar calendar) {
@@ -1149,14 +1166,19 @@ public abstract class AbstractCursor implements Cursor {
    * Accessor that assumes that the underlying value is an ARRAY;
    * corresponds to {@link java.sql.Types#ARRAY}.
    */
-  private static class ArrayAccessor extends AccessorImpl {
-    private final ColumnMetaData.AvaticaType componentType;
-    private final ArrayImpl.Factory factory;
+  static class ArrayAccessor extends AccessorImpl {
+    final ColumnMetaData.AvaticaType componentType;
+    final Accessor componentAccessor;
+    final SlotGetter componentSlotGetter;
+    final ArrayImpl.Factory factory;
 
     public ArrayAccessor(Getter getter,
-        ColumnMetaData.AvaticaType componentType, ArrayImpl.Factory factory) {
+        ColumnMetaData.AvaticaType componentType, Accessor componentAccessor,
+        SlotGetter componentSlotGetter, ArrayImpl.Factory factory) {
       super(getter);
       this.componentType = componentType;
+      this.componentAccessor = componentAccessor;
+      this.componentSlotGetter = componentSlotGetter;
       this.factory = factory;
     }
 
@@ -1175,35 +1197,37 @@ public abstract class AbstractCursor implements Cursor {
       if (list == null) {
         return null;
       }
-      return new ArrayImpl(list, componentType, factory);
+      return new ArrayImpl(list, this);
     }
 
     @Override public String getString() {
-      final List o = (List) getObject();
-      if (o == null) {
-        return null;
-      }
-      final Iterator iterator = o.iterator();
-      if (!iterator.hasNext()) {
-        return "[]";
-      }
-      final StringBuilder buf = new StringBuilder("[");
-      for (;;) {
-        append(buf, iterator.next());
-        if (!iterator.hasNext()) {
-          return buf.append("]").toString();
-        }
-        buf.append(", ");
-      }
+      final Array array = getArray();
+      return array == null ? null : array.toString();
+    }
+  }
+
+  /**
+   * Accessor that assumes that the underlying value is a STRUCT;
+   * corresponds to {@link java.sql.Types#STRUCT}.
+   */
+  private static class StructAccessor extends AccessorImpl {
+    public StructAccessor(Getter getter) {
+      super(getter);
     }
 
-    private void append(StringBuilder buf, Object o) {
+    @Override public Object getObject() {
+      return getStruct();
+    }
+
+    @Override public Struct getStruct() {
+      final Object o = super.getObject();
       if (o == null) {
-        buf.append("null");
-      } else if (o.getClass().isArray()) {
-        append(buf, AvaticaUtils.primitiveList(o));
+        return null;
+      } else if (o instanceof List) {
+        return new StructImpl((List) o);
       } else {
-        buf.append(o);
+        assert o instanceof Object[];
+        return new StructImpl(Arrays.asList((Object[]) o));
       }
     }
   }
@@ -1230,6 +1254,20 @@ public abstract class AbstractCursor implements Cursor {
   protected abstract class AbstractGetter implements Getter {
     public boolean wasNull() {
       return wasNull[0];
+    }
+  }
+
+  /** Implementation of {@link Getter} that returns the current contents of
+   * a mutable slot. */
+  public class SlotGetter implements Getter {
+    public Object slot;
+
+    public Object getObject() {
+      return slot;
+    }
+
+    public boolean wasNull() {
+      return slot == null;
     }
   }
 }
