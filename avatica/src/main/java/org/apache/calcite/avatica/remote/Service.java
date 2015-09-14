@@ -138,6 +138,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       return o instanceof CatalogsRequest;
     }
   }
@@ -171,6 +174,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       return o instanceof DatabasePropertyRequest;
     }
   }
@@ -240,6 +246,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof SchemasRequest) {
         SchemasRequest other = (SchemasRequest) o;
 
@@ -357,6 +366,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof TablesRequest) {
         TablesRequest other = (TablesRequest) o;
 
@@ -425,6 +437,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       return o instanceof TableTypesRequest;
     }
   }
@@ -525,6 +540,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof ColumnsRequest) {
         ColumnsRequest other = (ColumnsRequest) o;
 
@@ -592,6 +610,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       return o instanceof TypeInfoRequest;
     }
   }
@@ -707,6 +728,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof ResultSetResponse) {
         ResultSetResponse other = (ResultSetResponse) o;
 
@@ -824,6 +848,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof PrepareAndExecuteRequest) {
         PrepareAndExecuteRequest other = (PrepareAndExecuteRequest) o;
 
@@ -902,6 +929,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof ExecuteResponse) {
         ExecuteResponse other = (ExecuteResponse) o;
 
@@ -993,6 +1023,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof PrepareRequest) {
         PrepareRequest other = (PrepareRequest) o;
 
@@ -1063,6 +1096,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof PrepareResponse) {
         PrepareResponse other = (PrepareResponse) o;
 
@@ -1183,6 +1219,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof FetchRequest) {
         FetchRequest other = (FetchRequest) o;
 
@@ -1254,6 +1293,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof FetchResponse) {
         FetchResponse other = (FetchResponse) o;
 
@@ -1328,6 +1370,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof CreateStatementRequest) {
         CreateStatementRequest other = (CreateStatementRequest) o;
 
@@ -1405,6 +1450,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof CreateStatementResponse) {
         CreateStatementResponse other = (CreateStatementResponse) o;
 
@@ -1483,6 +1531,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof CloseStatementRequest) {
         CloseStatementRequest other = (CloseStatementRequest) o;
 
@@ -1525,6 +1576,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       return o instanceof CloseStatementResponse;
     }
   }
@@ -1585,6 +1639,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof CloseConnectionRequest) {
         CloseConnectionRequest other = (CloseConnectionRequest) o;
 
@@ -1627,6 +1684,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       return o instanceof CloseConnectionResponse;
     }
   }
@@ -1700,6 +1760,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof ConnectionSyncRequest) {
         ConnectionSyncRequest other = (ConnectionSyncRequest) o;
 
@@ -1771,6 +1834,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof ConnectionSyncResponse) {
         ConnectionSyncResponse other = (ConnectionSyncResponse) o;
 
@@ -1901,6 +1967,9 @@ public interface Service {
     }
 
     @Override public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
       if (o instanceof DatabasePropertyResponse) {
         DatabasePropertyResponse other = (DatabasePropertyResponse) o;
 
