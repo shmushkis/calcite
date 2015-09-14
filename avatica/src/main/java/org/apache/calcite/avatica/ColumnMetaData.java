@@ -41,7 +41,8 @@ import java.util.Objects;
 
 /**
  * Metadata for a column.
- * (Compare with {@link ResultSetMetaData}.)
+ *
+ * <p>(Compare with {@link java.sql.ResultSetMetaData}.)
  */
 public class ColumnMetaData {
   public final int ordinal; // 0-based
@@ -376,7 +377,7 @@ public class ColumnMetaData {
 
   /** Creates a ColumnMetaData for result sets that are not based on a struct
    * but need to have a single 'field' for purposes of
-   * {@link ResultSetMetaData}. */
+   * {@link java.sql.ResultSetMetaData}. */
   public static ColumnMetaData dummy(AvaticaType type, boolean nullable) {
     return new ColumnMetaData(
         0,
