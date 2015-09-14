@@ -31,7 +31,7 @@ public interface ProtobufTranslation {
   /**
    * Serialize a Response as a protocol buffer.
    *
-   * @param msg The response to serialize.
+   * @param response The response to serialize.
    * @throws IOException If there are errors during serialization.
    */
   byte[] serializeResponse(Response response) throws IOException;
