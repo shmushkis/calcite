@@ -28,8 +28,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A mock implementation of ProtobufService for testing. It performs no serialization of requests
- * and responses.
+ * A mock implementation of ProtobufService for testing.
+ *
+ * <p>It performs no serialization of requests and responses.
  */
 public class MockProtobufService extends ProtobufService {
 
@@ -90,7 +91,8 @@ public class MockProtobufService extends ProtobufService {
   }
 
   /**
-   * Fetch the static response for the given request
+   * Fetches the static response for the given request.
+   *
    * @param request the client's request
    * @return the appropriate response
    * @throws RuntimeException if no mapping is found for the request
@@ -106,7 +108,7 @@ public class MockProtobufService extends ProtobufService {
   }
 
   /**
-   * A factory which instantiates the mock protobuf service.
+   * A factory that instantiates the mock protobuf service.
    */
   public static class MockProtobufServiceFactory implements Service.Factory {
     @Override public Service create(AvaticaConnection connection) {

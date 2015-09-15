@@ -69,6 +69,7 @@ import static org.junit.Assert.assertEquals;
 
 /**
  * Tests serialization of requests and response objects.
+ *
  * @param <T> The object class being tested
  */
 @RunWith(Parameterized.class)
@@ -84,7 +85,7 @@ public class ProtobufTranslationImplTest<T> {
   }
 
   /**
-   * Identify function that accepts a request, serializes it to protobuf, and converts it back.
+   * Identity function that accepts a request, serializes it to protobuf, and converts it back.
    */
   private static class RequestFunc implements IdentityFunction<Request> {
     private final ProtobufTranslation translation;
@@ -100,7 +101,7 @@ public class ProtobufTranslationImplTest<T> {
   }
 
   /**
-   * Identify function that accepts a response, serializes it to protobuf, and converts it back.
+   * Identity function that accepts a response, serializes it to protobuf, and converts it back.
    */
   private static class ResponseFunc implements IdentityFunction<Response> {
     private final ProtobufTranslation translation;
@@ -150,7 +151,7 @@ public class ProtobufTranslationImplTest<T> {
   }
 
   /**
-   * Generate a collection of Requests whose serialization will be tested.
+   * Generates a collection of Requests whose serialization will be tested.
    */
   private static List<Request> getRequests() {
     LinkedList<Request> requests = new LinkedList<>();
@@ -208,7 +209,7 @@ public class ProtobufTranslationImplTest<T> {
   }
 
   /**
-   * Generate a collection of Responses whose serialization will be tested.
+   * Generates a collection of Responses whose serialization will be tested.
    */
   private static List<Response> getResponses() {
     LinkedList<Response> responses = new LinkedList<>();

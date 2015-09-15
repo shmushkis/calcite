@@ -29,34 +29,36 @@ import java.io.IOException;
 public interface ProtobufTranslation {
 
   /**
-   * Serialize a Response as a protocol buffer.
+   * Serializes a {@link Response} as a protocol buffer.
    *
-   * @param response The response to serialize.
-   * @throws IOException If there are errors during serialization.
+   * @param response The response to serialize
+   * @throws IOException If there are errors during serialization
    */
   byte[] serializeResponse(Response response) throws IOException;
 
   /**
-   * Serialize a Request as a protocol buffer.
+   * Serializes a {@link Request} as a protocol buffer.
    *
-   * @param request The request to serialize.
+   * @param request The request to serialize
    * @throws IOException If there are errors during serialization
    */
   byte[] serializeRequest(Request request) throws IOException;
 
   /**
-   * Parse a serialized protocol buffer request into a Request.
+   * Parses a serialized protocol buffer request into a {@link Request}.
+   *
    * @param bytes Serialized protocol buffer request from client
-   * @return A Request object for the given bytes.
-   * @throws InvalidProtocolBufferException If the protocol buffer cannot be deserialized.
+   * @return A Request object for the given bytes
+   * @throws InvalidProtocolBufferException If the protocol buffer cannot be deserialized
    */
   Request parseRequest(byte[] bytes) throws InvalidProtocolBufferException;
 
   /**
-   * Parse a serialize protocol buffer response into a {@link Response}.
+   * Parses a serialized protocol buffer response into a {@link Response}.
+   *
    * @param bytes Serialized protocol buffer request from server
    * @return The Response object for the given bytes
-   * @throws InvalidProtocolBufferException If the protocol buffer cannot be deserialized.
+   * @throws InvalidProtocolBufferException If the protocol buffer cannot be deserialized
    */
   Response parseResponse(byte[] bytes) throws InvalidProtocolBufferException;
 }

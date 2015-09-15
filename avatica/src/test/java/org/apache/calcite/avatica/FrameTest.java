@@ -30,7 +30,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Test serialization of Frame
+ * Tests serialization of {@link Frame}.
  */
 public class FrameTest {
 

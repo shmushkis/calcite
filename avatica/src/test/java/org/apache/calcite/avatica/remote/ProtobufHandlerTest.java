@@ -37,7 +37,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
 
 /**
- * Test basic serialization of objects with protocol buffers
+ * Test basic serialization of objects with protocol buffers.
  */
 public class ProtobufHandlerTest {
 

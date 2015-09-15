@@ -27,7 +27,7 @@ import org.mockito.Mockito;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Tests the HandlerFactory implementation
+ * Tests the {@link HandlerFactory} implementation.
  */
 public class HandlerFactoryTest {
 

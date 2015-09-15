@@ -26,7 +26,7 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Test serialization of TypedValue
+ * Test serialization of TypedValue.
  */
 public class TypedValueTest {
 

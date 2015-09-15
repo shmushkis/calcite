@@ -55,7 +55,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Implementation which translates protobuf requests to POJO requests
+ * Implementation of {@link ProtobufTranslationImpl} that translates
+ * protobuf requests to POJO requests.
  */
 public class ProtobufTranslationImpl implements ProtobufTranslation {
 
@@ -127,7 +128,8 @@ public class ProtobufTranslationImpl implements ProtobufTranslation {
   }
 
   /**
-   * Fetch the concrete message's Parser implementation.
+   * Fetches the concrete message's Parser implementation.
+   *
    * @param className The protocol buffer class name
    * @return The Parser for the class
    * @throws IllegalArgumentException If the argument is null or if a Parser for the given
@@ -147,7 +149,8 @@ public class ProtobufTranslationImpl implements ProtobufTranslation {
   }
 
   /**
-   * Fetch the concrete message's Parser implementation.
+   * Fetches the concrete message's Parser implementation.
+   *
    * @param className The protocol buffer class name
    * @return The Parser for the class
    * @throws IllegalArgumentException If the argument is null or if a Parser for the given

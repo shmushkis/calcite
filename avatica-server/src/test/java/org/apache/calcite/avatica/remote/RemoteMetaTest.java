@@ -62,7 +62,7 @@ public class RemoteMetaTest {
   // Keep a reference to the servers we start to clean them up after
   private static final List<HttpServer> ACTIVE_SERVERS = new ArrayList<>();
 
-  /** Factory that provides a JMeta */
+  /** Factory that provides a {@link JdbcMeta}. */
   public static class FullyRemoteJdbcMetaFactory implements Meta.Factory {
 
     private static JdbcMeta instance = null;

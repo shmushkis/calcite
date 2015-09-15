@@ -87,11 +87,12 @@ public abstract class ProtobufService extends AbstractService {
   }
 
   /**
-   * Determine if the given message has the field, denoted by the provided number, set.
+   * Determines whether the given message has the field, denoted by the provided number, set.
+   *
    * @param msg The protobuf message
    * @param desc The descriptor for the message
    * @param fieldNum The identifier for the field
-   * @return True if the message contains the field, false otherwise.
+   * @return True if the message contains the field, false otherwise
    */
   public static boolean hasField(Message msg, Descriptor desc, int fieldNum) {
     return msg.hasField(desc.findFieldByNumber(fieldNum));
