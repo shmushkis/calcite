@@ -94,11 +94,24 @@ public class RemoteDriverTest {
   }
 
   /**
-   * Interface which allows for alternate ways to access internals to the Connection for testing
+   * Interface that allows for alternate ways to access internals to the Connection for testing
    * purposes.
    */
   interface ConnectionInternals {
+    /**
+     * Reaches into the guts of a quasi-remote connection and pull out the
+     * statement map from the other side.
+     *
+     * <p>TODO: refactor tests to replace reflection with package-local access
+     */
     Cache<Integer, Object> getRemoteStatementMap(AvaticaConnection connection) throws Exception;
+
+    /**
+     * Reaches into the guts of a quasi-remote connection and pull out the
+     * connection map from the other side.
+     *
+     * <p>TODO: refactor tests to replace reflection with package-local access
+     */
     Cache<String, Connection> getRemoteConnectionMap(AvaticaConnection connection) throws Exception;
   }
 
@@ -110,36 +123,44 @@ public class RemoteDriverTest {
     // Json and Protobuf operations should be equivalent -- tests against one work on the other
     // Each test needs to get a fresh Connection and also access some internals on that Connection.
 
-    connections.add(new Object[] {new Callable<Connection>() {
-      public Connection call() {
-        try {
-          return ljs();
-        } catch (SQLException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    }, new QuasiRemoteJdbcServiceInternals(), new Callable<RequestInspection>() {
-      public RequestInspection call() throws Exception {
-        assert null != QuasiRemoteJdbcServiceFactory.requestInspection;
-        return QuasiRemoteJdbcServiceFactory.requestInspection;
-      }
-    } });
+    connections.add(
+      new Object[] {
+        new Callable<Connection>() {
+          public Connection call() {
+            try {
+              return ljs();
+            } catch (SQLException e) {
+              throw new RuntimeException(e);
+            }
+          }
+        },
+        new QuasiRemoteJdbcServiceInternals(),
+        new Callable<RequestInspection>() {
+          public RequestInspection call() throws Exception {
+            assert null != QuasiRemoteJdbcServiceFactory.requestInspection;
+            return QuasiRemoteJdbcServiceFactory.requestInspection;
+          }
+        } });
 
     // TODO write the ConnectionInternals implementation
-    connections.add(new Object[] {new Callable<Connection>() {
-      public Connection call() {
-        try {
-          return lpbs();
-        } catch (SQLException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    }, new QuasiRemoteProtobufJdbcServiceInternals(), new Callable<RequestInspection>() {
-      public RequestInspection call() throws Exception {
-        assert null != QuasiRemotePBJdbcServiceFactory.requestInspection;
-        return QuasiRemotePBJdbcServiceFactory.requestInspection;
-      }
-    } });
+    connections.add(
+      new Object[] {
+        new Callable<Connection>() {
+          public Connection call() {
+            try {
+              return lpbs();
+            } catch (SQLException e) {
+              throw new RuntimeException(e);
+            }
+          }
+        },
+        new QuasiRemoteProtobufJdbcServiceInternals(),
+        new Callable<RequestInspection>() {
+          public RequestInspection call() throws Exception {
+            assert null != QuasiRemotePBJdbcServiceFactory.requestInspection;
+            return QuasiRemotePBJdbcServiceFactory.requestInspection;
+          }
+        } });
 
     return connections;
   }
@@ -976,7 +997,7 @@ public class RemoteDriverTest {
   }
 
   /**
-   * Proxy that logs all requests passed into the {@link LocalProtobufService}
+   * Proxy that logs all requests passed into the {@link LocalProtobufService}.
    */
   public static class LoggingLocalProtobufService extends LocalProtobufService
       implements RequestInspection {
@@ -1047,11 +1068,6 @@ public class RemoteDriverTest {
    */
   public static class QuasiRemoteJdbcServiceInternals implements ConnectionInternals {
 
-    /**
-     * Reach into the guts of a quasi-remote connection and pull out the
-     * statement map from the other side.
-     * TODO: refactor tests to replace reflection with package-local access
-     */
     @Override public Cache<Integer, Object>
     getRemoteStatementMap(AvaticaConnection connection) throws Exception {
       Field metaF = AvaticaConnection.class.getDeclaredField("meta");
@@ -1077,11 +1093,6 @@ public class RemoteDriverTest {
       return cache;
     }
 
-    /**
-     * Reach into the guts of a quasi-remote connection and pull out the
-     * connection map from the other side.
-     * TODO: refactor tests to replace reflection with package-local access
-     */
     @Override public Cache<String, Connection>
     getRemoteConnectionMap(AvaticaConnection connection) throws Exception {
       Field metaF = AvaticaConnection.class.getDeclaredField("meta");
@@ -1115,11 +1126,6 @@ public class RemoteDriverTest {
    */
   public static class QuasiRemoteProtobufJdbcServiceInternals implements ConnectionInternals {
 
-    /**
-     * Reach into the guts of a quasi-remote connection and pull out the
-     * statement map from the other side.
-     * TODO: refactor tests to replace reflection with package-local access
-     */
     @Override public Cache<Integer, Object>
     getRemoteStatementMap(AvaticaConnection connection) throws Exception {
       Field metaF = AvaticaConnection.class.getDeclaredField("meta");
@@ -1146,11 +1152,6 @@ public class RemoteDriverTest {
       return cache;
     }
 
-    /**
-     * Reach into the guts of a quasi-remote connection and pull out the
-     * connection map from the other side.
-     * TODO: refactor tests to replace reflection with package-local access
-     */
     @Override public Cache<String, Connection>
     getRemoteConnectionMap(AvaticaConnection connection) throws Exception {
       Field metaF = AvaticaConnection.class.getDeclaredField("meta");
