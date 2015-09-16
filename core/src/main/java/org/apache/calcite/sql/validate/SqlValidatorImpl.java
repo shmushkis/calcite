@@ -3227,7 +3227,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     final SqlValidatorScope groupScope = getGroupScope(select);
     inferUnknownTypes(unknownType, groupScope, groupList);
 
-    groupList.validate(this, groupScope);
+    groupList.validateExpr(this, groupScope);
 
     // Derive the type of each GROUP BY item. We don't need the type, but
     // it resolves functions, and that is necessary for deducing
