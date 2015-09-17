@@ -6010,9 +6010,11 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-886">[CALCITE-886]
    * System functions in GROUP BY clause</a>. */
-  @Test public void testGroupingBySystemFunction() {
+  @Test public void testGroupBySystemFunction() {
     sql("select CURRENT_USER from emp group by CURRENT_USER").ok();
     sql("select CURRENT_USER from emp group by rollup(CURRENT_USER)").ok();
+    sql("select CURRENT_USER from emp group by rollup(CURRENT_USER, ^x^)")
+        .fails("Column 'X' not found in any table");
     sql("select CURRENT_USER from emp group by deptno").ok();
   }
 

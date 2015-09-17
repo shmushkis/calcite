@@ -1212,7 +1212,8 @@ having count(*) > 1;
 
 !ok
 
-# [CALCITE-886] Group by a system function which does not have "()".
+# [CALCITE-886] System functions in the GROUP BY clause
+# Calls to system functions do not have "()", which may confuse the validator.
 select CURRENT_USER as CUSER
 from jdbc_scott.emp
 group by CURRENT_USER;
@@ -1225,7 +1226,8 @@ group by CURRENT_USER;
 
 !ok
 
-# [CALCITE-886] grouping set has a system function which does not have "()"
+# [CALCITE-886] System functions in the GROUP BY clause
+# System function inside a GROUPING SETS.
 select CURRENT_USER as CUSER
 from jdbc_scott.emp
 group by grouping sets(CURRENT_USER);
