@@ -121,14 +121,17 @@ public abstract class EnumerableDefaults {
    * Determines whether all elements of a sequence
    * satisfy a condition.
    */
-  public static <TSource> boolean all(Enumerable<?> enumerable,
+  public static <TSource> boolean all(Enumerable<TSource> enumerable,
       Predicate1<TSource> predicate) {
-    for (Object o : enumerable) {
-      if (!predicate.apply((TSource) o)) {
-        return false;
+    try (Enumerator<TSource> os = enumerable.enumerator()) {
+      while (os.moveNext()) {
+        TSource o = os.current();
+        if (!predicate.apply(o)) {
+          return false;
+        }
       }
+      return true;
     }
-    return true;
   }
 
   /**
@@ -349,7 +352,7 @@ public abstract class EnumerableDefaults {
    * element by using a specified {@code EqualityComparer<TSource>}.
    */
   public static <TSource> boolean contains(Enumerable<TSource> enumerable,
-      TSource element, EqualityComparer comparer) {
+      TSource element, EqualityComparer<TSource> comparer) {
     for (TSource o : enumerable) {
       if (comparer.equal(o, element)) {
         return true;
@@ -2579,7 +2582,7 @@ public abstract class EnumerableDefaults {
           if (list.size() == 1) {
             // when we go from 1 to 2 elements, switch to array list
             TElement element = list.get(0);
-            list = new ArrayList<TElement>();
+            list = new ArrayList<>();
             list.add(element);
           }
           list.add(elementSelector.apply(o));
@@ -2744,25 +2747,21 @@ public abstract class EnumerableDefaults {
       final Enumerable<T0> first, final Enumerable<T1> second,
       final Function2<T0, T1, TResult> resultSelector) {
     return new AbstractEnumerable<TResult>() {
-      @Override
       public Enumerator<TResult> enumerator() {
         return new Enumerator<TResult>() {
           final Enumerator<T0> e1 = first.enumerator();
           final Enumerator<T1> e2 = second.enumerator();
-          @Override
+
           public TResult current() {
             return resultSelector.apply(e1.current(), e2.current());
           }
-          @Override
           public boolean moveNext() {
             return e1.moveNext() && e2.moveNext();
           }
-          @Override
           public void reset() {
             e1.reset();
             e2.reset();
           }
-          @Override
           public void close() {
             e1.close();
             e2.close();

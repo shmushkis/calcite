@@ -244,7 +244,7 @@ public interface ExtendedEnumerable<TSource> {
    * Determines whether a sequence contains a specified
    * element by using a specified {@code EqualityComparer<TSource>}.
    */
-  boolean contains(TSource element, EqualityComparer comparer);
+  boolean contains(TSource element, EqualityComparer<TSource> comparer);
 
   /**
    * Returns the number of elements in a
@@ -270,7 +270,7 @@ public interface ExtendedEnumerable<TSource> {
    * the specified value in a singleton collection if the sequence
    * is empty.
    */
-  Enumerable<TSource>  defaultIfEmpty(TSource value);
+  Enumerable<TSource> defaultIfEmpty(TSource value);
 
   /**
    * Returns distinct elements from a sequence by using

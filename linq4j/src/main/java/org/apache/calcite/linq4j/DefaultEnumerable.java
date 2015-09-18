@@ -175,7 +175,7 @@ public abstract class DefaultEnumerable<T> implements OrderedEnumerable<T> {
     return EnumerableDefaults.contains(getThis(), element);
   }
 
-  public boolean contains(T element, EqualityComparer comparer) {
+  public boolean contains(T element, EqualityComparer<T> comparer) {
     return EnumerableDefaults.contains(getThis(), element, comparer);
   }
 
