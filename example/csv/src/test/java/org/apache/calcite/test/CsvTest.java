@@ -127,6 +127,10 @@ public class CsvTest {
     checkSql("smart", "select name from DEPTS");
   }
 
+  @Test public void testSelectLongMultiplyInteger() throws SQLException {
+    checkSql("model", "select EMPNO * 3 as EMPNO from EMPS where EMPNO = 100");
+  }
+
   @Test public void testCustomTable() throws SQLException {
     checkSql("model-with-custom-table", "select * from CUSTOM_TABLE.EMPS");
   }
@@ -276,7 +280,7 @@ public class CsvTest {
     final int columnCount = metaData.getColumnCount();
     while (resultSet.next()) {
       for (int i = 1;; i++) {
-        out.print(resultSet.getString(i));
+        out.print(resultSet.getObject(i));
         if (i < columnCount) {
           out.print(", ");
         } else {
