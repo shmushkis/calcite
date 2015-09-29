@@ -811,6 +811,16 @@ public class RelOptRulesTest extends RelOptTestBase {
         "select p1 is not distinct from p0 from (values (2, cast(null as integer))) as t(p0, p1)");
   }
 
+  @Test public void testReduceConstantsProjectNullable() throws Exception {
+    HepProgram program = new HepProgramBuilder()
+        .addRuleInstance(ReduceExpressionsRule.PROJECT_INSTANCE)
+        .addRuleInstance(ReduceExpressionsRule.FILTER_INSTANCE)
+        .addRuleInstance(ReduceExpressionsRule.JOIN_INSTANCE)
+        .build();
+
+    checkPlanning(program, "select mgr from emp where mgr=10");
+  }
+
   // see HIVE-9645
   @Test public void testReduceConstantsNullEqualsOne() throws Exception {
     HepProgram program = new HepProgramBuilder()
