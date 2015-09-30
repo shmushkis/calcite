@@ -22,6 +22,7 @@ import org.apache.calcite.avatica.ColumnMetaData;
 
 import java.io.InputStream;
 import java.io.Reader;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URL;
@@ -31,13 +32,13 @@ import java.sql.Clob;
 import java.sql.Date;
 import java.sql.NClob;
 import java.sql.Ref;
+import java.sql.SQLException;
 import java.sql.SQLXML;
 import java.sql.Struct;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
@@ -179,7 +180,20 @@ public abstract class AbstractCursor implements Cursor {
       return new ArrayAccessor(getter, arrayType.component, componentAccessor,
           componentGetter, factory);
     case Types.STRUCT:
-      return new StructAccessor(getter);
+      switch (columnMetaData.type.rep) {
+      case OBJECT:
+        final ColumnMetaData.StructType structType =
+            (ColumnMetaData.StructType) columnMetaData.type;
+        List<Accessor> accessors = new ArrayList<>();
+        for (ColumnMetaData column : structType.columns) {
+          final Getter fieldGetter = new DelegateFieldGetter(getter, column.label);
+          accessors.add(
+              createAccessor(column, fieldGetter, localCalendar, factory));
+        }
+        return new StructAccessor(getter, accessors);
+      default:
+        throw new AssertionError("bad " + columnMetaData.type.rep);
+      }
     case Types.JAVA_OBJECT:
     case Types.OTHER: // e.g. map
       if (columnMetaData.type.name.startsWith("INTERVAL_")) {
@@ -1211,8 +1225,11 @@ public abstract class AbstractCursor implements Cursor {
    * corresponds to {@link java.sql.Types#STRUCT}.
    */
   private static class StructAccessor extends AccessorImpl {
-    public StructAccessor(Getter getter) {
+    private final List<Accessor> fieldAccessors;
+
+    public StructAccessor(Getter getter, List<Accessor> fieldAccessors) {
       super(getter);
+      this.fieldAccessors = fieldAccessors;
     }
 
     @Override public Object getObject() {
@@ -1226,8 +1243,15 @@ public abstract class AbstractCursor implements Cursor {
       } else if (o instanceof List) {
         return new StructImpl((List) o);
       } else {
-        assert o instanceof Object[];
-        return new StructImpl(Arrays.asList((Object[]) o));
+        final List<Object> list = new ArrayList<>();
+        for (Accessor fieldAccessor : fieldAccessors) {
+          try {
+            list.add(fieldAccessor.getObject());
+          } catch (SQLException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        return new StructImpl(list);
       }
     }
   }
@@ -1268,6 +1292,32 @@ public abstract class AbstractCursor implements Cursor {
 
     public boolean wasNull() {
       return slot == null;
+    }
+  }
+
+  /** Implementation of {@link Getter} that returns the value of a given field
+   * of the current contents of another getter. */
+  public class DelegateFieldGetter implements Getter {
+    public final Getter getter;
+    public final String fieldName;
+
+    public DelegateFieldGetter(Getter getter, String fieldName) {
+      this.getter = getter;
+      this.fieldName = fieldName;
+    }
+
+    public Object getObject() {
+      try {
+        final Object o = getter.getObject();
+        final Field field = o.getClass().getField(fieldName);
+        return field.get(getter.getObject());
+      } catch (IllegalAccessException | NoSuchFieldException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    public boolean wasNull() {
+      return getObject() == null;
     }
   }
 }

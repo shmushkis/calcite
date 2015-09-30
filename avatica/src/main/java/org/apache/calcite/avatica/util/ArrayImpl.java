@@ -150,10 +150,10 @@ public class ArrayImpl implements Array {
     final Object[] objects = list.toArray();
     switch (accessor.componentType.id) {
     case Types.ARRAY:
-      final ColumnMetaData.ArrayType arrayType =
-          (ColumnMetaData.ArrayType) accessor.componentType;
+      final AbstractCursor.ArrayAccessor componentAccessor =
+          (AbstractCursor.ArrayAccessor) accessor.componentAccessor;
       for (i = 0; i < objects.length; i++) {
-        objects[i] = new ArrayImpl((List) objects[i], accessor);
+        objects[i] = new ArrayImpl((List) objects[i], componentAccessor);
       }
     }
     return objects;
