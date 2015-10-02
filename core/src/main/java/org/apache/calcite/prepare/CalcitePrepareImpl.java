@@ -808,13 +808,13 @@ public class CalcitePrepareImpl implements CalcitePrepare {
 
   private ColumnMetaData.AvaticaType avaticaType(JavaTypeFactory typeFactory,
       RelDataType type, RelDataType fieldType) {
-    final Type clazz = typeFactory.getJavaClass(Util.first(fieldType, type));
-    final ColumnMetaData.Rep rep = ColumnMetaData.Rep.of(clazz);
-    assert rep != null;
     final String typeName = getTypeName(type);
     if (type.getComponentType() != null) {
       final ColumnMetaData.AvaticaType componentType =
           avaticaType(typeFactory, type.getComponentType(), null);
+      final Type clazz = typeFactory.getJavaClass(type.getComponentType());
+      final ColumnMetaData.Rep rep = ColumnMetaData.Rep.of(clazz);
+      assert rep != null;
       return ColumnMetaData.array(componentType, typeName, rep);
     } else {
       final int typeOrdinal = getTypeOrdinal(type);
@@ -828,6 +828,10 @@ public class CalcitePrepareImpl implements CalcitePrepare {
         }
         return ColumnMetaData.struct(columns);
       default:
+        final Type clazz =
+            typeFactory.getJavaClass(Util.first(fieldType, type));
+        final ColumnMetaData.Rep rep = ColumnMetaData.Rep.of(clazz);
+        assert rep != null;
         return ColumnMetaData.scalar(typeOrdinal, typeName, rep);
       }
     }

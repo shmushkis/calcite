@@ -2204,7 +2204,7 @@ public class JdbcTest {
         .query("select multiset(\n"
             + "  select \"deptno\", \"empid\" from \"hr\".\"emps\") as a\n"
             + "from (values (1))")
-        .returnsUnordered("A=[[10, 100], [20, 200], [10, 150], [10, 110]]");
+        .returnsUnordered("A=[{10, 100}, {20, 200}, {10, 150}, {10, 110}]");
   }
 
   @Test public void testMultisetQueryWithSingleColumn() {
@@ -2245,8 +2245,7 @@ public class JdbcTest {
         .with(CalciteAssert.Config.REGULAR)
         .query("select element(\"employees\") from \"hr\".\"depts\"\n"
             + "where cardinality(\"employees\") < 2")
-        .returnsUnordered(
-            "EXPR$0=Employee [empid: 200, deptno: 20, name: Eric]",
+        .returnsUnordered("EXPR$0={200, 20, Eric, 8000.0, 500}",
             "EXPR$0=null");
   }
 
@@ -4289,10 +4288,9 @@ public class JdbcTest {
         .with(CalciteAssert.Config.REGULAR)
         .query(
             "select \"deptno\", \"employees\"[1] as e from \"hr\".\"depts\"\n")
-        .returns(""
-            + "deptno=10; E=Employee [empid: 100, deptno: 10, name: Bill]\n"
-            + "deptno=30; E=null\n"
-            + "deptno=40; E=Employee [empid: 200, deptno: 20, name: Eric]\n");
+        .returnsUnordered("deptno=10; E={100, 10, Bill, 10000.0, 1000}",
+            "deptno=30; E=null",
+            "deptno=40; E={200, 20, Eric, 8000.0, 500}");
   }
 
   @Test public void testVarcharEquals() {

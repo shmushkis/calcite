@@ -186,7 +186,7 @@ public abstract class AbstractCursor implements Cursor {
             (ColumnMetaData.StructType) columnMetaData.type;
         List<Accessor> accessors = new ArrayList<>();
         for (ColumnMetaData column : structType.columns) {
-          final Getter fieldGetter = new DelegateFieldGetter(getter, column.label);
+          final Getter fieldGetter = new DelegateFieldGetter(getter, column);
           accessors.add(
               createAccessor(column, fieldGetter, localCalendar, factory));
         }
@@ -1299,17 +1299,21 @@ public abstract class AbstractCursor implements Cursor {
    * of the current contents of another getter. */
   public class DelegateFieldGetter implements Getter {
     public final Getter getter;
-    public final String fieldName;
+    private final ColumnMetaData columnMetaData;
 
-    public DelegateFieldGetter(Getter getter, String fieldName) {
+    public DelegateFieldGetter(Getter getter, ColumnMetaData columnMetaData) {
       this.getter = getter;
-      this.fieldName = fieldName;
+      this.columnMetaData = columnMetaData;
     }
 
     public Object getObject() {
+      final Object o = getter.getObject();
+      if (o instanceof Object[]) {
+        Object[] objects = (Object[]) o;
+        return objects[columnMetaData.ordinal];
+      }
       try {
-        final Object o = getter.getObject();
-        final Field field = o.getClass().getField(fieldName);
+        final Field field = o.getClass().getField(columnMetaData.label);
         return field.get(getter.getObject());
       } catch (IllegalAccessException | NoSuchFieldException e) {
         throw new RuntimeException(e);
