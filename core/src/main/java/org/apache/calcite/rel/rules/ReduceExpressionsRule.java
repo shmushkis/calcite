@@ -132,8 +132,7 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
       super(filterClass, relBuilderFactory, "ReduceExpressionsRule(Filter)");
     }
 
-    @Override
-    public void onMatch(RelOptRuleCall call) {
+    @Override public void onMatch(RelOptRuleCall call) {
       final Filter filter = call.rel(0);
       final List<RexNode> expList =
           Lists.newArrayList(filter.getCondition());
@@ -227,17 +226,18 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
       super(projectClass, relBuilderFactory, "ReduceExpressionsRule(Project)");
     }
 
-    @Override
-    public void onMatch(RelOptRuleCall call) {
+    @Override public void onMatch(RelOptRuleCall call) {
       Project project = call.rel(0);
       final RelOptPredicateList predicates =
           RelMetadataQuery.getPulledUpPredicates(project.getInput());
       final List<RexNode> expList =
           Lists.newArrayList(project.getProjects());
       if (reduceExpressions(project, expList, predicates)) {
-        call.transformTo(call.builder().push(
-            project.getInput()).project(
-                expList, project.getRowType().getFieldNames()).build());
+        call.transformTo(
+            call.builder()
+                .push(project.getInput())
+                .project(expList, project.getRowType().getFieldNames())
+                .build());
 
         // New plan is absolutely better than old plan.
         call.getPlanner().setImportance(project, 0.0);
@@ -255,8 +255,7 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
       super(joinClass, relBuilderFactory, "ReduceExpressionsRule(Join)");
     }
 
-    @Override
-    public void onMatch(RelOptRuleCall call) {
+    @Override public void onMatch(RelOptRuleCall call) {
       final Join join = call.rel(0);
       final List<RexNode> expList = Lists.newArrayList(join.getCondition());
       final int fieldCount = join.getLeft().getRowType().getFieldCount();
@@ -302,8 +301,7 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
       super(calcClass, relBuilderFactory, "ReduceExpressionsRule(Calc)");
     }
 
-    @Override
-    public void onMatch(RelOptRuleCall call) {
+    @Override public void onMatch(RelOptRuleCall call) {
       Calc calc = call.rel(0);
       RexProgram program = calc.getProgram();
       final List<RexNode> exprList = program.getExprList();
@@ -353,8 +351,8 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
               list.get(index).getIndex(),
               program.getOutputRowType().getFieldNames().get(k++));
         }
-        call.transformTo(calc.copy(
-            calc.getTraitSet(), calc.getInput(), builder.getProgram()));
+        call.transformTo(
+            calc.copy(calc.getTraitSet(), calc.getInput(), builder.getProgram()));
 
         // New plan is absolutely better than old plan.
         call.getPlanner().setImportance(calc, 0.0);
