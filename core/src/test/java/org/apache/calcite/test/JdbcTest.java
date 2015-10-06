@@ -2212,7 +2212,7 @@ public class JdbcTest {
         .query("select multiset(\n"
             + "  select \"deptno\" from \"hr\".\"emps\") as a\n"
             + "from (values (1))")
-        .returnsUnordered("A=[10, 20, 10, 10]");
+        .returnsUnordered("A=[{10}, {20}, {10}, {10}]");
   }
 
   @Ignore("unnest does not apply to array. should it?")
@@ -2236,8 +2236,8 @@ public class JdbcTest {
             + " select \"employees\" from \"hr\".\"depts\"\n"
             + " where \"deptno\" = 10)")
         .returnsUnordered(
-            "EXPR$0=Employee [empid: 100, deptno: 10, name: Bill]",
-            "EXPR$0=Employee [empid: 150, deptno: 10, name: Sebastian]");
+            "empid=100; deptno=10; name=Bill; salary=10000.0; commission=1000",
+            "empid=150; deptno=10; name=Sebastian; salary=7000.0; commission=null");
   }
 
   @Test public void testArrayElement() {

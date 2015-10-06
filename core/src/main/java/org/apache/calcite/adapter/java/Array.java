@@ -32,7 +32,7 @@ public @interface Array {
   Class component();
 
   /** Whether components may be null. */
-  boolean componentIsNullable() default true;
+  boolean componentIsNullable() default false;
 
   /** Maximum number of elements in the array. -1 means no maximum. */
   long maximumCardinality() default -1L;

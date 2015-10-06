@@ -186,7 +186,10 @@ public abstract class AbstractCursor implements Cursor {
             (ColumnMetaData.StructType) columnMetaData.type;
         List<Accessor> accessors = new ArrayList<>();
         for (ColumnMetaData column : structType.columns) {
-          final Getter fieldGetter = new DelegateFieldGetter(getter, column);
+          final Getter fieldGetter =
+              structType.columns.size() == 1
+                  ? getter
+                  : new StructGetter(getter, column);
           accessors.add(
               createAccessor(column, fieldGetter, localCalendar, factory));
         }
@@ -1297,11 +1300,11 @@ public abstract class AbstractCursor implements Cursor {
 
   /** Implementation of {@link Getter} that returns the value of a given field
    * of the current contents of another getter. */
-  public class DelegateFieldGetter implements Getter {
+  public class StructGetter implements Getter {
     public final Getter getter;
     private final ColumnMetaData columnMetaData;
 
-    public DelegateFieldGetter(Getter getter, ColumnMetaData columnMetaData) {
+    public StructGetter(Getter getter, ColumnMetaData columnMetaData) {
       this.getter = getter;
       this.columnMetaData = columnMetaData;
     }
