@@ -30,7 +30,7 @@ For a full list of releases, see
 {: #v1-4-0}
 
 In addition to a large number of bug fixes and minor enhancements,
-this release includes improvements to lattices and matierlized views,
+this release includes improvements to lattices and materialized views,
 and adds a builder API so that you can easily create relational
 algebra expressions.
 

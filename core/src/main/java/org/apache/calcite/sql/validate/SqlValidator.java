@@ -102,7 +102,7 @@ import java.util.Map;
  */
 public interface SqlValidator {
   /** Whether to follow the SQL standard strictly. */
-  boolean STRICT = Util.first(Boolean.getBoolean("calcite.strict.sql"), false);
+  boolean STRICT = Util.getBooleanProperty("calcite.strict.sql");
 
   //~ Methods ----------------------------------------------------------------
 
