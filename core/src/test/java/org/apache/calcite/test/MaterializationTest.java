@@ -29,6 +29,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.JsonBuilder;
+import org.apache.calcite.util.TryThreadLocal;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -106,8 +107,7 @@ public class MaterializationTest {
   }
 
   @Test public void testFilterQueryOnProjectView() {
-    try {
-      Prepare.THREAD_TRIM.set(true);
+    try (final TryThreadLocal.Memo ignored = Prepare.THREAD_TRIM.push(true)) {
       MaterializationService.setThreadLocal();
       CalciteAssert.that()
           .withMaterializations(
@@ -119,8 +119,6 @@ public class MaterializationTest {
           .enableMaterializations(true)
           .explainContains("EnumerableTableScan(table=[[hr, m0]])")
           .sameResultWithMaterializationsDisabled();
-    } finally {
-      Prepare.THREAD_TRIM.set(false);
     }
   }
 
@@ -134,8 +132,7 @@ public class MaterializationTest {
    * definition. */
   private void checkMaterialize(String materialize, String query, String model,
       Function<ResultSet, Void> explainChecker) {
-    try {
-      Prepare.THREAD_TRIM.set(true);
+    try (final TryThreadLocal.Memo ignored = Prepare.THREAD_TRIM.push(true)) {
       MaterializationService.setThreadLocal();
       CalciteAssert.that()
           .withMaterializations(model, "m0", materialize)
@@ -143,8 +140,6 @@ public class MaterializationTest {
           .enableMaterializations(true)
           .explainMatches("", explainChecker)
           .sameResultWithMaterializationsDisabled();
-    } finally {
-      Prepare.THREAD_TRIM.set(false);
     }
   }
 
@@ -152,16 +147,13 @@ public class MaterializationTest {
    * definition. */
   private void checkNoMaterialize(String materialize, String query,
       String model) {
-    try {
-      Prepare.THREAD_TRIM.set(true);
+    try (final TryThreadLocal.Memo ignored = Prepare.THREAD_TRIM.push(true)) {
       MaterializationService.setThreadLocal();
       CalciteAssert.that()
           .withMaterializations(model, "m0", materialize)
           .query(query)
           .enableMaterializations(true)
           .explainContains("EnumerableTableScan(table=[[hr, emps]])");
-    } finally {
-      Prepare.THREAD_TRIM.set(false);
     }
   }
 
@@ -790,8 +782,7 @@ public class MaterializationTest {
    * Pre-populated materializations</a>. */
   @Test public void testPrePopulated() {
     String q = "select \"deptno\" from \"emps\"";
-    try {
-      Prepare.THREAD_TRIM.set(true);
+    try (final TryThreadLocal.Memo ignored = Prepare.THREAD_TRIM.push(true)) {
       MaterializationService.setThreadLocal();
       CalciteAssert.that()
           .withMaterializations(
@@ -811,8 +802,6 @@ public class MaterializationTest {
           .enableMaterializations(true)
           .explainMatches("", CONTAINS_LOCATIONS)
           .sameResultWithMaterializationsDisabled();
-    } finally {
-      Prepare.THREAD_TRIM.set(false);
     }
   }
 }
