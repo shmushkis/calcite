@@ -1303,8 +1303,12 @@ public class RexUtil {
     }
     switch (a.getKind()) {
     case NOT:
-      // NOT x IS TRUE ==> x IS NOT TRUE
+      // (NOT x) IS TRUE ==> x IS FALSE
       // Similarly for IS NOT TRUE, IS FALSE, etc.
+      //
+      // Note that
+      //   (NOT x) IS TRUE !=> x IS FALSE
+      // because of null values.
       return simplify(rexBuilder,
           rexBuilder.makeCall(op(kind.negate()),
               ((RexCall) a).getOperands().get(0)));

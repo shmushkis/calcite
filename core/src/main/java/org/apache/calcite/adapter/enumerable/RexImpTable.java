@@ -187,8 +187,7 @@ public class RexImpTable {
   public static final MemberExpression BOXED_TRUE_EXPR =
       Expressions.field(null, Boolean.class, "TRUE");
 
-  private final Map<SqlOperator, CallImplementor> map =
-      new HashMap<SqlOperator, CallImplementor>();
+  private final Map<SqlOperator, CallImplementor> map = new HashMap<>();
   private final Map<SqlAggFunction, Supplier<? extends AggImplementor>> aggMap =
       Maps.newHashMap();
   private final Map<SqlAggFunction, Supplier<? extends WinAggImplementor>>
@@ -351,13 +350,8 @@ public class RexImpTable {
       public T get() {
         try {
           return constructor.newInstance();
-        } catch (InstantiationException e) {
-          throw new IllegalStateException(
-              "Unable to instantiate aggregate implementor " + constructor, e);
-        } catch (IllegalAccessException e) {
-          throw new IllegalStateException(
-              "Error while creating aggregate implementor " + constructor, e);
-        } catch (InvocationTargetException e) {
+        } catch (InstantiationException | IllegalAccessException
+            | InvocationTargetException e) {
           throw new IllegalStateException(
               "Error while creating aggregate implementor " + constructor, e);
         }
@@ -637,7 +631,7 @@ public class RexImpTable {
   private static List<RexNode> harmonize(
       final RexToLixTranslator translator, final List<RexNode> operands) {
     int nullCount = 0;
-    final List<RelDataType> types = new ArrayList<RelDataType>();
+    final List<RelDataType> types = new ArrayList<>();
     final RelDataTypeFactory typeFactory =
         translator.builder.getTypeFactory();
     for (RexNode operand : operands) {
@@ -663,7 +657,7 @@ public class RexImpTable {
       return operands;
     }
     assert (nullCount > 0) == type.isNullable();
-    final List<RexNode> list = new ArrayList<RexNode>();
+    final List<RexNode> list = new ArrayList<>();
     for (RexNode operand : operands) {
       list.add(
           translator.builder.ensureType(type, operand, false));
@@ -746,7 +740,7 @@ public class RexImpTable {
       NullAs nullAs,
       NullPolicy nullPolicy,
       NotNullImplementor implementor) {
-    final List<Expression> list = new ArrayList<Expression>();
+    final List<Expression> list = new ArrayList<>();
     switch (nullAs) {
     case NULL:
       // v0 == null || v1 == null ? null : f(v0, v1)
@@ -797,7 +791,7 @@ public class RexImpTable {
       // The cases with setNullable above might not help since the same
       // RexNode can be referred via multiple ways: RexNode itself, RexLocalRef,
       // and may be others.
-      Map<RexNode, Boolean> nullable = new HashMap<RexNode, Boolean>();
+      final Map<RexNode, Boolean> nullable = new HashMap<>();
       if (nullPolicy == NullPolicy.STRICT) {
         // The arguments should be not nullable if STRICT operator is computed
         // in nulls NOT_POSSIBLE mode
@@ -1134,7 +1128,7 @@ public class RexImpTable {
         AggAddContext add) {
       List<Expression> acc = add.accumulator();
       List<Expression> aggArgs = add.arguments();
-      List<Expression> args = new ArrayList<Expression>(aggArgs.size() + 1);
+      List<Expression> args = new ArrayList<>(aggArgs.size() + 1);
       args.add(acc.get(0));
       args.addAll(aggArgs);
       add.currentBlock().add(
@@ -1843,42 +1837,9 @@ public class RexImpTable {
         return translator.translate(operands.get(0),
             negate ? NullAs.IS_NOT_NULL : NullAs.IS_NULL);
       } else {
-        switch (0) {
-        case 0:
-          // 5 failures in JdbcTest:
-          //   testNotExistsCorrelated
-          //   testRunScalar
-          //   testRunSubquery
-          //   testScalarSubquery
-          //   testRunMisc
-          // 2 failures in CalciteSqlOperatorTest
-          //   testIsNotTrueOperator
-          //   testIsNotFalseOperator
-          return maybeNegate(
-              negate == seek,
-              translator.translate(
-                  operands.get(0),
-                  negate == seek ? NullAs.TRUE : NullAs.FALSE));
-        case 1:
-          // 11 failures in JdbcTest:
-          //   testNotExistsCorrelated
-          //   testRunScalar
-          //   testRunSubquery
-          //   testScalarSubquery
-          //   testRunMisc
-          //   testWhereNot
-          //   testHavingNot2
-          //   testNotInQueryWithNull
-          // ReflectiveSchemaTest.testJavaBoolean ("is not false" fails)
-          // CalciteSqlOperatorTest succeeds
-          return maybeNegate(negate,
-              translator.translate(operands.get(0), NullAs.FALSE));
-        default:
-          // testNotIn, testNotExistsCorrelated, testNotInEmptyQuery,
-          // testWhereNullable, testPreparedStatement, testTrimFieldsOver
-          return maybeNegate(negate,
-              translator.translate(operands.get(0), NullAs.TRUE));
-        }
+        return maybeNegate(negate == seek,
+            translator.translate(operands.get(0),
+                seek ? NullAs.FALSE : NullAs.TRUE));
       }
     }
   }
