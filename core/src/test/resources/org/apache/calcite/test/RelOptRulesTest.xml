@@ -4113,6 +4113,17 @@ LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$
         LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
 ]]>
         </Resource>
+        <Resource name="planAfter">
+            <![CDATA[
+LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8], DEPTNO0=[$9], NAME=[$10])
+  LogicalSort(sort0=[$5], dir0=[ASC], fetch=[10])
+    LogicalJoin(condition=[=($7, $9)], joinType=[left])
+      LogicalSort(sort0=[$5], dir0=[ASC], fetch=[10])
+        LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+      LogicalProject(DEPTNO=[$0], NAME=[$1])
+        LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+]]>
+        </Resource>
     </TestCase>
     <TestCase name="testExpandProjectScalar">
         <Resource name="sql">
@@ -4128,19 +4139,17 @@ LogicalProject(DEPTNO=[$7])
     LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 })])
   LogicalTableScan(table=[[CATALOG, SALES, EMP]])
->>>>>>> f5baea9... Implement scalar sub-query in project
 ]]>
         </Resource>
         <Resource name="planAfter">
             <![CDATA[
-<<<<<<< HEAD
-LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8], DEPTNO0=[$9], NAME=[$10])
-  LogicalSort(sort0=[$5], dir0=[ASC], fetch=[10])
-    LogicalJoin(condition=[=($7, $9)], joinType=[left])
-      LogicalSort(sort0=[$5], dir0=[ASC], fetch=[10])
-        LogicalTableScan(table=[[CATALOG, SALES, EMP]])
-      LogicalProject(DEPTNO=[$0], NAME=[$1])
-        LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+LogicalProject(EMPNO=[$0], D=[$9])
+  LogicalJoin(condition=[true], joinType=[left])
+    LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+    LogicalAggregate(group=[{}], agg#0=[SINGLE_VALUE($0)])
+      LogicalProject(DEPTNO=[$7])
+        LogicalFilter(condition=[<($0, 20)])
+          LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 ]]>
         </Resource>
     </TestCase>
@@ -4229,14 +4238,6 @@ LogicalSort(sort0=[$0], dir0=[ASC], fetch=[10])
       LogicalProject(NAME=[$0])
         LogicalProject(NAME=[$1])
           LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
-=======
-LogicalProject(EMPNO=[$0], D=[$9])
-  LogicalJoin(condition=[true], joinType=[left])
-    LogicalTableScan(table=[[CATALOG, SALES, EMP]])
-    LogicalAggregate(group=[{}], agg#0=[SINGLE_VALUE($0)])
-      LogicalProject(DEPTNO=[$7])
-        LogicalFilter(condition=[<($0, 20)])
-          LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 ]]>
         </Resource>
     </TestCase>
