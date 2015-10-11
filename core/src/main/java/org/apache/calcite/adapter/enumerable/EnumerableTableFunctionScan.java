@@ -69,20 +69,14 @@ public class EnumerableTableFunctionScan extends TableFunctionScan
     boolean array = false;
     if (getElementType() == null) {
       format = JavaRowFormat.ARRAY;
+    } else if (rowType.getFieldCount() == 1 && isQueryable()) {
+        format = JavaRowFormat.SCALAR;
     } else if (getElementType() instanceof Class
         && Object[].class.isAssignableFrom((Class) getElementType())) {
-      if (rowType.getFieldCount() == 1 && isQueryable()) {
-        format = JavaRowFormat.SCALAR;
-      } else {
-        array = true;
-        format = JavaRowFormat.ARRAY;
-      }
+      array = true;
+      format = JavaRowFormat.ARRAY;
     } else {
-      if (rowType.getFieldCount() == 1 && isQueryable()) {
-        format = JavaRowFormat.SCALAR;
-      } else {
-        format = JavaRowFormat.CUSTOM;
-      }
+      format = JavaRowFormat.CUSTOM;
     }
     final PhysType physType =
         PhysTypeImpl.of(implementor.getTypeFactory(), getRowType(), format,
