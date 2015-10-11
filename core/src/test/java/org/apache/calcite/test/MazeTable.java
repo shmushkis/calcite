@@ -62,7 +62,9 @@ public class MazeTable extends AbstractTable implements ScannableTable {
     final Maze maze = new Maze(width, height);
     final PrintWriter pw = new PrintWriter(System.out);
     maze.layout(random, pw);
-    maze.print(pw, true);
+    if (Maze.DEBUG) {
+      maze.print(pw, true);
+    }
     return new AbstractEnumerable<Object[]>() {
       int i = -1;
 
