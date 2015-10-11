@@ -463,19 +463,24 @@ public class JdbcTest {
    */
   @Test public void testTableFunction2()
       throws SQLException, ClassNotFoundException {
-    Connection connection =
-        DriverManager.getConnection("jdbc:calcite:");
+    Connection connection = DriverManager.getConnection("jdbc:calcite:");
     CalciteConnection calciteConnection =
         connection.unwrap(CalciteConnection.class);
     SchemaPlus rootSchema = calciteConnection.getRootSchema();
     SchemaPlus schema = rootSchema.add("s", new AbstractSchema());
-    final TableFunction table =
-        TableFunctionImpl.create(MAZE_METHOD);
+    final TableFunction table = TableFunctionImpl.create(MAZE_METHOD);
     schema.add("Maze", table);
     ResultSet resultSet = connection.createStatement().executeQuery("select *\n"
-        + "from table(\"s\".\"Maze\"(5, 2, 1)) as t(s)");
+        + "from table(\"s\".\"Maze\"(5, 3, 1)) as t(s)");
     assertThat(CalciteAssert.toString(resultSet),
-        equalTo("N=4; C=abcd\n"));
+        equalTo(""
+            + "S=+--+--+--+--+--+\n"
+            + "S=|        |     |\n"
+            + "S=+--+  +--+--+  +\n"
+            + "S=|     |  |     |\n"
+            + "S=+  +--+  +--+  +\n"
+            + "S=|              |\n"
+            + "S=+--+--+--+--+--+\n"));
   }
 
   /**
@@ -4315,9 +4320,9 @@ public class JdbcTest {
     CalciteAssert.that()
         .with(CalciteAssert.Config.REGULAR)
         .query(
-            "select \"deptno\", \"employees\"[1] as e from \"hr\".\"depts\"\n")
-        .returnsUnordered("deptno=10; E={100, 10, Bill, 10000.0, 1000}",
-            "deptno=30; E=null",
+            "select \"deptno\", \"employees\"[1] as e from \"hr\".\"depts\"\n").returnsUnordered(
+        "deptno=10; E={100, 10, Bill, 10000.0, 1000}",
+        "deptno=30; E=null",
             "deptno=40; E={200, 20, Eric, 8000.0, 500}");
   }
 
