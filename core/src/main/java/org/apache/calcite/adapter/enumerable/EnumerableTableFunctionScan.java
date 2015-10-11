@@ -27,6 +27,9 @@ import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.metadata.RelColumnMapping;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.QueryableTable;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.util.BuiltInMethod;
 
 import java.lang.reflect.Type;
 import java.util.List;
@@ -59,19 +62,30 @@ public class EnumerableTableFunctionScan extends TableFunctionScan
   public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
     BlockBuilder bb = new BlockBuilder();
      // Non-array user-specified types are not supported yet
+    final JavaRowFormat format;
+    boolean array = false;
+    if (getElementType() == null) {
+      format = JavaRowFormat.ARRAY;
+    } else if (getElementType() instanceof Class
+        && Object[].class.isAssignableFrom((Class) getElementType())) {
+      array = true;
+      format = JavaRowFormat.ARRAY;
+    } else {
+      format = JavaRowFormat.CUSTOM;
+    }
     final PhysType physType =
-        PhysTypeImpl.of(
-            implementor.getTypeFactory(),
-            getRowType(),
-            getElementType() == null /* e.g. not known */
-            || (getElementType() instanceof Class
-                && Object[].class.isAssignableFrom((Class) getElementType()))
-            ? JavaRowFormat.ARRAY
-            : JavaRowFormat.CUSTOM);
+        PhysTypeImpl.of(implementor.getTypeFactory(), getRowType(), format,
+            false);
     RexToLixTranslator t = RexToLixTranslator.forAggregation(
         (JavaTypeFactory) getCluster().getTypeFactory(), bb, null);
     t = t.setCorrelates(implementor.allCorrelateVariables);
-    final Expression translated = t.translate(getCall());
+    Expression translated = t.translate(getCall());
+    if (array
+        && rowType.getFieldCount() == 1
+        && !(getTable().unwrap(Table.class) instanceof QueryableTable)) {
+      translated =
+          Expressions.call(null, BuiltInMethod.SLICE0.method, translated);
+    }
     bb.add(Expressions.return_(null, translated));
     return implementor.result(physType, bb.toBlock());
   }

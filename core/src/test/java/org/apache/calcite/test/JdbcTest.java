@@ -62,6 +62,7 @@ import org.apache.calcite.runtime.SqlFunctions;
 import org.apache.calcite.schema.ModifiableTable;
 import org.apache.calcite.schema.ModifiableView;
 import org.apache.calcite.schema.QueryableTable;
+import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaFactory;
 import org.apache.calcite.schema.SchemaPlus;
@@ -170,6 +171,9 @@ import static org.junit.Assert.fail;
 public class JdbcTest {
   public static final Method GENERATE_STRINGS_METHOD =
       Types.lookupMethod(JdbcTest.class, "generateStrings", Integer.class);
+
+  public static final Method MAZE_METHOD =
+      Types.lookupMethod(MazeTable.class, "generate", int.class, int.class, int.class);
 
   public static final Method MULTIPLICATION_TABLE_METHOD =
       Types.lookupMethod(JdbcTest.class, "multiplicationTable", int.class,
@@ -449,6 +453,27 @@ public class JdbcTest {
     ResultSet resultSet = connection.createStatement().executeQuery("select *\n"
         + "from table(\"s\".\"GenerateStrings\"(5)) as t(n, c)\n"
         + "where char_length(c) > 3");
+    assertThat(CalciteAssert.toString(resultSet),
+        equalTo("N=4; C=abcd\n"));
+  }
+
+  /**
+   * Tests a table function that implements {@link ScannableTable} and returns
+   * a single column. It also happens to generate a maze.
+   */
+  @Test public void testTableFunction2()
+      throws SQLException, ClassNotFoundException {
+    Connection connection =
+        DriverManager.getConnection("jdbc:calcite:");
+    CalciteConnection calciteConnection =
+        connection.unwrap(CalciteConnection.class);
+    SchemaPlus rootSchema = calciteConnection.getRootSchema();
+    SchemaPlus schema = rootSchema.add("s", new AbstractSchema());
+    final TableFunction table =
+        TableFunctionImpl.create(MAZE_METHOD);
+    schema.add("Maze", table);
+    ResultSet resultSet = connection.createStatement().executeQuery("select *\n"
+        + "from table(\"s\".\"Maze\"(5, 2, 1)) as t(s)");
     assertThat(CalciteAssert.toString(resultSet),
         equalTo("N=4; C=abcd\n"));
   }
@@ -7050,7 +7075,7 @@ public class JdbcTest {
   private static QueryableTable oneThreePlus(String s) {
     List<Integer> items;
     // Argument is null in case SQL contains function call with expression.
-    // Then the engine calls a function with null argumets to get getRowType.
+    // Then the engine calls a function with null arguments to get getRowType.
     if (s == null) {
       items = ImmutableList.of();
     } else {
@@ -7058,10 +7083,11 @@ public class JdbcTest {
       items = ImmutableList.of(1, 3, latest);
     }
     final Enumerable<Integer> enumerable = Linq4j.asEnumerable(items);
-    return new AbstractQueryableTable(Object[].class) {
-      public Queryable<Integer> asQueryable(
+    return new AbstractQueryableTable(Integer.class) {
+      public <E> Queryable<E> asQueryable(
           QueryProvider queryProvider, SchemaPlus schema, String tableName) {
-        return enumerable.asQueryable();
+        //noinspection unchecked
+        return (Queryable<E>) enumerable.asQueryable();
       }
 
       public RelDataType getRowType(RelDataTypeFactory typeFactory) {
