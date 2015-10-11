@@ -90,7 +90,9 @@ public class MazeTable extends AbstractTable implements ScannableTable {
             return true;
           }
 
-          public void reset() {}
+          public void reset() {
+            i = -1;
+          }
 
           public void close() {}
         };
