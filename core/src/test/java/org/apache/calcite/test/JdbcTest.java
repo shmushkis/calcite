@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.test;
 
+import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.clone.CloneSchema;
 import org.apache.calcite.adapter.generate.RangeTable;
 import org.apache.calcite.adapter.java.AbstractQueryableTable;
@@ -173,7 +174,8 @@ public class JdbcTest {
       Types.lookupMethod(JdbcTest.class, "generateStrings", Integer.class);
 
   public static final Method MAZE_METHOD =
-      Types.lookupMethod(MazeTable.class, "generate", int.class, int.class, int.class);
+      Types.lookupMethod(MazeTable.class, "generate", int.class, int.class,
+          int.class);
 
   public static final Method MULTIPLICATION_TABLE_METHOD =
       Types.lookupMethod(JdbcTest.class, "multiplicationTable", int.class,
@@ -7113,6 +7115,27 @@ public class JdbcTest {
   public static class TestStaticTableFunction {
     public static QueryableTable eval(String s) {
       return oneThreePlus(s);
+    }
+  }
+
+  /** The real MazeTable may be found in example/function. This is a cut-down
+   * version to support a test. */
+  public static class MazeTable extends AbstractTable
+      implements ScannableTable {
+
+    public static ScannableTable generate(int width, int height, int seed) {
+      return new MazeTable();
+    }
+
+    public RelDataType getRowType(RelDataTypeFactory typeFactory) {
+      return typeFactory.builder()
+          .add("S", SqlTypeName.VARCHAR, 12)
+          .build();
+    }
+
+    public Enumerable<Object[]> scan(DataContext root) {
+      Object[][] rows = {{"abcde"}, {"xyz"}};
+      return Linq4j.asEnumerable(rows);
     }
   }
 }
