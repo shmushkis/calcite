@@ -461,9 +461,9 @@ public class JdbcTest {
 
   /**
    * Tests a table function that implements {@link ScannableTable} and returns
-   * a single column. It also happens to generate a maze.
+   * a single column.
    */
-  @Test public void testTableFunction2()
+  @Test public void testScannableTableFunction()
       throws SQLException, ClassNotFoundException {
     Connection connection = DriverManager.getConnection("jdbc:calcite:");
     CalciteConnection calciteConnection =
@@ -472,17 +472,12 @@ public class JdbcTest {
     SchemaPlus schema = rootSchema.add("s", new AbstractSchema());
     final TableFunction table = TableFunctionImpl.create(MAZE_METHOD);
     schema.add("Maze", table);
-    ResultSet resultSet = connection.createStatement().executeQuery("select *\n"
-        + "from table(\"s\".\"Maze\"(5, 3, 1)) as t(s)");
-    assertThat(CalciteAssert.toString(resultSet),
-        equalTo(""
-            + "S=+--+--+--+--+--+\n"
-            + "S=|        |     |\n"
-            + "S=+--+  +--+--+  +\n"
-            + "S=|     |  |     |\n"
-            + "S=+  +--+  +--+  +\n"
-            + "S=|              |\n"
-            + "S=+--+--+--+--+--+\n"));
+    final String sql = "select *\n"
+        + "from table(\"s\".\"Maze\"(5, 3, 1)) as t(s)";
+    ResultSet resultSet = connection.createStatement().executeQuery(sql);
+    final String result = "S=abcde\n"
+        + "S=xyz\n";
+    assertThat(CalciteAssert.toString(resultSet), equalTo(result));
   }
 
   /**
