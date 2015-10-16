@@ -478,6 +478,19 @@ LogicalProject(EXPR$0=[1])
 ]]>
         </Resource>
     </TestCase>
+    <TestCase name="testIntervalLiteral">
+        <Resource name="sql">
+            <![CDATA[select cast(empno as Integer) * (INTERVAL '1' DAY)
+from emp
+]]>
+        </Resource>
+        <Resource name="plan">
+            <![CDATA[
+LogicalProject(EXPR$0=[*(CAST($0):INTEGER NOT NULL, 86400000)])
+  LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+]]>
+        </Resource>
+    </TestCase>
     <TestCase name="testSelectDistinct">
         <Resource name="sql">
             <![CDATA[select distinct sal + 5 from emp]]>

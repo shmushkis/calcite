@@ -59,6 +59,11 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
     check("select 1 from emp", "${plan}");
   }
 
+  @Test public void testIntervalLiteral() {
+    check("select cast(empno as Integer) * (INTERVAL '1' DAY)\n"
+        + "from emp", "${plan}");
+  }
+
   @Test public void testAliasList() {
     check(
         "select a + b from (\n"
