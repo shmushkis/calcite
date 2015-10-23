@@ -1089,4 +1089,19 @@ group by deptno;
 
 !ok
 
+# [CALCITE-922] Value of INTERVAL literal
+select deptno * interval '2' day as d2,
+ deptno * interval -'3' hour as h3
+from "scott".dept;
++-----+------+
+| D2  | H3   |
++-----+------+
+| +20 | -30  |
+| +40 | -60  |
+| +60 | -90  |
+| +80 | -120 |
++-----+------+
+(4 rows)
+!ok
+
 # End misc.oq
