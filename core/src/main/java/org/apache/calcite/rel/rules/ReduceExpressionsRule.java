@@ -61,10 +61,13 @@ import org.apache.calcite.util.Stacks;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -516,56 +519,46 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
     // (e.g. "WHERE deptno = 1 AND deptno = 1")
     // (3) It will return false if there are inconsistent constraints (e.g.
     // "WHERE deptno = 1 AND deptno = 2")
-    Map<RexNode, RexLiteral> builder = Maps.newHashMap();
-    boolean findUsefulConstants = true;
+    final Multimap<RexNode, RexLiteral> multimap = LinkedListMultimap.create();
     for (RexNode predicate : predicates.pulledUpPredicates) {
-      if (predicate.getKind().equals(SqlKind.EQUALS)) {
-        final List<RexNode> operands = ((RexCall) predicate).getOperands();
-        if (operands.size() != 2) {
-          findUsefulConstants = false;
-          break;
-        } else {
-          if (operands.get(1) instanceof RexLiteral) {
-            RexLiteral literal = builder.get(operands.get(0));
-            if (literal == null) {
-              builder.put(operands.get(0), (RexLiteral) operands.get(1));
-            } else {
-              RexLiteral newLiteral = (RexLiteral) operands.get(1);
-              if (!literal.getValue().equals(newLiteral)) {
-                // should return false
-                // we bail out, the reduce filter expression rule should be able
-                // to deal with this.
-                findUsefulConstants = false;
-                break;
-              }
-            }
-          } else if (operands.get(0) instanceof RexLiteral) {
-            RexLiteral literal = builder.get(operands.get(1));
-            if (literal == null) {
-              builder.put(operands.get(1), (RexLiteral) operands.get(0));
-            } else {
-              RexLiteral newLiteral = (RexLiteral) operands.get(0);
-              if (!literal.getValue().equals(newLiteral)) {
-                // should return false
-                // we bail out, the reduce filter expression rule should be able
-                // to deal with this.
-                findUsefulConstants = false;
-                break;
-              }
-            }
-          } else {
-            findUsefulConstants = false;
-            break;
-          }
-        }
-      } else {
-        findUsefulConstants = false;
+      if (!gatherConstraints(multimap, predicate)) {
+        return ImmutableMap.of();
       }
     }
-    if (!findUsefulConstants) {
-      builder = Maps.newHashMap();
+    final ImmutableMap.Builder<RexNode, RexLiteral> builder =
+        ImmutableMap.builder();
+    for (Map.Entry<RexNode, Collection<RexLiteral>> entry
+        : multimap.asMap().entrySet()) {
+      // If collection has more than one element, the same column is
+      // constrained to different values, which is not satisfiable.
+      final Collection<RexLiteral> values = entry.getValue();
+      if (values.size() == 1) {
+        builder.put(entry.getKey(), Iterables.getOnlyElement(values));
+      }
     }
-    return ImmutableMap.copyOf(builder);
+    return builder.build();
+  }
+
+  private static boolean gatherConstraints(Multimap<RexNode, RexLiteral> map,
+      RexNode predicate) {
+    if (predicate.getKind() != SqlKind.EQUALS) {
+      return false;
+    }
+    final List<RexNode> operands = ((RexCall) predicate).getOperands();
+    if (operands.size() != 2) {
+      return false;
+    }
+    final RexNode left = operands.get(0);
+    final RexNode right = operands.get(1);
+    if (right instanceof RexLiteral) {
+      map.put(left, (RexLiteral) right);
+      return true;
+    }
+    if (left instanceof RexLiteral) {
+      map.put(right, (RexLiteral) left);
+      return true;
+    }
+    return false;
   }
 
   /** Pushes predicates into a CASE.

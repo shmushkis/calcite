@@ -4213,4 +4213,19 @@ LogicalSort(sort0=[$0], dir0=[ASC], fetch=[10])
 ]]>
         </Resource>
     </TestCase>
+    <TestCase name="testReduceConstantsDup2">
+        <Resource name="sql">
+            <![CDATA[select *
+from emp
+where deptno=7 and deptno=8
+and empno = 10 and mgr is null and empno = 10]]>
+        </Resource>
+        <Resource name="planBefore">
+            <![CDATA[
+LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8])
+  LogicalFilter(condition=[AND(=($7, 7), =($7, 8), =($0, 10), IS NULL($3), =($0, 10))])
+    LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+]]>
+        </Resource>
+    </TestCase>
 </Root>
