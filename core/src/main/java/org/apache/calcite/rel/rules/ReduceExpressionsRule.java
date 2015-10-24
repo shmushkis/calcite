@@ -510,15 +510,60 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
     // We cannot use an ImmutableMap.Builder here. If there are multiple entries
     // with the same key (e.g. "WHERE deptno = 1 AND deptno = 2"), it doesn't
     // matter which we take, so the latter will replace the former.
-    final Map<RexNode, RexLiteral> builder = Maps.newHashMap();
+    // The basic idea is to find all the pairs of RexNode = RexLiteral
+    // (1) If 'predicates' contain a non-EQUALS, we bail out.
+    // (2) It is OK if a RexNode is equal to the same RexLiteral several times,
+    // (e.g. "WHERE deptno = 1 AND deptno = 1")
+    // (3) It will return false if there are inconsistent constraints (e.g.
+    // "WHERE deptno = 1 AND deptno = 2")
+    Map<RexNode, RexLiteral> builder = Maps.newHashMap();
+    boolean findUsefulConstants = true;
     for (RexNode predicate : predicates.pulledUpPredicates) {
-      switch (predicate.getKind()) {
-      case EQUALS:
+      if (predicate.getKind().equals(SqlKind.EQUALS)) {
         final List<RexNode> operands = ((RexCall) predicate).getOperands();
-        if (operands.get(1) instanceof RexLiteral) {
-          builder.put(operands.get(0), (RexLiteral) operands.get(1));
+        if (operands.size() != 2) {
+          findUsefulConstants = false;
+          break;
+        } else {
+          if (operands.get(1) instanceof RexLiteral) {
+            RexLiteral literal = builder.get(operands.get(0));
+            if (literal == null) {
+              builder.put(operands.get(0), (RexLiteral) operands.get(1));
+            } else {
+              RexLiteral newLiteral = (RexLiteral) operands.get(1);
+              if (!literal.getValue().equals(newLiteral)) {
+                // should return false
+                // we bail out, the reduce filter expression rule should be able
+                // to deal with this.
+                findUsefulConstants = false;
+                break;
+              }
+            }
+          } else if (operands.get(0) instanceof RexLiteral) {
+            RexLiteral literal = builder.get(operands.get(1));
+            if (literal == null) {
+              builder.put(operands.get(1), (RexLiteral) operands.get(0));
+            } else {
+              RexLiteral newLiteral = (RexLiteral) operands.get(0);
+              if (!literal.getValue().equals(newLiteral)) {
+                // should return false
+                // we bail out, the reduce filter expression rule should be able
+                // to deal with this.
+                findUsefulConstants = false;
+                break;
+              }
+            }
+          } else {
+            findUsefulConstants = false;
+            break;
+          }
         }
+      } else {
+        findUsefulConstants = false;
       }
+    }
+    if (!findUsefulConstants) {
+      builder = Maps.newHashMap();
     }
     return ImmutableMap.copyOf(builder);
   }
