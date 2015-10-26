@@ -43,7 +43,7 @@ import static org.apache.calcite.avatica.InternalProperty.UNQUOTED_CASING;
  * it is instantiated using {@link AvaticaFactory#newDatabaseMetaData}.</p>
  */
 public class AvaticaDatabaseMetaData implements DatabaseMetaData {
-  private final AvaticaConnection connection;
+  protected final AvaticaConnection connection;
 
   protected  AvaticaDatabaseMetaData(AvaticaConnection connection) {
     this.connection = connection;
@@ -589,7 +589,7 @@ public class AvaticaDatabaseMetaData implements DatabaseMetaData {
             pat(tableNamePattern), typeList));
   }
 
-  private static Meta.Pat pat(String schemaPattern) {
+  protected static Meta.Pat pat(String schemaPattern) {
     return Meta.Pat.of(schemaPattern);
   }
 
