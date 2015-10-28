@@ -790,10 +790,8 @@ SqlNodeList ParenthesizedQueryOrCommaList(
 }
 
 /**
- * Parses function parameter lists including DISTINCT keyword recognition
- *
- * <p>This is pretty much the same as ParenthesizedQueryOrCommaList but allows
- * the DISTINCT keyword to follow the left paren and not be followed by a comma.
+ * Parses function parameter lists including DISTINCT keyword recognition,
+ * DEFAULT, and named argument assignment.
  */
 List FunctionParameterList(
     ExprContext exprContext) :
@@ -830,38 +828,52 @@ List FunctionParameterList(
     {
        list.add(e);
     }
-    [
-        name = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT>
-    ]
-    e = OrderedQueryOrExpr(firstExprContext)
-    {
-        if (e != null) {
-            if (name != null) {
-                e = SqlStdOperatorTable.ARGUMENT_ASSIGNMENT.createCall(
-                    name.getParserPosition().plus(e.getParserPosition()), name, e);
-                name = null;
-            }
-            list.add(e);
+    (
+        <DEFAULT_KW> {
+            list.add(SqlStdOperatorTable.DEFAULT.createCall(getPos()));
         }
-    }
+    |
+        [
+            name = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT>
+        ]
+        e = OrderedQueryOrExpr(firstExprContext)
+        {
+            if (e != null) {
+                if (name != null) {
+                    e = SqlStdOperatorTable.ARGUMENT_ASSIGNMENT.createCall(
+                        name.getParserPosition().plus(e.getParserPosition()),
+                        name, e);
+                }
+                list.add(e);
+            }
+            name = null;
+        }
+    )
     (
         <COMMA>
         {
             // a comma-list can't appear where only a query is expected
             checkNonQueryExpression(exprContext);
         }
-        [
-            name = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT>
-        ]
-        e = Expression(exprContext)
-        {
-            if (name != null) {
-                e = SqlStdOperatorTable.ARGUMENT_ASSIGNMENT.createCall(
-                    name.getParserPosition().plus(e.getParserPosition()), name, e);
-                name = null;
+        (
+            <DEFAULT_KW> {
+                list.add(SqlStdOperatorTable.DEFAULT.createCall(getPos()));
             }
-            list.add(e);
-        }
+        |
+            [
+                name = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT>
+            ]
+            e = Expression(exprContext)
+            {
+                if (name != null) {
+                    e = SqlStdOperatorTable.ARGUMENT_ASSIGNMENT.createCall(
+                        name.getParserPosition().plus(e.getParserPosition()),
+                        name, e);
+                    name = null;
+                }
+                list.add(e);
+            }
+        )
     ) *
     <RPAREN>
     {

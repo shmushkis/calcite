@@ -730,6 +730,25 @@ public class SqlParserTest {
         "(?s).*Encountered \"=>\" at .*");
   }
 
+  @Test public void testFunctionDefaultArgument() {
+    checkExp("foo(1, DEFAULT, default, 'default', \"default\", 3)",
+        "`FOO`(1, DEFAULT, DEFAULT, 'default', `default`, 3)");
+    checkExp("foo(DEFAULT)",
+        "`FOO`(DEFAULT)");
+    checkExp("foo(x => 1, DEFAULT)",
+        "`FOO`(`X` => 1, DEFAULT)");
+    check("select sum(DISTINCT DEFAULT) from t group by x",
+        "SELECT SUM(DISTINCT DEFAULT)\n"
+            + "FROM `T`\n"
+            + "GROUP BY `X`");
+    checkExpFails("foo(x ^+^ DEFAULT)",
+        "(?s).*Encountered \"\\+ DEFAULT\" at .*");
+    checkExpFails("foo(0, x ^+^ DEFAULT + y)",
+        "(?s).*Encountered \"\\+ DEFAULT\" at .*");
+    checkExpFails("foo(0, DEFAULT ^+^ y)",
+        "(?s).*Encountered \"\\+\" at .*");
+  }
+
   @Test public void testAggregateFilter() {
     sql("select sum(sal) filter (where gender = 'F') as femaleSal,\n"
         + " sum(sal) filter (where true) allSal,\n"

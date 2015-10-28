@@ -25,24 +25,22 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 
 /**
- * Operator that assigns an argument to a function call to a particular named
- * parameter.
+ * Operator that indicates that an argument to a function call is to take its
+ * default value.
  *
  * <p>Not an expression; just a holder to represent syntax until the validator
  * has chance to resolve arguments.
  */
-class SqlArgumentAssignmentOperator extends SqlSpecialOperator {
-  public SqlArgumentAssignmentOperator() {
-    super("=>", SqlKind.ARGUMENT_ASSIGNMENT, 20, true, ReturnTypes.ARG1,
-        InferTypes.RETURN_TYPE, OperandTypes.ANY_ANY);
+class SqlDefaultOperator extends SqlSpecialOperator {
+  public SqlDefaultOperator() {
+    super("DEFAULT", SqlKind.DEFAULT, 20, true, ReturnTypes.BOOLEAN_NOT_NULL,
+        InferTypes.RETURN_TYPE, OperandTypes.NILADIC);
   }
 
   @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec,
       int rightPrec) {
-    call.operand(0).unparse(writer, leftPrec, getLeftPrec());
     writer.sep(getName());
-    call.operand(1).unparse(writer, getRightPrec(), rightPrec);
   }
 }
 
-// End SqlArgumentAssignmentOperator.java
+// End SqlDefaultOperator.java
