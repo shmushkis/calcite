@@ -801,6 +801,7 @@ List FunctionParameterList(
     SqlNode e = null;
     List list = new ArrayList();
     ExprContext firstExprContext = exprContext;
+    SqlIdentifier name = null;
 }
 {
     <LPAREN>
@@ -829,9 +830,17 @@ List FunctionParameterList(
     {
        list.add(e);
     }
+    [
+        name = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT>
+    ]
     e = OrderedQueryOrExpr(firstExprContext)
     {
         if (e != null) {
+            if (name != null) {
+                e = SqlStdOperatorTable.ARGUMENT_ASSIGNMENT.createCall(
+                    name.getParserPosition().plus(e.getParserPosition()), name, e);
+                name = null;
+            }
             list.add(e);
         }
     }
@@ -841,8 +850,16 @@ List FunctionParameterList(
             // a comma-list can't appear where only a query is expected
             checkNonQueryExpression(exprContext);
         }
+        [
+            name = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT>
+        ]
         e = Expression(exprContext)
         {
+            if (name != null) {
+                e = SqlStdOperatorTable.ARGUMENT_ASSIGNMENT.createCall(
+                    name.getParserPosition().plus(e.getParserPosition()), name, e);
+                name = null;
+            }
             list.add(e);
         }
     ) *
@@ -5437,6 +5454,7 @@ String CommonNonReservedKeyWord() :
     | < STAR: "*" >
     | < SLASH: "/" >
     | < CONCAT: "||" >
+    | < NAMED_ARGUMENT_ASSIGNMENT: "=>" >
     | < DOUBLE_PERIOD: ".." >
     | < QUOTE: "'" >
     | < DOUBLE_QUOTE: "\"" >

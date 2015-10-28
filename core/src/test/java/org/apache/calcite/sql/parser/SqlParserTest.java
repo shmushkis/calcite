@@ -719,6 +719,17 @@ public class SqlParserTest {
     checkExp("ln(power(2,2))", "LN(POWER(2, 2))");
   }
 
+  @Test public void testFunctionNamedArgument() {
+    checkExp("foo(x => 1)",
+        "`FOO`(`X` => 1)");
+    checkExp("foo(x => 1, \"y\" => 'a', z => x <= y)",
+        "`FOO`(`X` => 1, `y` => 'a', `Z` => (`X` <= `Y`))");
+    checkExpFails("foo(x.y ^=>^ 1)",
+        "(?s).*Encountered \"=>\" at .*");
+    checkExpFails("foo(a => 1, x.y ^=>^ 2, c => 3)",
+        "(?s).*Encountered \"=>\" at .*");
+  }
+
   @Test public void testAggregateFilter() {
     sql("select sum(sal) filter (where gender = 'F') as femaleSal,\n"
         + " sum(sal) filter (where true) allSal,\n"
