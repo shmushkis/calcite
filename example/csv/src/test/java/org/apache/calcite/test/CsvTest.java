@@ -29,10 +29,12 @@ import java.io.PrintStream;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -412,6 +414,23 @@ public class CsvTest {
       Assert.assertEquals(java.sql.Timestamp.valueOf("1996-08-03 00:01:02"),
           resultSet.getTimestamp(3));
 
+    }
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-943">[CALCITE-943]
+   * gt operator not implemented for java.sql.Timestamp</a>. */
+  @Test public void testTimestampBetween() throws SQLException {
+    Properties info = new Properties();
+    info.put("model", jsonPath("bug"));
+
+    try (Connection connection
+        = DriverManager.getConnection("jdbc:calcite:", info)) {
+      final String sql = "select * from \"DATE\" where \"JOINTIMES\" > ?";
+      PreparedStatement statement = connection.prepareStatement(sql);
+      statement.setTimestamp(1, Timestamp.valueOf("2001-01-01 00:00:00"));
+      ResultSet resultSet = statement.executeQuery();
+      assertThat(CalciteAssert.toString(resultSet), is("x"));
     }
   }
 }
