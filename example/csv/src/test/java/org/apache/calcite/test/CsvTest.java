@@ -433,6 +433,19 @@ public class CsvTest {
       assertThat(CalciteAssert.toString(resultSet), is("x"));
     }
   }
+
+  @Test public void testTimestampBetween2() throws SQLException {
+    Properties info = new Properties();
+    info.put("model", jsonPath("bug"));
+
+    try (Connection connection
+        = DriverManager.getConnection("jdbc:calcite:", info)) {
+      final String sql = "select * from \"DATE\" where \"JOINTIMES\" > \"JOINTIMES\"";
+      PreparedStatement statement = connection.prepareStatement(sql);
+      ResultSet resultSet = statement.executeQuery();
+      assertThat(CalciteAssert.toString(resultSet), is("x"));
+    }
+  }
 }
 
 // End CsvTest.java

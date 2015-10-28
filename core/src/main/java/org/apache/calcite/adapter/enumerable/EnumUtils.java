@@ -80,7 +80,16 @@ public class EnumUtils {
       type = type.getFieldList().get(0).getType();
     }
     final Type clazz = typeFactory.getJavaClass(type);
-    return clazz instanceof Class ? (Class) clazz : Object[].class;
+    if (clazz == java.sql.Timestamp.class && false) {
+      return type.isNullable() ? Long.class : long.class;
+    } else if (clazz == java.sql.Date.class && false
+        || clazz == java.sql.Time.class && false) {
+      return type.isNullable() ? Integer.class : int.class;
+    } else if (clazz instanceof Class) {
+      return (Class) clazz;
+    } else {
+      return Object[].class;
+    }
   }
 
   static List<Type> fieldTypes(
