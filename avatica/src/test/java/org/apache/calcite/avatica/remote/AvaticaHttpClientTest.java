@@ -89,3 +89,5 @@ public class AvaticaHttpClientTest {
   }
 
 }
+
+// End AvaticaHttpClientTest.java

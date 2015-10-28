@@ -57,4 +57,4 @@ public class AvaticaConnectionTest {
 
 }
 
-// End AvaticaStatementTest.java
+// End AvaticaConnectionTest.java

@@ -16,8 +16,6 @@
  */
 package org.apache.calcite.avatica.jdbc;
 
-import com.google.common.base.Preconditions;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -90,14 +88,17 @@ public class StatementInfo {
   }
 
   /**
-   * Consumes <code>offset - position</code> elements from the {@link ResultSet}
+   * Consumes <code>offset - position</code> elements from the {@link ResultSet}.
+   *
    * @param offset The offset to advance to
    * @return True if the resultSet was advanced to the current point, false if insufficient rows
    *      were present to advance to the requested offset.
    */
   public boolean advanceResultSetToOffset(ResultSet results, long offset) throws SQLException {
-    Preconditions.checkArgument(offset >= 0 && offset >= position, "Offset should be "
+    if (offset < 0 || offset < position) {
+      throw new IllegalArgumentException("Offset should be "
         + " non-negative and not less than the current position. " + offset + ", " + position);
+    }
     if (position >= offset) {
       return true;
     }

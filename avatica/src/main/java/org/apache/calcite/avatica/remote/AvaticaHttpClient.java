@@ -30,3 +30,5 @@ public interface AvaticaHttpClient {
   byte[] send(byte[] request);
 
 }
+
+// End AvaticaHttpClient.java

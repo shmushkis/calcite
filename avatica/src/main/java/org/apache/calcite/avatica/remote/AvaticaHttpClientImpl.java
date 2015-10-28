@@ -35,7 +35,6 @@ public class AvaticaHttpClientImpl implements AvaticaHttpClient {
     this.url = url;
   }
 
-  @Override
   public byte[] send(byte[] request) {
     // TODO back-off policy?
     while (true) {
@@ -70,3 +69,5 @@ public class AvaticaHttpClientImpl implements AvaticaHttpClient {
     return (HttpURLConnection) url.openConnection();
   }
 }
+
+// End AvaticaHttpClientImpl.java

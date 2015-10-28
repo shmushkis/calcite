@@ -177,3 +177,5 @@ public enum MetaDataOperation {
     }
   }
 }
+
+// End MetaDataOperation.java

@@ -115,9 +115,8 @@ public abstract class AvaticaConnection implements Connection {
     this.maxRetriesPerExecute = getNumStatementRetries(info);
   }
 
-  /**
-   * Compute the number of retries {@link #executeInternal(String) should retry before failing.
-   */
+  /** Computes the number of retries
+   * {@link #executeInternal(String)} should retry before failing. */
   long getNumStatementRetries(Properties props) {
     return Long.valueOf(Objects.requireNonNull(props)
         .getProperty(NUM_EXECUTE_RETRIES_KEY, NUM_EXECUTE_RETRIES_DEFAULT));

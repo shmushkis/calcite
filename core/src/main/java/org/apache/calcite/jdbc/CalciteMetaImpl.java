@@ -652,6 +652,12 @@ public class CalciteMetaImpl extends MetaImpl {
     return DRIVER.connect(schema, typeFactory);
   }
 
+  public boolean syncResults(StatementHandle h, QueryState state, long offset)
+      throws NoSuchStatementException {
+    // Doesn't have application in Calcite itself.
+    throw new UnsupportedOperationException();
+  }
+
   /** Metadata describing a Calcite table. */
   private static class CalciteMetaTable extends MetaTable {
     private final Table calciteTable;
@@ -740,13 +746,6 @@ public class CalciteMetaImpl extends MetaImpl {
     public void remove() {
       throw new UnsupportedOperationException();
     }
-  }
-
-  @Override
-  public boolean syncResults(StatementHandle h, QueryState state, long offset)
-      throws NoSuchStatementException {
-    // Doesn't have application in Calcite itself.
-    throw new UnsupportedOperationException();
   }
 }
 

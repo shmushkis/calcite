@@ -31,6 +31,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Message;
 
@@ -2659,12 +2660,10 @@ public interface Service {
       this.offset = offset;
     }
 
-    @Override
     SyncResultsResponse accept(Service service) {
       return service.apply(this);
     }
 
-    @Override
     Request deserialize(Message genericMsg) {
       if (!(genericMsg instanceof Requests.SyncResultsRequest)) {
         throw new IllegalArgumentException(
@@ -2677,7 +2676,6 @@ public interface Service {
           QueryState.fromProto(msg.getState()), msg.getOffset());
     }
 
-    @Override
     Requests.SyncResultsRequest serialize() {
       Requests.SyncResultsRequest.Builder builder = Requests.SyncResultsRequest.newBuilder();
 
@@ -2695,8 +2693,7 @@ public interface Service {
       return builder.build();
     }
 
-    @Override
-    public int hashCode() {
+    @Override public int hashCode() {
       final int prime = 31;
       int result = 1;
       result = prime * result + ((connectionId == null) ? 0 : connectionId.hashCode());
@@ -2706,8 +2703,7 @@ public interface Service {
       return result;
     }
 
-    @Override
-    public boolean equals(Object obj) {
+    @Override public boolean equals(Object obj) {
       if (this == obj) {
         return true;
       }
@@ -2747,7 +2743,7 @@ public interface Service {
   }
 
   /**
-   * Response for {@link Service#apply(SyncResultsRequest)}
+   * Response for {@link Service#apply(SyncResultsRequest)}.
    */
   class SyncResultsResponse extends Response {
     public boolean missingStatement = false;
@@ -2763,7 +2759,6 @@ public interface Service {
       this.missingStatement = missingStatement;
     }
 
-    @Override
     SyncResultsResponse deserialize(Message genericMsg) {
       if (!(genericMsg instanceof Responses.SyncResultsResponse)) {
         throw new IllegalArgumentException(
@@ -2775,15 +2770,13 @@ public interface Service {
       return new SyncResultsResponse(msg.getMoreResults(), msg.getMissingStatement());
     }
 
-    @Override
     Responses.SyncResultsResponse serialize() {
       Responses.SyncResultsResponse.Builder builder = Responses.SyncResultsResponse.newBuilder();
 
       return builder.setMoreResults(moreResults).setMissingStatement(missingStatement).build();
     }
 
-    @Override
-    public int hashCode() {
+    @Override public int hashCode() {
       final int prime = 31;
       int result = 1;
       result = prime * result + (missingStatement ? 1231 : 1237);
@@ -2791,8 +2784,7 @@ public interface Service {
       return result;
     }
 
-    @Override
-    public boolean equals(Object obj) {
+    @Override public boolean equals(Object obj) {
       if (this == obj) {
         return true;
       }

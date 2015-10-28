@@ -278,7 +278,6 @@ public class LocalService implements Service {
     return new DatabasePropertyResponse(meta.getDatabaseProperties(ch));
   }
 
-  @Override
   public SyncResultsResponse apply(SyncResultsRequest request) {
     final Meta.StatementHandle h = new Meta.StatementHandle(
         request.connectionId, request.statementId, null);

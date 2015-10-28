@@ -64,6 +64,8 @@ import static org.junit.Assert.assertTrue;
 public class AlternatingRemoteMetaTest {
   private static final ConnectionSpec CONNECTION_SPEC = ConnectionSpec.HSQLDB;
 
+  private static String url;
+
   static {
     try {
       DriverManager.registerDriver(new AlternatingDriver());
@@ -112,7 +114,6 @@ public class AlternatingRemoteMetaTest {
       }
     }
 
-    @Override
     public byte[] send(byte[] request) {
       AvaticaHttpClientImpl client = clients.get(r.nextInt(clients.size()));
       //System.out.println("URL: " + client.url);
@@ -178,8 +179,6 @@ public class AlternatingRemoteMetaTest {
     }
 
   }
-
-  private static String url;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -347,8 +346,9 @@ public class AlternatingRemoteMetaTest {
     try (AvaticaConnection conn = (AvaticaConnection) DriverManager.getConnection(url);
         Statement statement = conn.createStatement()) {
       assertFalse(statement.execute("SET SCHEMA \"SCOTT\""));
-      assertFalse(statement.execute(
-          "CREATE TABLE \"FOO\"(\"KEY\" INTEGER NOT NULL, \"VALUE\" VARCHAR(10))"));
+      assertFalse(
+          statement.execute(
+              "CREATE TABLE \"FOO\"(\"KEY\" INTEGER NOT NULL, \"VALUE\" VARCHAR(10))"));
       assertFalse(statement.execute("SET TABLE \"FOO\" READONLY FALSE"));
 
       final int numRecords = 1000;
