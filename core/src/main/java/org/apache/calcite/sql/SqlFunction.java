@@ -318,7 +318,8 @@ public class SqlFunction extends SqlOperator {
             argTypes);
       }
       if (function == null) {
-        throw validator.handleUnresolvedFunction(call, this, argTypes);
+        throw validator.handleUnresolvedFunction(call, this, argTypes,
+            argNames);
       }
 
       // REVIEW jvs 25-Mar-2005:  This is, in a sense, expanding

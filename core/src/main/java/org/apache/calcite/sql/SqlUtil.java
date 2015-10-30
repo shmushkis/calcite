@@ -34,11 +34,11 @@ import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
+import org.apache.calcite.util.mapping.Mappings;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.calcite.util.mapping.Mappings;
 
 import java.nio.charset.Charset;
 import java.sql.DatabaseMetaData;
@@ -326,7 +326,7 @@ public abstract class SqlUtil {
    */
   public static SqlFunction lookupRoutine(SqlOperatorTable opTab,
       SqlIdentifier funcName, List<RelDataType> argTypes,
-      ImmutableList<String> argNames, SqlFunctionCategory category) {
+      List<String> argNames, SqlFunctionCategory category) {
     List<SqlFunction> list =
         lookupSubjectRoutines(
             opTab,
@@ -355,7 +355,7 @@ public abstract class SqlUtil {
    */
   public static List<SqlFunction> lookupSubjectRoutines(SqlOperatorTable opTab,
       SqlIdentifier funcName, List<RelDataType> argTypes,
-      ImmutableList<String> argNames, SqlFunctionCategory category) {
+      List<String> argNames, SqlFunctionCategory category) {
     // start with all routines matching by name
     List<SqlFunction> routines =
         lookupSubjectRoutinesByName(opTab, funcName, category);
@@ -448,9 +448,9 @@ public abstract class SqlUtil {
    * @sql.99 Part 2 Section 10.4 Syntax Rule 6.b.iii.2.B
    */
   private static void filterRoutinesByParameterType(List<SqlFunction> routines,
-      List<RelDataType> argTypes, ImmutableList<String> argNames) {
+      List<RelDataType> argTypes, List<String> argNames) {
     Iterator<SqlFunction> iter = routines.iterator();
-    loop:
+  loop:
     while (iter.hasNext()) {
       SqlFunction function = iter.next();
       List<RelDataType> paramTypes = function.getParamTypes();

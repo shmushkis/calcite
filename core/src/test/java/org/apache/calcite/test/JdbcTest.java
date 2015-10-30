@@ -1592,7 +1592,7 @@ public class JdbcTest {
         + "c0=Store 15; c1=1997; m0=52644.0700\n"
         + "c0=Store 11; c1=1997; m0=55058.7900\n",
     "select \"customer\".\"yearly_income\" as \"c0\","
-        + " \"customer\".\"education\" as \"c1\" \n"
+        + " \"customer\".\"education\" as \"c1\"\n"
         + "from \"customer\" as \"customer\",\n"
         + " \"sales_fact_1997\" as \"sales_fact_1997\"\n"
         + "where \"sales_fact_1997\".\"customer_id\" = \"customer\".\"customer_id\"\n"
@@ -2019,7 +2019,7 @@ public class JdbcTest {
     final StringBuilder buf = new StringBuilder();
     buf.append("select count(*)");
     for (int i = 0; i < n; i++) {
-      buf.append(i == 0 ? "\nfrom " : ",\n ")
+      buf.append(i == 0 ? "\nfrom " : ",\n")
           .append("\"hr\".\"depts\" as d").append(i);
     }
     for (int i = 1; i < n; i++) {
@@ -5459,17 +5459,20 @@ public class JdbcTest {
         .throws_("Duplicate argument name 'n'\n");
     // invalid argument names
     with.query("values (\"adhoc\".my_left(\"n\" => 3, \"m\" => 2, \"s\" => 'h'))")
-        .throws_("No match found for function signature MY_LEFT(n => <NUMERIC>, m => <NUMERIC>, s => <CHARACTER>)\n");
+        .throws_("No match found for function signature "
+            + "MY_LEFT(n => <NUMERIC>, m => <NUMERIC>, s => <CHARACTER>)\n");
     // missing arguments
     with.query("values (\"adhoc\".my_left(\"n\" => 3))")
-        .throws_("xxx\n");
+        .throws_("No match found for function signature MY_LEFT(n => <NUMERIC>)\n");
     with.query("values (\"adhoc\".my_left(\"s\" => 'hello'))")
-        .throws_("xxx\n");
+        .throws_("No match found for function signature MY_LEFT(s => <CHARACTER>)\n");
     // arguments of wrong type
     with.query("values (\"adhoc\".my_left(\"n\" => 'hello', \"s\" => 'x'))")
-        .throws_("xxx\n");
+        .throws_("No match found for function signature "
+            + "MY_LEFT(n => <CHARACTER>, s => <CHARACTER>)\n");
     with.query("values (\"adhoc\".my_left(\"n\" => 1, \"s\" => 0))")
-        .throws_("xxx\n");
+        .throws_("No match found for function signature "
+            + "MY_LEFT(n => <NUMERIC>, s => <NUMERIC>)\n");
   }
 
   /** Test for
@@ -6250,10 +6253,10 @@ public class JdbcTest {
   @Test public void testLexCaseInsensitiveSubQueryField() {
     CalciteAssert.that()
         .with(Lex.MYSQL)
-        .query("select DID \n"
-            + "from (select deptid as did \n"
+        .query("select DID\n"
+            + "from (select deptid as did\n"
             + "         FROM\n"
-            + "            ( values (1), (2) ) as T1(deptid) \n"
+            + "            ( values (1), (2) ) as T1(deptid)\n"
             + "         ) ")
         .returnsUnordered("DID=1", "DID=2");
   }
@@ -6431,11 +6434,11 @@ public class JdbcTest {
         CalciteAssert.that()
             .with(Lex.ORACLE);
 
-    with.query("select DID from (select DEPTID as did FROM \n "
+    with.query("select DID from (select DEPTID as did FROM\n"
         + "     ( values (1), (2) ) as T1(deptid) ) ")
         .returnsUnordered("DID=1", "DID=2");
 
-    with.query("select x.DID from (select DEPTID as did FROM \n "
+    with.query("select x.DID from (select DEPTID as did FROM\n"
         + "     ( values (1), (2) ) as T1(deptid) ) X")
         .returnsUnordered("DID=1", "DID=2");
   }
@@ -6445,23 +6448,23 @@ public class JdbcTest {
         CalciteAssert.that()
             .with(Lex.MYSQL);
 
-    with.query("select DID from (select deptid as did FROM \n "
+    with.query("select DID from (select deptid as did FROM\n"
         + "     ( values (1), (2) ) as T1(deptid) ) ")
         .returnsUnordered("DID=1", "DID=2");
 
-    with.query("select x.DID from (select deptid as did FROM \n "
+    with.query("select x.DID from (select deptid as did FROM\n"
         + "     ( values (1), (2) ) as T1(deptid) ) X ")
         .returnsUnordered("DID=1", "DID=2");
 
-    with.query("select X.DID from (select deptid as did FROM \n "
+    with.query("select X.DID from (select deptid as did FROM\n"
         + "     ( values (1), (2) ) as T1(deptid) ) X ")
         .returnsUnordered("DID=1", "DID=2");
 
-    with.query("select X.DID2 from (select deptid as did FROM \n "
+    with.query("select X.DID2 from (select deptid as did FROM\n"
         + "     ( values (1), (2) ) as T1(deptid) ) X (DID2)")
         .returnsUnordered("DID2=1", "DID2=2");
 
-    with.query("select X.DID2 from (select deptid as did FROM \n "
+    with.query("select X.DID2 from (select deptid as did FROM\n"
         + "     ( values (1), (2) ) as T1(deptid) ) X (DID2)")
         .returnsUnordered("DID2=1", "DID2=2");
   }
@@ -6471,23 +6474,23 @@ public class JdbcTest {
         CalciteAssert.that()
             .with(Lex.MYSQL);
 
-    with.query("select `DID` from (select deptid as did FROM \n "
+    with.query("select `DID` from (select deptid as did FROM\n"
         + "     ( values (1), (2) ) as T1(deptid) ) ")
         .returnsUnordered("DID=1", "DID=2");
 
-    with.query("select `x`.`DID` from (select deptid as did FROM \n "
+    with.query("select `x`.`DID` from (select deptid as did FROM\n"
         + "     ( values (1), (2) ) as T1(deptid) ) X ")
         .returnsUnordered("DID=1", "DID=2");
 
-    with.query("select `X`.`DID` from (select deptid as did FROM \n "
+    with.query("select `X`.`DID` from (select deptid as did FROM\n"
         + "     ( values (1), (2) ) as T1(deptid) ) X ")
         .returnsUnordered("DID=1", "DID=2");
 
-    with.query("select `X`.`DID2` from (select deptid as did FROM \n "
+    with.query("select `X`.`DID2` from (select deptid as did FROM\n"
         + "     ( values (1), (2) ) as T1(deptid) ) X (DID2)")
         .returnsUnordered("DID2=1", "DID2=2");
 
-    with.query("select `X`.`DID2` from (select deptid as did FROM \n "
+    with.query("select `X`.`DID2` from (select deptid as did FROM\n"
         + "     ( values (1), (2) ) as T1(deptid) ) X (DID2)")
         .returnsUnordered("DID2=1", "DID2=2");
   }
@@ -6495,7 +6498,7 @@ public class JdbcTest {
   @Test public void testUnquotedCaseSensitiveSubQuerySqlServer() {
     CalciteAssert.that()
         .with(Lex.SQL_SERVER)
-        .query("select DID from (select deptid as did FROM \n "
+        .query("select DID from (select deptid as did FROM\n"
             + "     ( values (1), (2) ) as T1(deptid) ) ")
         .returnsUnordered("DID=1", "DID=2");
   }
@@ -6503,7 +6506,7 @@ public class JdbcTest {
   @Test public void testQuotedCaseSensitiveSubQuerySqlServer() {
     CalciteAssert.that()
         .with(Lex.SQL_SERVER)
-        .query("select [DID] from (select deptid as did FROM \n "
+        .query("select [DID] from (select deptid as did FROM\n"
             + "     ( values (1), (2) ) as T1([deptid]) ) ")
         .returnsUnordered("DID=1", "DID=2");
   }
