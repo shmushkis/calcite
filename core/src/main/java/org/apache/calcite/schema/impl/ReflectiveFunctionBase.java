@@ -20,14 +20,17 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.Function;
 import org.apache.calcite.schema.FunctionParameter;
+import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.ReflectUtil;
 
 import com.google.common.collect.ImmutableList;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Implementation of a function that is based on a method.
@@ -46,7 +49,7 @@ public abstract class ReflectiveFunctionBase implements Function {
    */
   public ReflectiveFunctionBase(Method method) {
     this.method = method;
-    this.parameters = toFunctionParameters(method.getParameterTypes());
+    this.parameters = toFunctionParameters(method);
   }
 
   /**
@@ -60,16 +63,22 @@ public abstract class ReflectiveFunctionBase implements Function {
 
 
   public static ImmutableList<FunctionParameter> toFunctionParameters(
-      Class... types) {
-    return toFunctionParameters(Arrays.asList(types));
+      final Method method) {
+    final Class<?>[] types = method.getParameterTypes();
+    final List<Pair<Class<?>, String>> params = new ArrayList<>();
+    for (int i = 0; i < types.length; i++) {
+      String name = ReflectUtil.getParameterName(method, i);
+      params.add(Pair.<Class<?>, String>of(types[i], name));
+    }
+    return toFunctionParameters(params);
   }
 
   public static ImmutableList<FunctionParameter> toFunctionParameters(
-      Iterable<? extends Class> types) {
+      Iterable<? extends Map.Entry<? extends Class, String>> params) {
     final ImmutableList.Builder<FunctionParameter> res =
         ImmutableList.builder();
     int i = 0;
-    for (final Class type : types) {
+    for (final Map.Entry<? extends Class, String> param : params) {
       final int ordinal = i;
       res.add(new FunctionParameter() {
         public int getOrdinal() {
@@ -77,11 +86,11 @@ public abstract class ReflectiveFunctionBase implements Function {
         }
 
         public String getName() {
-          return "arg"  + ordinal;
+          return param.getValue();
         }
 
         public RelDataType getType(RelDataTypeFactory typeFactory) {
-          return typeFactory.createJavaType(type);
+          return typeFactory.createJavaType(param.getKey());
         }
       });
       i++;

@@ -37,6 +37,7 @@ import org.apache.calcite.schema.impl.ReflectiveFunctionBase;
 import org.apache.calcite.sql.validate.SqlMoniker;
 import org.apache.calcite.util.BuiltInMethod;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 
 import java.lang.reflect.Method;
@@ -72,7 +73,8 @@ public class SqlAdvisorGetHintsFunction
         }, NullPolicy.ANY, false);
 
   private static final List<FunctionParameter> PARAMETERS =
-    ReflectiveFunctionBase.toFunctionParameters(String.class, int.class);
+    ReflectiveFunctionBase.toFunctionParameters(
+        ImmutableMap.of(String.class, "sql", int.class, "pos").entrySet());
 
   public CallImplementor getImplementor() {
     return IMPLEMENTOR;
@@ -107,8 +109,7 @@ public class SqlAdvisorGetHintsFunction
     final String[] replaced = {null};
     final List<SqlMoniker> hints = advisor.getCompletionHints(sql,
       pos, replaced);
-    final List<SqlAdvisorHint> res =
-        new ArrayList<SqlAdvisorHint>(hints.size() + 1);
+    final List<SqlAdvisorHint> res = new ArrayList<>(hints.size() + 1);
     res.add(new SqlAdvisorHint(replaced[0], null, "MATCH"));
     for (SqlMoniker hint : hints) {
       res.add(new SqlAdvisorHint(hint));

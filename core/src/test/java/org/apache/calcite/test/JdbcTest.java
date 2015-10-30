@@ -45,6 +45,7 @@ import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.linq4j.function.Function0;
 import org.apache.calcite.linq4j.function.Function1;
 import org.apache.calcite.linq4j.function.Function2;
+import org.apache.calcite.linq4j.function.Parameter;
 import org.apache.calcite.linq4j.tree.Types;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
@@ -5265,6 +5266,12 @@ public class JdbcTest {
         + "'\n"
         + "         },\n"
         + "         {\n"
+        + "           name: 'MY_LEFT',\n"
+        + "           className: '"
+        + MyLeftFunction.class.getName()
+        + "'\n"
+        + "         },\n"
+        + "         {\n"
         + "           name: 'MY_STR',\n"
         + "           className: '"
         + MyToStringFunction.class.getName()
@@ -5434,6 +5441,35 @@ public class JdbcTest {
         + " max(\"adhoc\".count_args(0, 0)) as p2\n"
         + "from \"adhoc\".EMPLOYEES limit 1")
         .returns("P0=0; P1=1; P2=2\n");
+  }
+
+  /** Tests passing parameters to user-defined function by name. */
+  @Test public void testUdfArgumentName() {
+    final CalciteAssert.AssertThat with = withUdf();
+    // arguments in physical order
+    with.query("values (\"adhoc\".my_left(\"s\" => 'hello', \"n\" => 3))")
+        .returns("EXPR$0=hel\n");
+    // arguments in reverse order
+    with.query("values (\"adhoc\".my_left(\"n\" => 3, \"s\" => 'hello'))")
+        .returns("EXPR$0=hel\n");
+    with.query("values (\"adhoc\".my_left(\"n\" => 1 + 2, \"s\" => 'hello'))")
+        .returns("EXPR$0=hel\n");
+    // duplicate argument names
+    with.query("values (\"adhoc\".my_left(\"n\" => 3, \"n\" => 2, \"s\" => 'hello'))")
+        .throws_("Duplicate argument name 'n'\n");
+    // invalid argument names
+    with.query("values (\"adhoc\".my_left(\"n\" => 3, \"m\" => 2, \"s\" => 'h'))")
+        .throws_("No match found for function signature MY_LEFT(n => <NUMERIC>, m => <NUMERIC>, s => <CHARACTER>)\n");
+    // missing arguments
+    with.query("values (\"adhoc\".my_left(\"n\" => 3))")
+        .throws_("xxx\n");
+    with.query("values (\"adhoc\".my_left(\"s\" => 'hello'))")
+        .throws_("xxx\n");
+    // arguments of wrong type
+    with.query("values (\"adhoc\".my_left(\"n\" => 'hello', \"s\" => 'x'))")
+        .throws_("xxx\n");
+    with.query("values (\"adhoc\".my_left(\"n\" => 1, \"s\" => 0))")
+        .throws_("xxx\n");
   }
 
   /** Test for
@@ -6976,16 +7012,25 @@ public class JdbcTest {
     public MyTable2[] mytable2 = { new MyTable2() };
   }
 
-  /** Example of a UDF with a non-static {@code eval} method. */
+  /** Example of a UDF with a non-static {@code eval} method,
+   * and named parameters. */
   public static class MyPlusFunction {
-    public int eval(int x, int y) {
+    public int eval(@Parameter(name = "x") int x, @Parameter(name = "y") int y) {
       return x + y;
+    }
+  }
+
+  /** Example of a UDF with named parameters. */
+  public static class MyLeftFunction {
+    public String eval(@Parameter(name = "s") String s,
+        @Parameter(name = "n") int n) {
+      return s.substring(0, n);
     }
   }
 
   /** Example of a non-strict UDF. (Does something useful when passed NULL.) */
   public static class MyToStringFunction {
-    public static String eval(Object o) {
+    public static String eval(@Parameter(name = "o") Object o) {
       if (o == null) {
         return "<null>";
       }

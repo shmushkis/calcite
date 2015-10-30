@@ -16,9 +16,9 @@
  */
 package org.apache.calcite.sql.fun;
 
+import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
@@ -30,18 +30,22 @@ import org.apache.calcite.sql.type.ReturnTypes;
  *
  * <p>Not an expression; just a holder to represent syntax until the validator
  * has chance to resolve arguments.
+ *
+ * <p>Sub-class of {@link SqlAsOperator} ("AS") out of convenience; to be
+ * consistent with AS, we reverse the arguments.
  */
-class SqlArgumentAssignmentOperator extends SqlSpecialOperator {
+class SqlArgumentAssignmentOperator extends SqlAsOperator {
   public SqlArgumentAssignmentOperator() {
-    super("=>", SqlKind.ARGUMENT_ASSIGNMENT, 20, true, ReturnTypes.ARG1,
+    super("=>", SqlKind.ARGUMENT_ASSIGNMENT, 20, true, ReturnTypes.ARG0,
         InferTypes.RETURN_TYPE, OperandTypes.ANY_ANY);
   }
 
   @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec,
       int rightPrec) {
-    call.operand(0).unparse(writer, leftPrec, getLeftPrec());
-    writer.sep(getName());
-    call.operand(1).unparse(writer, getRightPrec(), rightPrec);
+    // Arguments are held in reverse order to be consistent with base class (AS).
+    call.operand(1).unparse(writer, leftPrec, getLeftPrec());
+    writer.keyword(getName());
+    call.operand(0).unparse(writer, getRightPrec(), rightPrec);
   }
 }
 

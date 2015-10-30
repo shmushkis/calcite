@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.sql;
 
+import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypePrecedenceList;
@@ -37,14 +38,17 @@ import org.apache.calcite.util.Util;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.calcite.util.mapping.Mappings;
 
 import java.nio.charset.Charset;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.calcite.util.Static.RESOURCE;
 
@@ -314,21 +318,21 @@ public abstract class SqlUtil {
    * @param opTab    operator table to search
    * @param funcName name of function being invoked
    * @param argTypes argument types
+   * @param argNames argument names, or null if call by position
    * @param category whether a function or a procedure. (If a procedure is
    *                 being invoked, the overload rules are simpler.)
    * @return matching routine, or null if none found
    * @sql.99 Part 2 Section 10.4
    */
-  public static SqlFunction lookupRoutine(
-      SqlOperatorTable opTab,
-      SqlIdentifier funcName,
-      List<RelDataType> argTypes,
-      SqlFunctionCategory category) {
+  public static SqlFunction lookupRoutine(SqlOperatorTable opTab,
+      SqlIdentifier funcName, List<RelDataType> argTypes,
+      ImmutableList<String> argNames, SqlFunctionCategory category) {
     List<SqlFunction> list =
         lookupSubjectRoutines(
             opTab,
             funcName,
             argTypes,
+            argNames,
             category);
     if (list.isEmpty()) {
       return null;
@@ -344,15 +348,14 @@ public abstract class SqlUtil {
    * @param opTab    operator table to search
    * @param funcName name of function being invoked
    * @param argTypes argument types
+   * @param argNames argument names, or null if call by position
    * @param category category of routine to look up
    * @return list of matching routines
    * @sql.99 Part 2 Section 10.4
    */
-  public static List<SqlFunction> lookupSubjectRoutines(
-      SqlOperatorTable opTab,
-      SqlIdentifier funcName,
-      List<RelDataType> argTypes,
-      SqlFunctionCategory category) {
+  public static List<SqlFunction> lookupSubjectRoutines(SqlOperatorTable opTab,
+      SqlIdentifier funcName, List<RelDataType> argTypes,
+      ImmutableList<String> argNames, SqlFunctionCategory category) {
     // start with all routines matching by name
     List<SqlFunction> routines =
         lookupSubjectRoutinesByName(opTab, funcName, category);
@@ -369,7 +372,7 @@ public abstract class SqlUtil {
 
     // second pass:  eliminate routines which don't accept the given
     // argument types
-    filterRoutinesByParameterType(routines, argTypes);
+    filterRoutinesByParameterType(routines, argTypes, argNames);
 
     // see if we can stop now; this is necessary for the case
     // of builtin functions where we don't have param type info
@@ -444,10 +447,10 @@ public abstract class SqlUtil {
   /**
    * @sql.99 Part 2 Section 10.4 Syntax Rule 6.b.iii.2.B
    */
-  private static void filterRoutinesByParameterType(
-      List<SqlFunction> routines,
-      List<RelDataType> argTypes) {
+  private static void filterRoutinesByParameterType(List<SqlFunction> routines,
+      List<RelDataType> argTypes, ImmutableList<String> argNames) {
     Iterator<SqlFunction> iter = routines.iterator();
+    loop:
     while (iter.hasNext()) {
       SqlFunction function = iter.next();
       List<RelDataType> paramTypes = function.getParamTypes();
@@ -455,18 +458,28 @@ public abstract class SqlUtil {
         // no parameter information for builtins; keep for now
         continue;
       }
+      if (argNames != null) {
+        // Arguments passed by name. Make sure that the function has parameters
+        // of all of these names.
+        Map<Integer, Integer> map = new HashMap<>();
+        for (Ord<String> argName : Ord.zip(argNames)) {
+          final int i = function.getParamNames().indexOf(argName.e);
+          if (i < 0) {
+            iter.remove();
+            continue loop;
+          }
+          map.put(argName.i, i);
+        }
+        argTypes = Mappings.permute(argTypes, Mappings.bijection(map));
+      }
       assert paramTypes.size() == argTypes.size();
-      boolean keep = true;
       for (Pair<RelDataType, RelDataType> p : Pair.zip(paramTypes, argTypes)) {
         final RelDataType argType = p.right;
         final RelDataType paramType = p.left;
         if (!SqlTypeUtil.canAssignFrom(paramType, argType)) {
-          keep = false;
-          break;
+          iter.remove();
+          continue loop;
         }
-      }
-      if (!keep) {
-        iter.remove();
       }
     }
   }

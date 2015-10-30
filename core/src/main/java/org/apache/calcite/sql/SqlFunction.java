@@ -152,6 +152,13 @@ public class SqlFunction extends SqlOperator {
     return paramTypes;
   }
 
+  /**
+   * @return array of parameter names
+   */
+  public List<String> getParamNames() {
+    return ImmutableList.of("s", "n");
+  }
+
   public void unparse(
       SqlWriter writer,
       SqlCall call,
@@ -216,7 +223,6 @@ public class SqlFunction extends SqlOperator {
       SqlValidatorScope scope,
       SqlCall call,
       boolean convertRowArgToColumnList) {
-    final List<SqlNode> operands = call.getOperandList();
 
     // Scope for operands. Usually the same as 'scope'.
     final SqlValidatorScope operandScope = scope.getOperandScope(call);
@@ -224,11 +230,38 @@ public class SqlFunction extends SqlOperator {
     // Indicate to the validator that we're validating a new function call
     validator.pushFunctionCall();
 
+    // If any arguments are named, construct a map.
+    final ImmutableList.Builder<String> nameBuilder = ImmutableList.builder();
+    final ImmutableList.Builder<SqlNode> argBuilder = ImmutableList.builder();
+    for (SqlNode operand : call.getOperandList()) {
+      if (operand.getKind() == SqlKind.ARGUMENT_ASSIGNMENT) {
+        final List<SqlNode> operandList = ((SqlCall) operand).getOperandList();
+        nameBuilder.add(((SqlIdentifier) operandList.get(1)).getSimple());
+        argBuilder.add(operandList.get(0));
+      }
+    }
+    ImmutableList<String> argNames = nameBuilder.build();
+    final List<SqlNode> args;
+    if (argNames.isEmpty()) {
+      args = call.getOperandList();
+      argNames = null;
+    } else {
+      if (argNames.size() < call.getOperandList().size()) {
+        throw validator.newValidationError(call,
+            RESOURCE.someButNotAllArgumentsAreNamed());
+      }
+      int duplicate = Util.firstDuplicate(argNames);
+      if (duplicate >= 0) {
+        throw validator.newValidationError(call,
+            RESOURCE.duplicateArgumentName(argNames.get(duplicate)));
+      }
+      args = argBuilder.build();
+    }
     try {
       final ImmutableList.Builder<RelDataType> argTypeBuilder =
           ImmutableList.builder();
       boolean containsRowArg = false;
-      for (SqlNode operand : operands) {
+      for (SqlNode operand : args) {
         RelDataType nodeType;
 
         // for row arguments that should be converted to ColumnList
@@ -252,6 +285,7 @@ public class SqlFunction extends SqlOperator {
               validator.getOperatorTable(),
               getNameAsId(),
               argTypes,
+              argNames,
               getFunctionType());
 
       // if we have a match on function name and parameter count, but
@@ -268,14 +302,14 @@ public class SqlFunction extends SqlOperator {
                 getFunctionType())) {
           // remove the already validated node types corresponding to
           // row arguments before re-validating
-          for (SqlNode operand : operands) {
+          for (SqlNode operand : args) {
             if (operand.getKind() == SqlKind.ROW) {
               validator.removeValidatedNodeType(operand);
             }
           }
           return deriveType(validator, scope, call, false);
         } else if (function != null) {
-          validator.validateColumnListParams(function, argTypes, operands);
+          validator.validateColumnListParams(function, argTypes, args);
         }
       }
 
@@ -292,6 +326,13 @@ public class SqlFunction extends SqlOperator {
       // because otherwise later validation code will
       // choke on the unresolved function.
       ((SqlBasicCall) call).setOperator(function);
+      if (argNames != null) {
+        final SqlNode[] targetOperands = ((SqlBasicCall) call).operands;
+        for (int i = 0; i < targetOperands.length; i++) {
+          targetOperands[i] =
+              args.get(argNames.indexOf(function.getParamNames().get(i)));
+        }
+      }
       return function.validateOperands(
           validator,
           operandScope,

@@ -842,7 +842,7 @@ List FunctionParameterList(
                 if (name != null) {
                     e = SqlStdOperatorTable.ARGUMENT_ASSIGNMENT.createCall(
                         name.getParserPosition().plus(e.getParserPosition()),
-                        name, e);
+                        e, name);
                 }
                 list.add(e);
             }
@@ -868,7 +868,7 @@ List FunctionParameterList(
                 if (name != null) {
                     e = SqlStdOperatorTable.ARGUMENT_ASSIGNMENT.createCall(
                         name.getParserPosition().plus(e.getParserPosition()),
-                        name, e);
+                        e, name);
                     name = null;
                 }
                 list.add(e);

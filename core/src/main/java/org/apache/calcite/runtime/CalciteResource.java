@@ -389,6 +389,12 @@ public interface CalciteResource {
   @BaseMessage("DISTINCT/ALL not allowed with {0} function")
   ExInst<SqlValidatorException> functionQuantifierNotAllowed(String a0);
 
+  @BaseMessage("Some but not all arguments are named")
+  ExInst<SqlValidatorException> someButNotAllArgumentsAreNamed();
+
+  @BaseMessage("Duplicate argument name ''{0}''")
+  ExInst<SqlValidatorException> duplicateArgumentName(String name);
+
   @BaseMessage("Not allowed to perform {0} on {1}")
   ExInst<SqlValidatorException> accessNotAllowed(String a0, String a1);
 
