@@ -20,7 +20,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Executable;
 
 /**
  * Annotation that supplies metadata about a function parameter.
@@ -29,7 +28,7 @@ import java.lang.reflect.Executable;
  * functions.
  *
  * <p>If present, supersedes information that might be available via
- * {@link Executable#getParameters()}.
+ * {@code Executable.getParameters()} (JDK 1.8 and above).
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.PARAMETER })

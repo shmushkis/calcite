@@ -61,7 +61,7 @@ public interface Compatible {
   @Deprecated // to be removed before 2.0
   void setSchema(Connection connection, String schema);
 
-  /** Calls {@link Method#getParameters()}[i].getName(). */
+  /** Calls {@link Method}.{@code getParameters()[i].getName()}. */
   String getParameterName(Method method, int i);
 
   /** Creates the implementation of Compatible suitable for the
@@ -117,7 +117,7 @@ public interface Compatible {
                   final Method method3 = parameter.getClass().getMethod("getName");
                   return method3.invoke(parameter);
                 } catch (NoSuchMethodException e) {
-                  return null;
+                  return "arg" + i;
                 }
               }
               return null;
