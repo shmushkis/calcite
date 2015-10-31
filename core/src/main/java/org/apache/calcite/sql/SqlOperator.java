@@ -548,6 +548,18 @@ public abstract class SqlOperator {
       throw Util.needToImplement(this);
     }
 
+    if (kind != SqlKind.ARGUMENT_ASSIGNMENT) {
+      for (Ord<SqlNode> operand : Ord.zip(callBinding.operands())) {
+        if (operand.e != null
+            && operand.e.getKind() == SqlKind.DEFAULT
+            && !operandTypeChecker.isOptional(operand.i)) {
+          throw callBinding.getValidator().newValidationError(
+              callBinding.getCall(),
+              RESOURCE.defaultForOptionalParameter());
+        }
+      }
+    }
+
     return operandTypeChecker.checkOperandTypes(
         callBinding,
         throwOnFailure);
@@ -557,13 +569,6 @@ public abstract class SqlOperator {
       SqlValidator validator,
       SqlOperandTypeChecker argType,
       SqlCall call) {
-    for (Ord<SqlNode> operand : Ord.zip(call.getOperandList())) {
-      if (operand.e.getKind() == SqlKind.DEFAULT
-          && !argType.isOptional(operand.i)) {
-        throw validator.newValidationError(call,
-            RESOURCE.defaultForOptionalParameter());
-      }
-    }
     SqlOperandCountRange od = call.getOperator().getOperandCountRange();
     if (od.isValidCount(call.operandCount())) {
       return;

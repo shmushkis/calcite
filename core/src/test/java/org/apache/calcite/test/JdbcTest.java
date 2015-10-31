@@ -5517,7 +5517,7 @@ public class JdbcTest {
         .throws_("DEFAULT is only allowed for optional parameters");
     with.query("values (\"adhoc\".abcde(a=>1,b=>2,c=>DEFAULT))")
         .throws_("DEFAULT is only allowed for optional parameters");
-    with.query("values (\"adhoc\".abcde(a=>1,b=>DEFAULT,c=3))")
+    with.query("values (\"adhoc\".abcde(a=>1,b=>DEFAULT,c=>3))")
         .returns("EXPR$0={a: 1, b: null, c: 3, d: null, e: null}\n");
   }
 
