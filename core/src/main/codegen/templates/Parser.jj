@@ -828,52 +828,52 @@ List FunctionParameterList(
     {
        list.add(e);
     }
+    [
+        name = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT>
+    ]
     (
         <DEFAULT_KW> {
-            list.add(SqlStdOperatorTable.DEFAULT.createCall(getPos()));
+            e = SqlStdOperatorTable.DEFAULT.createCall(getPos());
         }
     |
-        [
-            name = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT>
-        ]
         e = OrderedQueryOrExpr(firstExprContext)
-        {
-            if (e != null) {
-                if (name != null) {
-                    e = SqlStdOperatorTable.ARGUMENT_ASSIGNMENT.createCall(
-                        name.getParserPosition().plus(e.getParserPosition()),
-                        e, name);
-                }
-                list.add(e);
-            }
-            name = null;
-        }
     )
+    {
+        if (e != null) {
+            if (name != null) {
+                e = SqlStdOperatorTable.ARGUMENT_ASSIGNMENT.createCall(
+                    name.getParserPosition().plus(e.getParserPosition()),
+                    e, name);
+            }
+            list.add(e);
+        }
+        name = null;
+    }
     (
         <COMMA>
         {
             // a comma-list can't appear where only a query is expected
             checkNonQueryExpression(exprContext);
         }
+        [
+            name = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT>
+        ]
         (
             <DEFAULT_KW> {
-                list.add(SqlStdOperatorTable.DEFAULT.createCall(getPos()));
+                e = SqlStdOperatorTable.DEFAULT.createCall(getPos());
             }
         |
-            [
-                name = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT>
-            ]
             e = Expression(exprContext)
-            {
-                if (name != null) {
-                    e = SqlStdOperatorTable.ARGUMENT_ASSIGNMENT.createCall(
-                        name.getParserPosition().plus(e.getParserPosition()),
-                        e, name);
-                    name = null;
-                }
-                list.add(e);
-            }
         )
+        {
+            if (name != null) {
+                e = SqlStdOperatorTable.ARGUMENT_ASSIGNMENT.createCall(
+                    name.getParserPosition().plus(e.getParserPosition()),
+                    e, name);
+                name = null;
+            }
+            list.add(e);
+        }
     ) *
     <RPAREN>
     {

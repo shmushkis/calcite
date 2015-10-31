@@ -5272,6 +5272,12 @@ public class JdbcTest {
         + "'\n"
         + "         },\n"
         + "         {\n"
+        + "           name: 'ABCDE',\n"
+        + "           className: '"
+        + MyAbcdeFunction.class.getName()
+        + "'\n"
+        + "         },\n"
+        + "         {\n"
         + "           name: 'MY_STR',\n"
         + "           className: '"
         + MyToStringFunction.class.getName()
@@ -5473,6 +5479,46 @@ public class JdbcTest {
     with.query("values (\"adhoc\".my_left(\"n\" => 1, \"s\" => 0))")
         .throws_("No match found for function signature "
             + "MY_LEFT(n => <NUMERIC>, s => <NUMERIC>)\n");
+  }
+
+  /** Tests calling a user-defined function some of whose parameters are
+   * optional. */
+  @Test public void testUdfArgumentOptional() {
+    final CalciteAssert.AssertThat with = withUdf();
+    with.query("values (\"adhoc\".abcde(a=>1,b=>2,c=>3,d=>4,e=>5))")
+        .returns("EXPR$0={a: 1, b: 2, c: 3, d: 4, e: 5}\n");
+    with.query("values (\"adhoc\".abcde(1,2,3,4,CAST(NULL AS INTEGER)))")
+        .returns("EXPR$0={a: 1, b: 2, c: 3, d: 4, e: null}\n");
+    with.query("values (\"adhoc\".abcde(a=>1,b=>2,c=>3,d=>4))")
+        .returns("EXPR$0={a: 1, b: 2, c: 3, d: 4, e: null}\n");
+    with.query("values (\"adhoc\".abcde(a=>1,b=>2,c=>3))")
+        .returns("EXPR$0={a: 1, b: 2, c: 3, d: null, e: null}\n");
+    with.query("values (\"adhoc\".abcde(a=>1,e=>5,c=>3))")
+        .returns("EXPR$0={a: 1, b: null, c: 3, d: null, e: 5}\n");
+    with.query("values (\"adhoc\".abcde(1,2,3))")
+        .returns("EXPR$0={a: 1, b: 2, c: 3, d: null, e: null}\n");
+    with.query("values (\"adhoc\".abcde(1,2,3,4))")
+        .returns("EXPR$0={a: 1, b: 2, c: 3, d: 4, e: null}\n");
+    with.query("values (\"adhoc\".abcde(1,2,3,4,5))")
+        .returns("EXPR$0={a: 1, b: 2, c: 3, d: 4, e: 5}\n");
+    with.query("values (\"adhoc\".abcde(1,2))")
+        .throws_("No match found for function signature ABCDE(<NUMERIC>, <NUMERIC>)");
+    with.query("values (\"adhoc\".abcde(1,DEFAULT,3))")
+        .returns("EXPR$0={a: 1, b: null, c: 3, d: null, e: null}\n");
+    with.query("values (\"adhoc\".abcde(1,DEFAULT,'abcde'))")
+        .throws_("No match found for function signature ABCDE(<NUMERIC>, <ANY>, <CHARACTER>)");
+    with.query("values (\"adhoc\".abcde(true))")
+        .throws_("No match found for function signature ABCDE(<BOOLEAN>)");
+    with.query("values (\"adhoc\".abcde(true,DEFAULT))")
+        .throws_("No match found for function signature ABCDE(<BOOLEAN>, <ANY>)");
+    with.query("values (\"adhoc\".abcde(1,DEFAULT,3,DEFAULT))")
+        .returns("EXPR$0={a: 1, b: null, c: 3, d: null, e: null}\n");
+    with.query("values (\"adhoc\".abcde(1,2,DEFAULT))")
+        .throws_("DEFAULT is only allowed for optional parameters");
+    with.query("values (\"adhoc\".abcde(a=>1,b=>2,c=>DEFAULT))")
+        .throws_("DEFAULT is only allowed for optional parameters");
+    with.query("values (\"adhoc\".abcde(a=>1,b=>DEFAULT,c=3))")
+        .returns("EXPR$0={a: 1, b: null, c: 3, d: null, e: null}\n");
   }
 
   /** Test for
@@ -7028,6 +7074,18 @@ public class JdbcTest {
     public String eval(@Parameter(name = "s") String s,
         @Parameter(name = "n") int n) {
       return s.substring(0, n);
+    }
+  }
+
+  /** Example of a UDF with named parameters, some of them optional. */
+  public static class MyAbcdeFunction {
+    public String eval(@Parameter(name = "A", optional = false) Integer a,
+        @Parameter(name = "B", optional = true) Integer b,
+        @Parameter(name = "C", optional = false) Integer c,
+        @Parameter(name = "D", optional = true) Integer d,
+        @Parameter(name = "E", optional = true) Integer e) {
+      return "{a: " + a + ", b: " + b +  ", c: " + c +  ", d: " + d  + ", e: "
+          + e + "}";
     }
   }
 

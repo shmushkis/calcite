@@ -186,16 +186,6 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
           }
         });
 
-    // "=>" has no effect, so expand "id => x" into "x".
-    registerOp(
-        SqlStdOperatorTable.ARGUMENT_ASSIGNMENT,
-        new SqlRexConvertlet() {
-          public RexNode convertCall(SqlRexContext cx, SqlCall call) {
-            SqlNode expanded = call.operand(0);
-            return cx.convertExpression(expanded);
-          }
-        });
-
     // "SQRT(x)" is equivalent to "POWER(x, .5)"
     registerOp(
         SqlStdOperatorTable.SQRT,

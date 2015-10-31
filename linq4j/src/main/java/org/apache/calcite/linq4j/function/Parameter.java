@@ -23,7 +23,7 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Executable;
 
 /**
- * Annotation that supplies metadata about a method parameter.
+ * Annotation that supplies metadata about a function parameter.
  *
  * <p>A typical use is to derive names for the parameters of user-defined
  * functions.
@@ -34,7 +34,36 @@ import java.lang.reflect.Executable;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.PARAMETER })
 public @interface Parameter {
+  /** The name of the parameter.
+   *
+   * <p>The name is used when the function is called
+   * with parameter assignment, for example {@code foo(x => 1, y => 'a')}.
+   */
   String name();
+
+  /** Returns whether the parameter is optional.
+   *
+   * <p>An optional parameter does not need to be specified when you call the
+   * function.
+   *
+   * <p>If you call a function using positional parameter syntax, you can omit
+   * optional parameters on the trailing edge. For example, if you have a
+   * function
+   * {@code baz(int a, int b optional, int c, int d optional, int e optional)}
+   * then you can call {@code baz(a, b, c, d, e)}
+   * or {@code baz(a, b, c, d)}
+   * or {@code baz(a, b, c)}
+   * but not {@code baz(a, b)} because {@code c} is not optional.
+   *
+   * <p>If you call a function using parameter name assignment syntax, you can
+   * omit any parameter that has a default value. For example, you can call
+   * {@code baz(a => 1, e => 5, c => 3)}, omitting optional parameters {@code b}
+   * and {@code d}.
+   *
+   * <p>Currently, the default value used when a parameter is not specified
+   * is NULL, and therefore optional parameters must be nullable.
+   */
+  boolean optional() default false;
 }
 
 // End Parameter.java

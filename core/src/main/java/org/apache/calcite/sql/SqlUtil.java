@@ -17,6 +17,8 @@
 package org.apache.calcite.sql;
 
 import org.apache.calcite.linq4j.Ord;
+import org.apache.calcite.linq4j.function.Function1;
+import org.apache.calcite.linq4j.function.Functions;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypePrecedenceList;
@@ -34,7 +36,6 @@ import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
-import org.apache.calcite.util.mapping.Mappings;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
@@ -448,7 +449,7 @@ public abstract class SqlUtil {
    * @sql.99 Part 2 Section 10.4 Syntax Rule 6.b.iii.2.B
    */
   private static void filterRoutinesByParameterType(List<SqlFunction> routines,
-      List<RelDataType> argTypes, List<String> argNames) {
+      final List<RelDataType> argTypes, List<String> argNames) {
     Iterator<SqlFunction> iter = routines.iterator();
   loop:
     while (iter.hasNext()) {
@@ -458,25 +459,41 @@ public abstract class SqlUtil {
         // no parameter information for builtins; keep for now
         continue;
       }
+      final List<RelDataType> permutedArgTypes;
       if (argNames != null) {
         // Arguments passed by name. Make sure that the function has parameters
         // of all of these names.
-        Map<Integer, Integer> map = new HashMap<>();
+        final Map<Integer, Integer> map = new HashMap<>();
         for (Ord<String> argName : Ord.zip(argNames)) {
           final int i = function.getParamNames().indexOf(argName.e);
           if (i < 0) {
             iter.remove();
             continue loop;
           }
-          map.put(argName.i, i);
+          map.put(i, argName.i);
         }
-        argTypes = Mappings.permute(argTypes, Mappings.bijection(map));
+        permutedArgTypes = Functions.generate(paramTypes.size(),
+            new Function1<Integer, RelDataType>() {
+              public RelDataType apply(Integer a0) {
+                if (map.containsKey(a0)) {
+                  return argTypes.get(map.get(a0));
+                } else {
+                  return null;
+                }
+              }
+            });
+      } else {
+        permutedArgTypes = Lists.newArrayList(argTypes);
+        while (permutedArgTypes.size() < argTypes.size()) {
+          paramTypes.add(null);
+        }
       }
-      assert paramTypes.size() == argTypes.size();
-      for (Pair<RelDataType, RelDataType> p : Pair.zip(paramTypes, argTypes)) {
+      for (Pair<RelDataType, RelDataType> p
+          : Pair.zip(paramTypes, permutedArgTypes)) {
         final RelDataType argType = p.right;
         final RelDataType paramType = p.left;
-        if (!SqlTypeUtil.canAssignFrom(paramType, argType)) {
+        if (argType != null
+            && !SqlTypeUtil.canAssignFrom(paramType, argType)) {
           iter.remove();
           continue loop;
         }

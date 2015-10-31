@@ -23,6 +23,7 @@ import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 /**
  * Operator that indicates that an argument to a function call is to take its
@@ -33,8 +34,9 @@ import org.apache.calcite.sql.type.ReturnTypes;
  */
 class SqlDefaultOperator extends SqlSpecialOperator {
   public SqlDefaultOperator() {
-    super("DEFAULT", SqlKind.DEFAULT, 20, true, ReturnTypes.BOOLEAN_NOT_NULL,
-        InferTypes.RETURN_TYPE, OperandTypes.NILADIC);
+    super("DEFAULT", SqlKind.DEFAULT, 20, true,
+        ReturnTypes.explicit(SqlTypeName.ANY), InferTypes.RETURN_TYPE,
+        OperandTypes.NILADIC);
   }
 
   @Override public void unparse(SqlWriter writer, SqlCall call, int leftPrec,

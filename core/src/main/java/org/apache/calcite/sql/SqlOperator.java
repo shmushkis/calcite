@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.sql;
 
+import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -556,6 +557,13 @@ public abstract class SqlOperator {
       SqlValidator validator,
       SqlOperandTypeChecker argType,
       SqlCall call) {
+    for (Ord<SqlNode> operand : Ord.zip(call.getOperandList())) {
+      if (operand.e.getKind() == SqlKind.DEFAULT
+          && !argType.isOptional(operand.i)) {
+        throw validator.newValidationError(call,
+            RESOURCE.defaultForOptionalParameter());
+      }
+    }
     SqlOperandCountRange od = call.getOperator().getOperandCountRange();
     if (od.isValidCount(call.operandCount())) {
       return;

@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.sql;
 
+import org.apache.calcite.linq4j.function.Function1;
+import org.apache.calcite.linq4j.function.Functions;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -38,6 +40,14 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * function-call syntax.
  */
 public class SqlFunction extends SqlOperator {
+  /** Function that generates "arg{n}" for the {@code n}th argument name. */
+  private static final Function1<Integer, String> ARG_FN =
+      new Function1<Integer, String>() {
+        public String apply(Integer a0) {
+          return "arg" + a0;
+        }
+      };
+
   //~ Instance fields --------------------------------------------------------
 
   private final SqlFunctionCategory category;
@@ -153,10 +163,12 @@ public class SqlFunction extends SqlOperator {
   }
 
   /**
-   * @return array of parameter names
+   * Returns a list of parameter names.
+   *
+   * <p>The default implementation returns {@code [arg0, arg1, ..., argN]}.
    */
   public List<String> getParamNames() {
-    return ImmutableList.of("s", "n");
+    return Functions.generate(paramTypes.size(), ARG_FN);
   }
 
   public void unparse(
@@ -327,13 +339,6 @@ public class SqlFunction extends SqlOperator {
       // because otherwise later validation code will
       // choke on the unresolved function.
       ((SqlBasicCall) call).setOperator(function);
-      if (argNames != null) {
-        final SqlNode[] targetOperands = ((SqlBasicCall) call).operands;
-        for (int i = 0; i < targetOperands.length; i++) {
-          targetOperands[i] =
-              args.get(argNames.indexOf(function.getParamNames().get(i)));
-        }
-      }
       return function.validateOperands(
           validator,
           operandScope,

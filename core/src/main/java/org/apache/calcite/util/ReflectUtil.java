@@ -568,6 +568,16 @@ public abstract class ReflectUtil {
     return method.getParameters()[i].getName();
   }
 
+  /** Derives whether the {@code i}th parameter of a method is optional. */
+  public static boolean isParameterOptional(Method method, int i) {
+    for (Annotation annotation : method.getParameterAnnotations()[i]) {
+      if (annotation.annotationType() == Parameter.class) {
+        return ((Parameter) annotation).optional();
+      }
+    }
+    return false;
+  }
+
   //~ Inner Classes ----------------------------------------------------------
 
   /**

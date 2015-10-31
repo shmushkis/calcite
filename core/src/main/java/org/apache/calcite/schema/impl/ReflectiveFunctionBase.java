@@ -20,7 +20,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.Function;
 import org.apache.calcite.schema.FunctionParameter;
-import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.ReflectUtil;
 
 import com.google.common.collect.ImmutableList;
@@ -30,7 +29,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Implementation of a function that is based on a method.
@@ -49,7 +47,7 @@ public abstract class ReflectiveFunctionBase implements Function {
    */
   public ReflectiveFunctionBase(Method method) {
     this.method = method;
-    this.parameters = toFunctionParameters(method);
+    this.parameters = builder().addMethodParameters(method).build();
   }
 
   /**
@@ -59,43 +57,6 @@ public abstract class ReflectiveFunctionBase implements Function {
    */
   public List<FunctionParameter> getParameters() {
     return parameters;
-  }
-
-
-  public static ImmutableList<FunctionParameter> toFunctionParameters(
-      final Method method) {
-    final Class<?>[] types = method.getParameterTypes();
-    final List<Pair<Class<?>, String>> params = new ArrayList<>();
-    for (int i = 0; i < types.length; i++) {
-      String name = ReflectUtil.getParameterName(method, i);
-      params.add(Pair.<Class<?>, String>of(types[i], name));
-    }
-    return toFunctionParameters(params);
-  }
-
-  public static ImmutableList<FunctionParameter> toFunctionParameters(
-      Iterable<? extends Map.Entry<? extends Class, String>> params) {
-    final ImmutableList.Builder<FunctionParameter> res =
-        ImmutableList.builder();
-    int i = 0;
-    for (final Map.Entry<? extends Class, String> param : params) {
-      final int ordinal = i;
-      res.add(new FunctionParameter() {
-        public int getOrdinal() {
-          return ordinal;
-        }
-
-        public String getName() {
-          return param.getValue();
-        }
-
-        public RelDataType getType(RelDataTypeFactory typeFactory) {
-          return typeFactory.createJavaType(param.getKey());
-        }
-      });
-      i++;
-    }
-    return res.build();
   }
 
   /**
@@ -126,6 +87,58 @@ public abstract class ReflectiveFunctionBase implements Function {
       }
     }
     return null;
+  }
+
+  /** Creates a ParameterListBuilder. */
+  public static ParameterListBuilder builder() {
+    return new ParameterListBuilder();
+  }
+
+  /** Helps build lists of
+   * {@link org.apache.calcite.schema.FunctionParameter}. */
+  public static class ParameterListBuilder {
+    final List<FunctionParameter> builder = new ArrayList<>();
+
+    public ImmutableList<FunctionParameter> build() {
+      return ImmutableList.copyOf(builder);
+    }
+
+    public ParameterListBuilder add(final Class<?> type, final String name) {
+      return add(type, name, false);
+    }
+
+    public ParameterListBuilder add(final Class<?> type, final String name,
+        final boolean optional) {
+      final int ordinal = builder.size();
+      builder.add(
+          new FunctionParameter() {
+            public int getOrdinal() {
+              return ordinal;
+            }
+
+            public String getName() {
+              return name;
+            }
+
+            public RelDataType getType(RelDataTypeFactory typeFactory) {
+              return typeFactory.createJavaType(type);
+            }
+
+            public boolean isOptional() {
+              return optional;
+            }
+          });
+      return this;
+    }
+
+    public ParameterListBuilder addMethodParameters(Method method) {
+      final Class<?>[] types = method.getParameterTypes();
+      for (int i = 0; i < types.length; i++) {
+        add(types[i], ReflectUtil.getParameterName(method, i),
+            ReflectUtil.isParameterOptional(method, i));
+      }
+      return this;
+    }
   }
 }
 

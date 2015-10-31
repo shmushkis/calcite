@@ -1623,18 +1623,19 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
             returnType);
       }
     } else if (node instanceof SqlCall) {
-      SqlCall call = (SqlCall) node;
-      SqlOperandTypeInference operandTypeInference =
+      final SqlCall call = (SqlCall) node;
+      final SqlOperandTypeInference operandTypeInference =
           call.getOperator().getOperandTypeInference();
-      List<SqlNode> operands = call.getOperandList();
-      RelDataType[] operandTypes = new RelDataType[operands.size()];
+      final SqlCallBinding callBinding = new SqlCallBinding(this, scope, call);
+      final List<SqlNode> operands = callBinding.operands();
+      final RelDataType[] operandTypes = new RelDataType[operands.size()];
       if (operandTypeInference == null) {
         // TODO:  eventually should assert(operandTypeInference != null)
         // instead; for now just eat it
         Arrays.fill(operandTypes, unknownType);
       } else {
         operandTypeInference.inferOperandTypes(
-            new SqlCallBinding(this, scope, call),
+            callBinding,
             inferredType,
             operandTypes);
       }

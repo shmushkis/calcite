@@ -57,6 +57,10 @@ public class AssignableOperandTypeChecker implements SqlOperandTypeChecker {
 
   //~ Methods ----------------------------------------------------------------
 
+  public boolean isOptional(int i) {
+    return false;
+  }
+
   public SqlOperandCountRange getOperandCountRange() {
     return SqlOperandCountRanges.of(paramTypes.size());
   }
@@ -64,6 +68,8 @@ public class AssignableOperandTypeChecker implements SqlOperandTypeChecker {
   public boolean checkOperandTypes(
       SqlCallBinding callBinding,
       boolean throwOnFailure) {
+    // Do not use callBinding.operands(). We have not resolved to a function
+    // yet, therefore we do not know the ordered parameter names.
     final List<SqlNode> operands = callBinding.getCall().getOperandList();
     for (Pair<RelDataType, SqlNode> pair : Pair.zip(paramTypes, operands)) {
       RelDataType argType =
