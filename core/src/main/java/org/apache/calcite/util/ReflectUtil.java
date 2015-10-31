@@ -565,7 +565,7 @@ public abstract class ReflectUtil {
         return ((Parameter) annotation).name();
       }
     }
-    return method.getParameters()[i].getName();
+    return Compatible.INSTANCE.getParameterName(method, i);
   }
 
   /** Derives whether the {@code i}th parameter of a method is optional. */
