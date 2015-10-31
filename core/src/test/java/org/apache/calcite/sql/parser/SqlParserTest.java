@@ -738,9 +738,9 @@ public class SqlParserTest {
     checkExp("foo(x => 1, DEFAULT)",
         "`FOO`(`X` => 1, DEFAULT)");
     checkExp("foo(y => DEFAULT, x => 1)",
-        "`FOO`(`Y` => (DEFAULT), `X` => 1)");
+        "`FOO`(`Y` => DEFAULT, `X` => 1)");
     checkExp("foo(x => 1, y => DEFAULT)",
-        "`FOO`(`X` => 1, `Y` => (DEFAULT))");
+        "`FOO`(`X` => 1, `Y` => DEFAULT)");
     check("select sum(DISTINCT DEFAULT) from t group by x",
         "SELECT SUM(DISTINCT DEFAULT)\n"
             + "FROM `T`\n"
