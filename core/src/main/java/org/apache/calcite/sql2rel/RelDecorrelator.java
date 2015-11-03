@@ -391,7 +391,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
       Litmus ret) {
     for (int value : integers) {
       if (value >= limit) {
-        return ret.fail("value out of range");
+        return ret.fail("out of range; value: " + value + ", limit: " + limit);
       }
     }
     return ret.succeed();
@@ -578,13 +578,13 @@ public class RelDecorrelator implements ReflectiveVisitor {
     }
 
     // now it's time to rewrite LogicalAggregate
+    final ImmutableBitSet newGroupSet = ImmutableBitSet.range(newGroupKeyCount);
     List<AggregateCall> newAggCalls = Lists.newArrayList();
     List<AggregateCall> oldAggCalls = rel.getAggCallList();
 
     // LogicalAggregate.Call oldAggCall;
-    int oldChildOutputFieldCount = oldChildRel.getRowType().getFieldCount();
-    int newChildOutputFieldCount =
-        newProjectRel.getRowType().getFieldCount();
+    int oldChildOutputFieldCount = rel.getGroupSet().cardinality();
+    int newChildOutputFieldCount = newGroupSet.cardinality();
 
     int i = -1;
     for (AggregateCall oldAggCall : oldAggCalls) {
@@ -617,7 +617,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     LogicalAggregate newAggregate =
         LogicalAggregate.create(newProjectRel,
             false,
-            ImmutableBitSet.range(newGroupKeyCount),
+            newGroupSet,
             null,
             newAggCalls);
 

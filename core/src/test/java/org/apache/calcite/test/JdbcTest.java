@@ -4431,10 +4431,17 @@ public class JdbcTest {
   }
 
   @Test public void testExistsCorrelated() {
-    CalciteAssert.hr()
-        .query("select*from \"hr\".\"emps\" where exists (\n"
-            + " select 1 from \"hr\".\"depts\"\n"
-            + " where \"emps\".\"deptno\"=\"depts\".\"deptno\")")
+    final String sql = "select*from \"hr\".\"emps\" where exists (\n"
+        + " select 1 from \"hr\".\"depts\"\n"
+        + " where \"emps\".\"deptno\"=\"depts\".\"deptno\")";
+    final String plan = ""
+        + "LogicalProject(empid=[$0], deptno=[$1], name=[$2], salary=[$3], commission=[$4])\n"
+        + "  LogicalFilter(condition=[EXISTS({\n"
+        + "LogicalFilter(condition=[=($cor0.deptno, $0)])\n"
+        + "  EnumerableTableScan(table=[[hr, depts]])\n"
+        + "})], variablesSet=[[$cor0]])\n"
+        + "    EnumerableTableScan(table=[[hr, emps]])\n";
+    CalciteAssert.hr().query(sql).convertContains(plan)
         .returnsUnordered(
             "empid=100; deptno=10; name=Bill; salary=10000.0; commission=1000",
             "empid=150; deptno=10; name=Sebastian; salary=7000.0; commission=null",

@@ -503,6 +503,7 @@ public abstract class SqlToRelTestBase {
         root = root.withRel(converter.flattenTypes(root.rel, true));
       }
       if (enableDecorrelate) {
+        System.out.println(RelOptUtil.toString(root.rel));
         root = root.withRel(converter.decorrelate(sqlQuery, root.rel));
       }
       if (enableTrim) {
