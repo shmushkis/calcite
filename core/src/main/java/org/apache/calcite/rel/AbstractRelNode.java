@@ -35,6 +35,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.trace.CalciteTrace;
@@ -198,8 +199,12 @@ public abstract class AbstractRelNode implements RelNode {
     return className;
   }
 
+  public boolean isValid(Litmus litmus) {
+    return litmus.succeed();
+  }
+
   public boolean isValid(boolean fail) {
-    return true;
+    return isValid(Litmus.THROW);
   }
 
   /** @deprecated Use {@link RelMetadataQuery#collations(RelNode)} */
@@ -316,7 +321,7 @@ public abstract class AbstractRelNode implements RelNode {
             input.getRowType(),
             "rowtype of rel after registration",
             e.getRowType(),
-            true);
+            Litmus.THROW);
       }
       inputs.add(e);
     }
@@ -325,7 +330,7 @@ public abstract class AbstractRelNode implements RelNode {
       r = copy(getTraitSet(), inputs);
     }
     r.recomputeDigest();
-    assert r.isValid(true);
+    assert r.isValid(Litmus.THROW);
     return r;
   }
 

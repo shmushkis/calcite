@@ -40,6 +40,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.IntList;
+import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
@@ -139,7 +140,7 @@ public abstract class Aggregate extends SingleRel {
     }
     assert groupSet.length() <= child.getRowType().getFieldCount();
     for (AggregateCall aggCall : aggCalls) {
-      assert typeMatchesInferred(aggCall, true);
+      assert typeMatchesInferred(aggCall, Litmus.THROW);
       assert aggCall.filterArg < 0
           || child.getRowType().getFieldList().get(aggCall.filterArg).getType()
               .getSqlTypeName() == SqlTypeName.BOOLEAN;
@@ -364,16 +365,9 @@ public abstract class Aggregate extends SingleRel {
     return builder.build();
   }
 
-  public boolean isValid(boolean fail) {
-    if (!super.isValid(fail)) {
-      assert !fail;
-      return false;
-    }
-    if (!Util.isDistinct(getRowType().getFieldNames())) {
-      assert !fail : getRowType();
-      return false;
-    }
-    return true;
+  public boolean isValid(Litmus litmus) {
+    return super.isValid(litmus)
+        && litmus.check(Util.isDistinct(getRowType().getFieldNames()), getRowType());
   }
 
   /**
@@ -381,12 +375,12 @@ public abstract class Aggregate extends SingleRel {
    * type it was given when it was created.
    *
    * @param aggCall Aggregate call
-   * @param fail    Whether to fail if the types do not match
+   * @param litmus What to do if an error is detected (types do not match)
    * @return Whether the inferred and declared types match
    */
   private boolean typeMatchesInferred(
       final AggregateCall aggCall,
-      final boolean fail) {
+      final Litmus litmus) {
     SqlAggFunction aggFunction = aggCall.getAggregation();
     AggCallBinding callBinding = aggCall.createBinding(this);
     RelDataType type = aggFunction.inferReturnType(callBinding);
@@ -395,7 +389,7 @@ public abstract class Aggregate extends SingleRel {
         expectedType,
         "inferred type",
         type,
-        fail);
+        litmus);
   }
 
   /**

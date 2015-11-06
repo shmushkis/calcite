@@ -30,6 +30,7 @@ import org.apache.calcite.sql.validate.SqlMonotonicity;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.BitString;
+import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Util;
 
@@ -388,17 +389,15 @@ public class SqlLiteral extends SqlNode {
     return visitor.visit(this);
   }
 
-  public boolean equalsDeep(SqlNode node, boolean fail) {
+  public boolean equalsDeep(SqlNode node, Litmus litmus) {
     if (!(node instanceof SqlLiteral)) {
-      assert !fail : this + "!=" + node;
-      return false;
+      return litmus.fail(this + "!=" + node);
     }
     SqlLiteral that = (SqlLiteral) node;
     if (!this.equals(that)) {
-      assert !fail : this + "!=" + node;
-      return false;
+      return litmus.fail(this + "!=" + node);
     }
-    return true;
+    return litmus.succeed();
   }
 
   public SqlMonotonicity getMonotonicity(SqlValidatorScope scope) {

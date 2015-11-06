@@ -20,8 +20,6 @@ import org.apache.calcite.materialize.Lattice;
 
 import com.google.common.collect.ImmutableList;
 
-import java.util.Map;
-
 /**
  * Extension to the {@link Schema} interface.
  *
@@ -39,9 +37,9 @@ import java.util.Map;
  * The purpose of SchemaPlus is to expose to user code, in a read only manner,
  * some of the extra information about schemas that Calcite builds up when a
  * schema is registered. It appears in several SPI calls as context; for example
- * {@link SchemaFactory#create(SchemaPlus, String, Map)} contains a parent
- * schema that might be a wrapped instance of a user-defined {@link Schema}, or
- * indeed might not.
+ * {@link SchemaFactory#create(SchemaPlus, String, java.util.Map)} contains a
+ * parent schema that might be a wrapped instance of a user-defined
+ * {@link Schema}, or indeed might not.
  */
 public interface SchemaPlus extends Schema {
   /**
