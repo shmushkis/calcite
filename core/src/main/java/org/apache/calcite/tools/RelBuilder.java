@@ -1219,7 +1219,8 @@ public class RelBuilder {
     for (RexNode node : nodes) {
       fieldCollations.add(
           collation(node, RelFieldCollation.Direction.ASCENDING,
-              RelFieldCollation.NullDirection.UNSPECIFIED, extraNodes));
+              RelFieldCollation.Direction.ASCENDING.defaultNullDirection(),
+              extraNodes));
     }
     final RexNode offsetNode = offset <= 0 ? null : literal(offset);
     final RexNode fetchNode = fetch < 0 ? null : literal(fetch);
