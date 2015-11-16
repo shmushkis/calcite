@@ -26,7 +26,25 @@ public enum NullCollation {
   /** Nulls first for DESC and ASC. */
   FIRST,
   /** Nulls last for DESC and ASC. */
-  LAST
+  LAST;
+
+  /** Returns whether NULL values should appear last.
+   *
+   * @param desc Whether sort is descending
+   */
+  public boolean last(boolean desc) {
+    switch (this) {
+    case FIRST:
+      return false;
+    case LAST:
+      return true;
+    case LOW:
+      return desc;
+    case HIGH:
+    default:
+      return !desc;
+    }
+  }
 }
 
 // End NullCollation.java

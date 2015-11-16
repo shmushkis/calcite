@@ -16,8 +16,9 @@
  */
 package org.apache.calcite.rel;
 
-import com.google.common.base.Preconditions;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Definition of the ordering of one field of a {@link RelNode} whose
@@ -245,11 +246,16 @@ public class RelFieldCollation {
   }
 
   public String toString() {
-    return fieldIndex
-        + " " + direction.shortString
-        + (nullDirection == NullDirection.UNSPECIFIED
-        ? ""
-        : " " + nullDirection);
+    if (direction == Direction.ASCENDING
+        && nullDirection == direction.defaultNullDirection()) {
+      return String.valueOf(fieldIndex);
+    }
+    final StringBuilder sb = new StringBuilder();
+    sb.append(fieldIndex).append(" ").append(direction.shortString);
+    if (nullDirection != direction.defaultNullDirection()) {
+      sb.append(" ").append(nullDirection);
+    }
+    return sb.toString();
   }
 
   public String shortString() {

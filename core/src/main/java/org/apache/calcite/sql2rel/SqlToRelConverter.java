@@ -2761,7 +2761,9 @@ public class SqlToRelConverter {
 
     switch (nullDirection) {
     case UNSPECIFIED:
-      nullDirection = direction.defaultNullDirection();
+      nullDirection = validator.getDefaultNullCollation().last(desc(direction))
+          ? RelFieldCollation.NullDirection.LAST
+          : RelFieldCollation.NullDirection.FIRST;
     }
 
     // Scan the select list and order exprs for an identical expression.
@@ -2788,6 +2790,16 @@ public class SqlToRelConverter {
 
     extraExprs.add(converted);
     return new RelFieldCollation(ordinal + 1, direction, nullDirection);
+  }
+
+  private static boolean desc(RelFieldCollation.Direction direction) {
+    switch (direction) {
+    case DESCENDING:
+    case STRICTLY_DESCENDING:
+      return true;
+    default:
+      return false;
+    }
   }
 
   protected boolean enableDecorrelation() {

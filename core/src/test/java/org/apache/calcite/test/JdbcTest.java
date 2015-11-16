@@ -3158,7 +3158,7 @@ public class JdbcTest {
       final NullCollation nullCollation) {
     final Function<ResultSet, Void> checker = new Function<ResultSet, Void>() {
       public Void apply(ResultSet resultSet) {
-        String msg = (desc ? "DESC" : "ASC") + ":" + nullCollation;
+        final String msg = (desc ? "DESC" : "ASC") + ":" + nullCollation;
         final List<Number> numbers = new ArrayList<>();
         try {
           while (resultSet.next()) {
@@ -3168,22 +3168,8 @@ public class JdbcTest {
           throw new RuntimeException(e);
         }
         assertThat(msg, numbers.size(), is(3));
-        assertThat(msg, numbers.get(last() ? 2 : 0), nullValue());
+        assertThat(msg, numbers.get(nullCollation.last(desc) ? 2 : 0), nullValue());
         return null;
-      }
-
-      private boolean last() {
-        switch (nullCollation) {
-        case FIRST:
-          return false;
-        case LAST:
-          return true;
-        case LOW:
-          return desc;
-        case HIGH:
-        default:
-          return !desc;
-        }
       }
     };
     CalciteAssert.that()
