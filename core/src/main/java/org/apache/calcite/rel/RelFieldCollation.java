@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.rel;
 
+import com.google.common.base.Preconditions;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
 
 /**
@@ -120,6 +121,21 @@ public class RelFieldCollation {
         throw new AssertionError("unknown: " + monotonicity);
       }
     }
+
+    /** Returns the null direction if not specified. Consistent with Oracle,
+     * NULLS are sorted as if they were positive infinity. */
+    public NullDirection defaultNullDirection() {
+      switch (this) {
+      case ASCENDING:
+      case STRICTLY_ASCENDING:
+        return NullDirection.LAST;
+      case DESCENDING:
+      case STRICTLY_DESCENDING:
+        return NullDirection.FIRST;
+      default:
+        return NullDirection.UNSPECIFIED;
+      }
+    }
   }
 
   /**
@@ -160,14 +176,14 @@ public class RelFieldCollation {
    * Creates an ascending field collation.
    */
   public RelFieldCollation(int fieldIndex) {
-    this(fieldIndex, Direction.ASCENDING, NullDirection.UNSPECIFIED);
+    this(fieldIndex, Direction.ASCENDING);
   }
 
   /**
    * Creates a field collation with unspecified null direction.
    */
   public RelFieldCollation(int fieldIndex, Direction direction) {
-    this(fieldIndex, direction, NullDirection.UNSPECIFIED);
+    this(fieldIndex, direction, direction.defaultNullDirection());
   }
 
   /**
@@ -178,10 +194,8 @@ public class RelFieldCollation {
       Direction direction,
       NullDirection nullDirection) {
     this.fieldIndex = fieldIndex;
-    this.direction = direction;
-    this.nullDirection = nullDirection;
-    assert direction != null;
-    assert nullDirection != null;
+    this.direction = Preconditions.checkNotNull(direction);
+    this.nullDirection = Preconditions.checkNotNull(nullDirection);
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -239,6 +253,9 @@ public class RelFieldCollation {
   }
 
   public String shortString() {
+    if (nullDirection == direction.defaultNullDirection()) {
+      return direction.shortString;
+    }
     switch (nullDirection) {
     case FIRST:
       return direction.shortString + "-nulls-first";

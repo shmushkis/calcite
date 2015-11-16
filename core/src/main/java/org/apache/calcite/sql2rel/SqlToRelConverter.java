@@ -2759,6 +2759,11 @@ public class SqlToRelConverter {
 
     SqlNode converted = validator.expandOrderExpr(select, orderItem);
 
+    switch (nullDirection) {
+    case UNSPECIFIED:
+      nullDirection = direction.defaultNullDirection();
+    }
+
     // Scan the select list and order exprs for an identical expression.
     final SelectScope selectScope = validator.getRawSelectScope(select);
     int ordinal = -1;
