@@ -3172,12 +3172,22 @@ public class JdbcTest {
         return null;
       }
     };
-    CalciteAssert.that()
+    final CalciteAssert.AssertThat with = CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
-        .with("defaultNullCollation", nullCollation.name())
-        .query("select \"store_id\", \"grocery_sqft\" from \"store\"\n"
-            + "where \"store_id\" < 3 order by 2 " + (desc ? " DESC" : ""))
-        .returns(checker);
+        .with("defaultNullCollation", nullCollation.name());
+    final String sql = "select \"store_id\", \"grocery_sqft\" from \"store\"\n"
+        + "where \"store_id\" < 3 order by 2 "
+        + (desc ? " DESC" : "");
+    final String sql1 = "select \"store_id\", \"grocery_sqft\" from \"store\"\n"
+        + "where \"store_id\" < 3 order by \"florist\", 2 "
+        + (desc ? " DESC" : "");
+    final String sql2 = "select \"store_id\", \"grocery_sqft\" from \"store\"\n"
+        + "where \"store_id\" < 3 order by 2 "
+        + (desc ? " DESC" : "")
+        + ", 1";
+    with.query(sql).returns(checker);
+    with.query(sql1).returns(checker);
+    with.query(sql2).returns(checker);
   }
 
   /** Tests ORDER BY ... FETCH. */

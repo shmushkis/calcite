@@ -19,10 +19,10 @@ package org.apache.calcite.config;
 /** Strategy for how NULL values are to be sorted if NULLS FIRST or NULLS LAST
  * are not specified in an item in the ORDER BY clause. */
 public enum NullCollation {
-  /** Nulls last for DESC, nulls first for ASC. */
-  LOW,
   /** Nulls first for DESC, nulls last for ASC. */
   HIGH,
+  /** Nulls last for DESC, nulls first for ASC. */
+  LOW,
   /** Nulls first for DESC and ASC. */
   FIRST,
   /** Nulls last for DESC and ASC. */
