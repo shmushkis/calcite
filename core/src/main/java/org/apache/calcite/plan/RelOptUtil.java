@@ -2962,6 +2962,18 @@ public abstract class RelOptUtil {
     return builder.build();
   }
 
+  /** Returns true, and calls {@link Litmus#succeed()} if a given relational
+   * expression does not contain a given correlation. */
+  public static boolean notContainsCorrelation(RelNode r,
+      CorrelationId correlationId, Litmus litmus) {
+    final Set<CorrelationId> set = getVariablesUsed(r);
+    if (!set.contains(correlationId)) {
+      return litmus.succeed();
+    } else {
+      return litmus.fail("contains " + correlationId);
+    }
+  }
+
   /** Policies for handling two- and three-valued boolean logic. */
   public enum Logic {
     /** Three-valued boolean logic. */
