@@ -55,6 +55,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.ImmutableIntList;
+import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Stacks;
@@ -999,6 +1000,10 @@ public class RelBuilder {
       final CorrelationId id = Iterables.getOnlyElement(variablesSet);
       final ImmutableBitSet requiredColumns =
           RelOptUtil.correlationColumns(id, right.rel);
+      if (!RelOptUtil.notContainsCorrelation(left.rel, id, Litmus.IGNORE)) {
+        throw new IllegalArgumentException("variable " + id
+            + " must not be used by left input to correlation");
+      }
       join = correlateFactory.createCorrelate(left.rel, right.rel, id,
           requiredColumns, SemiJoinType.of(joinType));
     } else {

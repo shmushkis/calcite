@@ -4453,6 +4453,7 @@ public class JdbcTest {
         .query("select * from \"hr\".\"emps\" where not exists (\n"
             + " select 1 from \"hr\".\"depts\"\n"
             + " where \"emps\".\"deptno\"=\"depts\".\"deptno\")")
+        .explainContains("xx")
         .returnsUnordered(
             "empid=200; deptno=20; name=Eric; salary=8000.0; commission=500");
   }
