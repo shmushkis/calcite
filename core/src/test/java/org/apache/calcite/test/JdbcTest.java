@@ -4458,6 +4458,19 @@ public class JdbcTest {
             "empid=200; deptno=20; name=Eric; salary=8000.0; commission=500");
   }
 
+  /** Manual expansion of EXISTS in {@link #testNotExistsCorrelated()}.
+   * TODO: move this into .oq */
+  @Test public void testNotExistsCorrelated2() {
+    CalciteAssert.hr()
+        .query("select * from \"hr\".\"emps\" as e left join lateral (\n"
+            + " select distinct true as i\n"
+            + " from \"hr\".\"depts\"\n"
+            + " where e.\"deptno\"=\"depts\".\"deptno\") on true")
+        .explainContains("xx")
+        .returnsUnordered(
+            "empid=200; deptno=20; name=Eric; salary=8000.0; commission=500");
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-313">[CALCITE-313]
    * Query decorrelation fails</a>. */
