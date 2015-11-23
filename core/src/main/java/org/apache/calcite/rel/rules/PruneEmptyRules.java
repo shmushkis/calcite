@@ -26,6 +26,7 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
@@ -66,11 +67,11 @@ public abstract class PruneEmptyRules {
    */
   public static final RelOptRule UNION_INSTANCE =
       new RelOptRule(
-          operand(LogicalUnion.class,
+          operand(Union.class,
               unordered(operand(Values.class, null, Values.IS_EMPTY, none()))),
           "Union") {
         public void onMatch(RelOptRuleCall call) {
-          LogicalUnion union = call.rel(0);
+          final Union union = call.rel(0);
           final List<RelNode> childRels = call.getChildRels(union);
           final List<RelNode> newChildRels = new ArrayList<RelNode>();
           for (RelNode childRel : childRels) {
@@ -93,7 +94,7 @@ public abstract class PruneEmptyRules {
                     true);
             break;
           default:
-            newRel = LogicalUnion.create(newChildRels, union.all);
+            newRel = union.copy(union.getTraitSet(), newChildRels, union.all);
             break;
           }
           call.transformTo(newRel);

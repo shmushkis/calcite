@@ -78,6 +78,7 @@ import org.apache.calcite.rel.rules.AggregateStarTableRule;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
 import org.apache.calcite.rel.rules.FilterJoinRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
+import org.apache.calcite.rel.rules.FilterSetOpTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
 import org.apache.calcite.rel.rules.JoinAssociateRule;
 import org.apache.calcite.rel.rules.JoinCommuteRule;
@@ -218,6 +219,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
           FilterTableScanRule.INSTANCE,
           ProjectFilterTransposeRule.INSTANCE,
           FilterProjectTransposeRule.INSTANCE,
+          FilterSetOpTransposeRule.INSTANCE,
           FilterJoinRule.FILTER_ON_JOIN,
           JoinPushExpressionsRule.INSTANCE,
           AggregateExpandDistinctAggregatesRule.INSTANCE,
@@ -520,7 +522,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
     }
 
     // Change the below to enable constant-reduction.
-    if (false) {
+    if (true) {
       for (RelOptRule rule : CONSTANT_REDUCTION_RULES) {
         planner.addRule(rule);
       }

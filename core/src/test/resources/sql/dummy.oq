@@ -16,8 +16,14 @@
 # limitations under the License.
 #
 !use post
-values 1;
-EXPR$0
-1
+select * from (
+select * from (values (10, 1), (30, 3)) as t (x, y)
+union all
+select * from (values (20, 2))
+)
+where x + y > 30;
+x
+!plan
 !ok
+
 # End dummy.oq
