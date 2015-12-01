@@ -98,7 +98,7 @@ public abstract class Join extends BiRel {
     return ImmutableList.of(condition);
   }
 
-  public RelNode accept(RexShuttle shuttle) {
+  @Override public RelNode accept(RexShuttle shuttle) {
     RexNode condition = shuttle.apply(this.condition);
     if (this.condition == condition) {
       return this;
@@ -155,8 +155,7 @@ public abstract class Join extends BiRel {
     return true;
   }
 
-  // implement RelNode
-  public RelOptCost computeSelfCost(RelOptPlanner planner) {
+  @Override public RelOptCost computeSelfCost(RelOptPlanner planner) {
     // REVIEW jvs 9-Apr-2006:  Just for now...
     double rowCount = RelMetadataQuery.getRowCount(this);
     return planner.getCostFactory().makeCost(rowCount, 0, 0);
@@ -165,24 +164,31 @@ public abstract class Join extends BiRel {
   public static double estimateJoinedRows(
       Join joinRel,
       RexNode condition) {
-    double product =
-        RelMetadataQuery.getRowCount(joinRel.getLeft())
-            * RelMetadataQuery.getRowCount(joinRel.getRight());
+    // Row count estimates of 0 will be rounded up to 1.
+    // So, use maxRowCount where the product is very small.
+    final Double left = RelMetadataQuery.getRowCount(joinRel.getLeft());
+    final Double right = RelMetadataQuery.getRowCount(joinRel.getRight());
+    if (left <= 1D || right <= 1D) {
+      double max = RelMetadataQuery.getMaxRowCount(joinRel);
+      if (max <= 1D) {
+        return max;
+      }
+    }
+    double product = left * right;
 
     // TODO:  correlation factor
     return product * RelMetadataQuery.getSelectivity(joinRel, condition);
   }
 
-  // implement RelNode
-  public double getRows() {
+  @Override public double getRows() {
     return estimateJoinedRows(this, condition);
   }
 
-  public Set<String> getVariablesStopped() {
+  @Override public Set<String> getVariablesStopped() {
     return variablesStopped;
   }
 
-  public RelWriter explainTerms(RelWriter pw) {
+  @Override public RelWriter explainTerms(RelWriter pw) {
     return super.explainTerms(pw)
         .item("condition", condition)
         .item("joinType", joinType.name().toLowerCase())
@@ -192,7 +198,7 @@ public abstract class Join extends BiRel {
             !getSystemFieldList().isEmpty());
   }
 
-  protected RelDataType deriveRowType() {
+  @Override protected RelDataType deriveRowType() {
     return deriveJoinRowType(
         left.getRowType(),
         right.getRowType(),
