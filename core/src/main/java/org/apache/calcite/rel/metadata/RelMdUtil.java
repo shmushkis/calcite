@@ -22,6 +22,7 @@ import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Minus;
 import org.apache.calcite.rel.core.Project;
@@ -689,6 +690,39 @@ public class RelMdUtil {
       dRows = 0;
     }
     return dRows;
+  }
+
+  /** Returns an estimate of the number of rows returned by a {@link Join}. */
+  public static Double getJoinRowCount(Join join, RexNode condition) {
+    // Row count estimates of 0 will be rounded up to 1.
+    // So, use maxRowCount where the product is very small.
+    final Double left = RelMetadataQuery.getRowCount(join.getLeft());
+    final Double right = RelMetadataQuery.getRowCount(join.getRight());
+    if (left == null || right == null) {
+      return null;
+    }
+    if (left <= 1D || right <= 1D) {
+      Double max = RelMetadataQuery.getMaxRowCount(join);
+      if (max != null && max <= 1D) {
+        return max;
+      }
+    }
+    double product = left * right;
+
+    // TODO:  correlation factor
+    return product * RelMetadataQuery.getSelectivity(join, condition);
+  }
+
+  /** Returns an estimate of the number of rows returned by a
+   * {@link SemiJoin}. */
+  public static Double getSemiJoinRowCount(RelNode left, RelNode right,
+      JoinRelType joinType, RexNode condition) {
+    // TODO:  correlation factor
+    final Double leftCount = RelMetadataQuery.getRowCount(left);
+    if (leftCount == null) {
+      return null;
+    }
+    return leftCount * RexUtil.getSelectivity(condition);
   }
 
   //~ Inner Classes ----------------------------------------------------------

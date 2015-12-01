@@ -23,6 +23,7 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.BiRel;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
+import org.apache.calcite.rel.metadata.RelMdUtil;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -31,6 +32,7 @@ import org.apache.calcite.rex.RexChecker;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -161,27 +163,16 @@ public abstract class Join extends BiRel {
     return planner.getCostFactory().makeCost(rowCount, 0, 0);
   }
 
+  /** @deprecated Use {@link RelMdUtil#getJoinRowCount(Join, RexNode)}. */
+  @Deprecated // to be removed before 2.0
   public static double estimateJoinedRows(
       Join joinRel,
       RexNode condition) {
-    // Row count estimates of 0 will be rounded up to 1.
-    // So, use maxRowCount where the product is very small.
-    final Double left = RelMetadataQuery.getRowCount(joinRel.getLeft());
-    final Double right = RelMetadataQuery.getRowCount(joinRel.getRight());
-    if (left <= 1D || right <= 1D) {
-      Double max = RelMetadataQuery.getMaxRowCount(joinRel);
-      if (max != null && max <= 1D) {
-        return max;
-      }
-    }
-    double product = left * right;
-
-    // TODO:  correlation factor
-    return product * RelMetadataQuery.getSelectivity(joinRel, condition);
+    return Util.first(RelMdUtil.getJoinRowCount(joinRel, condition), 1D);
   }
 
   @Override public double getRows() {
-    return estimateJoinedRows(this, condition);
+    return Util.first(RelMdUtil.getJoinRowCount(this, condition), 1D);
   }
 
   @Override public Set<String> getVariablesStopped() {
@@ -301,14 +292,14 @@ public abstract class Join extends BiRel {
         == (systemFieldList.size()
         + leftType.getFieldCount()
         + rightType.getFieldCount()));
-    List<String> nameList = new ArrayList<String>();
-    List<RelDataType> typeList = new ArrayList<RelDataType>();
+    List<String> nameList = new ArrayList<>();
+    final List<RelDataType> typeList = new ArrayList<>();
 
     // use a hashset to keep track of the field names; this is needed
     // to ensure that the contains() call to check for name uniqueness
     // runs in constant time; otherwise, if the number of fields is large,
     // doing a contains() on a list can be expensive
-    HashSet<String> uniqueNameList = new HashSet<String>();
+    final HashSet<String> uniqueNameList = new HashSet<>();
     addFields(systemFieldList, typeList, nameList, uniqueNameList);
     addFields(leftType.getFieldList(), typeList, nameList, uniqueNameList);
     if (rightType != null) {
