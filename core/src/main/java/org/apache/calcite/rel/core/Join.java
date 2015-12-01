@@ -169,8 +169,8 @@ public abstract class Join extends BiRel {
     final Double left = RelMetadataQuery.getRowCount(joinRel.getLeft());
     final Double right = RelMetadataQuery.getRowCount(joinRel.getRight());
     if (left <= 1D || right <= 1D) {
-      double max = RelMetadataQuery.getMaxRowCount(joinRel);
-      if (max <= 1D) {
+      Double max = RelMetadataQuery.getMaxRowCount(joinRel);
+      if (max != null && max <= 1D) {
         return max;
       }
     }
