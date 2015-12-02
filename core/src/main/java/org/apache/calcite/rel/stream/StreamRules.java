@@ -195,8 +195,6 @@ public class StreamRules {
         final LogicalTableScan newScan =
             LogicalTableScan.create(cluster, relOptTable2);
         call.transformTo(newScan);
-      } else {
-        call.transformTo(LogicalValues.createEmpty(cluster, delta.getRowType()));
       }
     }
   }
