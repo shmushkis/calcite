@@ -29,6 +29,7 @@ import org.eigenbase.sql.fun.*;
 import org.eigenbase.sql.type.*;
 import org.eigenbase.sql.validate.SqlValidatorUtil;
 import org.eigenbase.util.*;
+import org.eigenbase.util.mapping.Mapping;
 import org.eigenbase.util.mapping.MappingType;
 import org.eigenbase.util.mapping.Mappings;
 
@@ -2137,6 +2138,27 @@ public abstract class RelOptUtil {
     return exps;
   }
 
+  public static Mapping createJoinMapping(
+      RelNode newJoin,
+      JoinRelBase origJoin,
+      boolean origOrder) {
+    final List<RelDataTypeField> newJoinFields =
+        newJoin.getRowType().getFieldList();
+    final Mapping mapping =
+        Mappings.create(
+            MappingType.INVERSE_SURJECTION,
+            newJoinFields.size(),
+            newJoinFields.size());
+    final int nFields =
+        origOrder ? origJoin.getRight().getRowType().getFieldCount()
+            : origJoin.getLeft().getRowType().getFieldCount();
+    for (int i = 0; i < newJoinFields.size(); i++) {
+      final int source = (i + nFields) % newJoinFields.size();
+      mapping.set(source, i);
+    }
+    return mapping;
+  }
+
   /**
    * Converts a filter to the new filter that would result if the filter is
    * pushed past a ProjectRel that it currently is referencing.
@@ -2351,6 +2373,113 @@ public abstract class RelOptUtil {
         throw new UnsupportedOperationException();
       }
     };
+  }
+
+  /** Returns whether a relational expression is the identity projection. */
+  public static boolean isIdentityProjection(RelNode rel) {
+    return rel instanceof ProjectRelBase
+        && isIdentity((ProjectRelBase) rel);
+  }
+
+  /** Returns whether a project is the identity.
+   *
+   * <p>Such a project can safely be removed. (Field names may change.)</p>
+   */
+  public static boolean isIdentity(ProjectRelBase project) {
+    RelNode child = project.getChild();
+    final RelDataType childRowType = child.getRowType();
+    if (!childRowType.isStruct()) {
+      return false;
+    }
+    if (!project.isBoxed()) {
+      return false;
+    }
+    if (!isIdentity(
+        project.getProjects(),
+        project.getRowType(),
+        childRowType)) {
+      return false;
+    }
+    return true;
+  }
+
+  /** Returns whether a set of project expressions are the identity. */
+  public static boolean isIdentity(
+      List<RexNode> exps,
+      RelDataType rowType,
+      RelDataType childRowType) {
+    List<RelDataTypeField> fields = rowType.getFieldList();
+    List<RelDataTypeField> childFields = childRowType.getFieldList();
+    int fieldCount = childFields.size();
+    if (exps.size() != fieldCount) {
+      return false;
+    }
+    for (int i = 0; i < exps.size(); i++) {
+      RexNode exp = exps.get(i);
+      if (!(exp instanceof RexInputRef)) {
+        return false;
+      }
+      RexInputRef var = (RexInputRef) exp;
+      if (var.getIndex() != i) {
+        return false;
+      }
+      if (!fields.get(i).getName().equals(childFields.get(i).getName())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Splits a node into a (child, mapping) if the node is a simple project.
+   * Return is never null; if there is no simple project, returns (node,
+   * identity mapping). Mapping is null if the projection is the identity. */
+  public static Pair<RelNode, Mapping> splitProject(RelNode node) {
+    // TODO: if there multiple projects, compose their mappings
+    if (!(node instanceof ProjectRelBase)) {
+      return null;
+    }
+    final ProjectRelBase project = (ProjectRelBase) node;
+    int[] indexes = new int[project.getRowType().getFieldCount()];
+    int n = 0;
+    for (RexNode e : project.getProjects()) {
+      if (!(e instanceof RexInputRef)) {
+        return null;
+      }
+      indexes[n++] = ((RexInputRef) e).getIndex();
+    }
+    final RelNode child = project.getChild();
+    if (isIdentity(indexes)) {
+      return Pair.of(child, null);
+    }
+
+    return Pair.of(child,
+        Mappings.createSurjection(indexes, child.getRowType().getFieldCount()));
+  }
+
+  /** Returns null if it is the identity projection. */
+  private static Mapping getMapping(ProjectRelBase projectRelBase) {
+    int[] indexes = new int[projectRelBase.getRowType().getFieldCount()];
+    int n = 0;
+    for (Ord<RexNode> project : Ord.zip(projectRelBase.getProjects())) {
+      if (!(project.e instanceof RexInputRef)) {
+        return null;
+      }
+      indexes[n++] = ((RexInputRef) project.e).getIndex();
+    }
+    if (isIdentity(indexes)) {
+      return null;
+    }
+    return Mappings.createSurjection(indexes,
+        projectRelBase.getChild().getRowType().getFieldCount());
+  }
+
+  private static boolean isIdentity(int[] a) {
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != i) {
+        return false;
+      }
+    }
+    return true;
   }
 
   //~ Inner Classes ----------------------------------------------------------

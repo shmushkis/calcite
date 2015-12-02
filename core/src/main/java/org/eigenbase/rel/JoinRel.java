@@ -17,11 +17,10 @@
 */
 package org.eigenbase.rel;
 
-import java.util.*;
-
 import org.eigenbase.relopt.*;
 import org.eigenbase.reltype.RelDataTypeField;
 import org.eigenbase.rex.*;
+import org.eigenbase.util.mapping.Mapping;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -46,7 +45,7 @@ public final class JoinRel extends JoinRelBase {
   // semijoin optimizations, it's pretty much required.
   private final boolean semiJoinDone;
 
-  private List<RelDataTypeField> systemFieldList;
+  private ImmutableList<RelDataTypeField> systemFieldList;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -58,6 +57,7 @@ public final class JoinRel extends JoinRelBase {
    * @param right            Right input
    * @param condition        Join condition
    * @param joinType         Join type
+   * @param mapping          Output field mapping
    * @param variablesStopped Set of names of variables which are set by the
    *                         LHS and used by the RHS and are not available to
    *                         nodes above this JoinRel in the tree
@@ -68,16 +68,10 @@ public final class JoinRel extends JoinRelBase {
       RelNode right,
       RexNode condition,
       JoinRelType joinType,
-      Set<String> variablesStopped) {
-    this(
-        cluster,
-        left,
-        right,
-        condition,
-        joinType,
-        variablesStopped,
-        false,
-        Collections.<RelDataTypeField>emptyList());
+      Mapping mapping,
+      ImmutableSet<String> variablesStopped) {
+    this(cluster, left, right, condition, joinType, mapping, variablesStopped,
+        false, ImmutableList.<RelDataTypeField>of());
   }
 
   /**
@@ -89,6 +83,7 @@ public final class JoinRel extends JoinRelBase {
    * @param right            Right input
    * @param condition        Join condition
    * @param joinType         Join type
+   * @param mapping          Output field mapping
    * @param variablesStopped Set of names of variables which are set by the
    *                         LHS and used by the RHS and are not available to
    *                         nodes above this JoinRel in the tree
@@ -105,17 +100,12 @@ public final class JoinRel extends JoinRelBase {
       RelNode right,
       RexNode condition,
       JoinRelType joinType,
-      Set<String> variablesStopped,
+      Mapping mapping,
+      ImmutableSet<String> variablesStopped,
       boolean semiJoinDone,
-      List<RelDataTypeField> systemFieldList) {
-    super(
-        cluster,
-        cluster.traitSetOf(Convention.NONE),
-        left,
-        right,
-        condition,
-        joinType,
-        variablesStopped);
+      ImmutableList<RelDataTypeField> systemFieldList) {
+    super(cluster, cluster.traitSetOf(Convention.NONE), left, right, condition,
+        joinType, mapping, variablesStopped);
     assert systemFieldList != null;
     this.semiJoinDone = semiJoinDone;
     this.systemFieldList = systemFieldList;
@@ -125,10 +115,9 @@ public final class JoinRel extends JoinRelBase {
    * Creates a JoinRel by parsing serialized output.
    */
   public JoinRel(RelInput input) {
-    this(
-        input.getCluster(), input.getInputs().get(0),
+    this(input.getCluster(), input.getInputs().get(0),
         input.getInputs().get(1), input.getExpression("condition"),
-        input.getEnum("joinType", JoinRelType.class),
+        input.getEnum("joinType", JoinRelType.class), input.getMapping(),
         ImmutableSet.<String>of(), false,
         ImmutableList.<RelDataTypeField>of());
   }
@@ -145,6 +134,7 @@ public final class JoinRel extends JoinRelBase {
         right,
         conditionExpr,
         this.joinType,
+        this.mapping,
         this.variablesStopped,
         this.semiJoinDone,
         systemFieldList);
@@ -156,13 +146,9 @@ public final class JoinRel extends JoinRelBase {
   }
 
   public RelWriter explainTerms(RelWriter pw) {
-    // NOTE jvs 14-Mar-2006: Do it this way so that semijoin state
-    // don't clutter things up in optimizers that don't use semijoins
-    if (!semiJoinDone) {
-      return super.explainTerms(pw);
-    }
+    // Don't clutter things up in optimizers that don't use semi-joins
     return super.explainTerms(pw)
-        .item("semiJoinDone", semiJoinDone);
+        .itemIf("semiJoinDone", true, semiJoinDone);
   }
 
   /**
@@ -176,7 +162,7 @@ public final class JoinRel extends JoinRelBase {
     return semiJoinDone;
   }
 
-  public List<RelDataTypeField> getSystemFieldList() {
+  public ImmutableList<RelDataTypeField> getSystemFieldList() {
     return systemFieldList;
   }
 }
