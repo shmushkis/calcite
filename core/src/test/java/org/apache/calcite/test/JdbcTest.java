@@ -4643,8 +4643,25 @@ public class JdbcTest {
         };
     final Quidem quidem = new Quidem(bufferedReader, writer, env);
     quidem.execute(
-        new Quidem.ConnectionFactory() {
+        new Quidem.NewConnectionFactory() {
           public Connection connect(String name) throws Exception {
+            return connect(name, false);
+          }
+
+          public Connection connect(String name, boolean reference)
+              throws Exception {
+            if (reference) {
+              if (name.equals("foodmart")) {
+                final ConnectionSpec db =
+                    CalciteAssert.DatabaseInstance.HSQLDB.foodmart;
+                final Connection connection = DriverManager.getConnection(db.url,
+                    db.username,
+                    db.password);
+                connection.setSchema("foodmart");
+                return connection;
+              }
+              return null;
+            }
             if (name.equals("hr")) {
               return CalciteAssert.hr()
                   .connect();
