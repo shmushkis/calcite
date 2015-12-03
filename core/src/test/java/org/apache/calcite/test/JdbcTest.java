@@ -4641,8 +4641,7 @@ public class JdbcTest {
             return null;
           }
         };
-    final Quidem quidem = new Quidem(bufferedReader, writer, env);
-    quidem.execute(
+    final Quidem.NewConnectionFactory connectionFactory =
         new Quidem.NewConnectionFactory() {
           public Connection connect(String name) throws Exception {
             return connect(name, false);
@@ -4717,7 +4716,8 @@ public class JdbcTest {
             }
             throw new RuntimeException("unknown connection '" + name + "'");
           }
-        });
+        };
+    new Quidem(bufferedReader, writer, env, connectionFactory).execute();
     final String diff = DiffTestCase.diff(inFile, outFile);
     if (!diff.isEmpty()) {
       fail("Files differ: " + outFile + " " + inFile + "\n" + diff);
