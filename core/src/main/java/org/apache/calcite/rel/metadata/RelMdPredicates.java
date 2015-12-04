@@ -185,16 +185,10 @@ public class RelMdPredicates {
         projectPullUpPredicates.add(
             rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL,
                 rexBuilder.makeInputRef(project, expr.i)));
-      } else if (expr.e instanceof RexLiteral) {
-        final RexLiteral literal = (RexLiteral) expr.e;
+      } else if (RexUtil.isConstant(expr.e)) {
         projectPullUpPredicates.add(
             rexBuilder.makeCall(SqlStdOperatorTable.EQUALS,
-                rexBuilder.makeInputRef(project, expr.i), literal));
-      } else if (expr.e instanceof RexCall
-                && RexUtil.isConstant(expr.e)) {
-        projectPullUpPredicates.add(
-            rexBuilder.makeCall(SqlStdOperatorTable.EQUALS,
-            rexBuilder.makeInputRef(project, expr.i), expr.e));
+                rexBuilder.makeInputRef(project, expr.i), expr.e));
       }
     }
     return RelOptPredicateList.of(projectPullUpPredicates);
@@ -371,8 +365,8 @@ public class RelMdPredicates {
     final RexNode leftChildPredicates;
     final RexNode rightChildPredicates;
 
-    JoinConditionBasedPredicateInference(Join joinRel, RexNode lPreds,
-                                         RexNode rPreds) {
+    public JoinConditionBasedPredicateInference(Join joinRel,
+            RexNode lPreds, RexNode rPreds) {
       this(joinRel, joinRel instanceof SemiJoin, lPreds, rPreds);
     }
 

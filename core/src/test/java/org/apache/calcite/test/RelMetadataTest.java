@@ -78,7 +78,9 @@ import org.junit.Test;
 
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -1276,8 +1278,17 @@ public class RelMetadataTest extends SqlToRelTestBase {
         + "  where mgr is null and deptno < 10)";
     final RelNode rel = convertSql(sql);
     RelOptPredicateList list = RelMetadataQuery.getPulledUpPredicates(rel);
-    assertThat(list.pulledUpPredicates.toString(),
-        is("[IS NULL($1), <($0, 10), IS NULL($2), =($4, CAST('1'):INTEGER NOT NULL), =($3, 'y')]"));
+    assertThat(sortedStrings(list.pulledUpPredicates).toString(),
+        is("[<($0, 10), =($3, 'y'), =($4, CAST('1'):INTEGER NOT NULL), IS NULL($1), IS NULL($2)]"));
+  }
+
+  private static <E> List<String> sortedStrings(Iterable<E> iterable) {
+    final List<String> strings = new ArrayList<>();
+    for (E e : iterable) {
+      strings.add(e.toString());
+    }
+    Collections.sort(strings);
+    return ImmutableList.copyOf(strings);
   }
 
   /** Custom metadata interface. */
