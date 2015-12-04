@@ -18,6 +18,7 @@ package org.apache.calcite.sql.validate;
 
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.linq4j.Ord;
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -27,6 +28,7 @@ import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.runtime.Feature;
 import org.apache.calcite.runtime.Resources;
+import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.JoinConditionType;
 import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlAccessEnum;
@@ -3175,16 +3177,25 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
   }
 
-  public void validateSequenceValue(SqlValidatorScope scope, SqlCall call) {
-    List<SqlNode> operands = call.getOperandList();
-    assert operands.size() >= 1;
-    assert operands.get(0) instanceof SqlIdentifier;
-    SqlIdentifier id = (SqlIdentifier) operands.get(0);
+  public void validateSequenceValue(SqlValidatorScope scope, SqlIdentifier id) {
+    // FIXME: We should not be creating namespace at validate time, if at all.
+    // How is an identifier resolved to a table?
     final IdentifierNamespace newNs =
         new IdentifierNamespace(
             this, id, null, null, scope);
     registerNamespace(null, null, newNs, false);
     validateNamespace(newNs);
+
+    // We've found a table. But is it a sequence?
+    final SqlValidatorTable table = newNs.resolve().getTable();
+    final Table table1 = ((RelOptTable) table).unwrap(Table.class);
+    switch (table1.getJdbcTableType()) {
+    case SEQUENCE:
+    case TEMPORARY_SEQUENCE:
+      break;
+    default:
+      throw newValidationError(id, RESOURCE.notASequence(id.toString()));
+    }
   }
 
   public SqlValidatorScope getWithScope(SqlNode withItem) {

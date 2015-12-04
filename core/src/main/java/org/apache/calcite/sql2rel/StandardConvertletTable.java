@@ -19,17 +19,11 @@ package org.apache.calcite.sql2rel;
 import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
-import org.apache.calcite.linq4j.tree.Expression;
-import org.apache.calcite.plan.RelOptSchema;
-import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelDistribution;
-import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeFamily;
-import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexCallBinding;
@@ -73,7 +67,6 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
@@ -702,89 +695,12 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
     final List<SqlNode> operands = call.getOperandList();
     assert operands.size() == 1;
     assert operands.get(0) instanceof SqlIdentifier;
-    RelOptTable seqTable = cx.resolveSequenceTable((SqlIdentifier) operands.get(0));
-    RelDataType operandType = cx.getTypeFactory().createSqlType(SqlTypeName.OTHER);
+    final SqlIdentifier id = (SqlIdentifier) operands.get(0);
+    final String key = Util.listToString(id.names);
     RelDataType returnType =
         cx.getValidator().getValidatedNodeType(call);
     return cx.getRexBuilder().makeCall(returnType, fun,
-        ImmutableList.<RexNode>of(
-            cx.getRexBuilder().makeLiteral(
-                new ComparableRelOptTable(seqTable), operandType, false)));
-  }
-
-  private class ComparableRelOptTable
-  implements RelOptTable, Comparable<ComparableRelOptTable> {
-    private RelOptTable table;
-    
-    public ComparableRelOptTable(RelOptTable table) {
-      assert table != null;
-      this.table = table;
-    }
-
-    @Override
-    public int compareTo(ComparableRelOptTable o) {
-      return this.toString().compareTo(o.toString());
-    }
-
-    @Override
-    public List<String> getQualifiedName() {
-      return table.getQualifiedName();
-    }
-
-    @Override
-    public double getRowCount() {
-      return table.getRowCount();
-    }
-
-    @Override
-    public RelDataType getRowType() {
-      return table.getRowType();
-    }
-
-    @Override
-    public RelOptSchema getRelOptSchema() {
-      return table.getRelOptSchema();
-    }
-
-    @Override
-    public RelNode toRel(ToRelContext context) {
-      return table.toRel(context);
-    }
-
-    @Override
-    public List<RelCollation> getCollationList() {
-      return table.getCollationList();
-    }
-
-    @Override
-    public RelDistribution getDistribution() {
-      return table.getDistribution();
-    }
-
-    @Override
-    public boolean isKey(ImmutableBitSet columns) {
-      return table.isKey(columns);
-    }
-
-    @Override
-    public <T> T unwrap(Class<T> clazz) {
-      return table.unwrap(clazz);
-    }
-
-    @Override
-    public Expression getExpression(Class clazz) {
-      return table.getExpression(clazz);
-    }
-
-    @Override
-    public RelOptTable extend(List<RelDataTypeField> extendedFields) {
-      return table.extend(extendedFields);
-    }
-    
-    @Override
-    public String toString() {
-      return '"' + table.getQualifiedName().toString() + '"';
-    }
+        ImmutableList.<RexNode>of(cx.getRexBuilder().makeLiteral(key)));
   }
 
   public RexNode convertAggregateFunction(
