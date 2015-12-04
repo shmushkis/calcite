@@ -72,6 +72,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Matcher;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -1252,8 +1253,8 @@ public class RelMetadataTest extends SqlToRelTestBase {
                     + empScan.getRowType().getFieldCount()));
 
     predicates = RelMetadataQuery.getPulledUpPredicates(semiJoin);
-    assertThat(predicates.pulledUpPredicates.toString(), is("[=($0, 1)]"));
-    assertThat(predicates.leftInferredPredicates.toString(), is("[]"));
+    assertThat(predicates.pulledUpPredicates, sortsAs("[=($0, 1)]"));
+    assertThat(predicates.leftInferredPredicates, sortsAs("[]"));
     assertThat(predicates.rightInferredPredicates.isEmpty(), is(true));
   }
 
@@ -1268,27 +1269,55 @@ public class RelMetadataTest extends SqlToRelTestBase {
     final Aggregate rel = (Aggregate) convertSql(sql);
     RelOptPredicateList inputSet = RelMetadataQuery.getPulledUpPredicates(rel);
     ImmutableList<RexNode> pulledUpPredicates = inputSet.pulledUpPredicates;
-    assertThat(pulledUpPredicates.toString(), is("[=($0, 1)]"));
+    assertThat(pulledUpPredicates, sortsAs("[=($0, 1)]"));
   }
 
-  @Test public void testPullUpPredicatesFromProject() {
+  @Test public void testPullUpPredicatesOnConstant() {
     final String sql = "select deptno, mgr, x, 'y' as y, z from (\n"
         + "  select deptno, mgr, cast(null as integer) as x, cast('1' as int) as z\n"
         + "  from emp\n"
         + "  where mgr is null and deptno < 10)";
     final RelNode rel = convertSql(sql);
     RelOptPredicateList list = RelMetadataQuery.getPulledUpPredicates(rel);
-    assertThat(sortedStrings(list.pulledUpPredicates).toString(),
-        is("[<($0, 10), =($3, 'y'), =($4, CAST('1'):INTEGER NOT NULL), IS NULL($1), IS NULL($2)]"));
+    assertThat(list.pulledUpPredicates,
+        sortsAs("[<($0, 10), =($3, 'y'), =($4, CAST('1'):INTEGER NOT NULL), "
+            + "IS NULL($1), IS NULL($2)]"));
   }
 
-  private static <E> List<String> sortedStrings(Iterable<E> iterable) {
-    final List<String> strings = new ArrayList<>();
-    for (E e : iterable) {
-      strings.add(e.toString());
-    }
-    Collections.sort(strings);
-    return ImmutableList.copyOf(strings);
+  @Test public void testPullUpPredicatesOnNullableConstant() {
+    final String sql = "select nullif(1, 1) as c\n"
+        + "  from emp\n"
+        + "  where mgr is null and deptno < 10";
+    final RelNode rel = convertSql(sql);
+    RelOptPredicateList list = RelMetadataQuery.getPulledUpPredicates(rel);
+    // Uses "IS NOT DISTINCT FROM" rather than "=" because cannot guarantee not null.
+    assertThat(list.pulledUpPredicates,
+        sortsAs("[IS NOT DISTINCT FROM($0, CASE(=(1, 1), null, 1))]"));
+  }
+
+  /**
+   * Matcher that succeeds for any collection that, when converted to strings
+   * and sorted on those strings, matches the given reference string.
+   *
+   * <p>Use it as an alternative to {@link CoreMatchers#is} if items in your
+   * list might occur in any order.
+   *
+   * <p>For example:
+   *
+   * <pre>List&lt;Integer&gt; ints = Arrays.asList(2, 500, 12);
+   * assertThat(ints, sortsAs("[12, 2, 500]");</pre>
+   */
+  static <T> Matcher<Iterable<? extends T>> sortsAs(final String value) {
+    return new CustomTypeSafeMatcher<Iterable<? extends T>>(value) {
+      protected boolean matchesSafely(Iterable<? extends T> item) {
+        final List<String> strings = new ArrayList<>();
+        for (T t : item) {
+          strings.add(t.toString());
+        }
+        Collections.sort(strings);
+        return value.equals(strings.toString());
+      }
+    };
   }
 
   /** Custom metadata interface. */
