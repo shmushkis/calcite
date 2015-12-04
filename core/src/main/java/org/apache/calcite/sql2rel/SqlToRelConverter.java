@@ -4175,6 +4175,11 @@ public class SqlToRelConverter {
       return exprConverter.convertLiteral(this, literal);
     }
 
+    // implement SqlRexContext
+    public RelOptTable resolveSequenceTable(SqlIdentifier id) {
+      return getTargetTable(id);
+    }
+
     public RexNode convertInterval(SqlIntervalQualifier intervalQualifier) {
       return exprConverter.convertInterval(this, intervalQualifier);
     }

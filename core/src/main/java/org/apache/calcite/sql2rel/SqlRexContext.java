@@ -16,11 +16,13 @@
  */
 package org.apache.calcite.sql2rel;
 
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexRangeRef;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlSelect;
@@ -93,6 +95,11 @@ public interface SqlRexContext {
    * Converts a literal.
    */
   RexNode convertLiteral(SqlLiteral literal);
+
+  /**
+   * Resolves a sequence id to a RelOptTable.
+   */
+  RelOptTable resolveSequenceTable(SqlIdentifier id);
 }
 
 // End SqlRexContext.java

@@ -240,6 +240,8 @@ public class RexLiteral extends RexNode {
     case ROW:
     case MULTISET:
       return value instanceof List;
+    case OTHER:
+      return true;
     case ANY:
       // Literal of type ANY is not legal. "CAST(2 AS ANY)" remains
       // an integer literal surrounded by a cast function.
@@ -404,6 +406,9 @@ public class RexLiteral extends RexNode {
               return list.size();
             }
           });
+      break;
+    case OTHER:
+      pw.print(value.toString());
       break;
     default:
       assert valueMatchesType(value, typeName, true);

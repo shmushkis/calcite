@@ -3175,6 +3175,18 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
   }
 
+  public void validateSequenceValue(SqlValidatorScope scope, SqlCall call) {
+    List<SqlNode> operands = call.getOperandList();
+    assert operands.size() >= 1;
+    assert operands.get(0) instanceof SqlIdentifier;
+    SqlIdentifier id = (SqlIdentifier) operands.get(0);
+    final IdentifierNamespace newNs =
+        new IdentifierNamespace(
+            this, id, null, null, scope);
+    registerNamespace(null, null, newNs, false);
+    validateNamespace(newNs);
+  }
+
   public SqlValidatorScope getWithScope(SqlNode withItem) {
     assert withItem.getKind() == SqlKind.WITH_ITEM;
     return scopes.get(withItem);

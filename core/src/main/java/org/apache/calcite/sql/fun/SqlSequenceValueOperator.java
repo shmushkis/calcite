@@ -54,6 +54,7 @@ public class SqlSequenceValueOperator extends SqlSpecialOperator {
 
   @Override public void validateCall(SqlCall call, SqlValidator validator,
       SqlValidatorScope scope, SqlValidatorScope operandScope) {
+    validator.validateSequenceValue(scope, call);
   }
 }
 

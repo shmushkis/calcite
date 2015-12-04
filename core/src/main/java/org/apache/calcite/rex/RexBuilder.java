@@ -1298,6 +1298,8 @@ public class RexBuilder {
           type.getSqlTypeName());
     case ANY:
       return makeLiteral(value, guessType(value), allowCast);
+    case OTHER:
+      return makeLiteral((Comparable) value, type, SqlTypeName.OTHER);
     default:
       throw Util.unexpected(type.getSqlTypeName());
     }
