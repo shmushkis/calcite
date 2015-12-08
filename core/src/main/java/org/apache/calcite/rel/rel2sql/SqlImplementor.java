@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.rel.rel2sql;
 
-import org.apache.calcite.adapter.jdbc.JdbcRel;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
@@ -52,19 +51,23 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -82,6 +85,7 @@ public class SqlImplementor {
 
   public final SqlDialect dialect;
   protected final Set<String> aliasSet = new LinkedHashSet<>();
+  protected final Map<String, SqlNode> ordinalMap = new HashMap<>();
 
   protected SqlImplementor(SqlDialect dialect) {
     this.dialect = dialect;
@@ -127,9 +131,15 @@ public class SqlImplementor {
    * tree). */
   public abstract class Context {
     final int fieldCount;
+    private final boolean ignoreCast;
 
     protected Context(int fieldCount) {
+      this(fieldCount, false);
+    }
+
+    protected Context(int fieldCount, boolean ignoreCast) {
       this.fieldCount = fieldCount;
+      this.ignoreCast = ignoreCast;
     }
 
     public abstract SqlNode field(int ordinal);
@@ -216,7 +226,12 @@ public class SqlImplementor {
         final List<SqlNode> nodeList = toSql(program, call.getOperands());
         switch (rex.getKind()) {
         case CAST:
-          nodeList.add(toSql(call.getType()));
+          if (ignoreCast) {
+            assert nodeList.size() == 1;
+            return nodeList.get(0);
+          } else {
+            nodeList.add(toSql(call.getType()));
+          }
         }
         if (op instanceof SqlBinaryOperator && nodeList.size() > 2) {
           // In RexNode trees, OR and AND have any number of children;
@@ -269,7 +284,7 @@ public class SqlImplementor {
             null,
             POS);
       }
-      throw new AssertionError(type); // TODO: implement
+      return SqlTypeUtil.convertTypeToSpec(type);
     }
 
     private List<SqlNode> toSql(RexProgram program, List<RexNode> operandList) {
@@ -315,13 +330,15 @@ public class SqlImplementor {
       case STRICTLY_DESCENDING:
         node = SqlStdOperatorTable.DESC.createCall(POS, node);
       }
-      switch (collation.nullDirection) {
-      case FIRST:
-        node = SqlStdOperatorTable.NULLS_FIRST.createCall(POS, node);
-        break;
-      case LAST:
-        node = SqlStdOperatorTable.NULLS_LAST.createCall(POS, node);
-        break;
+      if (collation.nullDirection != dialect.defaultNullDirection(collation.direction)) {
+        switch (collation.nullDirection) {
+        case FIRST:
+          node = SqlStdOperatorTable.NULLS_FIRST.createCall(POS, node);
+          break;
+        case LAST:
+          node = SqlStdOperatorTable.NULLS_LAST.createCall(POS, node);
+          break;
+        }
       }
       return node;
     }
@@ -356,7 +373,7 @@ public class SqlImplementor {
     private final List<Pair<String, RelDataType>> aliases;
 
     /** Creates an AliasContext; use {@link #aliasContext(List, boolean)}. */
-    private AliasContext(List<Pair<String, RelDataType>> aliases,
+    protected AliasContext(List<Pair<String, RelDataType>> aliases,
         boolean qualified) {
       super(computeFieldCount(aliases));
       this.aliases = aliases;
@@ -368,6 +385,11 @@ public class SqlImplementor {
         final List<RelDataTypeField> fields = alias.right.getFieldList();
         if (ordinal < fields.size()) {
           RelDataTypeField field = fields.get(ordinal);
+          final SqlNode mappedSqlNode =
+              ordinalMap.get(field.getName().toLowerCase());
+          if (mappedSqlNode != null) {
+            return mappedSqlNode;
+          }
           return new SqlIdentifier(!qualified
               ? ImmutableList.of(field.getName())
               : ImmutableList.of(alias.left, field.getName()),
@@ -406,7 +428,7 @@ public class SqlImplementor {
   public class Result {
     final SqlNode node;
     private final String neededAlias;
-    public final List<Pair<String, RelDataType>> aliases;
+    private final List<Pair<String, RelDataType>> aliases;
     final Expressions.FluentList<Clause> clauses;
 
     public Result(SqlNode node, Collection<Clause> clauses, String neededAlias,
@@ -424,24 +446,28 @@ public class SqlImplementor {
      * <p>You need to declare which clauses you intend to add. If the clauses
      * are "later", you can add to the same query. For example, "GROUP BY" comes
      * after "WHERE". But if they are the same or earlier, this method will
-     * start a new SELECT that wraps the previous result.</p>
+     * start a new SELECT that wraps the previous result.
      *
      * <p>When you have called
      * {@link Builder#setSelect(SqlNodeList)},
      * {@link Builder#setWhere(SqlNode)} etc. call
      * {@link Builder#result(SqlNode, Collection, RelNode)}
-     * to fix the new query.</p>
+     * to fix the new query.
      *
      * @param rel Relational expression being implemented
      * @param clauses Clauses that will be generated to implement current
      *                relational expression
      * @return A builder
      */
-    public Builder builder(JdbcRel rel, Clause... clauses) {
+    public Builder builder(RelNode rel, Clause... clauses) {
       final Clause maxClause = maxClause();
       boolean needNew = false;
+      // If old and new clause are equal and belong to below set,
+      // then new SELECT wrap is not required
+      Set<Clause> nonWrapSet = ImmutableSet.of(Clause.SELECT);
       for (Clause clause : clauses) {
-        if (maxClause.ordinal() >= clause.ordinal()) {
+        if (maxClause.ordinal() > clause.ordinal()
+            || (maxClause.equals(clause) && !nonWrapSet.contains(clause))) {
           needNew = true;
         }
       }
@@ -458,7 +484,7 @@ public class SqlImplementor {
       final SqlNodeList selectList = select.getSelectList();
       if (selectList != null) {
         newContext = new Context(selectList.size()) {
-          @Override public SqlNode field(int ordinal) {
+          public SqlNode field(int ordinal) {
             final SqlNode selectItem = selectList.get(ordinal);
             switch (selectItem.getKind()) {
             case AS:
@@ -530,12 +556,12 @@ public class SqlImplementor {
 
   /** Builder. */
   public class Builder {
-    private final JdbcRel rel;
-    private final List<Clause> clauses;
+    private final RelNode rel;
+    final List<Clause> clauses;
     private final SqlSelect select;
     public final Context context;
 
-    public Builder(JdbcRel rel, List<Clause> clauses, SqlSelect select,
+    public Builder(RelNode rel, List<Clause> clauses, SqlSelect select,
         Context context) {
       this.rel = rel;
       this.clauses = clauses;
@@ -562,6 +588,16 @@ public class SqlImplementor {
       select.setOrderBy(nodeList);
     }
 
+    public void setFetch(SqlNode fetch) {
+      assert clauses.contains(Clause.FETCH);
+      select.setFetch(fetch);
+    }
+
+    public void setOffset(SqlNode offset) {
+      assert clauses.contains(Clause.OFFSET);
+      select.setOffset(offset);
+    }
+
     public Result result() {
       return SqlImplementor.this.result(select, clauses, rel);
     }
@@ -570,7 +606,7 @@ public class SqlImplementor {
   /** Clauses in a SQL query. Ordered by evaluation order.
    * SELECT is set only when there is a NON-TRIVIAL SELECT clause. */
   public enum Clause {
-    FROM, WHERE, GROUP_BY, HAVING, SELECT, SET_OP, ORDER_BY
+    FROM, WHERE, GROUP_BY, HAVING, SELECT, SET_OP, ORDER_BY, FETCH, OFFSET
   }
 }
 
