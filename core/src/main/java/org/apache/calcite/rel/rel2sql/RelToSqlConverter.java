@@ -45,65 +45,52 @@ import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSelect;
-import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.fun.SqlSingleValueAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.ReflectUtil;
+import org.apache.calcite.util.ReflectiveVisitor;
+
+import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
  * Utility to convert relational expressions to SQL abstract syntax tree.
  */
-public class RelToSqlConverter extends SqlImplementor {
+public class RelToSqlConverter extends SqlImplementor
+    implements ReflectiveVisitor {
 
-  private static final Logger LOGGER = Logger.getLogger(RelToSqlConverter.class.getName());
+  private final ReflectUtil.MethodDispatcher<Result> dispatcher;
 
+  /** Creates a RelToSqlConverter. */
   public RelToSqlConverter(SqlDialect dialect) {
     super(dialect);
+    dispatcher = ReflectUtil.createMethodDispatcher(Result.class, this, "visit",
+        RelNode.class);
+  }
+
+  /** Dispatches a call to the {@code visit(Xxx e)} method where {@code Xxx}
+   * most closely matches the runtime type of the argument. */
+  protected Result dispatch(RelNode e) {
+    return dispatcher.invoke(e);
   }
 
   public Result visitChild(int i, RelNode e) {
-    if (e instanceof Union) {
-      return visitUnion((Union) e);
-    } else if (e instanceof Join) {
-      return visitJoin((Join) e);
-    } else if (e instanceof Filter) {
-      return visitFilter((Filter) e);
-    } else if (e instanceof Project) {
-      return visitProject((Project) e);
-    } else if (e instanceof Aggregate) {
-      return visitAggregate((Aggregate) e);
-    } else if (e instanceof TableScan) {
-      return visitTableScan((TableScan) e);
-    } else if (e instanceof Intersect) {
-      return visitIntersect((Intersect) e);
-    } else if (e instanceof Minus) {
-      return visitMinus((Minus) e);
-    } else if (e instanceof Calc) {
-      return visitCalc((Calc) e);
-    } else if (e instanceof Sort) {
-      return visitSort((Sort) e);
-    } else if (e instanceof TableModify) {
-      return visitTableModify((TableModify) e);
-    } else {
-      throw new AssertionError("Need to Implement for " + e.getClass().getName()); // TODO:
-    }
+    return dispatch(e);
   }
 
-  public Result visitUnion(Union e) {
-    final SqlSetOperator operator = e.all
-        ? SqlStdOperatorTable.UNION_ALL
-        : SqlStdOperatorTable.UNION;
-    return setOpToSql(operator, e);
+  /** @see #dispatch */
+  public Result visit(RelNode e) {
+    throw new AssertionError("Need to implement " + e.getClass().getName());
   }
 
-  public Result visitJoin(Join e) {
+  /** @see #dispatch */
+  public Result visit(Join e) {
     final Result leftResult = visitChild(0, e.getLeft());
     final Result rightResult = visitChild(1, e.getRight());
     final Context leftContext = leftResult.qualifiedContext();
@@ -124,7 +111,8 @@ public class RelToSqlConverter extends SqlImplementor {
     return result(join, leftResult, rightResult);
   }
 
-  public Result visitFilter(Filter e) {
+  /** @see #dispatch */
+  public Result visit(Filter e) {
     Result x = visitChild(0, e.getInput());
     final Builder builder =
         x.builder(e, Clause.WHERE);
@@ -132,7 +120,8 @@ public class RelToSqlConverter extends SqlImplementor {
     return builder.result();
   }
 
-  public Result visitProject(Project e) {
+  /** @see #dispatch */
+  public Result visit(Project e) {
     Result x = visitChild(0, e.getInput());
     if (isStar(e.getChildExps(), e.getInput().getRowType())) {
       return x;
@@ -149,8 +138,8 @@ public class RelToSqlConverter extends SqlImplementor {
     return builder.result();
   }
 
-
-  public Result visitAggregate(Aggregate e) {
+  /** @see #dispatch */
+  public Result visit(Aggregate e) {
     // "select a, b, sum(x) from ( ... ) group by a, b"
     final Result x = visitChild(0, e.getInput());
     final Builder builder;
@@ -184,24 +173,36 @@ public class RelToSqlConverter extends SqlImplementor {
     return builder.result();
   }
 
-  public Result visitTableScan(TableScan e) {
-    return result(new SqlIdentifier(e.getTable().getQualifiedName(), SqlParserPos.ZERO),
-        Collections.singletonList(Clause.FROM), e);
+  /** @see #dispatch */
+  public Result visit(TableScan e) {
+    final SqlIdentifier identifier =
+        new SqlIdentifier(e.getTable().getQualifiedName(), SqlParserPos.ZERO);
+    return result(identifier, Collections.singletonList(Clause.FROM), e);
   }
 
-  public Result visitIntersect(Intersect e) {
+  /** @see #dispatch */
+  public Result visit(Union e) {
+    return setOpToSql(e.all
+        ? SqlStdOperatorTable.UNION_ALL
+        : SqlStdOperatorTable.UNION, e);
+  }
+
+  /** @see #dispatch */
+  public Result visit(Intersect e) {
     return setOpToSql(e.all
         ? SqlStdOperatorTable.INTERSECT_ALL
         : SqlStdOperatorTable.INTERSECT, e);
   }
 
-  public Result visitMinus(Minus e) {
+  /** @see #dispatch */
+  public Result visit(Minus e) {
     return setOpToSql(e.all
         ? SqlStdOperatorTable.EXCEPT_ALL
         : SqlStdOperatorTable.EXCEPT, e);
   }
 
-  public Result visitCalc(Calc e) {
+  /** @see #dispatch */
+  public Result visit(Calc e) {
     Result x = visitChild(0, e.getInput());
     final RexProgram program = e.getProgram();
     Builder builder =
@@ -224,11 +225,12 @@ public class RelToSqlConverter extends SqlImplementor {
     return builder.result();
   }
 
-  public Result visitValues(Values e) {
+  /** @see #dispatch */
+  public Result visit(Values e) {
     final List<String> fields = e.getRowType().getFieldNames();
     final List<Clause> clauses = Collections.singletonList(Clause.SELECT);
-    final Context context =
-        new AliasContext(Collections.<Pair<String, RelDataType>>emptyList(), false);
+    final List<Pair<String, RelDataType>> pairs = ImmutableList.of();
+    final Context context = aliasContext(pairs, false);
     final List<SqlSelect> selects = new ArrayList<>();
     for (List<RexLiteral> tuple : e.getTuples()) {
       final List<SqlNode> selectList = new ArrayList<>();
@@ -256,7 +258,8 @@ public class RelToSqlConverter extends SqlImplementor {
     return result(query, clauses, e);
   }
 
-  public Result visitSort(Sort e) {
+  /** @see #dispatch */
+  public Result visit(Sort e) {
     final Result x = visitChild(0, e.getInput());
     final Builder builder = x.builder(e, Clause.ORDER_BY);
     List<SqlNode> orderByList = Expressions.list();
@@ -267,8 +270,9 @@ public class RelToSqlConverter extends SqlImplementor {
     return builder.result();
   }
 
-  public Result visitTableModify(TableModify e) {
-    throw new AssertionError(); // TODO:
+  /** @see #dispatch */
+  public Result visit(TableModify e) {
+    throw new AssertionError("not implemented: " + e);
   }
 
   @Override public void addSelect(List<SqlNode> selectList, SqlNode node,

@@ -62,6 +62,7 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -104,7 +105,7 @@ public abstract class SqlImplementor {
   protected final Map<String, SqlNode> ordinalMap = new HashMap<>();
 
   protected SqlImplementor(SqlDialect dialect) {
-    this.dialect = dialect;
+    this.dialect = Preconditions.checkNotNull(dialect);
   }
 
   public abstract Result visitChild(int i, RelNode e);
@@ -277,8 +278,8 @@ public abstract class SqlImplementor {
       node = stripCastFromString(node);
       operands = ((RexCall) node).getOperands();
       op = ((RexCall) node).getOperator();
-      assert operands.size() == 2;
-      if (operands.get(0) instanceof RexInputRef
+      if (operands.size() == 2
+          && operands.get(0) instanceof RexInputRef
           && operands.get(1) instanceof RexInputRef) {
         final RexInputRef op0 = (RexInputRef) operands.get(0);
         final RexInputRef op1 = (RexInputRef) operands.get(1);
