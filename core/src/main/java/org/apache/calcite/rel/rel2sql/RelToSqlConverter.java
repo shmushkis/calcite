@@ -86,7 +86,6 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -95,19 +94,16 @@ import java.util.logging.Logger;
 /**
  * Utility to convert RelNodes to SqlNode
  */
-public class RelToSqlConverter {
+public class RelToSqlConverter extends SqlImplementor {
 
   private static final Logger LOGGER = Logger.getLogger(RelToSqlConverter.class.getName());
 
   public static final SqlParserPos POS = SqlParserPos.ZERO;
 
-  final SqlDialect dialect;
-  private final Set<String> aliasSet = new LinkedHashSet<>();
-
   private final Map<String, SqlNode> ordinalMap = new HashMap<>();
 
   public RelToSqlConverter(SqlDialect dialect) {
-    this.dialect = dialect;
+    super(dialect);
   }
 
   /**
