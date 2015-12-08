@@ -659,17 +659,7 @@ public class JdbcRules {
           x.builder(this, JdbcImplementor.Clause.ORDER_BY);
       List<SqlNode> orderByList = Expressions.list();
       for (RelFieldCollation fieldCollation : collation.getFieldCollations()) {
-        if (fieldCollation.nullDirection
-            != RelFieldCollation.NullDirection.UNSPECIFIED
-            && implementor.dialect.getDatabaseProduct()
-               == SqlDialect.DatabaseProduct.MYSQL) {
-          orderByList.add(
-              SqlImplementor.ISNULL_FUNCTION.createCall(POS,
-                  builder.context.field(fieldCollation.getFieldIndex())));
-          fieldCollation = new RelFieldCollation(fieldCollation.getFieldIndex(),
-              fieldCollation.getDirection());
-        }
-        orderByList.add(builder.context.toSql(fieldCollation));
+        builder.addOrderItem(orderByList, fieldCollation);
       }
       builder.setOrderBy(new SqlNodeList(orderByList, POS));
       return builder.result();
@@ -717,7 +707,7 @@ public class JdbcRules {
       final SqlSetOperator operator = all
           ? SqlStdOperatorTable.UNION_ALL
           : SqlStdOperatorTable.UNION;
-      return SqlImplementor.setOpToSql(implementor, operator, this);
+      return implementor.setOpToSql(operator, this);
     }
   }
 
@@ -761,10 +751,9 @@ public class JdbcRules {
     }
 
     public JdbcImplementor.Result implement(JdbcImplementor implementor) {
-      return SqlImplementor.setOpToSql(implementor,
-          all
-              ? SqlStdOperatorTable.INTERSECT_ALL
-              : SqlStdOperatorTable.INTERSECT,
+      return implementor.setOpToSql(all
+          ? SqlStdOperatorTable.INTERSECT_ALL
+          : SqlStdOperatorTable.INTERSECT,
           this);
     }
   }
@@ -804,10 +793,9 @@ public class JdbcRules {
     }
 
     public JdbcImplementor.Result implement(JdbcImplementor implementor) {
-      return SqlImplementor.setOpToSql(implementor,
-          all
-              ? SqlStdOperatorTable.EXCEPT_ALL
-              : SqlStdOperatorTable.EXCEPT,
+      return implementor.setOpToSql(all
+          ? SqlStdOperatorTable.EXCEPT_ALL
+          : SqlStdOperatorTable.EXCEPT,
           this);
     }
   }

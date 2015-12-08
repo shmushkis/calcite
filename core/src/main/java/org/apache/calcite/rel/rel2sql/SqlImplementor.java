@@ -221,22 +221,20 @@ public abstract class SqlImplementor {
     return i == program.getInputRowType().getFieldCount();
   }
 
-  public static Result setOpToSql(SqlImplementor implementor,
-      SqlSetOperator operator, RelNode rel) {
+  public Result setOpToSql(SqlSetOperator operator, RelNode rel) {
     List<SqlNode> list = Expressions.list();
     for (Ord<RelNode> input : Ord.zip(rel.getInputs())) {
-      final Result result =
-          implementor.visitChild(input.i, input.e);
+      final Result result = visitChild(input.i, input.e);
       list.add(result.asSelect());
     }
     final SqlCall node = operator.createCall(new SqlNodeList(list, POS));
     final List<Clause> clauses =
         Expressions.list(Clause.SET_OP);
-    return implementor.result(node, clauses, rel);
+    return result(node, clauses, rel);
   }
 
   /**
-   * Convert {@link RexNode} condition into {@link SqlNode}
+   * Converts a {@link RexNode} condition into a {@link SqlNode}.
    *
    * @param node            condition Node
    * @param leftContext     LeftContext
@@ -276,10 +274,11 @@ public abstract class SqlImplementor {
     case GREATER_THAN_OR_EQUAL:
     case LESS_THAN:
     case LESS_THAN_OR_EQUAL:
+      node = stripCastFromString(node);
       operands = ((RexCall) node).getOperands();
       op = ((RexCall) node).getOperator();
-      if (operands.size() == 2
-          && operands.get(0) instanceof RexInputRef
+      assert operands.size() == 2;
+      if (operands.get(0) instanceof RexInputRef
           && operands.get(1) instanceof RexInputRef) {
         final RexInputRef op0 = (RexInputRef) operands.get(0);
         final RexInputRef op1 = (RexInputRef) operands.get(1);
@@ -304,6 +303,45 @@ public abstract class SqlImplementor {
       return joinContext.toSql(null, node);
     }
     throw new AssertionError(node);
+  }
+
+  /** Removes cast from string.
+   *
+   * <p>For example, {@code x > CAST('2015-01-07' AS DATE)}
+   * becomes {@code x > '2015-01-07'}.
+   */
+  private static RexNode stripCastFromString(RexNode node) {
+    switch (node.getKind()) {
+    case EQUALS:
+    case IS_NOT_DISTINCT_FROM:
+    case NOT_EQUALS:
+    case GREATER_THAN:
+    case GREATER_THAN_OR_EQUAL:
+    case LESS_THAN:
+    case LESS_THAN_OR_EQUAL:
+      final RexCall call = (RexCall) node;
+      final RexNode o0 = call.operands.get(0);
+      final RexNode o1 = call.operands.get(1);
+      if (o0.getKind() == SqlKind.CAST
+          && o1.getKind() != SqlKind.CAST) {
+        final RexNode o0b = ((RexCall) o0).getOperands().get(0);
+        switch (o0b.getType().getSqlTypeName()) {
+        case CHAR:
+        case VARCHAR:
+          return call.clone(call.getType(), ImmutableList.of(o0b, o1));
+        }
+      }
+      if (o1.getKind() == SqlKind.CAST
+          && o0.getKind() != SqlKind.CAST) {
+        final RexNode o1b = ((RexCall) o1).getOperands().get(0);
+        switch (o1b.getType().getSqlTypeName()) {
+        case CHAR:
+        case VARCHAR:
+          return call.clone(call.getType(), ImmutableList.of(o0, o1b));
+        }
+      }
+    }
+    return node;
   }
 
   private static SqlOperator reverseOperatorDirection(SqlOperator op) {
@@ -470,10 +508,10 @@ public abstract class SqlImplementor {
             new SqlNodeList(thenList, POS), elseNode);
 
       default:
-        final RexCall call = (RexCall) rex;
+        final RexCall call = (RexCall) stripCastFromString(rex);
         final SqlOperator op = call.getOperator();
         final List<SqlNode> nodeList = toSql(program, call.getOperands());
-        switch (rex.getKind()) {
+        switch (call.getKind()) {
         case CAST:
           if (ignoreCast) {
             assert nodeList.size() == 1;
@@ -845,6 +883,20 @@ public abstract class SqlImplementor {
     public void setOffset(SqlNode offset) {
       assert clauses.contains(Clause.OFFSET);
       select.setOffset(offset);
+    }
+
+    public void addOrderItem(List<SqlNode> orderByList,
+        RelFieldCollation field) {
+      if (field.nullDirection != RelFieldCollation.NullDirection.UNSPECIFIED
+          && dialect.getDatabaseProduct() == SqlDialect.DatabaseProduct.MYSQL) {
+        orderByList.add(
+            ISNULL_FUNCTION.createCall(POS,
+                context.field(field.getFieldIndex())));
+        field = new RelFieldCollation(field.getFieldIndex(),
+            field.getDirection(),
+            RelFieldCollation.NullDirection.UNSPECIFIED);
+      }
+      orderByList.add(context.toSql(field));
     }
 
     public Result result() {
