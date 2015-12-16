@@ -4449,17 +4449,26 @@ public class JdbcTest {
   }
 
   @Test public void testNotExistsCorrelated() {
+    final String plan = "PLAN="
+        + "EnumerableCalc(expr#0..5=[{inputs}], expr#6=[IS NOT NULL($t5)], expr#7=[true], expr#8=[false], expr#9=[CASE($t6, $t7, $t8)], expr#10=[NOT($t9)], proj#0..4=[{exprs}], $condition=[$t10])\n"
+        + "  EnumerableCorrelate(correlation=[$cor0], joinType=[LEFT], requiredColumns=[{1}])\n"
+        + "    EnumerableTableScan(table=[[hr, emps]])\n"
+        + "    EnumerableAggregate(group=[{0}])\n"
+        + "      EnumerableCalc(expr#0..3=[{inputs}], expr#4=[true], expr#5=[$cor0], expr#6=[$t5.deptno], expr#7=[=($t6, $t0)], i=[$t4], $condition=[$t7])\n"
+        + "        EnumerableTableScan(table=[[hr, depts]])\n";
+    final String sql = "select * from \"hr\".\"emps\" where not exists (\n"
+        + " select 1 from \"hr\".\"depts\"\n"
+        + " where \"emps\".\"deptno\"=\"depts\".\"deptno\")";
     CalciteAssert.hr()
-        .query("select * from \"hr\".\"emps\" where not exists (\n"
-            + " select 1 from \"hr\".\"depts\"\n"
-            + " where \"emps\".\"deptno\"=\"depts\".\"deptno\")")
-        .explainContains("xx")
+        .with("forceDecorrelate", false)
+        .query(sql)
+        .explainContains(plan)
         .returnsUnordered(
             "empid=200; deptno=20; name=Eric; salary=8000.0; commission=500");
   }
 
   /** Manual expansion of EXISTS in {@link #testNotExistsCorrelated()}.
-   * TODO: move this into .oq */
+   * TODO: move this into .iq */
   @Test public void testNotExistsCorrelated2() {
     CalciteAssert.hr()
         .query("select * from \"hr\".\"emps\" as e left join lateral (\n"

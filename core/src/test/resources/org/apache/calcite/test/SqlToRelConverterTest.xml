@@ -3088,4 +3088,23 @@ LogicalProject(EXPR$0=['abc'], EXPR$1=[$SLICE($9)])
 ]]>
         </Resource>
     </TestCase>
+    <TestCase name="testNotExistsCorrelated">
+        <Resource name="sql">
+            <![CDATA[select * from emp where not exists (
+  select 1 from dept where emp.deptno=dept.deptno)]]>
+        </Resource>
+        <Resource name="plan">
+            <![CDATA[
+LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8])
+  LogicalFilter(condition=[NOT(IS NOT NULL($9))])
+    LogicalCorrelate(correlation=[$cor0], joinType=[LEFT], requiredColumns=[{7}])
+      LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+      LogicalAggregate(group=[{}], agg#0=[MIN($0)])
+        LogicalProject($f0=[true])
+          LogicalProject(EXPR$0=[1])
+            LogicalFilter(condition=[=($cor0.DEPTNO, $0)])
+              LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+]]>
+        </Resource>
+    </TestCase>
 </Root>

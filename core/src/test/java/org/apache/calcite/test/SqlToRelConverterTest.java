@@ -836,6 +836,12 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
         "${plan}");
   }
 
+  @Test public void testNotExistsCorrelated() {
+    final String sql = "select * from emp where not exists (\n"
+        + "  select 1 from dept where emp.deptno=dept.deptno)";
+    tester.withDecorrelation(false).assertConvertsTo(sql, "${plan}");
+  }
+
   @Test public void testExistsCorrelatedDecorrelate() {
     final String sql = "select*from emp where exists (\n"
         + "  select 1 from dept where emp.deptno=dept.deptno)";
