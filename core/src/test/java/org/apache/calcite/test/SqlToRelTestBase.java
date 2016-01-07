@@ -519,7 +519,7 @@ public abstract class SqlToRelTestBase {
       }
       if (enableTrim) {
         converter.setTrimUnusedFields(true);
-        root = root.withRel(converter.trimUnusedFields(false, root.rel));
+        root = root.withRel(converter.trimUnusedFields(true, root.rel));
       }
       return root;
     }
