@@ -486,7 +486,7 @@ public abstract class AvaticaConnection implements Connection {
     // opportunity to call cancel.
     try {
       if (statement.openResultSet != null) {
-        statement.openResultSet.execute();
+        statement.openResultSet.executeEmpty();
         isUpdateCapable(statement);
       }
     } catch (Exception e) {

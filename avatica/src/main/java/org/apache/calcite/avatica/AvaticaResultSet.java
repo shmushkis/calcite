@@ -195,6 +195,18 @@ public class AvaticaResultSet implements ResultSet, ArrayImpl.Factory {
     return this;
   }
 
+  protected AvaticaResultSet executeEmpty() throws SQLException {
+    final List<TypedValue> parameterValues = statement.getBoundParameterValues();
+    final Iterable<Object> iterable1 = firstFrame.rows;
+
+    this.cursor = MetaImpl.createCursor(signature.cursorFactory, iterable1);
+    this.accessorList =
+        cursor.createAccessors(columnMetaDataList, localCalendar, this);
+    this.row = -1;
+    this.afterLast = false;
+    return this;
+  }
+
   protected AvaticaResultSet execute2(Cursor cursor,
       List<ColumnMetaData> columnMetaDataList) {
     this.cursor = cursor;
