@@ -303,14 +303,25 @@ public class ScannableTableTest {
           CalciteConnection.class);
 
       final AtomicInteger scanCount = new AtomicInteger();
+      final AtomicInteger enumerateCount = new AtomicInteger();
       final Schema schema =
           new AbstractSchema() {
             @Override protected Map<String, Table> getTableMap() {
               return ImmutableMap.<String, Table>of("TENS",
                   new SimpleTable() {
-                    @Override public Enumerable<Object[]> scan(DataContext root) {
-                      scanCount.incrementAndGet();
+                    private Enumerable<Object[]> superScan(DataContext root) {
                       return super.scan(root);
+                    }
+
+                    @Override public Enumerable<Object[]>
+                    scan(final DataContext root) {
+                      scanCount.incrementAndGet();
+                      return new AbstractEnumerable<Object[]>() {
+                        public Enumerator<Object[]> enumerator() {
+                          enumerateCount.incrementAndGet();
+                          return superScan(root).enumerator();
+                        }
+                      };
                     }
                   });
             }
@@ -320,12 +331,32 @@ public class ScannableTableTest {
       final PreparedStatement statement =
           calciteConnection.prepareStatement(sql);
       assertThat(scanCount.get(), is(0));
+      assertThat(enumerateCount.get(), is(0));
+
+      // First execute
       statement.setInt(1, 20);
-      final ResultSet resultSet = statement.executeQuery();
-      //assertThat(scanCount.get(), is(1));
-      assertThat(CalciteAssert.toString(resultSet),
-          equalTo("i=0\ni=10\n"));
+      ResultSet resultSet = statement.executeQuery();
+      assertThat(scanCount.get(), is(2)); // 2 scans for execute is OK
+      assertThat(enumerateCount.get(), is(0));
+      assertThat(resultSet,
+          Matchers.returnsUnordered("i=[0]", "i=[10]"));
       assertThat(scanCount.get(), is(1));
+      assertThat(enumerateCount.get(), is(1));
+
+      // Second execute
+      resultSet = statement.executeQuery();
+      assertThat(scanCount.get(), is(2));
+      assertThat(resultSet,
+          Matchers.returnsUnordered("i=[0]", "i=[10]"));
+      assertThat(scanCount.get(), is(2));
+
+      // Third execute
+      statement.setInt(1, 30);
+      resultSet = statement.executeQuery();
+      assertThat(scanCount.get(), is(3));
+      assertThat(resultSet,
+          Matchers.returnsUnordered("i=[0]", "i=[10]", "i=[20]"));
+      assertThat(scanCount.get(), is(3));
     }
   }
 

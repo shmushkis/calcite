@@ -19,6 +19,7 @@ package org.apache.calcite.test;
 import com.google.common.collect.Lists;
 
 import org.hamcrest.CustomTypeSafeMatcher;
+import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 
 import java.sql.ResultSet;
@@ -32,6 +33,10 @@ import java.util.List;
  */
 public class Matchers {
   private Matchers() {}
+
+  /** Allows passing the actual result from the {@code matchesSafely} method to
+   * the {@code describeMismatchSafely} method that will show the difference. */
+  private static final ThreadLocal<Object> THREAD_ACTUAL = new ThreadLocal<>();
 
   /**
    * Creates a matcher that matches if the examined result set returns the
@@ -48,8 +53,14 @@ public class Matchers {
     Collections.sort(expectedList);
 
     return new CustomTypeSafeMatcher<ResultSet>(Arrays.toString(lines)) {
-      protected boolean matchesSafely(ResultSet resultSet) {
+      @Override protected void describeMismatchSafely(ResultSet item,
+          Description description) {
+        final Object value = THREAD_ACTUAL.get();
+        THREAD_ACTUAL.remove();
+        description.appendText("was ").appendValue(value);
+      }
 
+      protected boolean matchesSafely(ResultSet resultSet) {
         final List<String> actualList = Lists.newArrayList();
         try {
           CalciteAssert.toStringList(resultSet, actualList);
@@ -59,7 +70,12 @@ public class Matchers {
         }
         Collections.sort(actualList);
 
-        return actualList.equals(expectedList);
+        THREAD_ACTUAL.set(actualList);
+        final boolean equals = actualList.equals(expectedList);
+        if (!equals) {
+          THREAD_ACTUAL.set(actualList);
+        }
+        return equals;
       }
     };
   }
