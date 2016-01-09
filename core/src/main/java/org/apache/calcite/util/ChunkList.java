@@ -32,19 +32,24 @@ import java.util.NoSuchElementException;
  * @param <E> element type
  */
 public class ChunkList<E> extends AbstractSequentialList<E> {
+  /** The header is the first 3 slots of a chunk: a back link, forward link,
+   * and the number of slots occupied. */
   private static final int HEADER_SIZE = 3;
-  private int size;
-  private Object[] first;
-  private Object[] last;
-
   private static final int CHUNK_SIZE = 64;
-  private static final Integer[] INTEGERS = new Integer[CHUNK_SIZE + 3];
+  private static final Integer[] INTEGERS = new Integer[CHUNK_SIZE + HEADER_SIZE];
 
   static {
     for (int i = 0; i < INTEGERS.length; i++) {
       INTEGERS[i] = i;
     }
   }
+
+  /** Number of elements in the list. */
+  private int size;
+  /** Pointer to first chunk in the list. */
+  private Object[] first;
+  /** Pointer to last chunk in the list. */
+  private Object[] last;
 
   /**
    * Creates an empty ChunkList.
@@ -190,32 +195,40 @@ public class ChunkList<E> extends AbstractSequentialList<E> {
   /** Iterator over a {@link ChunkList}. */
   private class ChunkListIterator implements ListIterator<E> {
     private Object[] chunk;
+    /** Offset in the list of the first element of this chunk. */
     private int startIndex;
-    private int offset;
+    /** Offset within current chunk of the next element to return. */
+    private int cursor;
+    /** Offset within the current chunk of the last element returned. -1 if
+     * next has not been called. */
+    private int lastRet;
+    /** Offset of the first unoccupied location in the current chunk. */
     private int end;
 
+    /** Creates an iterator that is positioned before the first element.
+     * The list may or may not be empty. */
     ChunkListIterator() {
       this(null, 0, -1, 0);
     }
 
-    ChunkListIterator(Object[] chunk, int startIndex, int offset, int end) {
+    ChunkListIterator(Object[] chunk, int startIndex, int cursor, int end) {
       this.chunk = chunk;
       this.startIndex = startIndex;
-      this.offset = offset;
+      this.cursor = cursor;
       this.end = end;
     }
 
     public boolean hasNext() {
-      return offset + 1 < end
+      return cursor + 1 < end
           || (chunk == null
           ? first != null
           : ChunkList.next(chunk) != null);
     }
 
     public E next() {
-      ++offset;
-      assert offset <= end;
-      if (offset == end) {
+      ++cursor;
+      assert cursor <= end;
+      if (cursor == end) {
         if (chunk == null) {
           chunk = first;
         } else {
@@ -225,39 +238,42 @@ public class ChunkList<E> extends AbstractSequentialList<E> {
         if (chunk == null) {
           throw new NoSuchElementException();
         }
-        offset = HEADER_SIZE;
+        cursor = HEADER_SIZE;
         end = occupied(chunk) + HEADER_SIZE;
       }
-      return (E) element(chunk, offset);
+      return (E) element(chunk, cursor);
     }
 
     public boolean hasPrevious() {
-      return offset >= HEADER_SIZE || ChunkList.prev(chunk) != null;
+      return cursor >= HEADER_SIZE || ChunkList.prev(chunk) != null;
     }
 
     public E previous() {
-      --offset;
-      if (offset == HEADER_SIZE - 1) {
+      --cursor;
+      if (cursor == HEADER_SIZE - 1) {
         chunk = chunk == null ? last : ChunkList.prev(chunk);
         if (chunk == null) {
           throw new NoSuchElementException();
         }
         end = occupied(chunk);
         startIndex -= end;
-        offset = end - 1;
+        cursor = end - 1;
       }
-      return (E) element(chunk, offset);
+      return (E) element(chunk, cursor);
     }
 
     public int nextIndex() {
-      return startIndex + (offset - HEADER_SIZE) + 1;
+      return startIndex + (cursor - HEADER_SIZE) + 1;
     }
 
     public int previousIndex() {
-      return startIndex + (offset - HEADER_SIZE);
+      return startIndex + (cursor - HEADER_SIZE);
     }
 
     public void remove() {
+      if (chunk == null) {
+        throw new IllegalStateException();
+      }
       --size;
       if (end == HEADER_SIZE + 1) {
         // Chunk is now empty.
@@ -272,7 +288,7 @@ public class ChunkList<E> extends AbstractSequentialList<E> {
           }
           chunk = null;
           end = HEADER_SIZE;
-          offset = end - 1;
+          cursor = end - 1;
         } else {
           if (prev == null) {
             first = next;
@@ -282,30 +298,30 @@ public class ChunkList<E> extends AbstractSequentialList<E> {
             setPrev(next, prev);
           }
           chunk = next;
-          offset = HEADER_SIZE;
+          cursor = HEADER_SIZE;
           end = HEADER_SIZE + occupied(next);
         }
         return;
       }
       // Move existing contents down one.
       System.arraycopy(
-          chunk, offset + 1, chunk, offset, end - offset - 1);
+          chunk, cursor + 1, chunk, cursor, end - cursor - 1);
       --end;
       setElement(chunk, end, null); // allow gc
       setOccupied(chunk, end - HEADER_SIZE);
-      if (offset == end) {
+      if (cursor == end) {
         final Object[] next = ChunkList.next(chunk);
         if (next != null) {
           startIndex += end - HEADER_SIZE;
           chunk = next;
-          offset = HEADER_SIZE - 1;
+          cursor = HEADER_SIZE - 1;
           end = HEADER_SIZE + occupied(next);
         }
       }
     }
 
     public void set(E e) {
-      setElement(chunk, offset, e);
+      setElement(chunk, cursor, e);
     }
 
     public void add(E e) {
@@ -336,13 +352,13 @@ public class ChunkList<E> extends AbstractSequentialList<E> {
           startIndex += CHUNK_SIZE;
         }
         chunk = newChunk;
-        end = offset = HEADER_SIZE;
+        end = cursor = HEADER_SIZE;
       } else {
         // Move existing contents up one.
         System.arraycopy(
-            chunk, offset, chunk, offset + 1, end - offset);
+            chunk, cursor, chunk, cursor + 1, end - cursor);
       }
-      setElement(chunk, offset, e);
+      setElement(chunk, cursor, e);
 //            ++offset;
       ++end;
       setOccupied(chunk, end - HEADER_SIZE);

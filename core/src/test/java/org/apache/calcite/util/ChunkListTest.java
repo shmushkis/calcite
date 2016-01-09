@@ -30,9 +30,11 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -44,7 +46,7 @@ public class ChunkListTest {
    * Unit test for {@link ChunkList}.
    */
   @Test public void testChunkList() {
-    final ChunkList<Integer> list = new ChunkList<Integer>();
+    final ChunkList<Integer> list = new ChunkList<>();
     assertEquals(0, list.size());
     assertTrue(list.isEmpty());
     assertEquals("[]", list.toString());
@@ -103,37 +105,84 @@ public class ChunkListTest {
     assertEquals(1, (int) list.get(3));
 
     // remove all instances of a value that exists
-    boolean b = list.removeAll(Arrays.asList(9));
+    boolean b = list.removeAll(Collections.singletonList(9));
     assertTrue(b);
 
     // remove all instances of a non-existent value
-    b = list.removeAll(Arrays.asList(99));
+    b = list.removeAll(Collections.singletonList(99));
     assertFalse(b);
 
     // remove all instances of a value that occurs in the last chunk
     list.add(12345);
-    b = list.removeAll(Arrays.asList(12345));
+    b = list.removeAll(Collections.singletonList(12345));
     assertTrue(b);
 
     // remove all instances of a value that occurs in the last chunk but
     // not as the last value
     list.add(12345);
     list.add(123);
-    b = list.removeAll(Arrays.asList(12345));
+    b = list.removeAll(Collections.singletonList(12345));
     assertTrue(b);
 
-    assertEquals(
-        1000, new ChunkList<Integer>(Collections.nCopies(1000, 77)).size());
+    assertThat(new ChunkList<>(Collections.nCopies(1000, 77)).size(),
+        is(1000));
 
     // add to an empty list via iterator
     //noinspection MismatchedQueryAndUpdateOfCollection
-    final ChunkList<String> list2 = new ChunkList<String>();
+    final ChunkList<String> list2 = new ChunkList<>();
     list2.listIterator(0).add("x");
     assertEquals("[x]", list2.toString());
 
     // add at start
     list2.add(0, "y");
     assertEquals("[y, x]", list2.toString());
+
+    list2.remove(0);
+    assertEquals("[x]", list2.toString());
+
+    // clear a list of length 1
+    list2.clear();
+    assertThat(list2.isEmpty(), is(true));
+
+    // clear a list of length 0
+    list2.clear();
+    assertThat(list2.isEmpty(), is(true));
+
+    // clear a list of length 2
+    list2.add("z");
+    list2.add("z");
+    list2.clear();
+    assertThat(list2.isEmpty(), is(true));
+
+    // clear a list of length 100
+    list2.addAll(Collections.nCopies(100, "z"));
+    assertThat(list2.size(), is(100));
+    list2.clear();
+    assertThat(list2.isEmpty(), is(true));
+  }
+
+  /**
+   * Removing via an iterator.
+   */
+  @Test public void testIterator() {
+    final ChunkList<String> list = new ChunkList<>();
+    list.add("a");
+    list.add("b");
+    final ListIterator<String> listIterator = list.listIterator(0);
+    try {
+      listIterator.remove();
+      fail("excepted exception");
+    } catch (IllegalStateException e) {
+      // ok
+    }
+    listIterator.next();
+    listIterator.remove();
+    assertThat(list.size(), is(1));
+    assertThat(listIterator.hasNext(), is(true));
+    listIterator.next();
+    listIterator.remove();
+    assertThat(list.size(), is(0));
+    assertThat(listIterator.hasNext(), is(false));
   }
 
   /**
@@ -148,7 +197,7 @@ public class ChunkListTest {
       checkRandom(random, new ChunkList<Integer>(), iterationCount);
     }
     checkRandom(
-        new Random(3), new ChunkList<Integer>(Collections.nCopies(1000, 5)),
+        new Random(3), new ChunkList<>(Collections.nCopies(1000, 5)),
         iterationCount);
   }
 
@@ -231,22 +280,22 @@ public class ChunkListTest {
             Arrays.asList(
                 new Function0<List<Integer>>() {
                   public List<Integer> apply() {
-                    return new ArrayList<Integer>();
+                    return new ArrayList<>();
                   }
                 },
                 new Function0<List<Integer>>() {
                   public List<Integer> apply() {
-                    return new LinkedList<Integer>();
+                    return new LinkedList<>();
                   }
                 },
                 new Function0<List<Integer>>() {
                   public List<Integer> apply() {
-                    return new ChunkList<Integer>();
+                    return new ChunkList<>();
                   }
                 }),
             Arrays.asList("ArrayList", "LinkedList", "ChunkList-64"));
     final List<Pair<Function0<List<Integer>>, String>> factories1 =
-        new ArrayList<Pair<Function0<List<Integer>>, String>>();
+        new ArrayList<>();
     for (Pair<Function0<List<Integer>>, String> pair : factories0) {
       factories1.add(pair);
     }
