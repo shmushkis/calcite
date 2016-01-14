@@ -38,7 +38,6 @@ import org.apache.calcite.util.ZonelessTimestamp;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.math.BigDecimal;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.AbstractList;
 import java.util.Calendar;
@@ -119,7 +118,7 @@ import java.util.TimeZone;
  * <td>Binary constant, for example <code>X'7F34'</code>. (The number of hexits
  * must be even; see above.) These constants are always BINARY, never
  * VARBINARY.</td>
- * <td>{@link ByteBuffer}</td>
+ * <td>{@link ByteString}</td>
  * </tr>
  * <tr>
  * <td>{@link SqlTypeName#SYMBOL}</td>
@@ -552,7 +551,7 @@ public class RexLiteral extends RexNode {
     }
     switch (typeName) {
     case BINARY:
-      return ((ByteBuffer) value).array();
+      return ((ByteString) value).getBytes();
     case CHAR:
       return ((NlsString) value).getValue();
     case DECIMAL:
@@ -602,10 +601,11 @@ public class RexLiteral extends RexNode {
     return !booleanValue(this);
   }
 
-  public boolean equals(Object obj) {
-    return (obj instanceof RexLiteral)
-        && equals(((RexLiteral) obj).value, value)
-        && equals(((RexLiteral) obj).type, type);
+  public boolean equals(Object o) {
+    return this == o
+        || o instanceof RexLiteral
+        && Objects.equals(((RexLiteral) o).value, value)
+        && Objects.equals(((RexLiteral) o).type, type);
   }
 
   public int hashCode() {
@@ -648,10 +648,6 @@ public class RexLiteral extends RexNode {
   public static boolean isNullLiteral(RexNode node) {
     return (node instanceof RexLiteral)
         && (((RexLiteral) node).value == null);
-  }
-
-  private static boolean equals(Object o1, Object o2) {
-    return (o1 == null) ? (o2 == null) : o1.equals(o2);
   }
 
   public <R> R accept(RexVisitor<R> visitor) {

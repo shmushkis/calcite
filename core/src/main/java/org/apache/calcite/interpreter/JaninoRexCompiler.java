@@ -39,6 +39,7 @@ import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -99,8 +100,8 @@ public class JaninoRexCompiler implements Interpreter.ScalarCompiler {
     final Expression root =
         Expressions.field(context_, BuiltInMethod.CONTEXT_ROOT.field);
     final List<Expression> list =
-        RexToLixTranslator.translateProjects(program, javaTypeFactory, builder,
-            null, root, inputGetter, correlates);
+        RexToLixTranslator.translateProjects(program, javaTypeFactory,
+            rexBuilder, builder, null, root, inputGetter, correlates);
     for (int i = 0; i < list.size(); i++) {
       builder.add(
           Expressions.statement(
@@ -152,10 +153,8 @@ public class JaninoRexCompiler implements Interpreter.ScalarCompiler {
     }
     try {
       return getScalar(classDeclaration, s);
-    } catch (CompileException e) {
-      throw new RuntimeException(e);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+    } catch (CompileException | IOException e) {
+      throw Throwables.propagate(e);
     }
   }
 

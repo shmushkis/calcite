@@ -18,9 +18,6 @@ package org.apache.calcite.sql.advise;
 
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.enumerable.CallImplementor;
-import org.apache.calcite.adapter.enumerable.NotNullImplementor;
-import org.apache.calcite.adapter.enumerable.NullPolicy;
-import org.apache.calcite.adapter.enumerable.RexImpTable;
 import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
@@ -62,14 +59,14 @@ public class SqlAdvisorGetHintsFunction
         SqlAdvisor.class, String.class, int.class);
 
   private static final CallImplementor IMPLEMENTOR =
-    RexImpTable.createImplementor(
-        new NotNullImplementor() {
-          public Expression implement(RexToLixTranslator translator,
-              RexCall call, List<Expression> operands) {
-            return Expressions.call(GET_COMPLETION_HINTS,
-                Iterables.concat(Collections.singleton(ADVISOR), operands));
-          }
-        }, NullPolicy.ANY, false);
+      new CallImplementor() {
+        public Expression implement(RexToLixTranslator translator,
+            RexCall call) {
+          return Expressions.call(GET_COMPLETION_HINTS,
+              Iterables.concat(Collections.singleton(ADVISOR),
+                  translator.translateList(call.getOperands())));
+        }
+      };
 
   private static final List<FunctionParameter> PARAMETERS =
       ReflectiveFunctionBase.builder()

@@ -18,9 +18,7 @@ package org.apache.calcite.schema.impl;
 
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.enumerable.CallImplementor;
-import org.apache.calcite.adapter.enumerable.NullPolicy;
-import org.apache.calcite.adapter.enumerable.ReflectiveCallNotNullImplementor;
-import org.apache.calcite.adapter.enumerable.RexImpTable;
+import org.apache.calcite.adapter.enumerable.ReflectiveCallImplementor;
 import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
@@ -113,30 +111,26 @@ public class TableFunctionImpl extends ReflectiveFunctionBase implements
   }
 
   private static CallImplementor createImplementor(final Method method) {
-    return RexImpTable.createImplementor(
-        new ReflectiveCallNotNullImplementor(method) {
-          public Expression implement(RexToLixTranslator translator,
-              RexCall call, List<Expression> translatedOperands) {
-            Expression expr = super.implement(translator, call,
-                translatedOperands);
-            final Class<?> returnType = method.getReturnType();
-            if (QueryableTable.class.isAssignableFrom(returnType)) {
-              Expression queryable = Expressions.call(
-                  Expressions.convert_(expr, QueryableTable.class),
-                  BuiltInMethod.QUERYABLE_TABLE_AS_QUERYABLE.method,
-                  Expressions.call(DataContext.ROOT,
-                      BuiltInMethod.DATA_CONTEXT_GET_QUERY_PROVIDER.method),
-                  Expressions.constant(null, SchemaPlus.class),
-                  Expressions.constant(call.getOperator().getName(), String.class));
-              expr = Expressions.call(queryable,
-                  BuiltInMethod.QUERYABLE_AS_ENUMERABLE.method);
-            } else {
-              expr = Expressions.call(expr,
-                  BuiltInMethod.SCANNABLE_TABLE_SCAN.method, DataContext.ROOT);
-            }
-            return expr;
-          }
-        }, NullPolicy.ANY, false);
+    return new ReflectiveCallImplementor(method) {
+      public Expression implement(RexToLixTranslator translator, RexCall call) {
+        final Expression expr = super.implement(translator, call);
+        final Class<?> returnType = method.getReturnType();
+        if (QueryableTable.class.isAssignableFrom(returnType)) {
+          Expression queryable = Expressions.call(
+              Expressions.convert_(expr, QueryableTable.class),
+              BuiltInMethod.QUERYABLE_TABLE_AS_QUERYABLE.method,
+              Expressions.call(DataContext.ROOT,
+                  BuiltInMethod.DATA_CONTEXT_GET_QUERY_PROVIDER.method),
+              Expressions.constant(null, SchemaPlus.class),
+              Expressions.constant(call.getOperator().getName(), String.class));
+          return Expressions.call(queryable,
+              BuiltInMethod.QUERYABLE_AS_ENUMERABLE.method);
+        } else {
+          return Expressions.call(expr,
+              BuiltInMethod.SCANNABLE_TABLE_SCAN.method, DataContext.ROOT);
+        }
+      }
+    };
   }
 
   private Table apply(List<Object> arguments) {

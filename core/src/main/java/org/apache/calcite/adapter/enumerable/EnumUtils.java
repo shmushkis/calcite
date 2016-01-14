@@ -239,7 +239,40 @@ public class EnumUtils {
   static Expression enforce(final Type storageType,
       final Expression e) {
     if (storageType != null && e.type != storageType) {
-      if (e.type == java.sql.Date.class) {
+      final Primitive primitive = Primitive.of(e.type);
+      final Primitive primitive2 = Primitive.ofBox(e.type);
+      if (primitive != null) {
+        if (storageType == primitive.boxClass) {
+          // e.g. "int" to "Integer", generate "Integer.valueOf(x)"
+          return Expressions.box(e, primitive);
+        }
+        final Primitive primitive3 = Primitive.of(storageType);
+        if (primitive3 != null) {
+          // e.g. "int" to "byte", generate "(byte) x"
+          return Expressions.convert_(e, primitive3.primitiveClass);
+        }
+        final Primitive primitive4 = Primitive.ofBox(storageType);
+        if (primitive4 != null) {
+          // e.g. "int" to "Byte", generate "Byte.valueOf((byte) x)"
+          return Expressions.box(
+              Expressions.convert_(e, primitive4.primitiveClass), primitive4);
+        }
+      } else if (primitive2 != null) {
+        if (storageType == primitive2.primitiveClass) {
+          // e.g. "Integer" to "int", generate "x.intValue()"
+          return Expressions.unbox(e, primitive2);
+        }
+        final Primitive primitive3 = Primitive.of(storageType);
+        if (primitive3 != null) {
+          // e.g. "Integer" to "byte", generate "x.byteValue()"
+          return Expressions.unbox(e, primitive3);
+        }
+        final Primitive primitive4 = Primitive.ofBox(storageType);
+        if (primitive4 != null) {
+          // e.g. "Integer" to "Byte", generate "Byte.valueOf(x.byteValue())"
+          return Expressions.box(Expressions.unbox(e, primitive4), primitive2);
+        }
+      } else if (e.type == java.sql.Date.class) {
         if (storageType == int.class) {
           return Expressions.call(BuiltInMethod.DATE_TO_INT.method, e);
         }

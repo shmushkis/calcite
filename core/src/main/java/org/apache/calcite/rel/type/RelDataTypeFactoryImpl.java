@@ -237,6 +237,7 @@ public abstract class RelDataTypeFactoryImpl implements RelDataTypeFactory {
       boolean nullable) {
     if (type instanceof JavaType) {
       JavaType javaType = (JavaType) type;
+      final Primitive primitive = Primitive.ofBoxOr(javaType.clazz);
       if (SqlTypeUtil.inCharFamily(javaType)) {
         return new JavaType(
             javaType.clazz,

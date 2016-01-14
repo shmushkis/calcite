@@ -58,8 +58,8 @@ import static org.junit.Assert.assertThat;
  */
 public class RexProgramTest {
   //~ Instance fields --------------------------------------------------------
-  private JavaTypeFactory typeFactory;
-  private RexBuilder rexBuilder;
+  protected JavaTypeFactory typeFactory;
+  protected RexBuilder rexBuilder;
 
   //~ Methods ----------------------------------------------------------------
 
@@ -105,36 +105,76 @@ public class RexProgramTest {
     return n;
   }
 
-  private RexNode not(RexNode node) {
+  RexNode not(RexNode node) {
     return rexBuilder.makeCall(SqlStdOperatorTable.NOT, node);
   }
 
-  private RexNode and(RexNode... nodes) {
+  RexNode and(RexNode... nodes) {
     return and(ImmutableList.copyOf(nodes));
   }
 
-  private RexNode and(Iterable<? extends RexNode> nodes) {
+  RexNode and(Iterable<? extends RexNode> nodes) {
     // Does not flatten nested ANDs. We want test input to contain nested ANDs.
     return rexBuilder.makeCall(SqlStdOperatorTable.AND,
         ImmutableList.copyOf(nodes));
   }
 
-  private RexNode or(RexNode... nodes) {
+  RexNode or(RexNode... nodes) {
     return or(ImmutableList.copyOf(nodes));
   }
 
-  private RexNode or(Iterable<? extends RexNode> nodes) {
+  RexNode or(Iterable<? extends RexNode> nodes) {
     // Does not flatten nested ORs. We want test input to contain nested ORs.
     return rexBuilder.makeCall(SqlStdOperatorTable.OR,
         ImmutableList.copyOf(nodes));
   }
 
-  private RexNode case_(RexNode... nodes) {
+  RexNode isTrue(RexNode node) {
+    return rexBuilder.makeCall(SqlStdOperatorTable.IS_TRUE, node);
+  }
+
+  RexNode isFalse(RexNode node) {
+    return rexBuilder.makeCall(SqlStdOperatorTable.IS_FALSE, node);
+  }
+
+  RexNode isNull(RexNode node) {
+    return rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, node);
+  }
+
+  RexNode isNotNull(RexNode node) {
+    return rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, node);
+  }
+
+  RexNode isNotTrue(RexNode node) {
+    return rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_TRUE, node);
+  }
+
+  RexNode case_(RexNode... nodes) {
     return rexBuilder.makeCall(SqlStdOperatorTable.CASE, nodes);
   }
 
-  private RexNode eq(RexNode n1, RexNode n2) {
+  RexNode eq(RexNode n1, RexNode n2) {
     return rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, n1, n2);
+  }
+
+  RexNode lt(RexNode n1, RexNode n2) {
+    return rexBuilder.makeCall(SqlStdOperatorTable.LESS_THAN, n1, n2);
+  }
+
+  RexNode gt(RexNode n1, RexNode n2) {
+    return rexBuilder.makeCall(SqlStdOperatorTable.GREATER_THAN, n1, n2);
+  }
+
+  RexNode plus(RexNode n1, RexNode n2) {
+    return rexBuilder.makeCall(SqlStdOperatorTable.PLUS, n1, n2);
+  }
+
+  RexNode abs(RexNode n1) {
+    return rexBuilder.makeCall(SqlStdOperatorTable.ABS, n1);
+  }
+
+  RexNode cast(RexNode n, RelDataType type) {
+    return rexBuilder.makeCast(type, n);
   }
 
   /**
@@ -289,12 +329,7 @@ public class RexProgramTest {
         types.get(0), 0);
     final RexLiteral c1 = rexBuilder.makeExactLiteral(BigDecimal.ONE);
     final RexLiteral c5 = rexBuilder.makeExactLiteral(BigDecimal.valueOf(5L));
-    RexLocalRef t2 =
-        builder.addExpr(
-            rexBuilder.makeCall(
-                SqlStdOperatorTable.PLUS,
-                i0,
-                c1));
+    RexLocalRef t2 = builder.addExpr(plus(i0, c1));
     // $t3 = 77 (not used)
     final RexLiteral c77 =
         rexBuilder.makeExactLiteral(
@@ -304,55 +339,30 @@ public class RexProgramTest {
             c77);
     Util.discard(t3);
     // $t4 = $t0 + $t1 (i.e. x + y)
-    final RexNode i1 = rexBuilder.makeInputRef(
-        types.get(1), 1);
-    RexLocalRef t4 =
-        builder.addExpr(
-            rexBuilder.makeCall(
-                SqlStdOperatorTable.PLUS,
-                i0,
-                i1));
+    final RexNode i1 = rexBuilder.makeInputRef(types.get(1), 1);
+    RexLocalRef t4 = builder.addExpr(plus(i0, i1));
     RexLocalRef t5;
     final RexLocalRef t1;
     switch (variant) {
     case 0:
     case 2:
       // $t5 = $t0 + $t0 (i.e. x + x)
-      t5 = builder.addExpr(
-          rexBuilder.makeCall(
-              SqlStdOperatorTable.PLUS,
-              i0,
-              i0));
+      t5 = builder.addExpr(plus(i0, i0));
       t1 = null;
       break;
     case 1:
     case 3:
     case 4:
       // $tx = $t0 + 1
-      t1 =
-          builder.addExpr(
-              rexBuilder.makeCall(
-                  SqlStdOperatorTable.PLUS,
-                  i0,
-                  c1));
+      t1 = builder.addExpr(plus(i0, c1));
       // $t5 = $t0 + $tx (i.e. x + (x + 1))
-      t5 =
-          builder.addExpr(
-              rexBuilder.makeCall(
-                  SqlStdOperatorTable.PLUS,
-                  i0,
-                  t1));
+      t5 = builder.addExpr(plus(i0, t1));
       break;
     default:
       throw Util.newInternal("unexpected variant " + variant);
     }
     // $t6 = $t4 + $t2 (i.e. (x + y) + (x + 1))
-    RexLocalRef t6 =
-        builder.addExpr(
-            rexBuilder.makeCall(
-                SqlStdOperatorTable.PLUS,
-                t4,
-                t2));
+    RexLocalRef t6 = builder.addExpr(plus(t4, t2));
     builder.addProject(t6.getIndex(), "a");
     builder.addProject(t5.getIndex(), "b");
 
@@ -361,19 +371,9 @@ public class RexProgramTest {
     switch (variant) {
     case 2:
       // $t7 = $t4 > $i0 (i.e. (x + y) > 0)
-      t7 =
-          builder.addExpr(
-              rexBuilder.makeCall(
-                  SqlStdOperatorTable.GREATER_THAN,
-                  t4,
-                  i0));
+      t7 = builder.addExpr(gt(t4, i0));
       // $t8 = $t7 AND $t7
-      t8 =
-          builder.addExpr(
-              rexBuilder.makeCall(
-                  SqlStdOperatorTable.AND,
-                  t7,
-                  t7));
+      t8 = builder.addExpr(and(t7, t7));
       builder.addCondition(t8);
       builder.addCondition(t7);
       break;
@@ -382,17 +382,13 @@ public class RexProgramTest {
       // $t7 = 5
       t7 = builder.addExpr(c5);
       // $t8 = $t2 > $t7 (i.e. (x + 1) > 5)
-      t8 =
-          builder.addExpr(
-              rexBuilder.makeCall(SqlStdOperatorTable.GREATER_THAN, t2, t7));
+      t8 = builder.addExpr(gt(t2, t7));
       // $t9 = true
       final RexLocalRef t9 =
           builder.addExpr(rexBuilder.makeLiteral(true));
       // $t10 = $t1 is not null (i.e. y is not null)
       assert t1 != null;
-      final RexLocalRef t10 =
-          builder.addExpr(
-              rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, t1));
+      final RexLocalRef t10 = builder.addExpr(isNotNull(t1));
       // $t11 = false
       final RexLocalRef t11 =
           builder.addExpr(rexBuilder.makeLiteral(false));
@@ -401,21 +397,16 @@ public class RexProgramTest {
           builder.addExpr(rexBuilder.makeNullLiteral(SqlTypeName.BOOLEAN));
       // $t13 = case when $t8 then $t9 when $t10 then $t11 else $t12 end
       final RexLocalRef t13 =
-          builder.addExpr(
-              rexBuilder.makeCall(SqlStdOperatorTable.CASE,
-                  t8, t9, t10, t11, t12));
+          builder.addExpr(case_(t8, t9, t10, t11, t12));
       // $t14 = not $t13 (i.e. not case ... end)
       final RexLocalRef t14 =
-          builder.addExpr(
-              rexBuilder.makeCall(SqlStdOperatorTable.NOT, t13));
+          builder.addExpr(not(t13));
       // don't add 't14 is true' - that is implicit
       if (variant == 3) {
         builder.addCondition(t14);
       } else {
         // $t15 = $14 is true
-        final RexLocalRef t15 =
-            builder.addExpr(
-                rexBuilder.makeCall(SqlStdOperatorTable.IS_TRUE, t14));
+        final RexLocalRef t15 = builder.addExpr(isTrue(t14));
         builder.addCondition(t15);
       }
     }
@@ -459,15 +450,9 @@ public class RexProgramTest {
     assertThat(strongIf(unknownLiteral, c13), is(true));
 
     // AND is strong if one of its arguments is strong
-    final RexNode andUnknownTrue =
-        rexBuilder.makeCall(SqlStdOperatorTable.AND,
-            unknownLiteral, trueLiteral);
-    final RexNode andTrueUnknown =
-        rexBuilder.makeCall(SqlStdOperatorTable.AND,
-            trueLiteral, unknownLiteral);
-    final RexNode andFalseTrue =
-        rexBuilder.makeCall(SqlStdOperatorTable.AND,
-            falseLiteral, trueLiteral);
+    final RexNode andUnknownTrue = and(unknownLiteral, trueLiteral);
+    final RexNode andTrueUnknown = and(trueLiteral, unknownLiteral);
+    final RexNode andFalseTrue = and(falseLiteral, trueLiteral);
 
     assertThat(strongIf(andUnknownTrue, c), is(true));
     assertThat(strongIf(andTrueUnknown, c), is(true));
@@ -759,6 +744,7 @@ public class RexProgramTest {
     final RexNode eRef = rexBuilder.makeFieldAccess(range, 4);
     final RexLiteral true_ = rexBuilder.makeLiteral(true);
     final RexLiteral false_ = rexBuilder.makeLiteral(false);
+    final RexLiteral null_ = rexBuilder.constantNull();
 
     // and: remove duplicates
     checkSimplify(and(aRef, bRef, aRef), "AND(?0.a, ?0.b)");
@@ -824,12 +810,16 @@ public class RexProgramTest {
         "OR(?0.a, AND(?0.d, NOT(?0.b), NOT(?0.c)), AND(NOT(?0.b), NOT(?0.c), NOT(?0.e)))");
 
     // is null, applied to not-null value
-    checkSimplify(rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, aRef),
-        "false");
+    checkSimplify(isNull(aRef), "false");
 
     // is not null, applied to not-null value
-    checkSimplify(rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, aRef),
-        "true");
+    checkSimplify(isNotNull(aRef), "true");
+
+    // "null is not null" -> false
+    checkSimplify(isNotNull(null_), "false");
+
+    // "null is not null" -> false
+    checkSimplify(and(true_, isNotNull(null_)), "false");
   }
 }
 

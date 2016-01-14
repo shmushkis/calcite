@@ -35,6 +35,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.calcite.sql.validate.SqlUserDefinedFunction;
 import org.apache.calcite.util.ControlFlowException;
 import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Pair;
@@ -42,6 +43,7 @@ import org.apache.calcite.util.Util;
 import org.apache.calcite.util.mapping.Mappings;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -57,6 +59,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.Nonnull;
 
 /**
  * Utility methods concerning row-expressions.
@@ -704,6 +707,16 @@ public class RexUtil {
   }
 
   /**
+   * Converts a collection of expressions into an AND;
+   * never returns null.
+   */
+  @Nonnull public static RexNode composeConjunction(RexBuilder rexBuilder,
+      Iterable<? extends RexNode> nodes) {
+    return Preconditions.checkNotNull(
+        composeConjunction(rexBuilder, nodes, false));
+  }
+
+  /**
    * Converts a collection of expressions into an AND.
    * If there are zero expressions, returns TRUE.
    * If there is one expression, returns just that expression.
@@ -721,6 +734,9 @@ public class RexUtil {
     case 1:
       return list.get(0);
     default:
+      if (list.contains(rexBuilder.makeLiteral(false))) {
+        return rexBuilder.makeLiteral(false);
+      }
       return rexBuilder.makeCall(SqlStdOperatorTable.AND, list);
     }
   }
@@ -760,6 +776,16 @@ public class RexUtil {
   }
 
   /**
+   * Converts a collection of expressions into an OR;
+   * never returns null.
+   */
+  @Nonnull public static RexNode composeDisjunction(RexBuilder rexBuilder,
+      Iterable<? extends RexNode> nodes) {
+    return Preconditions.checkNotNull(
+        composeDisjunction(rexBuilder, nodes, false));
+  }
+
+  /**
    * Converts a collection of expressions into an OR.
    * If there are zero expressions, returns FALSE.
    * If there is one expression, returns just that expression.
@@ -777,6 +803,9 @@ public class RexUtil {
     case 1:
       return list.get(0);
     default:
+      if (list.contains(rexBuilder.makeLiteral(true))) {
+        return rexBuilder.makeLiteral(true);
+      }
       return rexBuilder.makeCall(SqlStdOperatorTable.OR, list);
     }
   }
@@ -795,7 +824,7 @@ public class RexUtil {
         addOr(builder, node);
       }
     }
-    return builder.build();
+    return  builder.build();
   }
 
   private static void addOr(ImmutableList.Builder<RexNode> builder,
@@ -1331,7 +1360,7 @@ public class RexUtil {
     if (a.getKind() != negateKind) {
       return simplify(rexBuilder,
           rexBuilder.makeCall(op(negateKind),
-              ImmutableList.of(((RexCall) a).getOperands().get(0))));
+              ImmutableList.copyOf(((RexCall) a).getOperands())));
     }
     return call;
   }
@@ -1381,6 +1410,21 @@ public class RexUtil {
       return simplify(rexBuilder,
           rexBuilder.makeCall(op(kind.negate()),
               ((RexCall) a).getOperands().get(0)));
+    case LITERAL:
+      switch (call.getKind()) {
+      case IS_NULL:
+        return rexBuilder.makeLiteral(RexUtil.isNull(a));
+      case IS_NOT_NULL:
+        return rexBuilder.makeLiteral(!RexUtil.isNull(a));
+      case IS_TRUE:
+        return rexBuilder.makeLiteral(a.isAlwaysTrue());
+      case IS_NOT_FALSE:
+        return rexBuilder.makeLiteral(a.isAlwaysTrue() || RexUtil.isNull(a));
+      case IS_FALSE:
+        return rexBuilder.makeLiteral(a.isAlwaysFalse());
+      case IS_NOT_TRUE:
+        return rexBuilder.makeLiteral(a.isAlwaysFalse() || RexUtil.isNull(a));
+      }
     }
     RexNode a2 = simplify(rexBuilder, a);
     if (a != a2) {
@@ -1389,7 +1433,7 @@ public class RexUtil {
     return call;
   }
 
-  private static SqlOperator op(SqlKind kind) {
+  static SqlOperator op(SqlKind kind) {
     switch (kind) {
     case IS_FALSE:
       return SqlStdOperatorTable.IS_FALSE;
@@ -1405,6 +1449,22 @@ public class RexUtil {
       return SqlStdOperatorTable.IS_NOT_TRUE;
     case IS_NOT_NULL:
       return SqlStdOperatorTable.IS_NOT_NULL;
+    case EQUALS:
+      return SqlStdOperatorTable.EQUALS;
+    case NOT_EQUALS:
+      return SqlStdOperatorTable.NOT_EQUALS;
+    case LESS_THAN:
+      return SqlStdOperatorTable.LESS_THAN;
+    case LESS_THAN_OR_EQUAL:
+      return SqlStdOperatorTable.LESS_THAN_OR_EQUAL;
+    case GREATER_THAN:
+      return SqlStdOperatorTable.GREATER_THAN;
+    case GREATER_THAN_OR_EQUAL:
+      return SqlStdOperatorTable.GREATER_THAN_OR_EQUAL;
+    case IS_DISTINCT_FROM:
+      return SqlStdOperatorTable.IS_DISTINCT_FROM;
+    case IS_NOT_DISTINCT_FROM:
+      return SqlStdOperatorTable.IS_NOT_DISTINCT_FROM;
     default:
       throw new AssertionError(kind);
     }
@@ -1461,12 +1521,14 @@ public class RexUtil {
           notTerms.add(pair.e.getKey());
         }
       }
-      return composeDisjunction(rexBuilder, terms, false);
+      return composeDisjunction(rexBuilder, terms);
     }
     if (newOperands.equals(operands)) {
       return call;
     }
-    return call.clone(call.getType(), newOperands);
+    // Allow the new CASE to figure out its own type. It may have changed
+    // from BOOLEAN to BOOLEAN NOT NULL.
+    return rexBuilder.makeCall(SqlStdOperatorTable.CASE, newOperands);
   }
 
   /** Given "CASE WHEN p1 THEN v1 ... ELSE e END"
@@ -1521,13 +1583,24 @@ public class RexUtil {
           simplify(rexBuilder,
               rexBuilder.makeCall(SqlStdOperatorTable.NOT, notDisjunction)));
     }
-    return composeConjunction(rexBuilder, terms, false);
+    return composeConjunction(rexBuilder, terms);
   }
 
   /** Simplifies OR(x, x) into x, and similar. */
   public static RexNode simplifyOr(RexBuilder rexBuilder, RexCall call) {
     assert call.getKind() == SqlKind.OR;
     final List<RexNode> terms = RelOptUtil.disjunctions(call);
+    return simplifyOrs(rexBuilder, terms);
+  }
+
+  public static RexNode simplifyOrs(RexBuilder rexBuilder,
+      List<RexNode> terms) {
+    return simplifyOrs_(rexBuilder, new ArrayList<>(terms));
+  }
+
+  // private because we modify the list
+  private static RexNode simplifyOrs_(RexBuilder rexBuilder,
+      List<RexNode> terms) {
     for (int i = 0; i < terms.size(); i++) {
       final RexNode term = terms.get(i);
       switch (term.getKind()) {
@@ -1542,7 +1615,7 @@ public class RexUtil {
         }
       }
     }
-    return composeDisjunction(rexBuilder, terms, false);
+    return composeDisjunction(rexBuilder, terms);
   }
 
   /**
@@ -1589,10 +1662,9 @@ public class RexUtil {
             });
       }
     }
-    return composeConjunction(
-        rexBuilder, Iterables.concat(
-            ImmutableList.of(e), Iterables.transform(
-                notTerms, notFn(rexBuilder))), false);
+    return composeConjunction(rexBuilder,
+        Iterables.concat(ImmutableList.of(e),
+            Iterables.transform(notTerms, notFn(rexBuilder))));
   }
 
   /** Returns whether a given operand of a CASE expression is a predicate.
@@ -1631,6 +1703,50 @@ public class RexUtil {
       return false;
     } catch (Util.FoundOne e) {
       return true;
+    }
+  }
+
+  /** Converts an expression into null-safe format.
+   *
+   * <p>Arguments to strict functions have already been converted to not null
+   */
+  public static RexNode nullSafe(RexBuilder rexBuilder, RexNode e) {
+    return new NullSafeVisitor(rexBuilder).value(e);
+  }
+
+  /** Returns whether an operator always returns null if any of its arguments is
+   * null. */
+  public static boolean isStrict(SqlOperator op) {
+    switch (op.kind) {
+    case IS_DISTINCT_FROM:
+    case IS_NOT_DISTINCT_FROM:
+    case IS_NULL:
+    case IS_NOT_NULL:
+    case IS_TRUE:
+    case IS_NOT_TRUE:
+    case IS_FALSE:
+    case IS_NOT_FALSE:
+    case AND: // not strict: "FALSE OR NULL" yields FALSE
+    case OR: // not strict: "TRUE OR NULL" yields TRUE
+    case CASE: // not strict: "CASE WHEN UNKNOWN THEN 1 ELSE 2 END" yields 2
+    case NULLIF:
+    case MAP_VALUE_CONSTRUCTOR:
+    case MULTISET_VALUE_CONSTRUCTOR:
+    case ARRAY_VALUE_CONSTRUCTOR:
+      return false;
+    }
+    return !(op instanceof SqlUserDefinedFunction);
+  }
+
+  /** Returns whether an operator always returns null <em>only if</em> one or
+   * more of its arguments is null. */
+  public static boolean isCoStrict(SqlOperator op) {
+    switch (op.kind) {
+    case AND: // "x AND y" never returns NULL if neither x nor y are NULL
+    case OR:
+      return true;
+    default:
+      return isStrict(op);
     }
   }
 
@@ -1921,11 +2037,11 @@ public class RexUtil {
 
 
     private RexNode and(Iterable<? extends RexNode> nodes) {
-      return composeConjunction(rexBuilder, nodes, false);
+      return composeConjunction(rexBuilder, nodes);
     }
 
     private RexNode or(Iterable<? extends RexNode> nodes) {
-      return composeDisjunction(rexBuilder, nodes, false);
+      return composeDisjunction(rexBuilder, nodes);
     }
   }
 
@@ -1998,11 +2114,11 @@ public class RexUtil {
     }
 
     private RexNode and(Iterable<? extends RexNode> nodes) {
-      return composeConjunction(rexBuilder, nodes, false);
+      return composeConjunction(rexBuilder, nodes);
     }
 
     private RexNode or(Iterable<? extends RexNode> nodes) {
-      return composeDisjunction(rexBuilder, nodes, false);
+      return composeDisjunction(rexBuilder, nodes);
     }
   }
 
@@ -2137,6 +2253,7 @@ public class RexUtil {
       }
     }
   }
+
 }
 
 // End RexUtil.java

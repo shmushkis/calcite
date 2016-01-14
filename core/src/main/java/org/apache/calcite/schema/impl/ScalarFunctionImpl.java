@@ -17,9 +17,7 @@
 package org.apache.calcite.schema.impl;
 
 import org.apache.calcite.adapter.enumerable.CallImplementor;
-import org.apache.calcite.adapter.enumerable.NullPolicy;
-import org.apache.calcite.adapter.enumerable.ReflectiveCallNotNullImplementor;
-import org.apache.calcite.adapter.enumerable.RexImpTable;
+import org.apache.calcite.adapter.enumerable.ReflectiveCallImplementor;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.ImplementableFunction;
@@ -111,9 +109,8 @@ public class ScalarFunctionImpl extends ReflectiveFunctionBase implements
     return implementor;
   }
 
-  private static CallImplementor createImplementor(final Method method) {
-    return RexImpTable.createImplementor(
-        new ReflectiveCallNotNullImplementor(method), NullPolicy.NONE, false);
+  private static CallImplementor createImplementor(Method method) {
+    return new ReflectiveCallImplementor(method);
   }
 }
 

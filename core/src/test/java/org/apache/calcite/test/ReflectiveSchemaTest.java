@@ -494,40 +494,43 @@ public class ReflectiveSchemaTest {
         .returns("P=2; W=1; SP=2; SW=1; IP=2; IW=1; LP=2; LW=1\n");
   }
 
-  @Test public void testDivideWraperPrimitive() throws Exception {
+  @Test public void testDivideWrapperPrimitive() throws Exception {
     final CalciteAssert.AssertThat with =
         CalciteAssert.that().withSchema("s", CATCHALL);
-    with.query("select \"wrapperLong\" / \"primitiveLong\" as c\n"
-        + " from \"s\".\"everyTypes\" where \"primitiveLong\" <> 0")
-        .planContains(
-            "final Long inp13_ = current.wrapperLong;")
-        .planContains(
-            "return inp13_ == null ? (Long) null : Long.valueOf(inp13_.longValue() / current.primitiveLong);")
+    final String sql = "select \"wrapperLong\" / \"primitiveLong\" as c\n"
+        + " from \"s\".\"everyTypes\" where \"primitiveLong\" <> 0";
+    final String plan = ""
+        + "final org.apache.calcite.test.ReflectiveSchemaTest.EveryType current = (org.apache.calcite.test.ReflectiveSchemaTest.EveryType) inputEnumerator.current();\n"
+        + "              return (Object) current.wrapperLong == null ? (Long) null : Long.valueOf(current.wrapperLong.longValue() / current.primitiveLong);";
+    with.query(sql)
+        .planContains(plan)
         .returns("C=null\n");
   }
 
-  @Test public void testDivideWraperWrapper() throws Exception {
+  @Test public void testDivideWrapperWrapper() throws Exception {
     final CalciteAssert.AssertThat with =
         CalciteAssert.that().withSchema("s", CATCHALL);
-    with.query("select \"wrapperLong\" / \"wrapperLong\" as c\n"
-        + " from \"s\".\"everyTypes\" where \"primitiveLong\" <> 0")
-        .planContains(
-            "final Long inp13_ = ((org.apache.calcite.test.ReflectiveSchemaTest.EveryType) inputEnumerator.current()).wrapperLong;")
-        .planContains(
-            "return inp13_ == null ? (Long) null : Long.valueOf(inp13_.longValue() / inp13_.longValue());")
+    final String sql = "select \"wrapperLong\" / \"wrapperLong\" as c\n"
+        + " from \"s\".\"everyTypes\" where \"primitiveLong\" <> 0";
+    final String plan = ""
+        + "final org.apache.calcite.test.ReflectiveSchemaTest.EveryType current = (org.apache.calcite.test.ReflectiveSchemaTest.EveryType) inputEnumerator.current();\n"
+        + "              return (Object) current.wrapperLong == null ? (Long) null : Long.valueOf(current.wrapperLong.longValue() / current.wrapperLong.longValue())";
+    with.query(sql)
+        .planContains(plan)
         .returns("C=null\n");
   }
 
-  @Test public void testDivideWraperWrapperMultipleTimes() throws Exception {
+  @Test public void testDivideWrapperWrapperMultipleTimes() throws Exception {
     final CalciteAssert.AssertThat with =
         CalciteAssert.that().withSchema("s", CATCHALL);
-    with.query("select \"wrapperLong\" / \"wrapperLong\"\n"
+    final String sql = "select \"wrapperLong\" / \"wrapperLong\"\n"
         + "+ \"wrapperLong\" / \"wrapperLong\" as c\n"
-        + " from \"s\".\"everyTypes\" where \"primitiveLong\" <> 0")
-        .planContains(
-            "final Long inp13_ = ((org.apache.calcite.test.ReflectiveSchemaTest.EveryType) inputEnumerator.current()).wrapperLong;")
-        .planContains(
-            "return inp13_ == null ? (Long) null : Long.valueOf(inp13_.longValue() / inp13_.longValue() + inp13_.longValue() / inp13_.longValue());")
+        + " from \"s\".\"everyTypes\" where \"primitiveLong\" <> 0";
+    final String plan = ""
+        + "final org.apache.calcite.test.ReflectiveSchemaTest.EveryType current = (org.apache.calcite.test.ReflectiveSchemaTest.EveryType) inputEnumerator.current();\n"
+        + "              return (Object) current.wrapperLong == null ? (Long) null : Long.valueOf(current.wrapperLong.longValue() / current.wrapperLong.longValue() + current.wrapperLong.longValue() / current.wrapperLong.longValue())";
+    with.query(sql)
+        .planContains(plan)
         .returns("C=null\n");
   }
 

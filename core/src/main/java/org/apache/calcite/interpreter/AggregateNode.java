@@ -33,6 +33,7 @@ import org.apache.calcite.linq4j.tree.ParameterExpression;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.impl.AggregateFunctionImpl;
@@ -158,9 +159,13 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
                       inputPhysType.getRowType());
             }
 
+            public RexBuilder rexBuilder() {
+              return rel.getCluster().getRexBuilder();
+            }
+
             public RexToLixTranslator rowTranslator() {
               return RexToLixTranslator.forAggregation(typeFactory,
-                  currentBlock(),
+                  rexBuilder(), currentBlock(),
                   new RexToLixTranslator.InputGetterImpl(
                       Collections.singletonList(
                           Pair.of((Expression) inParameter, inputPhysType))))

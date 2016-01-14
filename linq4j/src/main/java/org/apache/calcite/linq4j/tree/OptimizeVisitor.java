@@ -368,7 +368,7 @@ public class OptimizeVisitor extends Visitor {
     if (BOOLEAN_VALUEOF_BOOL.equals(methodCallExpression.method)) {
       Boolean always = always(expressions.get(0));
       if (always != null) {
-        return always ? TRUE_EXPR : FALSE_EXPR;
+        return always ? BOXED_TRUE_EXPR : BOXED_FALSE_EXPR;
       }
     }
     return super.visit(methodCallExpression, targetExpression, expressions);

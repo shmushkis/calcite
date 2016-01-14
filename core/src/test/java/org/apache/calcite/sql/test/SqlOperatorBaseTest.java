@@ -20,6 +20,7 @@ import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlCall;
@@ -262,12 +263,12 @@ public abstract class SqlOperatorBaseTest {
   /**
    * Whether DECIMAL type is implemented.
    */
-  public static final boolean DECIMAL = false;
+  public static final boolean DECIMAL = Bug.value(false);
 
   /**
    * Whether INTERVAL type is implemented.
    */
-  public static final boolean INTERVAL = false;
+  public static final boolean INTERVAL = Bug.value(false);
 
   private final boolean enable;
 
@@ -2822,6 +2823,10 @@ public abstract class SqlOperatorBaseTest {
 
   @Test public void testPlusOperatorAny() {
     tester.setFor(SqlStdOperatorTable.PLUS);
+    tester.checkType("1+CAST(2 AS ANY)", "ANY NOT NULL");
+    if (!Bug.CALCITE_1102_FIXED) {
+      return;
+    }
     tester.checkScalar("1+CAST(2 AS ANY)", "3", "ANY NOT NULL");
   }
 
@@ -5297,7 +5302,7 @@ public abstract class SqlOperatorBaseTest {
               || s.matches("MOD\\(.*, 0\\)")) {
             continue;
           }
-          boolean strict = isStrict(op);
+          boolean strict = RexUtil.isStrict(op);
           try {
             if (nullCount > 0 && strict) {
               tester.checkNull(s);
@@ -5326,30 +5331,8 @@ public abstract class SqlOperatorBaseTest {
     }
   }
 
-  /** Returns whether an operator always returns null if any of its arguments is
-   * null. */
-  private static boolean isStrict(SqlOperator op) {
-    if (op == SqlStdOperatorTable.NULLIF) {
-      return false;
-    }
-    switch (op.kind) {
-    case IS_DISTINCT_FROM:
-    case IS_NOT_DISTINCT_FROM:
-    case IS_NULL:
-    case IS_NOT_NULL:
-    case IS_TRUE:
-    case IS_NOT_TRUE:
-    case IS_FALSE:
-    case IS_NOT_FALSE:
-    case AND: // not strict: FALSE OR NULL yields FALSE
-    case OR: // not strict: TRUE OR NULL yields TRUE
-      return false;
-    }
-    return true;
-  }
-
   private List<Object> getValues(BasicSqlType type, boolean inBound) {
-    List<Object> values = new ArrayList<Object>();
+    List<Object> values = new ArrayList<>();
     for (boolean sign : FALSE_TRUE) {
       for (SqlTypeName.Limit limit : SqlTypeName.Limit.values()) {
         Object o = type.getLimit(sign, limit, !inBound);

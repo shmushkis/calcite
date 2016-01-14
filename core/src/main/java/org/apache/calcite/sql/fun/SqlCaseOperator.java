@@ -259,7 +259,7 @@ public class SqlCaseOperator extends SqlOperator {
   private RelDataType inferTypeFromOperands(
       RelDataTypeFactory typeFactory,
       List<RelDataType> argTypes) {
-    assert (argTypes.size() % 2) == 1 : "odd number of arguments expected: "
+    assert (argTypes.size() % 2) == 1 : "expected odd number of arguments, got "
         + argTypes.size();
     assert argTypes.size() > 1 : argTypes.size();
     List<RelDataType> thenTypes = new ArrayList<RelDataType>();

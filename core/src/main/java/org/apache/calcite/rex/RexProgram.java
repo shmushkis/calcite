@@ -456,7 +456,7 @@ public class RexProgram {
             });
     if (condition != null) {
       if (!SqlTypeUtil.inBooleanFamily(condition.getType())) {
-        return litmus.fail("condition must be boolean");
+        return litmus.fail("condition's type must be BOOLEAN");
       }
       condition.accept(checker);
       if (checker.failCount > 0) {
@@ -788,7 +788,15 @@ public class RexProgram {
     assert isValid(Litmus.THROW);
     final RexProgramBuilder builder =
         RexProgramBuilder.create(rexBuilder, inputRowType, exprs, projects,
-            condition, outputRowType, true, simplify);
+            condition, outputRowType, true, simplify, false);
+    return builder.getProgram(false);
+  }
+
+  public RexProgram nullSafe(RexBuilder rexBuilder) {
+    assert isValid(Litmus.THROW);
+    final RexProgramBuilder builder =
+        RexProgramBuilder.create(rexBuilder, inputRowType, exprs, projects,
+            condition, outputRowType, true, true, true);
     return builder.getProgram(false);
   }
 
