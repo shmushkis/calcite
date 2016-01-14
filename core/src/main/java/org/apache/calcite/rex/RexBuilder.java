@@ -272,6 +272,16 @@ public class RexBuilder {
             ImmutableList.<RelCollation>of()));
   }
 
+  /** Returns an predicate that treats UNKNOWN values as FALSE,
+   * consistent with the semantics of WHERE, HAVING and FILTER in SQL,
+   * by wrapping in {@code IS TRUE} if necessary. */
+  public RexNode makeUnknownsFalse(RexNode e) {
+    if (!e.getType().isNullable()) {
+      return e;
+    }
+    return makeCall(SqlStdOperatorTable.IS_TRUE, e);
+  }
+
   /**
    * Creates a reference to an aggregate call, checking for repeated calls.
    *

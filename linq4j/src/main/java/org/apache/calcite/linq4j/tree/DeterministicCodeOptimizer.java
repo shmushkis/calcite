@@ -48,6 +48,8 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
    */
   protected final Map<Expression, Boolean> constants = new IdentityHashMap<>();
 
+  protected final Map<String, Expression> constantNames = new HashMap<>();
+
   /**
    * The map that de-duplicates expressions, so the same expressions may reuse
    * the same final static fields.
@@ -159,10 +161,67 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
       methodCallExpression) {
     if (isConstant(methodCallExpression.targetExpression)
         && isConstant(methodCallExpression.expressions)
-        && isMethodDeterministic(methodCallExpression.method)) {
+        && isMethodDeterministic(methodCallExpression.method)
+        && (methodCallExpression.targetExpression == null
+            || isNeverNull(methodCallExpression.targetExpression))) {
       return createField(methodCallExpression);
     }
     return methodCallExpression;
+  }
+
+  private static boolean mask(int bits, int test) {
+    return (bits & test) == test;
+  }
+
+  private boolean isNeverNull(Expression expression) {
+    if (Primitive.is(expression.type)) {
+      return true;
+    }
+    switch (expression.nodeType) {
+    case Constant:
+      assert expression instanceof ConstantExpression;
+      return ((ConstantExpression) expression).value != null;
+    case Parameter:
+      final Expression e =
+          constantNames.get(((ParameterExpression) expression).name);
+      return e != null
+          && isNeverNull(e);
+    case MemberAccess:
+      final MemberExpression memberExpression = (MemberExpression) expression;
+      // We assume that any static final member that is referenced in generated
+      // code is not null. There are no counter-examples to this at present.
+      return mask(memberExpression.field.getModifiers(),
+          Modifier.STATIC | Modifier.FINAL);
+    case Convert:
+      assert expression instanceof UnaryExpression;
+      return isNeverNull(((UnaryExpression) expression).expression);
+    case Conditional:
+      assert expression instanceof TernaryExpression;
+      return isNeverNull(((TernaryExpression) expression).expression1)
+          && isNeverNull(((TernaryExpression) expression).expression2);
+    case Call:
+      assert expression instanceof MethodCallExpression;
+      return (((MethodCallExpression) expression).targetExpression == null
+          || isNeverNull(expression))
+          && isStrict(((MethodCallExpression) expression).method)
+          && allNeverNull(((MethodCallExpression) expression).expressions);
+    default:
+      return false;
+    }
+  }
+
+  private boolean isStrict(Method method) {
+    // All methods in DETERMINISTIC_CLASSES happen to be strict
+    return DETERMINISTIC_CLASSES.contains(method.getDeclaringClass());
+  }
+
+  private boolean allNeverNull(List<Expression> expressions) {
+    for (Expression expression : expressions) {
+      if (!isNeverNull(expression)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override public Expression visit(MethodCallExpression methodCallExpression,
@@ -210,6 +269,7 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
             && Modifier.isFinal(field.modifier)
             && field.initializer != null) {
           constants.put(field.parameter, true);
+          constantNames.put(field.parameter.name, field.initializer);
           fieldsByName.put(field.parameter.name, field.parameter);
           dedup.put(field.initializer, field.parameter);
         }
@@ -253,6 +313,7 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
     dedup.put(expression, pe);
     addedDeclarations.add(decl);
     constants.put(pe, true);
+    constantNames.put(pe.name, expression);
     fieldsByName.put(name, pe);
     return pe;
   }

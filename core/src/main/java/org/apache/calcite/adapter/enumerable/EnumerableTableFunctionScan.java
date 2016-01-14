@@ -82,7 +82,8 @@ public class EnumerableTableFunctionScan extends TableFunctionScan
         PhysTypeImpl.of(implementor.getTypeFactory(), getRowType(), format,
             false);
     RexToLixTranslator t = RexToLixTranslator.forAggregation(
-        (JavaTypeFactory) getCluster().getTypeFactory(), bb, null);
+        (JavaTypeFactory) getCluster().getTypeFactory(),
+        getCluster().getRexBuilder(), bb, null);
     t = t.setCorrelates(implementor.allCorrelateVariables);
     Expression translated = t.translate(getCall());
     if (array && rowType.getFieldCount() == 1) {

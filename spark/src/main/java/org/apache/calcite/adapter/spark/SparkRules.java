@@ -21,7 +21,6 @@ import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.adapter.enumerable.JavaRowFormat;
 import org.apache.calcite.adapter.enumerable.PhysType;
 import org.apache.calcite.adapter.enumerable.PhysTypeImpl;
-import org.apache.calcite.adapter.enumerable.RexImpTable;
 import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
@@ -191,8 +190,7 @@ public abstract class SparkRules {
               RexToLixTranslator.translateLiteral(
                   pair.right,
                   pair.left.getType(),
-                  typeFactory,
-                  RexImpTable.NullAs.NULL));
+                  typeFactory));
         }
         expressions.add(physType.record(literals));
       }
@@ -340,6 +338,7 @@ public abstract class SparkRules {
             RexToLixTranslator.translateCondition(
                 program,
                 typeFactory,
+                getCluster().getRexBuilder(),
                 builder2,
                 new RexToLixTranslator.InputGetterImpl(
                     Collections.singletonList(
@@ -357,6 +356,7 @@ public abstract class SparkRules {
           RexToLixTranslator.translateProjects(
               program,
               typeFactory,
+              getCluster().getRexBuilder(),
               builder2,
               null,
               DataContext.ROOT,

@@ -92,7 +92,11 @@ public abstract class SqlCall extends SqlNode {
     final SqlOperator operator = getOperator();
     if (leftPrec > operator.getLeftPrec()
         || (operator.getRightPrec() <= rightPrec && (rightPrec != 0))
-        || writer.isAlwaysUseParentheses() && isA(SqlKind.EXPRESSION)) {
+        || writer.isAlwaysUseParentheses()
+            && isA(SqlKind.EXPRESSION)
+            && operator.getSyntax() != SqlSyntax.FUNCTION
+            && operator.getSyntax() != SqlSyntax.FUNCTION_STAR
+            && operator.getSyntax() != SqlSyntax.FUNCTION_ID) {
       final SqlWriter.Frame frame = writer.startList("(", ")");
       operator.unparse(writer, this, 0, 0);
       writer.endList(frame);

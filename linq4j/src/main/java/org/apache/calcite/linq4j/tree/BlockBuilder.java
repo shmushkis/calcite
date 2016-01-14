@@ -32,16 +32,17 @@ import java.util.Set;
  * <p>Has methods that help ensure that variable names are unique.</p>
  */
 public class BlockBuilder {
-  final List<Statement> statements = new ArrayList<Statement>();
-  final Set<String> variables = new HashSet<String>();
+  final List<Statement> statements = new ArrayList<>();
+  final Set<String> variables = new HashSet<>();
   /** Contains final-fine-to-reuse-declarations.
    * An entry to this map is added when adding final declaration of a
    * statement with optimize=true parameter. */
   final Map<Expression, DeclarationStatement> expressionForReuse =
-      new HashMap<Expression, DeclarationStatement>();
+      new HashMap<>();
 
   private final boolean optimizing;
   private final BlockBuilder parent;
+  public int deferInitialization = 0;
 
   private static final Visitor OPTIMIZE_VISITOR = new OptimizeVisitor();
 
@@ -111,7 +112,7 @@ public class BlockBuilder {
     }
     Expression result = null;
     final Map<ParameterExpression, Expression> replacements =
-        new IdentityHashMap<ParameterExpression, Expression>();
+        new IdentityHashMap<>();
     final Visitor visitor = new SubstituteVariableVisitor(replacements);
     for (int i = 0; i < block.statements.size(); i++) {
       Statement statement = block.statements.get(i);
@@ -211,14 +212,39 @@ public class BlockBuilder {
         return decl.parameter;
       }
     }
-    DeclarationStatement declare = Expressions.declare(Modifier.FINAL,
-        newName(name, optimize), expression);
-    add(declare);
-    return declare.parameter;
+    if (deferInitialization(null)) {
+      switch (expression.nodeType) {
+      case Assign:
+        return expression;
+      }
+      DeclarationStatement declare = Expressions.declare(Modifier.FINAL,
+          Expressions.parameter(expression.getType(), newName(name, optimize)),
+          null);
+      add(declare);
+      return Expressions.assign(declare.parameter, expression);
+    } else {
+      DeclarationStatement declare = Expressions.declare(Modifier.FINAL,
+          newName(name, optimize), expression);
+      add(declare);
+      return declare.parameter;
+    }
+  }
+
+  private boolean deferInitialization(DeclarationStatement declare) {
+    return deferInitialization > 0;
+  }
+
+  public void deferInitialization() {
+    deferInitialization++;
+  }
+
+  public void eagerInitialization() {
+    deferInitialization--;
   }
 
   /**
-   * Checks if experssion is simple enough for always inline
+   * Returns whether an expression is simple enough to always inline.
+   *
    * @param expr expression to test
    * @return true when given expression is safe to always inline
    */
@@ -275,7 +301,21 @@ public class BlockBuilder {
         return decl;
       }
     }
-    return optimizing ? expressionForReuse.get(expr) : null;
+    if (!optimizing) {
+      return null;
+    }
+    for (;;) {
+      final DeclarationStatement decl = expressionForReuse.get(expr);
+      if (decl != null) {
+        return decl;
+      }
+      switch (expr.nodeType) {
+      default:
+        return null;
+      case Assign:
+        expr = ((BinaryExpression) expr).expression1;
+      }
+    }
   }
 
   public void add(Statement statement) {
@@ -334,12 +374,10 @@ public class BlockBuilder {
       }
     }
     final Map<ParameterExpression, Expression> subMap =
-        new IdentityHashMap<ParameterExpression, Expression>(
-            useCounter.map.size());
-    final SubstituteVariableVisitor visitor = new SubstituteVariableVisitor(
-        subMap);
-    final ArrayList<Statement> oldStatements = new ArrayList<Statement>(
-        statements);
+        new IdentityHashMap<>(useCounter.map.size());
+    final SubstituteVariableVisitor visitor =
+        new SubstituteVariableVisitor(subMap);
+    final List<Statement> oldStatements = new ArrayList<>(statements);
     statements.clear();
 
     for (Statement oldStatement : oldStatements) {
@@ -487,7 +525,7 @@ public class BlockBuilder {
   private static class SubstituteVariableVisitor extends Visitor {
     private final Map<ParameterExpression, Expression> map;
     private final Map<ParameterExpression, Boolean> actives =
-        new IdentityHashMap<ParameterExpression, Boolean>();
+        new IdentityHashMap<>();
 
     public SubstituteVariableVisitor(Map<ParameterExpression, Expression> map) {
       this.map = map;
@@ -545,8 +583,7 @@ public class BlockBuilder {
 
   /** Use counter. */
   private static class UseCounter extends Visitor {
-    private final Map<ParameterExpression, Slot> map =
-        new IdentityHashMap<ParameterExpression, Slot>();
+    private final Map<ParameterExpression, Slot> map = new IdentityHashMap<>();
 
     @Override public Expression visit(ParameterExpression parameter) {
       final Slot slot = map.get(parameter);

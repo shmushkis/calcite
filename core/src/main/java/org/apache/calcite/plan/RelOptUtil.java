@@ -801,8 +801,8 @@ public abstract class RelOptUtil {
         rightKeys,
         nonEquiList);
 
-    return RexUtil.composeConjunction(
-        left.getCluster().getRexBuilder(), nonEquiList, false);
+    return RexUtil.composeConjunction(left.getCluster().getRexBuilder(),
+        nonEquiList);
   }
 
   /**
@@ -912,7 +912,7 @@ public abstract class RelOptUtil {
 
     // Convert the remainders into a list that are AND'ed together.
     return RexUtil.composeConjunction(
-        inputs.get(0).getCluster().getRexBuilder(), nonEquiList, false);
+        inputs.get(0).getCluster().getRexBuilder(), nonEquiList);
   }
 
   public static RexNode splitCorrelatedFilterCondition(
@@ -1200,8 +1200,7 @@ public abstract class RelOptUtil {
           @Override public int size() {
             return leftKeys.size();
           }
-        },
-        false);
+        });
   }
 
   public static SqlOperator op(SqlKind kind, SqlOperator operator) {

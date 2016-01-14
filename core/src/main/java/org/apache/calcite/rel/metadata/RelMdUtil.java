@@ -396,7 +396,7 @@ public class RelMdUtil {
 
     double artificialSel = 1.0;
 
-    for (RexNode pred : RelOptUtil.conjunctions(predicate)) {
+    for (RexNode pred : RelOptUtil.conjunctions(stripIsTrue(predicate))) {
       if (pred.getKind() == SqlKind.IS_NOT_NULL) {
         sel *= .9;
       } else if (
@@ -417,6 +417,24 @@ public class RelMdUtil {
       return artificialSel;
     } else {
       return sel * artificialSel;
+    }
+  }
+
+  /** Converts "e IS TRUE" to "e".
+   *
+   * <p>This allows various patterns to be recognized. The null semantics are
+   * different, but this is not significant in several applications, such as
+   * computing selectivity.
+   *
+   * @see RexBuilder#makeUnknownsFalse(RexNode) the converse operation */
+  private static RexNode stripIsTrue(RexNode e) {
+    for (;;) {
+      switch (e.getKind()) {
+      default:
+        return e;
+      case IS_TRUE:
+        e = ((RexCall) e).getOperands().get(0);
+      }
     }
   }
 

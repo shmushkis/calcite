@@ -676,14 +676,14 @@ public class OptimizerTest {
   }
 
   @Test public void booleanValueOfTrue() {
-    // Boolean.valueOf(true) -> true
-    assertEquals("{\n  return true;\n}\n",
+    // Boolean.valueOf(true) -> Boolean.TRUE
+    assertEquals("{\n  return Boolean.TRUE;\n}\n",
         optimize(Expressions.call(Boolean.class, "valueOf", TRUE)));
   }
 
   @Test public void testBooleanValueOfFalse() {
-    // Boolean.valueOf(false) -> false
-    assertEquals("{\n  return false;\n}\n",
+    // Boolean.valueOf(false) -> Boolean.FALSE
+    assertEquals("{\n  return Boolean.FALSE;\n}\n",
         optimize(Expressions.call(Boolean.class, "valueOf", FALSE)));
   }
 

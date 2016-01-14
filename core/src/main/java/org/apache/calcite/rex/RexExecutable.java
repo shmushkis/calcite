@@ -23,8 +23,9 @@ import org.apache.calcite.runtime.Utilities;
 import org.apache.calcite.util.Pair;
 
 import org.codehaus.commons.compiler.CompileException;
-import org.codehaus.janino.ClassBodyEvaluator;
-import org.codehaus.janino.Scanner;
+import org.codehaus.commons.compiler.CompilerFactoryFactory;
+import org.codehaus.commons.compiler.IClassBodyEvaluator;
+import org.codehaus.commons.compiler.ICompilerFactory;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -43,18 +44,23 @@ public class RexExecutable {
   private DataContext dataContext;
 
   public RexExecutable(String code, Object reason) {
+    final ICompilerFactory compilerFactory;
     try {
+      compilerFactory = CompilerFactoryFactory.getDefaultCompilerFactory();
+    } catch (Exception e) {
+      throw new IllegalStateException(
+          "Unable to instantiate java compiler", e);
+    }
+    try {
+      final IClassBodyEvaluator cbe = compilerFactory.newClassBodyEvaluator();
+      cbe.setClassName(GENERATED_CLASS_NAME);
+      cbe.setExtendedClass(Utilities.class);
+      final Class[] interfaces = {Function1.class, Serializable.class};
+      cbe.setImplementedInterfaces(interfaces);
+      cbe.setParentClassLoader(getClass().getClassLoader());
       //noinspection unchecked
-      compiledFunction =
-          (Function1) ClassBodyEvaluator.createFastClassBodyEvaluator(
-              new Scanner(null, new StringReader(code)),
-              GENERATED_CLASS_NAME,
-              Utilities.class,
-              new Class[] {Function1.class, Serializable.class},
-              getClass().getClassLoader());
-    } catch (CompileException e) {
-      throw new RuntimeException("While compiling " + reason, e);
-    } catch (IOException e) {
+      compiledFunction = (Function1) cbe.createInstance(new StringReader(code));
+    } catch (CompileException | IOException e) {
       throw new RuntimeException("While compiling " + reason, e);
     }
     this.code = code;

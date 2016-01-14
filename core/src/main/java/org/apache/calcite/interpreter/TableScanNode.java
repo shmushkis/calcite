@@ -246,7 +246,7 @@ public class TableScanNode implements Node {
     if (!rejectedFilters.isEmpty()) {
       final RexNode filter =
           RexUtil.composeConjunction(rel.getCluster().getRexBuilder(),
-              rejectedFilters, false);
+              rejectedFilters);
       // Re-map filter for the projects that have been applied already
       final RexNode filter2;
       final RelDataType inputRowType;

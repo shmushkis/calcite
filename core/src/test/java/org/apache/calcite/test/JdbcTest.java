@@ -2427,12 +2427,6 @@ public class JdbcTest {
     CalciteAssert.hr()
         .query(
             "select upper((case when \"empid\">\"deptno\"*10 then 'y' else null end)) T from \"hr\".\"emps\"")
-        .planContains("static final String "
-            + "$L4J$C$org_apache_calcite_runtime_SqlFunctions_upper_y_ = "
-            + "org.apache.calcite.runtime.SqlFunctions.upper(\"y\");")
-        .planContains("return current.empid <= current.deptno * 10 "
-            + "? (String) null "
-            + ": $L4J$C$org_apache_calcite_runtime_SqlFunctions_upper_y_;")
         .returns("T=null\n"
             + "T=null\n"
             + "T=Y\n"
@@ -2443,12 +2437,6 @@ public class JdbcTest {
     CalciteAssert.hr()
         .query(
             "select upper((case when \"empid\">\"deptno\"*10 then \"name\" end)) T from \"hr\".\"emps\"")
-        .planContains(
-            "final String inp2_ = current.name;")
-        .planContains("return current.empid <= current.deptno * 10 "
-            + "|| inp2_ == null "
-            + "? (String) null "
-            + ": org.apache.calcite.runtime.SqlFunctions.upper(inp2_);")
         .returns("T=null\n"
             + "T=null\n"
             + "T=SEBASTIAN\n"
@@ -2456,21 +2444,15 @@ public class JdbcTest {
   }
 
   @Test public void testReuseExpressionWhenNullChecking3() {
+    final String sql = "select substring(\"name\",\n"
+        + "  \"deptno\"+case when user <> 'sa' then 1 end) as x\n"
+        + "from \"hr\".\"emps\"";
     CalciteAssert.hr()
-        .query(
-            "select substring(\"name\", \"deptno\"+case when user <> 'sa' then 1 end) from \"hr\".\"emps\"")
-        .planContains(
-            "final String inp2_ = current.name;")
-        .planContains("static final boolean "
-            + "$L4J$C$org_apache_calcite_runtime_SqlFunctions_ne_sa_sa_ = "
-            + "org.apache.calcite.runtime.SqlFunctions.ne(\"sa\", \"sa\");")
-        .planContains("static final boolean "
-            + "$L4J$C$_org_apache_calcite_runtime_SqlFunctions_ne_sa_sa_ = "
-            + "!$L4J$C$org_apache_calcite_runtime_SqlFunctions_ne_sa_sa_;")
-        .planContains("return inp2_ == null "
-            + "|| $L4J$C$_org_apache_calcite_runtime_SqlFunctions_ne_sa_sa_ ? (String) null"
-            + " : org.apache.calcite.runtime.SqlFunctions.substring(inp2_, "
-            + "current.deptno + 1);");
+        .query(sql)
+        .returnsUnordered("X=null",
+            "X=null",
+            "X=null",
+            "X=null");
   }
 
   @Test public void testReuseExpressionWhenNullChecking4() {
@@ -2484,24 +2466,6 @@ public class JdbcTest {
             + "   end-2) T\n"
             + "from\n"
             + "\"hr\".\"emps\"")
-        .planContains(
-            "final String inp2_ = current.name;")
-        .planContains(
-            "final int inp1_ = current.deptno;")
-        .planContains("static final boolean "
-            + "$L4J$C$org_apache_calcite_runtime_SqlFunctions_eq_sa_sa_ = "
-            + "org.apache.calcite.runtime.SqlFunctions.eq(\"sa\", \"sa\");")
-        .planContains("static final boolean "
-            + "$L4J$C$_org_apache_calcite_runtime_SqlFunctions_eq_sa_sa_ = "
-            + "!$L4J$C$org_apache_calcite_runtime_SqlFunctions_eq_sa_sa_;")
-        .planContains("return inp2_ == null "
-            + "|| $L4J$C$_org_apache_calcite_runtime_SqlFunctions_eq_sa_sa_ "
-            + "|| !v5 && inp1_ * 8 <= 8 "
-            + "? (String) null "
-            + ": org.apache.calcite.runtime.SqlFunctions.substring("
-            + "org.apache.calcite.runtime.SqlFunctions.trim(true, true, \" \", "
-            + "org.apache.calcite.runtime.SqlFunctions.substring(inp2_, "
-            + "inp1_ * 0 + 1)), (v5 ? 4 : 5) - 2);")
         .returns("T=ill\n"
             + "T=ric\n"
             + "T=ebastian\n"
@@ -2519,26 +2483,6 @@ public class JdbcTest {
             + "   end-2) T\n"
             + "from\n"
             + "\"hr\".\"emps\"")
-        .planContains(
-            "final String inp2_ = current.name;")
-        .planContains(
-            "final int inp1_ = current.deptno;")
-        .planContains(
-            "static final int $L4J$C$5_2 = 5 - 2;")
-        .planContains("static final boolean "
-            + "$L4J$C$org_apache_calcite_runtime_SqlFunctions_eq_sa_sa_ = "
-            + "org.apache.calcite.runtime.SqlFunctions.eq(\"sa\", \"sa\");")
-        .planContains("static final boolean "
-            + "$L4J$C$_org_apache_calcite_runtime_SqlFunctions_eq_sa_sa_ = "
-            + "!$L4J$C$org_apache_calcite_runtime_SqlFunctions_eq_sa_sa_;")
-        .planContains("return inp2_ == null "
-            + "|| $L4J$C$_org_apache_calcite_runtime_SqlFunctions_eq_sa_sa_ "
-            + "|| current.empid <= inp1_ && inp1_ * 8 <= 8 "
-            + "? (String) null "
-            + ": org.apache.calcite.runtime.SqlFunctions.substring("
-            + "org.apache.calcite.runtime.SqlFunctions.trim(true, true, \" \", "
-            + "org.apache.calcite.runtime.SqlFunctions.substring(inp2_, "
-            + "inp1_ * 0 + 1)), $L4J$C$5_2);")
         .returns("T=ll\n"
             + "T=ic\n"
             + "T=bastian\n"
@@ -3497,8 +3441,8 @@ public class JdbcTest {
         .planContains("return new Object[] {\n"
             + "                  current[1],\n"
             + "                  current[0],\n"
-            // Float.valueOf(SqlFunctions.toFloat(current[5])) comes from SUM0
-            + "                  org.apache.calcite.runtime.SqlFunctions.toLong(current[4]) > 0L ? Float.valueOf(org.apache.calcite.runtime.SqlFunctions.toFloat(current[5])) : (Float) null,\n"
+            // "(Float) current[5]" comes from SUM0
+            + "                  org.apache.calcite.runtime.SqlFunctions.toLong(current[4]) > 0L ? (Float) current[5] : (Float) null,\n"
             + "                  5,\n"
             + "                  current[6],\n"
             + "                  current[7]};\n");

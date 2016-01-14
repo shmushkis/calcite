@@ -469,7 +469,7 @@ public class RelBuilder {
 
   /** Creates an OR. */
   public RexNode or(Iterable<? extends RexNode> operands) {
-    return RexUtil.composeDisjunction(cluster.getRexBuilder(), operands, false);
+    return RexUtil.composeDisjunction(cluster.getRexBuilder(), operands);
   }
 
   /** Creates a NOT. */
@@ -617,9 +617,7 @@ public class RelBuilder {
       if (filter.getType().getSqlTypeName() != SqlTypeName.BOOLEAN) {
         throw Static.RESOURCE.filterMustBeBoolean().ex();
       }
-      if (filter.getType().isNullable()) {
-        filter = call(SqlStdOperatorTable.IS_TRUE, filter);
-      }
+      filter = cluster.getRexBuilder().makeUnknownsFalse(filter);
     }
     return new AggCallImpl(aggFunction, distinct, filter, alias,
         ImmutableList.copyOf(operands));

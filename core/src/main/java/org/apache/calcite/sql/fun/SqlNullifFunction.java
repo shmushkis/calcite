@@ -44,7 +44,7 @@ public class SqlNullifFunction extends SqlFunction {
     // strategies are used.
     super(
         "NULLIF",
-        SqlKind.OTHER_FUNCTION,
+        SqlKind.NULLIF,
         ReturnTypes.ARG0_FORCE_NULLABLE,
         null,
         OperandTypes.COMPARABLE_UNORDERED_COMPARABLE_UNORDERED,
