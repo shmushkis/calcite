@@ -1208,7 +1208,7 @@ public class SqlToRelConverter {
       assert rex instanceof RexRangeRef;
       final int fieldCount = rex.getType().getFieldCount();
       RexNode rexNode = rexBuilder.makeFieldAccess(rex, fieldCount - 1);
-      rexNode = rexBuilder.makeCall(SqlStdOperatorTable.IS_TRUE, rexNode);
+      rexNode = rexBuilder.makeUnknownsFalse(rexNode);
 
       // Then append the IS NOT NULL(leftKeysForIn).
       //
@@ -2410,7 +2410,7 @@ public class SqlToRelConverter {
       }
       list.add(rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, operands));
     }
-    return RexUtil.composeConjunction(rexBuilder, list, false);
+    return RexUtil.composeConjunction(rexBuilder, list);
   }
 
   private static JoinRelType convertJoinType(JoinType joinType) {
@@ -4601,10 +4601,7 @@ public class SqlToRelConverter {
         if (filter != null) {
           RexNode convertedExpr = bb.convertExpression(filter);
           assert convertedExpr != null;
-          if (convertedExpr.getType().isNullable()) {
-            convertedExpr =
-                rexBuilder.makeCall(SqlStdOperatorTable.IS_TRUE, convertedExpr);
-          }
+          convertedExpr = rexBuilder.makeUnknownsFalse(convertedExpr);
           filterArg = lookupOrCreateGroupExpr(convertedExpr);
         }
       } finally {

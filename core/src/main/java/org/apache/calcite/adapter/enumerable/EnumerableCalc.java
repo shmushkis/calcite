@@ -38,6 +38,7 @@ import org.apache.calcite.rel.core.Calc;
 import org.apache.calcite.rel.metadata.RelMdCollation;
 import org.apache.calcite.rel.metadata.RelMdDistribution;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.Pair;
@@ -113,6 +114,7 @@ public class EnumerableCalc extends Calc implements EnumerableRel {
 
   public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
     final JavaTypeFactory typeFactory = implementor.getTypeFactory();
+    final RexBuilder rexBuilder = getCluster().getRexBuilder();
     final BlockBuilder builder = new BlockBuilder();
     final EnumerableRel child = (EnumerableRel) getInput();
 
@@ -146,8 +148,7 @@ public class EnumerableCalc extends Calc implements EnumerableRel {
                 BuiltInMethod.ENUMERATOR_CURRENT.method),
             inputJavaType);
 
-    final RexProgram program =
-        this.program.normalize(getCluster().getRexBuilder(), true);
+    final RexProgram program = this.program.nullSafe(rexBuilder);
 
     BlockStatement moveNextBody;
     if (program.getCondition() == null) {
@@ -162,6 +163,7 @@ public class EnumerableCalc extends Calc implements EnumerableRel {
           RexToLixTranslator.translateCondition(
               program,
               typeFactory,
+              rexBuilder,
               builder2,
               new RexToLixTranslator.InputGetterImpl(
                   Collections.singletonList(
@@ -189,6 +191,7 @@ public class EnumerableCalc extends Calc implements EnumerableRel {
         RexToLixTranslator.translateProjects(
             program,
             typeFactory,
+            rexBuilder,
             builder3,
             physType,
             DataContext.ROOT,

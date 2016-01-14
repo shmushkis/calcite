@@ -643,7 +643,8 @@ public class PhysTypeImpl implements PhysType {
     if (storageType == null) {
       storageType = fieldClass(field);
     }
-    return format.field(expression, field, storageType);
+    final Expression e = format.field(expression, field, storageType);
+    return RexToLixTranslator.convert(e, storageType);
   }
 }
 

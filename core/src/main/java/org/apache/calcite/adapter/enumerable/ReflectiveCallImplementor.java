@@ -27,25 +27,27 @@ import java.util.List;
 
 /**
  * Implementation of
- * {@link org.apache.calcite.adapter.enumerable.NotNullImplementor}
+ * {@link org.apache.calcite.adapter.enumerable.CallImplementor}
  * that calls a given {@link java.lang.reflect.Method}.
  *
  * <p>When method is not static, a new instance of the required class is
  * created.
  */
-public class ReflectiveCallNotNullImplementor implements NotNullImplementor {
+public class ReflectiveCallImplementor implements CallImplementor {
   protected final Method method;
 
   /**
-   * Constructor of {@link ReflectiveCallNotNullImplementor}
+   * Constructor of {@link ReflectiveCallImplementor}.
+   *
    * @param method method that is used to implement the call
    */
-  public ReflectiveCallNotNullImplementor(Method method) {
+  public ReflectiveCallImplementor(Method method) {
     this.method = method;
   }
 
-  public Expression implement(RexToLixTranslator translator,
-      RexCall call, List<Expression> translatedOperands) {
+  public Expression implement(RexToLixTranslator translator, RexCall call) {
+    List<Expression> translatedOperands =
+        translator.translateList(call.getOperands());
     translatedOperands =
         EnumUtils.fromInternal(method.getParameterTypes(), translatedOperands);
     if ((method.getModifiers() & Modifier.STATIC) != 0) {
@@ -61,4 +63,4 @@ public class ReflectiveCallNotNullImplementor implements NotNullImplementor {
 
 }
 
-// End ReflectiveCallNotNullImplementor.java
+// End ReflectiveCallImplementor.java

@@ -20,9 +20,12 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
+
+import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -56,10 +59,8 @@ public class RexProgramBuilder {
    * Creates a program-builder.
    */
   public RexProgramBuilder(RelDataType inputRowType, RexBuilder rexBuilder) {
-    assert inputRowType != null;
-    assert rexBuilder != null;
-    this.inputRowType = inputRowType;
-    this.rexBuilder = rexBuilder;
+    this.inputRowType = Preconditions.checkNotNull(inputRowType);
+    this.rexBuilder = Preconditions.checkNotNull(rexBuilder);
     this.validating = assertionsAreEnabled();
 
     // Pre-create an expression for each input field.
@@ -82,6 +83,7 @@ public class RexProgramBuilder {
    * @param outputRowType  Output row type
    * @param normalize      Whether to normalize
    * @param simplify       Whether to simplify
+   * @param nullSafe       Whether to expand expressions for null safety
    */
   private RexProgramBuilder(
       RexBuilder rexBuilder,
@@ -91,7 +93,8 @@ public class RexProgramBuilder {
       RexNode condition,
       final RelDataType outputRowType,
       boolean normalize,
-      boolean simplify) {
+      boolean simplify,
+      boolean nullSafe) {
     this(inputRowType, rexBuilder);
 
     // Create a shuttle for registering input expressions.
@@ -115,7 +118,10 @@ public class RexProgramBuilder {
     for (Pair<? extends RexNode, RelDataTypeField> pair
         : Pair.zip(projectList, fieldList)) {
       final RexNode project;
-      if (simplify) {
+      if (nullSafe) {
+        project = RexUtil.nullSafe(rexBuilder,
+            RexUtil.simplify(rexBuilder, pair.left.accept(expander)));
+      } else if (simplify) {
         project = RexUtil.simplify(rexBuilder, pair.left.accept(expander));
       } else {
         project = pair.left;
@@ -127,10 +133,13 @@ public class RexProgramBuilder {
 
     // Register the condition, if there is one.
     if (condition != null) {
-      if (simplify) {
+      if (nullSafe) {
+        condition = RexUtil.nullSafe(rexBuilder,
+            RexUtil.simplify(rexBuilder,
+                rexBuilder.makeUnknownsFalse(condition.accept(expander))));
+      } else if (simplify) {
         condition = RexUtil.simplify(rexBuilder,
-            rexBuilder.makeCall(SqlStdOperatorTable.IS_TRUE,
-                condition.accept(expander)));
+            rexBuilder.makeUnknownsFalse(condition.accept(expander)));
         if (condition.isAlwaysTrue()) {
           condition = null;
         }
@@ -260,13 +269,15 @@ public class RexProgramBuilder {
    * not, call {@link #registerOutput(RexNode)} first.</p>
    */
   public void addCondition(RexNode expr) {
-    assert expr != null;
+    Preconditions.checkNotNull(expr);
+    Preconditions.checkArgument(expr.getType().getSqlTypeName()
+        == SqlTypeName.BOOLEAN, "condition must be BOOLEAN");
+    RexLocalRef ref = registerInput(expr);
     if (conditionRef == null) {
-      conditionRef = registerInput(expr);
+      conditionRef = ref;
     } else {
       // AND the new condition with the existing condition.
       // If the new condition is identical to the existing condition, skip it.
-      RexLocalRef ref = registerInput(expr);
       if (!ref.equals(conditionRef)) {
         conditionRef =
             registerInput(
@@ -525,9 +536,24 @@ public class RexProgramBuilder {
       final RexNode condition,
       final RelDataType outputRowType,
       boolean normalize,
-      boolean simplify) {
+      boolean simplify,
+      boolean nullSafe) {
     return new RexProgramBuilder(rexBuilder, inputRowType, exprList,
-        projectList, condition, outputRowType, normalize, simplify);
+        projectList, condition, outputRowType, normalize, simplify, nullSafe);
+  }
+
+  @Deprecated // to be removed before 2.0
+  public static RexProgramBuilder create(
+      RexBuilder rexBuilder,
+      final RelDataType inputRowType,
+      final List<RexNode> exprList,
+      final List<? extends RexNode> projectList,
+      final RexNode condition,
+      final RelDataType outputRowType,
+      boolean normalize,
+      boolean simplify) {
+    return create(rexBuilder, inputRowType, exprList, projectList, condition,
+        outputRowType, normalize, false, false);
   }
 
   @Deprecated // to be removed before 2.0

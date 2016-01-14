@@ -32,13 +32,9 @@ public interface CallImplementor {
    *
    * @param translator Translator for the call
    * @param call Call that should be implemented
-   * @param nullAs The desired mode of {@code null} translation
    * @return Translated call
    */
-  Expression implement(
-      RexToLixTranslator translator,
-      RexCall call,
-      RexImpTable.NullAs nullAs);
+  Expression implement(RexToLixTranslator translator, RexCall call);
 }
 
 // End CallImplementor.java

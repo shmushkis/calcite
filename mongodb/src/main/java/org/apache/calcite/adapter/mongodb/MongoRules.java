@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.adapter.mongodb;
 
-import org.apache.calcite.adapter.enumerable.RexImpTable;
 import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.plan.Convention;
@@ -165,7 +164,7 @@ public class MongoRules {
       }
       return "{$literal: "
           + RexToLixTranslator.translateLiteral(literal, literal.getType(),
-              typeFactory, RexImpTable.NullAs.NOT_POSSIBLE)
+              typeFactory)
           + "}";
     }
 

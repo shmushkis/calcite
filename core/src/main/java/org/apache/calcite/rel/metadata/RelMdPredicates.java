@@ -243,8 +243,8 @@ public class RelMdPredicates
 
     JoinConditionBasedPredicateInference jI =
         new JoinConditionBasedPredicateInference(semiJoin,
-            RexUtil.composeConjunction(rB, leftInfo.pulledUpPredicates, false),
-            RexUtil.composeConjunction(rB, rightInfo.pulledUpPredicates, false));
+            RexUtil.composeConjunction(rB, leftInfo.pulledUpPredicates),
+            RexUtil.composeConjunction(rB, rightInfo.pulledUpPredicates));
 
     return jI.inferPredicates(false);
   }
@@ -260,9 +260,8 @@ public class RelMdPredicates
 
     JoinConditionBasedPredicateInference jI =
         new JoinConditionBasedPredicateInference(join,
-            RexUtil.composeConjunction(rB, leftInfo.pulledUpPredicates, false),
-            RexUtil.composeConjunction(rB, rightInfo.pulledUpPredicates,
-                false));
+            RexUtil.composeConjunction(rB, leftInfo.pulledUpPredicates),
+            RexUtil.composeConjunction(rB, rightInfo.pulledUpPredicates));
 
     return jI.inferPredicates(false);
   }
@@ -317,7 +316,7 @@ public class RelMdPredicates
         return RelOptPredicateList.EMPTY;
       }
       RelOptUtil.decomposeDisjunction(
-          RexUtil.composeConjunction(rB, info.pulledUpPredicates, false),
+          RexUtil.composeConjunction(rB, info.pulledUpPredicates),
           orList);
     }
 
@@ -325,7 +324,7 @@ public class RelMdPredicates
       return RelOptPredicateList.EMPTY;
     }
     return RelOptPredicateList.of(
-        RelOptUtil.conjunctions(RexUtil.composeDisjunction(rB, orList, false)));
+        RelOptUtil.conjunctions(RexUtil.composeDisjunction(rB, orList)));
   }
 
   /**
@@ -621,7 +620,7 @@ public class RelMdPredicates
           return expr != null;
         }
       });
-      return RexUtil.composeConjunction(rexBuilder, exprs, false);
+      return RexUtil.composeConjunction(rexBuilder, exprs);
     }
 
     /**

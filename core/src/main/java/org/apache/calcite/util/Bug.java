@@ -56,9 +56,9 @@ public abstract class Bug {
   // will make merge conflicts much less likely than if everyone is
   // appending.
 
-  public static final boolean DT239_FIXED = false;
+  public static final boolean DT239_FIXED = value(false);
 
-  public static final boolean DT785_FIXED = false;
+  public static final boolean DT785_FIXED = value(false);
 
   // jhyde
 
@@ -66,14 +66,14 @@ public abstract class Bug {
    * Whether <a href="http://issues.eigenbase.org/browse/FNL-3">issue
    * Fnl-3</a> is fixed.
    */
-  public static final boolean FNL3_FIXED = false;
+  public static final boolean FNL3_FIXED = value(false);
 
   /**
    * Whether <a href="http://issues.eigenbase.org/browse/FRG-327">issue
    * FRG-327: AssertionError while translating IN list that contains null</a>
    * is fixed.
    */
-  public static final boolean FRG327_FIXED = false;
+  public static final boolean FRG327_FIXED = value(false);
 
   /**
    * Whether <a href="http://issues.eigenbase.org/browse/FRG-377">issue
@@ -81,80 +81,80 @@ public abstract class Bug {
    * :ALPHA:, * :UPPER:, :LOWER:, ... etc. are not yet implemented in
    * SIMILAR TO expressions.</a> is fixed.
    */
-  public static final boolean FRG377_FIXED = false;
+  public static final boolean FRG377_FIXED = value(false);
 
   /**
    * Whether dtbug1684 "CURRENT_DATE not implemented in fennel calc" is fixed.
    */
-  public static final boolean DT1684_FIXED = false;
+  public static final boolean DT1684_FIXED = value(false);
 
   /**
    * Whether <a href="http://issues.eigenbase.org/browse/FNL-25">issue
    * FNL-25</a> is fixed. (also filed as dtbug 153)
    */
-  public static final boolean FNL25_FIXED = false;
+  public static final boolean FNL25_FIXED = value(false);
 
   /**
    * Whether <a href="http://issues.eigenbase.org/browse/FRG-73">issue FRG-73:
    * miscellaneous bugs with nested comments</a> is fixed.
    */
-  public static final boolean FRG73_FIXED = false;
+  public static final boolean FRG73_FIXED = value(false);
 
   /**
    * Whether <a href="http://issues.eigenbase.org/browse/FRG-78">issue FRG-78:
    * collation clause should be on expression instead of identifier</a> is
    * fixed.
    */
-  public static final boolean FRG78_FIXED = false;
+  public static final boolean FRG78_FIXED = value(false);
 
   /**
    * Whether <a href="http://issues.eigenbase.org/browse/FRG-187">issue
    * FRG-187: FarragoAutoVmOperatorTest.testOverlapsOperator fails</a> is
    * fixed.
    */
-  public static final boolean FRG187_FIXED = false;
+  public static final boolean FRG187_FIXED = value(false);
 
   /**
    * Whether <a href="http://issues.eigenbase.org/browse/FRG-189">issue
    * FRG-189: FarragoAutoVmOperatorTest.testSelect fails</a> is fixed.
    */
-  public static final boolean FRG189_FIXED = false;
+  public static final boolean FRG189_FIXED = value(false);
 
   /**
    * Whether <a href="http://issues.eigenbase.org/browse/FRG-254">issue
    * FRG-254: environment-dependent failure for
    * SqlOperatorTest.testPrefixPlusOperator</a> is fixed.
    */
-  public static final boolean FRG254_FIXED = false;
+  public static final boolean FRG254_FIXED = value(false);
 
   /**
    * Whether <a href="http://issues.eigenbase.org/browse/FRG-282">issue
    * FRG-282: Support precision in TIME and TIMESTAMP data types</a> is fixed.
    */
-  public static final boolean FRG282_FIXED = false;
+  public static final boolean FRG282_FIXED = value(false);
 
   /**
    * Whether <a href="http://issues.eigenbase.org/browse/FRG-296">issue
    * FRG-296: SUBSTRING(string FROM regexp FOR regexp)</a> is fixed.
    */
-  public static final boolean FRG296_FIXED = false;
+  public static final boolean FRG296_FIXED = value(false);
 
   /**
    * Whether <a href="http://issues.eigenbase.org/browse/FRG-375">issue
    * FRG-375: The expression VALUES ('cd' SIMILAR TO '[a-e^c]d') returns TRUE.
    * It should return FALSE.</a> is fixed.
    */
-  public static final boolean FRG375_FIXED = false;
+  public static final boolean FRG375_FIXED = value(false);
 
   /** Whether
    * <a href="https://issues.apache.org/jira/browse/CALCITE-194">[CALCITE-194]
    * Array items in MongoDB adapter</a> is fixed. */
-  public static final boolean CALCITE_194_FIXED = false;
+  public static final boolean CALCITE_194_FIXED = value(false);
 
   /** Whether
    * <a href="https://issues.apache.org/jira/browse/CALCITE-319">[CALCITE-319]
    * Table aliases should follow case-sensitivity policy</a> is fixed. */
-  public static final boolean CALCITE_319_FIXED = false;
+  public static final boolean CALCITE_319_FIXED = value(false);
 
   /** Whether the remaining issues raised in
    * <a href="https://issues.apache.org/jira/browse/CALCITE-461">[CALCITE-461]
@@ -163,22 +163,28 @@ public abstract class Bug {
    * <p>Now that [CALCITE-461] is fixed, the tracking bug is
    * <a href="https://issues.apache.org/jira/browse/CALCITE-574">[CALCITE-574]
    * Remove org.apache.calcite.util.Bug.CALCITE_461_FIXED</a>. */
-  public static final boolean CALCITE_461_FIXED = false;
+  public static final boolean CALCITE_461_FIXED = value(false);
 
   /** Whether
    * <a href="https://issues.apache.org/jira/browse/CALCITE-673">[CALCITE-673]
    * Timeout executing joins against MySQL</a> is fixed. */
-  public static final boolean CALCITE_673_FIXED = false;
+  public static final boolean CALCITE_673_FIXED = value(false);
 
   /** Whether
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1048">[CALCITE-1048]
    * Make metadata more robust</a> is fixed. */
-  public static final boolean CALCITE_1048_FIXED = false;
+  public static final boolean CALCITE_1048_FIXED = value(false);
 
   /** Whether
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1045">[CALCITE-1045]
    * Decorrelate sub-queries in Project and Join</a> is fixed. */
-  public static final boolean CALCITE_1045_FIXED = false;
+  public static final boolean CALCITE_1045_FIXED = value(false);
+
+  /** Whether
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-1102">[CALCITE-1102]
+   * Add implementations of built-in operators applied to ANY type</a> is
+   * fixed. */
+  public static final boolean CALCITE_1102_FIXED = value(false);
 
   /**
    * Use this to flag temporary code.
@@ -190,7 +196,7 @@ public abstract class Bug {
    *
    * <p>Example #1:
    * <blockquote><pre>
-   * if (Bug.remark("baz fixed") == null) {
+   * if (value("baz fixed") == null) {
    *   baz();
    * }</pre></blockquote>
    *
@@ -215,6 +221,13 @@ public abstract class Bug {
   public static boolean upgrade(String remark) {
     Util.discard(remark);
     return false;
+  }
+
+  /**
+   * Use this method to make a constant value look not constant.
+   */
+  public static <E> E value(E e) {
+    return e;
   }
 }
 

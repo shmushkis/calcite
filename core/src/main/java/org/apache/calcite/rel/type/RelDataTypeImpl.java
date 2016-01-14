@@ -170,13 +170,10 @@ public abstract class RelDataTypeImpl
     return fieldList != null;
   }
 
-  // implement RelDataType
-  public boolean equals(Object obj) {
-    if (obj instanceof RelDataTypeImpl) {
-      final RelDataTypeImpl that = (RelDataTypeImpl) obj;
-      return this.digest.equals(that.digest);
-    }
-    return false;
+  @Override public boolean equals(Object o) {
+    return o == this
+        || o instanceof RelDataTypeImpl
+        && digest.equals(((RelDataTypeImpl) o).digest);
   }
 
   // implement RelDataType

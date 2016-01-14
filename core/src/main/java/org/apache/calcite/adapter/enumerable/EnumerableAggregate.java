@@ -38,6 +38,7 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -335,9 +336,13 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
                       inputPhysType.getRowType());
             }
 
+            public RexBuilder rexBuilder() {
+              return getCluster().getRexBuilder();
+            }
+
             public RexToLixTranslator rowTranslator() {
               return RexToLixTranslator.forAggregation(typeFactory,
-                  currentBlock(),
+                  rexBuilder(), currentBlock(),
                   new RexToLixTranslator.InputGetterImpl(
                       Collections.singletonList(
                           Pair.of((Expression) inParameter, inputPhysType))))

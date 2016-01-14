@@ -35,7 +35,9 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.util.BuiltInMethod;
 import org.apache.calcite.util.Util;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
@@ -79,7 +81,8 @@ public class RexExecutorImpl implements RelOptPlanner.Executor {
             Expressions.convert_(root0_, DataContext.class)));
     final List<Expression> expressions =
         RexToLixTranslator.translateProjects(programBuilder.getProgram(),
-        javaTypeFactory, blockBuilder, null, root_, getter, null);
+            javaTypeFactory, rexBuilder, blockBuilder, null, root_, getter,
+            null);
     blockBuilder.add(
         Expressions.return_(null,
             Expressions.newArrayInit(Object[].class, expressions)));
@@ -113,9 +116,15 @@ public class RexExecutorImpl implements RelOptPlanner.Executor {
   /**
    * Do constant reduction using generated code.
    */
-  public void reduce(RexBuilder rexBuilder, List<RexNode> constExps,
+  public void reduce(final RexBuilder rexBuilder, List<RexNode> constExps,
       List<RexNode> reducedValues) {
-    final String code = compile(rexBuilder, constExps,
+    final String code = compile(rexBuilder,
+        Lists.transform(constExps,
+            new Function<RexNode, RexNode>() {
+              public RexNode apply(RexNode node) {
+                return RexUtil.nullSafe(rexBuilder, node);
+              }
+            }),
         new RexToLixTranslator.InputGetter() {
           public Expression field(BlockBuilder list, int index,
               Type storageType) {

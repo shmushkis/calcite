@@ -348,7 +348,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
                               salField.getIndex()),
                           rexBuilder.makeExactLiteral(BigDecimal.valueOf(1000L),
                               salField.getType())));
-                  return RexUtil.composeConjunction(rexBuilder, nodes, false);
+                  return RexUtil.composeConjunction(rexBuilder, nodes);
                 }
 
                 @Override public RelDataType

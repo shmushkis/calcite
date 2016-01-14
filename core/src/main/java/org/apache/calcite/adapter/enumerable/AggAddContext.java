@@ -17,6 +17,7 @@
 package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.tree.Expression;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
@@ -31,8 +32,7 @@ import java.util.List;
 public interface AggAddContext extends AggResultContext {
   /**
    * Returns {@link org.apache.calcite.rex.RexNode} representation of arguments.
-   * This can be useful for manual translation of required arguments with
-   * different {@link NullPolicy}.
+   *
    * @return {@link org.apache.calcite.rex.RexNode} representation of arguments
    */
   List<RexNode> rexArguments();
@@ -60,6 +60,9 @@ public interface AggAddContext extends AggResultContext {
    * @return {@link RexToLixTranslator} suitable to transform the arguments
    */
   RexToLixTranslator rowTranslator();
+
+  /** Returns a Rex builder. */
+  RexBuilder rexBuilder();
 }
 
 // End AggAddContext.java

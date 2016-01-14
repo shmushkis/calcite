@@ -559,6 +559,48 @@ select count(*) as c from "everyTypes" where "utilDate" = TIMESTAMP '1970-01-01 
 
 !ok
 
+# [CALCITE-1054] NPE caused by wrong code generation for TIMESTAMP fields
+select count(*) as c
+from "everyTypes"
+where "sqlTimestamp" > TIMESTAMP '1970-01-01 01:23:45'
+and "sqlTimestamp" < TIMESTAMP '1980-01-01 01:01:01';
++---+
+| C |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+# As above, but for TIME
+select count(*) as c
+from "everyTypes"
+where "sqlTime" > TIME '01:23:45'
+and "sqlTime" < TIME '11:01:01';
++---+
+| C |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+# As above, but for DATE
+select count(*) as c
+from "everyTypes"
+where "sqlDate" > DATE '1970-01-01'
+and "sqlDate" < DATE '1980-01-01';
++---+
+| C |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
 # [CALCITE-346] Add commutative join rule
 #
 # 3-way join that does not require bushy join.  Best plan is: sales_fact_1997 as

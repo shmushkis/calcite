@@ -25,6 +25,7 @@ import org.apache.calcite.linq4j.tree.Primitive;
 import org.apache.calcite.linq4j.tree.Types;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -120,12 +121,13 @@ public abstract class StrictAggImplementor implements AggImplementor {
     final List<RexNode> args = add.rexArguments();
     final RexToLixTranslator translator = add.rowTranslator();
     final List<Expression> conditions = new ArrayList<>();
-    conditions.addAll(
-        translator.translateList(args, RexImpTable.NullAs.IS_NOT_NULL));
+    for (RexNode arg : args) {
+      final RexNode isNotNull =
+          add.rexBuilder().makeCall(SqlStdOperatorTable.IS_NOT_NULL, arg);
+      conditions.add(translator.translate(isNotNull));
+    }
     if (add.rexFilterArgument() != null) {
-      conditions.add(
-          translator.translate(add.rexFilterArgument(),
-              RexImpTable.NullAs.FALSE));
+      conditions.add(translator.translate(add.rexFilterArgument()));
     }
     Expression condition = Expressions.foldAnd(conditions);
     if (Expressions.constant(false).equals(condition)) {
