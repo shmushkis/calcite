@@ -19,13 +19,17 @@ package org.apache.calcite.adapter.enumerable;
 import org.apache.calcite.linq4j.tree.BlockStatement;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 
+import com.google.common.collect.ImmutableSet;
+
 import java.util.List;
+import java.util.Set;
 
 /**
  * A relational expression of one of the
@@ -43,8 +47,19 @@ public interface EnumerableRel
 
   RelFactories.ProjectFactory PROJECT_FACTORY =
       new RelFactories.ProjectFactory() {
+        public RelNode createProject(RelNode input,
+            List<? extends RexNode> childExprs, List<String> fieldNames) {
+          return createProject(input, childExprs, fieldNames,
+              ImmutableSet.<CorrelationId>of());
+        }
+
         public RelNode createProject(RelNode child,
-            List<? extends RexNode> projects, List<String> fieldNames) {
+            List<? extends RexNode> projects, List<String> fieldNames,
+            Set<CorrelationId> variablesSet) {
+          if (!variablesSet.isEmpty()) {
+            throw new UnsupportedOperationException(
+                "EnumerableProject cannot correlate");
+          }
           final RelOptCluster cluster = child.getCluster();
           final RelDataType rowType =
               RexUtil.createStructType(cluster.getTypeFactory(), projects,

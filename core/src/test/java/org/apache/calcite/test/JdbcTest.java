@@ -4542,6 +4542,22 @@ public class JdbcTest {
         .returnsCount(599);
   }
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-1045">[CALCITE-1045]
+   * Decorrelate sub-queries in Project and Join</a>. */
+  @Test public void testCorrelatedScalarSubqueryInProject() throws SQLException {
+    final String sql = "select e.employee_id,\n"
+        + "  (select avg(e2.salary)\n"
+        + "     from employee e2\n"
+        + "     where e2.store_id = e.store_id) as avg_sal\n"
+        + " from employee e";
+    CalciteAssert.that()
+        .with(CalciteAssert.Config.FOODMART_CLONE)
+        .with(Lex.JAVA)
+        .query(sql)
+        .returnsCount(0);
+  }
+
   @Test public void testLeftJoin() {
     CalciteAssert.hr()
         .query("select e.\"deptno\", d.\"deptno\"\n"
@@ -4681,7 +4697,7 @@ public class JdbcTest {
   }
 
   @Test public void testRunScalar() throws Exception {
-    try (final TryThreadLocal.Memo ignored = Prepare.THREAD_EXPAND.push(true)) {
+    try (final TryThreadLocal.Memo ignored = Prepare.THREAD_EXPAND.push(false)) {
       checkRun("sql/scalar.iq");
     }
   }
@@ -4725,7 +4741,7 @@ public class JdbcTest {
                 public Object apply(String v) {
                   switch (v) {
                   case "calcite1045":
-                    return Bug.CALCITE_1045_FIXED;
+                    return true; //Bug.CALCITE_1045_FIXED;
                   case "calcite1048":
                     return Bug.CALCITE_1048_FIXED;
                   }

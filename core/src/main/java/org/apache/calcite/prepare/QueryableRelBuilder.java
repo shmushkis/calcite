@@ -40,6 +40,7 @@ import org.apache.calcite.linq4j.function.Predicate1;
 import org.apache.calcite.linq4j.function.Predicate2;
 import org.apache.calcite.linq4j.tree.FunctionExpression;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalTableScan;
@@ -47,6 +48,8 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.QueryableTable;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.AbstractTableQueryable;
+
+import com.google.common.collect.ImmutableSet;
 
 import java.math.BigDecimal;
 import java.util.Comparator;
@@ -510,7 +513,8 @@ class QueryableRelBuilder<T> implements QueryableFactory<T> {
     RelNode child = toRel(source);
     List<RexNode> nodes = translator.toRexList(selector, child);
     setRel(
-        LogicalProject.create(child, nodes, (List<String>)  null));
+        LogicalProject.create(child, nodes, (List<String>)  null,
+            ImmutableSet.<CorrelationId>of()));
     return null;
   }
 

@@ -25,6 +25,7 @@ import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelInput;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelShuttle;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.metadata.RelMdCollation;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
@@ -35,8 +36,10 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.Util;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Sub-class of {@link org.apache.calcite.rel.core.Project} not
@@ -93,9 +96,17 @@ public final class LogicalProject extends Project {
 
   //~ Methods ----------------------------------------------------------------
 
-  /** Creates a LogicalProject. */
+  @Deprecated // to be removed before 2.0
   public static LogicalProject create(final RelNode input,
       final List<? extends RexNode> projects, List<String> fieldNames) {
+    return create(input, projects, fieldNames,
+        ImmutableSet.<CorrelationId>of());
+  }
+
+  /** Creates a LogicalProject. */
+  public static LogicalProject create(final RelNode input,
+      final List<? extends RexNode> projects, List<String> fieldNames,
+      Set<CorrelationId> variablesSet) {
     final RelOptCluster cluster = input.getCluster();
     final List<String> fieldNames2 =
         fieldNames == null
@@ -105,12 +116,19 @@ public final class LogicalProject extends Project {
     final RelDataType rowType =
         RexUtil.createStructType(cluster.getTypeFactory(), projects,
             fieldNames2);
-    return create(input, projects, rowType);
+    return create(input, projects, rowType, variablesSet);
+  }
+
+  @Deprecated // to be removed before 2.0
+  public static LogicalProject create(final RelNode input,
+      final List<? extends RexNode> projects, RelDataType rowType) {
+    return create(input, projects, rowType, ImmutableSet.<CorrelationId>of());
   }
 
   /** Creates a LogicalProject, specifying row type rather than field names. */
   public static LogicalProject create(final RelNode input,
-      final List<? extends RexNode> projects, RelDataType rowType) {
+      final List<? extends RexNode> projects, RelDataType rowType,
+      Set<CorrelationId> variablesSet) {
     final RelOptCluster cluster = input.getCluster();
     final RelMetadataQuery mq = RelMetadataQuery.instance();
     final RelTraitSet traitSet =

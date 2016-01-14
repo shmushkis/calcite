@@ -45,6 +45,7 @@ import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.List;
 import java.util.Set;
@@ -108,6 +109,10 @@ public class RelFactories {
   public interface ProjectFactory {
     /** Creates a project. */
     RelNode createProject(RelNode input, List<? extends RexNode> childExprs,
+        List<String> fieldNames, Set<CorrelationId> variablesSet);
+
+    @Deprecated // to be removed before 2.0
+    RelNode createProject(RelNode input, List<? extends RexNode> childExprs,
         List<String> fieldNames);
   }
 
@@ -117,8 +122,15 @@ public class RelFactories {
    */
   private static class ProjectFactoryImpl implements ProjectFactory {
     public RelNode createProject(RelNode input,
+        List<? extends RexNode> childExprs, List<String> fieldNames,
+        Set<CorrelationId> variablesSet) {
+      return LogicalProject.create(input, childExprs, fieldNames, variablesSet);
+    }
+
+    public RelNode createProject(RelNode input,
         List<? extends RexNode> childExprs, List<String> fieldNames) {
-      return LogicalProject.create(input, childExprs, fieldNames);
+      return LogicalProject.create(input, childExprs, fieldNames,
+          ImmutableSet.<CorrelationId>of());
     }
   }
 

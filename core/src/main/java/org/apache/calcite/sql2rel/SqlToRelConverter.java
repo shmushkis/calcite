@@ -494,7 +494,11 @@ public class SqlToRelConverter {
     if (!enableDecorrelation()) {
       return rootRel;
     }
+    System.out.println("Before decorrelate:\n"
+        + RelOptUtil.toString(rootRel));
     final RelNode result = decorrelateQuery(rootRel);
+    System.out.println("After decorrelate:\n"
+        + RelOptUtil.toString(result));
     if (result != rootRel) {
       checkConvertedType(query, result);
     }

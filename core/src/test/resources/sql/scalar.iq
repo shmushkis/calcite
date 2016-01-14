@@ -124,7 +124,7 @@ select deptno, (select sum(empno) from "scott".emp where 1 = 0 group by ()) as x
 !ok
 
 # [CALCITE-709] Errors with LIMIT inside scalar sub-query
-!if (false) {
+!if (fixed.calcite1045) {
 select deptno, (select sum(empno) from "scott".emp where deptno = dept.deptno limit 1) as x from "scott".dept;
 +--------+----------------------+
 | DEPTNO |          X           |
@@ -140,7 +140,7 @@ select deptno, (select sum(empno) from "scott".emp where deptno = dept.deptno li
 !}
 
 # [CALCITE-709] Errors with LIMIT inside scalar sub-query
-!if (false) {
+!if (fixed.calcite1045) {
 select deptno, (select sum(empno) from "scott".emp where deptno = dept.deptno limit 0) as x from "scott".dept;
 +--------+----------------------+
 | DEPTNO |          X           |
@@ -156,7 +156,7 @@ select deptno, (select sum(empno) from "scott".emp where deptno = dept.deptno li
 !}
 
 # [CALCITE-709] Errors with LIMIT inside scalar sub-query
-!if (false) {
+!if (fixed.calcite1045) {
 select deptno, (select deptno from "scott".emp where deptno = dept.deptno limit 1) as x from "scott".dept;
 +--------+------+
 | DEPTNO |  X   |
@@ -185,15 +185,15 @@ select deptno, (select deptno from "scott".emp where deptno = dept.deptno limit 
 !ok
 
 # [CALCITE-709] Errors with LIMIT inside scalar sub-query
-!if (false) {
+!if (fixed.calcite1045) {
 select deptno, (select empno from "scott".emp where deptno = dept.deptno order by empno limit 1) as x from "scott".dept;
 +--------+--------+
 | DEPTNO |   X    |
 +--------+--------+
-| 10     | 7369   |
+| 10     | 7782   |
 | 20     | 7369   |
-| 30     | 7369   |
-| 40     | 7369   |
+| 30     | 7499   |
+| 40     |        |
 +--------+--------+
 (4 rows)
 

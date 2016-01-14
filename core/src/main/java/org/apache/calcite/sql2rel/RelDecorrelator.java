@@ -2518,6 +2518,9 @@ public class RelDecorrelator implements ReflectiveVisitor {
     @Override public RelNode visit(LogicalProject project) {
       try {
         stack.push(project);
+        for (CorrelationId correlationId : project.getVariablesSet()) {
+          mapCorVarToCorRel.put(correlationId, project);
+        }
         for (RexNode node : project.getProjects()) {
           node.accept(rexVisitor(project));
         }

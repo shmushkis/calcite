@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.rel;
 
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
@@ -27,6 +28,7 @@ import org.apache.calcite.util.mapping.Mappings;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -148,7 +150,8 @@ public class RelRoot {
     for (Pair<Integer, String> field : fields) {
       projects.add(rexBuilder.makeInputRef(rel, field.left));
     }
-    return LogicalProject.create(rel, projects, Pair.right(fields));
+    return LogicalProject.create(rel, projects, Pair.right(fields),
+        ImmutableSet.<CorrelationId>of());
   }
 
   public boolean isNameTrivial() {

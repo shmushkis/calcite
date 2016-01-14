@@ -768,7 +768,7 @@ public class TpchTest {
   }
 
   @Test public void testLineItem() {
-    with()
+    with(true)
         .query("select * from tpch.lineitem")
         .returnsCount(6001215);
   }

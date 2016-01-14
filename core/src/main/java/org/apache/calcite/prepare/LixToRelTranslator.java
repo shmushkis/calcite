@@ -29,6 +29,7 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalTableScan;
@@ -38,6 +39,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.BuiltInMethod;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -89,7 +91,7 @@ class LixToRelTranslator implements RelOptTable.ToRelContext {
         input = translate(call.targetExpression);
         return LogicalProject.create(input,
             toRex(input, (FunctionExpression) call.expressions.get(0)),
-            (List<String>) null);
+            (List<String>) null, ImmutableSet.<CorrelationId>of());
 
       case WHERE:
         input = translate(call.targetExpression);

@@ -50,6 +50,7 @@ import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
+import org.apache.calcite.util.Bug;
 import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.TryThreadLocal;
@@ -95,7 +96,7 @@ public abstract class Prepare {
    * but a few tests override and set it to true. After CALCITE-1045
    * is fixed, remove those overrides and use false everywhere. */
   public static final TryThreadLocal<Boolean> THREAD_EXPAND =
-      TryThreadLocal.of(false);
+      TryThreadLocal.of(Bug.CALCITE_1045_FIXED);
 
   public Prepare(CalcitePrepare.Context context, CatalogReader catalogReader,
       Convention resultConvention) {
