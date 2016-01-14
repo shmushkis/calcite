@@ -109,8 +109,7 @@ public class EnumerableValues extends Values implements EnumerableRel {
             RexToLixTranslator.translateLiteral(
                 pair.right,
                 pair.left.getType(),
-                typeFactory,
-                RexImpTable.NullAs.NULL));
+                typeFactory));
       }
       expressions.add(physType.record(literals));
     }

@@ -906,7 +906,7 @@ public class SqlParserTest {
   @Test public void testGrouping() {
     sql("select deptno, grouping(deptno) from emp\n"
         + "group by grouping sets (deptno, (deptno, gender), ())")
-        .ok("SELECT `DEPTNO`, (GROUPING(`DEPTNO`))\n"
+        .ok("SELECT `DEPTNO`, GROUPING(`DEPTNO`)\n"
             + "FROM `EMP`\n"
             + "GROUP BY GROUPING SETS(`DEPTNO`, (`DEPTNO`, `GENDER`), ())");
   }

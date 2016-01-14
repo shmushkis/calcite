@@ -331,6 +331,16 @@ public enum SqlKind {
    */
   CASE,
 
+  /**
+   * The "NULLIF" operator.
+   */
+  NULLIF,
+
+  /**
+   * The "COALESCE" operator.
+   */
+  COALESCE,
+
   // prefix operators
 
   /**
@@ -817,7 +827,7 @@ public enum SqlKind {
           concat(
               EnumSet.of(AS, ARGUMENT_ASSIGNMENT, DEFAULT,
                   DESCENDING, CUBE, ROLLUP, GROUPING_SETS, EXTEND,
-                  SELECT, JOIN, OTHER_FUNCTION, CAST, TRIM, FLOOR, CEIL,
+                  SELECT, JOIN, OTHER_FUNCTION, CAST,
                   LITERAL_CHAIN, JDBC_FN, PRECEDING, FOLLOWING, ORDER_BY,
                   NULLS_FIRST, NULLS_LAST, COLLECTION_TABLE, TABLESAMPLE,
                   VALUES, WITH, WITH_ITEM),
@@ -924,7 +934,8 @@ public enum SqlKind {
 
   /** Returns the kind that you get if you apply NOT to this kind.
    *
-   * <p>For example, {@code IS_NOT_NULL.negate()} returns {@link #IS_NULL}. */
+   * <p>For example, {@code IS_NOT_NULL.negate()} returns {@link #IS_NULL};
+   * {@code GREATER_THAN.negate()} returns {@link #LESS_THAN_OR_EQUAL}. */
   public SqlKind negate() {
     switch (this) {
     case IS_TRUE:
@@ -939,10 +950,22 @@ public enum SqlKind {
       return IS_NOT_TRUE;
     case IS_NOT_NULL:
       return IS_NULL;
+    case EQUALS:
+      return NOT_EQUALS;
+    case NOT_EQUALS:
+      return EQUALS;
     case IS_DISTINCT_FROM:
       return IS_NOT_DISTINCT_FROM;
     case IS_NOT_DISTINCT_FROM:
       return IS_DISTINCT_FROM;
+    case LESS_THAN:
+      return GREATER_THAN_OR_EQUAL;
+    case LESS_THAN_OR_EQUAL:
+      return GREATER_THAN;
+    case GREATER_THAN:
+      return LESS_THAN_OR_EQUAL;
+    case GREATER_THAN_OR_EQUAL:
+      return LESS_THAN;
     default:
       return this;
     }

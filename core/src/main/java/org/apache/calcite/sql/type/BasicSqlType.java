@@ -95,7 +95,7 @@ public class BasicSqlType extends AbstractSqlType {
   //~ Methods ----------------------------------------------------------------
 
   /**
-   * Constructs a type with nullablity
+   * Constructs a type with nullability
    */
   BasicSqlType createWithNullability(boolean nullable) {
     BasicSqlType ret;

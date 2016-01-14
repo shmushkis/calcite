@@ -176,8 +176,8 @@ public class JoinPushThroughJoinRule extends RelOptRule {
     new RexPermuteInputsShuttle(bottomBottomMapping, relA, relC)
         .visitList(bottomNonIntersecting, newBottomList);
     final RexBuilder rexBuilder = cluster.getRexBuilder();
-    RexNode newBottomCondition =
-        RexUtil.composeConjunction(rexBuilder, newBottomList, false);
+    final RexNode newBottomCondition =
+        RexUtil.composeConjunction(rexBuilder, newBottomList);
     final Join newBottomJoin =
         bottomJoin.copy(bottomJoin.getTraitSet(), newBottomCondition, relA,
             relC, bottomJoin.getJoinType(), bottomJoin.isSemiJoinDone());
@@ -195,8 +195,8 @@ public class JoinPushThroughJoinRule extends RelOptRule {
         .visitList(intersecting, newTopList);
     new RexPermuteInputsShuttle(topMapping, newBottomJoin, relB)
         .visitList(bottomIntersecting, newTopList);
-    RexNode newTopCondition =
-        RexUtil.composeConjunction(rexBuilder, newTopList, false);
+    final RexNode newTopCondition =
+        RexUtil.composeConjunction(rexBuilder, newTopList);
     @SuppressWarnings("SuspiciousNameCombination")
     final Join newTopJoin =
         topJoin.copy(topJoin.getTraitSet(), newTopCondition, newBottomJoin,
@@ -284,8 +284,8 @@ public class JoinPushThroughJoinRule extends RelOptRule {
     new RexPermuteInputsShuttle(bottomBottomMapping, relC, relB)
         .visitList(bottomNonIntersecting, newBottomList);
     final RexBuilder rexBuilder = cluster.getRexBuilder();
-    RexNode newBottomCondition =
-        RexUtil.composeConjunction(rexBuilder, newBottomList, false);
+    final RexNode newBottomCondition =
+        RexUtil.composeConjunction(rexBuilder, newBottomList);
     final Join newBottomJoin =
         bottomJoin.copy(bottomJoin.getTraitSet(), newBottomCondition, relC,
             relB, bottomJoin.getJoinType(), bottomJoin.isSemiJoinDone());
@@ -303,8 +303,8 @@ public class JoinPushThroughJoinRule extends RelOptRule {
         .visitList(intersecting, newTopList);
     new RexPermuteInputsShuttle(topMapping, newBottomJoin, relA)
         .visitList(bottomIntersecting, newTopList);
-    RexNode newTopCondition =
-        RexUtil.composeConjunction(rexBuilder, newTopList, false);
+    final RexNode newTopCondition =
+        RexUtil.composeConjunction(rexBuilder, newTopList);
     @SuppressWarnings("SuspiciousNameCombination")
     final Join newTopJoin =
         topJoin.copy(topJoin.getTraitSet(), newTopCondition, newBottomJoin,

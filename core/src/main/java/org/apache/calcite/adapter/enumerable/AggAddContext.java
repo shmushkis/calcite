@@ -17,6 +17,7 @@
 package org.apache.calcite.adapter.enumerable;
 
 import org.apache.calcite.linq4j.tree.Expression;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
@@ -60,6 +61,9 @@ public interface AggAddContext extends AggResultContext {
    * @return {@link RexToLixTranslator} suitable to transform the arguments
    */
   RexToLixTranslator rowTranslator();
+
+  /** Returns a Rex builder. */
+  RexBuilder rexBuilder();
 }
 
 // End AggAddContext.java

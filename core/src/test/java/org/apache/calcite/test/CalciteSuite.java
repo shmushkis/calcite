@@ -124,7 +124,7 @@ import org.junit.runners.Suite;
     LinqFrontJdbcBackTest.class,
     JdbcFrontJdbcBackLinqMiddleTest.class,
     CalciteSqlOperatorTest.class,
-    LatticeTest.class,
+    // TODO: LatticeTest.class,
     ReflectiveSchemaTest.class,
     JdbcTest.class,
     CalciteRemoteDriverTest.class,

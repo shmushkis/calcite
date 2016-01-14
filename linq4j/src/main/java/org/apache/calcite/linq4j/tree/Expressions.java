@@ -1414,6 +1414,9 @@ public abstract class Expressions {
     case OrElse:
       type = Boolean.TYPE;
       break;
+    case Assign:
+      type = left.type;
+      break;
     default:
       type = larger(left.type, right.type);
       break;
@@ -1424,7 +1427,8 @@ public abstract class Expressions {
   /** Returns an expression to box the value of a primitive expression.
    * E.g. {@code box(e, Primitive.INT)} returns {@code Integer.valueOf(e)}. */
   public static Expression box(Expression expression, Primitive primitive) {
-    return call(primitive.boxClass, "valueOf", expression);
+    return call(primitive.boxClass, "valueOf",
+        Types.castIfNecessary(primitive.primitiveClass, expression));
   }
 
   /** Converts e.g. "anInteger" to "Integer.valueOf(anInteger)". */
@@ -2948,16 +2952,16 @@ public abstract class Expressions {
 
   /** Combines a list of expressions using AND.
    * Returns TRUE if the list is empty.
-   * Returns FALSE if any of the conditions are constant FALSE;
-   * otherwise returns NULL if any of the conditions are constant NULL. */
+   * Returns FALSE if any of the conditions are constant FALSE. */
   public static Expression foldAnd(List<Expression> conditions) {
     Expression e = null;
-    int nullCount = 0;
     for (Expression condition : conditions) {
       if (condition instanceof ConstantExpression) {
         final Boolean value = (Boolean) ((ConstantExpression) condition).value;
         if (value == null) {
-          ++nullCount;
+          // Value is null. We can't include a null value in an AND so we assume
+          // the the preceding conditions have ensured that we will never get
+          // here. Skip the value.
           continue;
         } else if (value) {
           continue;
@@ -2970,9 +2974,6 @@ public abstract class Expressions {
       } else {
         e = andAlso(e, condition);
       }
-    }
-    if (nullCount > 0) {
-      return constant(null);
     }
     if (e == null) {
       return constant(true);

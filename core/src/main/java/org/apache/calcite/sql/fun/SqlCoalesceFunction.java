@@ -44,7 +44,7 @@ public class SqlCoalesceFunction extends SqlFunction {
     // strategies are used.
     super(
         "COALESCE",
-        SqlKind.OTHER_FUNCTION,
+        SqlKind.COALESCE,
         ReturnTypes.LEAST_RESTRICTIVE,
         null,
         OperandTypes.SAME_VARIADIC,

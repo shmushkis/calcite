@@ -349,7 +349,7 @@ public class SubstitutionVisitor {
       }
     }
     return RexUtil.composeConjunction(rexBuilder,
-        Lists.transform(targets, RexUtil.notFn(rexBuilder)), false);
+        Lists.transform(targets, RexUtil.notFn(rexBuilder)));
   }
 
   /**

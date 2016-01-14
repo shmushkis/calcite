@@ -31,6 +31,7 @@ import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexProgramBuilder;
 import org.apache.calcite.util.BuiltInMethod;
@@ -164,18 +165,20 @@ public class EnumerableThetaJoin extends Join implements EnumerableRel {
         Expressions.parameter(leftPhysType.getJavaRowType(), "left");
     final ParameterExpression right_ =
         Expressions.parameter(rightPhysType.getJavaRowType(), "right");
+    final RexBuilder rexBuilder = getCluster().getRexBuilder();
     final RexProgramBuilder program =
         new RexProgramBuilder(
             implementor.getTypeFactory().builder()
                 .addAll(left.getRowType().getFieldList())
                 .addAll(right.getRowType().getFieldList())
                 .build(),
-            getCluster().getRexBuilder());
-    program.addCondition(condition);
+            rexBuilder);
+    program.addCondition(rexBuilder.makeUnknownsFalse(condition));
     builder.add(
         Expressions.return_(null,
             RexToLixTranslator.translateCondition(program.getProgram(),
                 implementor.getTypeFactory(),
+                rexBuilder,
                 builder,
                 new RexToLixTranslator.InputGetterImpl(
                     ImmutableList.of(Pair.of((Expression) left_, leftPhysType),

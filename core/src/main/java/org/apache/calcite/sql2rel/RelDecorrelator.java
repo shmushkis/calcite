@@ -992,7 +992,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     }
 
     final RexNode condition =
-        RexUtil.composeConjunction(rexBuilder, conditions, false);
+        RexUtil.composeConjunction(rexBuilder, conditions);
     RelNode newJoin =
         LogicalJoin.create(leftFrame.r, rightFrame.r, condition,
             ImmutableSet.<CorrelationId>of(), rel.getJoinType().toJoinType());

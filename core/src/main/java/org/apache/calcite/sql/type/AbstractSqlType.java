@@ -56,23 +56,19 @@ public abstract class AbstractSqlType
 
   //~ Methods ----------------------------------------------------------------
 
-  // implement RelDataType
-  public SqlTypeName getSqlTypeName() {
+  @Override public SqlTypeName getSqlTypeName() {
     return typeName;
   }
 
-  // implement RelDataType
-  public boolean isNullable() {
+  @Override public boolean isNullable() {
     return isNullable;
   }
 
-  // implement RelDataType
-  public RelDataTypeFamily getFamily() {
+  @Override public RelDataTypeFamily getFamily() {
     return typeName.getFamily();
   }
 
-  // implement RelDataType
-  public RelDataTypePrecedenceList getPrecedenceList() {
+  @Override public RelDataTypePrecedenceList getPrecedenceList() {
     RelDataTypePrecedenceList list =
         SqlTypeExplicitPrecedenceList.getListForType(this);
     if (list != null) {

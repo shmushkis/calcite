@@ -48,6 +48,15 @@ import static org.junit.Assert.assertThat;
  * Tests factoring out deterministic expressions.
  */
 public class DeterministicTest {
+  /** Wraps an expression in a method in an anonymous class. */
+  private static Expression methodize(Expression expression) {
+    return Expressions.new_(Runnable.class,
+        Collections.<Expression>emptyList(),
+        Expressions.methodDecl(0, expression.type, "test",
+            Collections.<ParameterExpression>emptyList(),
+            Blocks.toFunctionBlock(expression)));
+  }
+
   /**
    * Class to test @Deterministic annotation
    */
@@ -131,16 +140,7 @@ public class DeterministicTest {
 
   @Test public void testFactorOutBinaryAdd() {
     assertThat(
-        optimize(
-            Expressions.new_(
-                Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(
-                    0,
-                    int.class,
-                    "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(Expressions.add(ONE, TWO))))),
+        optimize(methodize(Expressions.add(ONE, TWO))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
             + "      int test() {\n"
@@ -155,14 +155,7 @@ public class DeterministicTest {
   @Test public void testFactorOutBinaryAddSurvivesMultipleOptimizations() {
     assertThat(
         optimize(
-            optimizeExpression(
-                Expressions.new_(Runnable.class,
-                    Collections.<Expression>emptyList(),
-                    Expressions.methodDecl(0,
-                        int.class,
-                        "test",
-                        Collections.<ParameterExpression>emptyList(),
-                        Blocks.toFunctionBlock(Expressions.add(ONE, TWO)))))),
+            optimizeExpression(methodize(Expressions.add(ONE, TWO)))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
             + "      int test() {\n"
@@ -177,17 +170,9 @@ public class DeterministicTest {
   @Test public void testFactorOutBinaryAddNameCollision() {
     assertThat(
         optimize(
-            Expressions.new_(
-                Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(
-                    0,
-                    int.class,
-                    "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(
-                        Expressions.multiply(Expressions.add(ONE, TWO),
-                            Expressions.subtract(ONE, TWO)))))),
+            methodize(
+                Expressions.multiply(Expressions.add(ONE, TWO),
+                    Expressions.subtract(ONE, TWO)))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
             + "      int test() {\n"
@@ -204,17 +189,7 @@ public class DeterministicTest {
   @Test public void testFactorOutBinaryAddMul() {
     assertThat(
         optimize(
-            Expressions.new_(
-                Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(
-                    0,
-                    int.class,
-                    "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(
-                        Expressions.multiply(Expressions.add(ONE, TWO),
-                            THREE))))),
+            methodize(Expressions.multiply(Expressions.add(ONE, TWO), THREE))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
             + "      int test() {\n"
@@ -230,33 +205,25 @@ public class DeterministicTest {
   @Test public void testFactorOutNestedClasses() {
     assertThat(
         optimize(
-            Expressions.new_(
-                Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(
-                    0,
-                    int.class,
-                    "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(
-                        Expressions.add(
-                            Expressions.add(ONE, FOUR),
-                            Expressions.call(
-                                Expressions.new_(
-                                    Callable.class,
-                                    Collections.<Expression>emptyList(),
-                                    Expressions.methodDecl(
-                                        0,
-                                        Object.class,
-                                        "call",
-                                        Collections
-                                            .<ParameterExpression>emptyList(),
-                                        Blocks.toFunctionBlock(
-                                            Expressions.multiply(
-                                                Expressions.add(ONE, TWO),
-                                                THREE)))),
+            methodize(
+                Expressions.add(
+                    Expressions.add(ONE, FOUR),
+                    Expressions.call(
+                        Expressions.new_(
+                            Callable.class,
+                            Collections.<Expression>emptyList(),
+                            Expressions.methodDecl(
+                                0,
+                                Object.class,
                                 "call",
-                                Collections.<Expression>emptyList())))))),
+                                Collections
+                                    .<ParameterExpression>emptyList(),
+                                Blocks.toFunctionBlock(
+                                    Expressions.multiply(
+                                        Expressions.add(ONE, TWO),
+                                        THREE)))),
+                        "call",
+                        Collections.<Expression>emptyList())))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
             + "      int test() {\n"
@@ -278,18 +245,12 @@ public class DeterministicTest {
   @Test public void testNewBigInteger() {
     assertThat(
         optimize(
-            Expressions.new_(
-                Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(
-                    0, int.class, "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(
-                        Expressions.new_(BigInteger.class,
-                            Expressions.constant("42")))))),
+            methodize(
+                Expressions.new_(BigInteger.class,
+                    Expressions.constant("42")))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
-            + "      int test() {\n"
+            + "      java.math.BigInteger test() {\n"
             + "        return $L4J$C$new_java_math_BigInteger_42_;\n"
             + "      }\n"
             + "\n"
@@ -303,18 +264,10 @@ public class DeterministicTest {
   @Test public void testInstanceofTest() {
     // Single instanceof is not optimized
     assertThat(
-        optimize(
-            Expressions.new_(
-                Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(
-                    0, int.class, "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(
-                        Expressions.typeIs(ONE, Boolean.class))))),
+        optimize(methodize(Expressions.typeIs(ONE, Boolean.class))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
-            + "      int test() {\n"
+            + "      boolean test() {\n"
             + "        return 1 instanceof Boolean;\n"
             + "      }\n"
             + "\n"
@@ -326,17 +279,13 @@ public class DeterministicTest {
     // instanceof is optimized in complex expressions
     assertThat(
         optimize(
-            Expressions.new_(Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(0, int.class, "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(
-                        Expressions.orElse(
-                            Expressions.typeIs(ONE, Boolean.class),
-                            Expressions.typeIs(TWO, Integer.class)))))),
+            methodize(
+                Expressions.orElse(
+                    Expressions.typeIs(ONE, Boolean.class),
+                    Expressions.typeIs(TWO, Integer.class)))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
-            + "      int test() {\n"
+            + "      boolean test() {\n"
             + "        return $L4J$C$1_instanceof_Boolean_2_instanceof_Integer;\n"
             + "      }\n"
             + "\n"
@@ -351,17 +300,13 @@ public class DeterministicTest {
     // Integer.valueOf(0) is optimized in complex expressions
     assertThat(
         optimize(
-            Expressions.new_(Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(0, int.class, "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(
-                        Expressions.call(
-                            getMethod(Integer.class, "valueOf", int.class),
-                            Expressions.constant(0)))))),
+            methodize(
+                Expressions.call(
+                    getMethod(Integer.class, "valueOf", int.class),
+                    Expressions.constant(0)))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
-            + "      int test() {\n"
+            + "      Integer test() {\n"
             + "        return $L4J$C$Integer_valueOf_0_;\n"
             + "      }\n"
             + "\n"
@@ -374,21 +319,17 @@ public class DeterministicTest {
     // instanceof is optimized in complex expressions
     assertThat(
         optimize(
-            Expressions.new_(Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(0, int.class, "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(
-                        Expressions.call(
-                            Expressions.field(null, BigInteger.class, "ONE"),
-                            "add",
-                            Expressions.call(null,
-                                Types.lookupMethod(BigInteger.class, "valueOf",
-                                    long.class),
-                                Expressions.constant(42L))))))),
+            methodize(
+                Expressions.call(
+                    Expressions.field(null, BigInteger.class, "ONE"),
+                    "add",
+                    Expressions.call(null,
+                        Types.lookupMethod(BigInteger.class, "valueOf",
+                            long.class),
+                        Expressions.constant(42L))))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
-            + "      int test() {\n"
+            + "      java.math.BigInteger test() {\n"
             + "        return "
             + "$L4J$C$java_math_BigInteger_ONE_add_java_math_BigInteger_valueOf_42L_;\n"
             + "      }\n"
@@ -406,24 +347,20 @@ public class DeterministicTest {
     // instanceof is optimized in complex expressions
     assertThat(
         optimize(
-            Expressions.new_(Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(0, int.class, "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(
-                        Expressions.call(
-                            Expressions.call(null,
-                                Types.lookupMethod(BigInteger.class, "valueOf",
-                                    long.class),
-                                Expressions.constant(42L)),
-                            "add",
-                            Expressions.call(null,
-                                Types.lookupMethod(BigInteger.class, "valueOf",
-                                    long.class),
-                                Expressions.constant(42L))))))),
+            methodize(
+                Expressions.call(
+                    Expressions.call(null,
+                        Types.lookupMethod(BigInteger.class, "valueOf",
+                            long.class),
+                        Expressions.constant(42L)),
+                    "add",
+                    Expressions.call(null,
+                        Types.lookupMethod(BigInteger.class, "valueOf",
+                            long.class),
+                        Expressions.constant(42L))))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
-            + "      int test() {\n"
+            + "      java.math.BigInteger test() {\n"
             + "        return "
             + "$L4J$C$java_math_BigInteger_valueOf_42L_add_java_math_BigInteger_valued8d57d69;\n"
             + "      }\n"
@@ -440,19 +377,11 @@ public class DeterministicTest {
   @Test public void testDeterministicMethodCall() {
     assertThat(
         optimize(
-            Expressions.new_(
-                Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(
-                    0,
-                    int.class,
-                    "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(
-                        Expressions.call(null,
-                            Types.lookupMethod(TestClass.class,
-                                "deterministic", int.class),
-                            ONE))))),
+            methodize(
+                Expressions.call(null,
+                    Types.lookupMethod(TestClass.class,
+                        "deterministic", int.class),
+            ONE))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
             + "      int test() {\n"
@@ -467,19 +396,11 @@ public class DeterministicTest {
   @Test public void testNonDeterministicMethodCall() {
     assertThat(
         optimize(
-            Expressions.new_(
-                Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(
-                    0,
-                    int.class,
-                    "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(
-                        Expressions.call(null,
-                            Types.lookupMethod(TestClass.class,
-                                "nonDeterministic", int.class),
-                            ONE))))),
+            methodize(
+                Expressions.call(null,
+                    Types.lookupMethod(TestClass.class,
+                        "nonDeterministic", int.class),
+                    ONE))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
             + "      int test() {\n"
@@ -493,19 +414,11 @@ public class DeterministicTest {
   @Test public void testDeterministicClassDefaultMethod() {
     assertThat(
         optimize(
-            Expressions.new_(
-                Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(
-                    0,
-                    int.class,
-                    "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(
-                        Expressions.call(null,
-                            Types.lookupMethod(TestDeterministicClass.class,
-                                "deterministic", int.class),
-                            ONE))))),
+            methodize(
+                Expressions.call(null,
+                    Types.lookupMethod(TestDeterministicClass.class,
+                        "deterministic", int.class),
+                    ONE))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
             + "      int test() {\n"
@@ -520,19 +433,11 @@ public class DeterministicTest {
   @Test public void testDeterministicClassNonDeterministicMethod() {
     assertThat(
         optimize(
-            Expressions.new_(
-                Runnable.class,
-                Collections.<Expression>emptyList(),
-                Expressions.methodDecl(
-                    0,
-                    int.class,
-                    "test",
-                    Collections.<ParameterExpression>emptyList(),
-                    Blocks.toFunctionBlock(
-                        Expressions.call(null,
-                            Types.lookupMethod(TestDeterministicClass.class,
-                                "nonDeterministic", int.class),
-                            ONE))))),
+            methodize(
+                Expressions.call(null,
+                    Types.lookupMethod(TestDeterministicClass.class,
+                        "nonDeterministic", int.class),
+                    ONE))),
         equalTo("{\n"
             + "  return new Runnable(){\n"
             + "      int test() {\n"
@@ -541,6 +446,40 @@ public class DeterministicTest {
             + "\n"
             + "    };\n"
             + "}\n"));
+  }
+
+  /** Tests that we do not inline "x.intValue()", where "x" is an Integer that
+   * may be null. If an expression is going to be thrown, we want it to be
+   * thrown at run time, not class load time. */
+  @Test public void testSafe() {
+    String s = "{\n"
+        + "  return new Runnable(){\n"
+        + "      String test() {\n"
+        + "        return String.valueOf($L4J$C$10_20_Integer_valueOf_1_Integer_null.intValue());\n"
+        + "      }\n"
+        + "\n"
+        + "      static final boolean $L4J$C$10_20 = 10 < 20;\n"
+        + "      static final Integer $L4J$C$Integer_valueOf_1_ = Integer.valueOf(1);\n"
+        + "      static final Integer $L4J$C$10_20_Integer_valueOf_1_Integer_null = $L4J$C$10_20 ? $L4J$C$Integer_valueOf_1_ : (Integer) null;\n"
+        + "    };\n"
+        + "}\n";
+    assertThat(
+        optimize(
+            methodize(
+                Expressions.call(
+                    String.class,
+                    "valueOf",
+                    Expressions.call(
+                        Expressions.condition(
+                            Expressions.lessThan(
+                                Expressions.constant(10),
+                                Expressions.constant(20)),
+                            Expressions.call(Integer.class,
+                                "valueOf", Expressions.constant(1)),
+                            Expressions.convert_(Expressions.constant(null),
+                                Integer.class)),
+                        "intValue")))),
+        equalTo(s));
   }
 }
 

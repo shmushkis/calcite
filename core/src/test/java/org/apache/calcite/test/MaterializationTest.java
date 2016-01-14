@@ -576,7 +576,7 @@ public class MaterializationTest {
             rexBuilder.makeCall(
                 SqlStdOperatorTable.NOT,
                 i0_eq_0));
-    checkSatisfiable(e3, "NOT(=($0, 0))");
+    checkSatisfiable(e3, "<>($0, 0)");
 
     // The expression "$1 = 1".
     final RexNode i1_eq_1 =
@@ -606,7 +606,7 @@ public class MaterializationTest {
             rexBuilder.makeCall(
                 SqlStdOperatorTable.NOT,
                 i1_eq_1));
-    checkSatisfiable(e5, "AND(=($0, 0), NOT(=($1, 1)))");
+    checkSatisfiable(e5, "AND(=($0, 0), <>($1, 1))");
 
     // "$0 = 0 AND NOT ($0 = 0 AND $1 = 1)" may be satisfiable. Can simplify.
     final RexNode e6 =

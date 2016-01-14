@@ -41,6 +41,7 @@ import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -57,7 +58,6 @@ import com.google.common.collect.ImmutableList;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -163,12 +163,11 @@ public class EnumerableWindow extends Window implements EnumerableRel {
     final Result result = implementor.visitChild(this, 0, child, pref);
     Expression source_ = builder.append("source", result.block);
 
-    final List<Expression> translatedConstants =
-        new ArrayList<Expression>(constants.size());
+    final List<Expression> translatedConstants = new ArrayList<>();
     for (RexLiteral constant : constants) {
       translatedConstants.add(
           RexToLixTranslator.translateLiteral(constant, constant.getType(),
-              typeFactory, RexImpTable.NullAs.NULL));
+              typeFactory));
     }
 
     PhysType inputPhysType = result.physType;
@@ -203,8 +202,8 @@ public class EnumerableWindow extends Window implements EnumerableRel {
       final Expression collectionExpr = partitionIterator.left;
       final Expression iterator_ = partitionIterator.right;
 
-      List<AggImpState> aggs = new ArrayList<AggImpState>();
-      List<AggregateCall> aggregateCalls = group.getAggregateCalls(this);
+      final List<AggImpState> aggs = new ArrayList<>();
+      final List<AggregateCall> aggregateCalls = group.getAggregateCalls(this);
       for (int aggIdx = 0; aggIdx < aggregateCalls.size(); aggIdx++) {
         AggregateCall call = aggregateCalls.get(aggIdx);
         aggs.add(new AggImpState(aggIdx, call, true));
@@ -271,10 +270,10 @@ public class EnumerableWindow extends Window implements EnumerableRel {
               translatedConstants);
 
       final RexToLixTranslator translator =
-          RexToLixTranslator.forAggregation(typeFactory, builder4,
-              inputGetter);
+          RexToLixTranslator.forAggregation(typeFactory,
+              getCluster().getRexBuilder(), builder4, inputGetter);
 
-      final List<Expression> outputRow = new ArrayList<Expression>();
+      final List<Expression> outputRow = new ArrayList<>();
       int fieldCountWithAggResults =
         inputPhysType.getRowType().getFieldCount();
       for (int i = 0; i < fieldCountWithAggResults; i++) {
@@ -436,11 +435,9 @@ public class EnumerableWindow extends Window implements EnumerableRel {
                       result.physType.getRowType(),
                       constants,
                       argList);
-              List<RexNode> args = new ArrayList<RexNode>(
-                  inputTypes.size());
-              for (int i = 0; i < argList.size(); i++) {
-                Integer idx = argList.get(i);
-                args.add(new RexInputRef(idx, inputTypes.get(i)));
+              final List<RexNode> args = new ArrayList<>(inputTypes.size());
+              for (Pair<Integer, RelDataType> p : Pair.zip(argList, inputTypes)) {
+                args.add(new RexInputRef(p.left, p.right));
               }
               return args;
             }
@@ -452,7 +449,7 @@ public class EnumerableWindow extends Window implements EnumerableRel {
       if (!forBlock.statements.isEmpty()) {
         // For instance, row_number does not use for loop to compute the value
         Statement forAggLoop = Expressions.for_(
-            Arrays.asList(jDecl),
+            ImmutableList.of(jDecl),
             Expressions.lessThanOrEqual(jDecl.parameter, endX),
             Expressions.preIncrementAssign(jDecl.parameter),
             forBlock);
@@ -545,7 +542,7 @@ public class EnumerableWindow extends Window implements EnumerableRel {
                     translatedConstants);
 
             return RexToLixTranslator.forAggregation(typeFactory,
-                block, inputGetter);
+                getCluster().getRexBuilder(), block, inputGetter);
           }
 
           public Expression computeIndex(Expression offset,
@@ -778,8 +775,7 @@ public class EnumerableWindow extends Window implements EnumerableRel {
             .substring("ID$0$".length()) + aggName;
       }
       List<Type> state = agg.implementor.getStateType(agg.context);
-      final List<Expression> decls =
-          new ArrayList<Expression>(state.size());
+      final List<Expression> decls = new ArrayList<>(state.size());
       for (int i = 0; i < state.size(); i++) {
         Type type = state.get(i);
         ParameterExpression pe =
@@ -828,6 +824,10 @@ public class EnumerableWindow extends Window implements EnumerableRel {
 
             public List<RexNode> rexArguments() {
               return rexArguments.apply(agg);
+            }
+
+            public RexBuilder rexBuilder() {
+              return getCluster().getRexBuilder();
             }
 
             public RexNode rexFilterArgument() {
