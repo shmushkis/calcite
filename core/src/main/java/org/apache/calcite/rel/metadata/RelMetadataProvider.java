@@ -18,6 +18,9 @@ package org.apache.calcite.rel.metadata;
 
 import org.apache.calcite.rel.RelNode;
 
+import java.lang.reflect.Method;
+import java.util.Map;
+
 /**
  * RelMetadataProvider defines an interface for obtaining metadata about
  * relational expressions. This interface is weakly-typed and is not intended to
@@ -57,6 +60,8 @@ public interface RelMetadataProvider {
   <M extends Metadata> UnboundMetadata<M>
   apply(Class<? extends RelNode> relClass,
       Class<? extends M> metadataClass);
+
+  Map<Method, Object> handlers(Class<? extends Metadata> metadataClass);
 }
 
 // End RelMetadataProvider.java

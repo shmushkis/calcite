@@ -66,6 +66,10 @@ public abstract class BuiltInMetadata {
      * (whereas empty set indicates definitely no keys at all)
      */
     Set<ImmutableBitSet> getUniqueKeys(boolean ignoreNulls);
+
+    interface Handler {
+      Set<ImmutableBitSet> getUniqueKeys(RelNode r, RelMetadataQuery mq, boolean ignoreNulls);
+    }
   }
 
   /** Metadata about whether a set of columns uniquely identifies a row. */

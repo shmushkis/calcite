@@ -22,17 +22,28 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlExplainLevel;
+import org.apache.calcite.util.ControlFlowException;
 import org.apache.calcite.util.ImmutableBitSet;
 
+import com.google.common.base.Throwables;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
+import javax.annotation.Nonnull;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 /**
  * RelMetadataQuery provides a strongly-typed facade on top of
@@ -72,6 +83,23 @@ import java.util.Set;
 public abstract class RelMetadataQuery {
   /** Set of active metadata queries. */
   public final Set<List> set = new HashSet<>();
+
+  public static final HandlerFactory handlerFactory = new HandlerFactory();
+
+  private BuiltInMetadata.UniqueKeys.Handler uniqueKeysHandler =
+      initialHandler(BuiltInMetadata.UniqueKeys.Handler.class);
+
+  private static <H> H initialHandler(Class<H> handlerClass) {
+    return handlerClass.cast(
+        Proxy.newProxyInstance(RelMetadataQuery.class.getClassLoader(),
+            new Class[] {handlerClass},
+            new InvocationHandler() {
+              public Object invoke(Object proxy, Method method, Object[] args)
+                  throws Throwable {
+                throw NoHandler.INSTANCE;
+              }
+            }));
+  }
 
   //~ Methods ----------------------------------------------------------------
 
@@ -246,9 +274,7 @@ public abstract class RelMetadataQuery {
    * (whereas empty set indicates definitely no keys at all)
    */
   public Set<ImmutableBitSet> getUniqueKeys(RelNode rel) {
-    final BuiltInMetadata.UniqueKeys metadata =
-        rel.metadata(BuiltInMetadata.UniqueKeys.class, this);
-    return metadata.getUniqueKeys(false);
+    return getUniqueKeys(rel, false);
   }
 
   /**
@@ -265,6 +291,16 @@ public abstract class RelMetadataQuery {
    */
   public Set<ImmutableBitSet> getUniqueKeys(RelNode rel,
       boolean ignoreNulls) {
+    if (true) {
+      for (;;) {
+        try {
+          return uniqueKeysHandler.getUniqueKeys(rel, this, ignoreNulls);
+        } catch (NoHandler e) {
+          uniqueKeysHandler = handlerFactory.revise(rel.getClass(),
+              BuiltInMetadata.UniqueKeys.Handler.class);
+        }
+      }
+    }
     final BuiltInMetadata.UniqueKeys metadata =
         rel.metadata(BuiltInMetadata.UniqueKeys.class, this);
     return metadata.getUniqueKeys(ignoreNulls);
@@ -608,6 +644,14 @@ public abstract class RelMetadataQuery {
       result = 1.0;
     }
     return result;
+  }
+
+  private static class NoHandler extends ControlFlowException {
+    @SuppressWarnings("ThrowableInstanceNeverThrown")
+    public static final NoHandler INSTANCE = new NoHandler();
+  }
+
+  static class HandlerFactory {
   }
 }
 

@@ -27,6 +27,7 @@ import org.apache.calcite.util.Util;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -63,6 +64,7 @@ public class ReflectiveRelMetadataProvider
   //~ Instance fields --------------------------------------------------------
   private final ConcurrentMap<Class<RelNode>, UnboundMetadata> map;
   private final Class<? extends Metadata> metadataClass0;
+  private final ImmutableMap<Method, Object> handlerMap;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -71,13 +73,16 @@ public class ReflectiveRelMetadataProvider
    *
    * @param map Map
    * @param metadataClass0 Metadata class
+   * @param handlerMap Methods handled and the objects to call them on
    */
   protected ReflectiveRelMetadataProvider(
       ConcurrentMap<Class<RelNode>, UnboundMetadata> map,
-      Class<? extends Metadata> metadataClass0) {
+      Class<? extends Metadata> metadataClass0,
+      Map<Method, Object> handlerMap) {
     assert !map.isEmpty() : "are your methods named wrong?";
     this.map = map;
     this.metadataClass0 = metadataClass0;
+    this.handlerMap = ImmutableMap.copyOf(handlerMap);
   }
 
   /** Returns an implementation of {@link RelMetadataProvider} that scans for
@@ -136,16 +141,19 @@ public class ReflectiveRelMetadataProvider
       }
     }
 
-    // This needs to be a councurrent map since RelMetadataProvider are cached in static
+    // This needs to be a concurrent map since RelMetadataProvider are cached in static
     // fields, thus the map is subject to concurrent modifications later.
     // See map.put in org.apache.calcite.rel.metadata.ReflectiveRelMetadataProvider.apply(
     // java.lang.Class<? extends org.apache.calcite.rel.RelNode>)
     final ConcurrentMap<Class<RelNode>, UnboundMetadata> methodsMap = new ConcurrentHashMap<>();
+    final ImmutableMap.Builder<Method, Object> handlerBuilder =
+        ImmutableMap.builder();
     for (Class<RelNode> key : classes) {
       ImmutableNullableList.Builder<Method> builder =
           ImmutableNullableList.builder();
       for (final Method method : methods) {
         builder.add(find(handlerMap, key, method));
+        handlerBuilder.put(method, target);
       }
       final List<Method> handlerMethods = builder.build();
       final UnboundMetadata function =
@@ -224,7 +232,12 @@ public class ReflectiveRelMetadataProvider
           };
       methodsMap.put(key, function);
     }
-    return new ReflectiveRelMetadataProvider(methodsMap, metadataClass0);
+    return new ReflectiveRelMetadataProvider(methodsMap, metadataClass0,
+        handlerBuilder.build());
+  }
+
+  public Map<Method, Object> handlers(Class<? extends Metadata> metadataClass) {
+    return handlerMap;
   }
 
   /** Finds an implementation of a method for {@code relNodeClass} or its
