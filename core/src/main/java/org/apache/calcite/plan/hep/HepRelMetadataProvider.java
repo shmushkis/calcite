@@ -22,6 +22,11 @@ import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.metadata.UnboundMetadata;
 
+import com.google.common.collect.ImmutableMap;
+
+import java.lang.reflect.Method;
+import java.util.Map;
+
 /**
  * HepRelMetadataProvider implements the {@link RelMetadataProvider} interface
  * by combining metadata from the rels inside of a {@link HepRelVertex}.
@@ -45,6 +50,10 @@ class HepRelMetadataProvider implements RelMetadataProvider {
         return function.bind(rel2, mq);
       }
     };
+  }
+
+  public Map<Method, Object> handlers(Class<? extends Metadata> metadataClass) {
+    return ImmutableMap.of(); // TODO:
   }
 }
 

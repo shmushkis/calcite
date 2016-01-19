@@ -22,6 +22,11 @@ import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.metadata.UnboundMetadata;
 
+import com.google.common.collect.ImmutableMap;
+
+import java.lang.reflect.Method;
+import java.util.Map;
+
 /**
  * VolcanoRelMetadataProvider implements the {@link RelMetadataProvider}
  * interface by combining metadata from the rels making up an equivalence class.
@@ -98,6 +103,10 @@ public class VolcanoRelMetadataProvider implements RelMetadataProvider {
         return null;
       }
     };
+  }
+
+  public Map<Method, Object> handlers(Class<? extends Metadata> metadataClass) {
+    return ImmutableMap.of(); // TODO:
   }
 }
 

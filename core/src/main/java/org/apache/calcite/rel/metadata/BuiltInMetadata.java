@@ -67,8 +67,10 @@ public abstract class BuiltInMetadata {
      */
     Set<ImmutableBitSet> getUniqueKeys(boolean ignoreNulls);
 
-    interface Handler {
-      Set<ImmutableBitSet> getUniqueKeys(RelNode r, RelMetadataQuery mq, boolean ignoreNulls);
+    /** Handler API. */
+    interface Handler extends MetadataHandler<UniqueKeys> {
+      Set<ImmutableBitSet> getUniqueKeys(RelNode r, RelMetadataQuery mq,
+          boolean ignoreNulls);
     }
   }
 

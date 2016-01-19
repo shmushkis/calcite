@@ -20,6 +20,7 @@ import org.apache.calcite.rel.RelNode;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
 import java.lang.reflect.InvocationHandler;
@@ -28,6 +29,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Implementation of the {@link RelMetadataProvider}
@@ -89,6 +91,14 @@ public class ChainedRelMetadataProvider implements RelMetadataProvider {
         }
       };
     }
+  }
+
+  public Map<Method, Object> handlers(Class<? extends Metadata> metadataClass) {
+    final ImmutableMap.Builder<Method, Object> builder = ImmutableMap.builder();
+    for (RelMetadataProvider provider : providers.reverse()) {
+      builder.putAll(provider.handlers(metadataClass));
+    }
+    return builder.build();
   }
 
   /** Creates a chain. */

@@ -22,20 +22,15 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.util.ControlFlowException;
 import org.apache.calcite.util.ImmutableBitSet;
 
-import com.google.common.base.Throwables;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
-import javax.annotation.Nonnull;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -43,7 +38,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 
 /**
  * RelMetadataQuery provides a strongly-typed facade on top of
@@ -80,14 +74,21 @@ import java.util.concurrent.ExecutionException;
  * providers. Then supply that instance to the planner via the appropriate
  * plugin mechanism.
  */
-public abstract class RelMetadataQuery {
+public class RelMetadataQuery {
   /** Set of active metadata queries. */
   public final Set<List> set = new HashSet<>();
 
-  public static final HandlerFactory handlerFactory = new HandlerFactory();
+  public final JaninoRelMetadataProvider metadataProvider;
 
   private BuiltInMetadata.UniqueKeys.Handler uniqueKeysHandler =
       initialHandler(BuiltInMetadata.UniqueKeys.Handler.class);
+
+  public static final ThreadLocal<JaninoRelMetadataProvider> THREAD_PROVIDERS =
+      new ThreadLocal<>();
+
+  private RelMetadataQuery(JaninoRelMetadataProvider metadataProvider) {
+    this.metadataProvider = Preconditions.checkNotNull(metadataProvider);
+  }
 
   private static <H> H initialHandler(Class<H> handlerClass) {
     return handlerClass.cast(
@@ -108,8 +109,7 @@ public abstract class RelMetadataQuery {
    * occur while computing metadata.
    */
   public static RelMetadataQuery instance() {
-    return new RelMetadataQuery() {
-    };
+    return new RelMetadataQuery(THREAD_PROVIDERS.get());
   }
 
   /**
@@ -291,14 +291,16 @@ public abstract class RelMetadataQuery {
    */
   public Set<ImmutableBitSet> getUniqueKeys(RelNode rel,
       boolean ignoreNulls) {
-    if (true) {
-      for (;;) {
-        try {
-          return uniqueKeysHandler.getUniqueKeys(rel, this, ignoreNulls);
-        } catch (NoHandler e) {
-          uniqueKeysHandler = handlerFactory.revise(rel.getClass(),
-              BuiltInMetadata.UniqueKeys.Handler.class);
-        }
+    for (;;) {
+      if (true) {
+        break;
+      }
+      try {
+        return uniqueKeysHandler.getUniqueKeys(rel, this, ignoreNulls);
+      } catch (NoHandler e) {
+        uniqueKeysHandler = metadataProvider.revise(rel.getClass(),
+            BuiltInMetadata.UniqueKeys.class,
+            BuiltInMetadata.UniqueKeys.Handler.class);
       }
     }
     final BuiltInMetadata.UniqueKeys metadata =
@@ -646,13 +648,14 @@ public abstract class RelMetadataQuery {
     return result;
   }
 
-  private static class NoHandler extends ControlFlowException {
+  /** Exception that indicates there there should be a handler for
+   * this class but there is not. The action is probably to
+   * re-generate the handler class. */
+  public static class NoHandler extends ControlFlowException {
     @SuppressWarnings("ThrowableInstanceNeverThrown")
     public static final NoHandler INSTANCE = new NoHandler();
   }
 
-  static class HandlerFactory {
-  }
 }
 
 // End RelMetadataQuery.java
