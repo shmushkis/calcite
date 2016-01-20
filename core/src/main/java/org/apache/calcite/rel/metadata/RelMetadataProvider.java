@@ -29,6 +29,10 @@ import java.util.Map;
  *
  * <p>For background and motivation, see <a
  * href="http://wiki.eigenbase.org/RelationalExpressionMetadata">wiki</a>.
+ *
+ * <p>If your provider is not a singleton, we recommend that you implement
+ * {@link #equals(Object)} and {@link #hashCode()} methods. This makes the
+ * cache of {@link JaninoRelMetadataProvider} more effective.
  */
 public interface RelMetadataProvider {
   //~ Methods ----------------------------------------------------------------
@@ -61,7 +65,8 @@ public interface RelMetadataProvider {
   apply(Class<? extends RelNode> relClass,
       Class<? extends M> metadataClass);
 
-  Map<Method, Object> handlers(Class<? extends Metadata> metadataClass);
+  <M extends Metadata> Map<Method, MetadataHandler<M>>
+  handlers(MetadataDef<M> def);
 }
 
 // End RelMetadataProvider.java

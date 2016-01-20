@@ -53,9 +53,20 @@ public class ChainedRelMetadataProvider implements RelMetadataProvider {
   protected ChainedRelMetadataProvider(
       ImmutableList<RelMetadataProvider> providers) {
     this.providers = providers;
+    assert !providers.contains(this);
   }
 
   //~ Methods ----------------------------------------------------------------
+
+  @Override public boolean equals(Object obj) {
+    return obj == this
+        || obj instanceof ChainedRelMetadataProvider
+        && providers.equals(((ChainedRelMetadataProvider) obj).providers);
+  }
+
+  @Override public int hashCode() {
+    return providers.hashCode();
+  }
 
   public <M extends Metadata> UnboundMetadata<M>
   apply(Class<? extends RelNode> relClass,
@@ -93,10 +104,12 @@ public class ChainedRelMetadataProvider implements RelMetadataProvider {
     }
   }
 
-  public Map<Method, Object> handlers(Class<? extends Metadata> metadataClass) {
-    final ImmutableMap.Builder<Method, Object> builder = ImmutableMap.builder();
+  public <M extends Metadata> Map<Method, MetadataHandler<M>>
+  handlers(MetadataDef<M> def) {
+    final ImmutableMap.Builder<Method, MetadataHandler<M>> builder =
+        ImmutableMap.builder();
     for (RelMetadataProvider provider : providers.reverse()) {
-      builder.putAll(provider.handlers(metadataClass));
+      builder.putAll(provider.handlers(def));
     }
     return builder.build();
   }

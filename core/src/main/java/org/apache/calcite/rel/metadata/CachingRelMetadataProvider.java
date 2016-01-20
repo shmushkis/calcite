@@ -77,8 +77,9 @@ public class CachingRelMetadataProvider implements RelMetadataProvider {
     };
   }
 
-  public Map<Method, Object> handlers(Class<? extends Metadata> metadataClass) {
-    return underlyingProvider.handlers(metadataClass);
+  public <M extends Metadata> Map<Method, MetadataHandler<M>>
+  handlers(MetadataDef<M> def) {
+    return underlyingProvider.handlers(def);
   }
 
   //~ Inner Classes ----------------------------------------------------------
