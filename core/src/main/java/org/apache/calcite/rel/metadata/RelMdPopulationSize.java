@@ -49,7 +49,7 @@ public class RelMdPopulationSize
   //~ Methods ----------------------------------------------------------------
 
   public MetadataDef<BuiltInMetadata.PopulationSize> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.PopulationSize.DEF;
   }
 
   public Double getPopulationSize(Filter rel, RelMetadataQuery mq,

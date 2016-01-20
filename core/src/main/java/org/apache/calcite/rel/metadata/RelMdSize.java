@@ -74,7 +74,7 @@ public class RelMdSize implements MetadataHandler<BuiltInMetadata.Size> {
   //~ Methods ----------------------------------------------------------------
 
   public MetadataDef<BuiltInMetadata.Size> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.Size.DEF;
   }
 
   /** Catch-all implementation for

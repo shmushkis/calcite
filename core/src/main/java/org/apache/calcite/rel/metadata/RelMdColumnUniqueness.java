@@ -68,7 +68,7 @@ public class RelMdColumnUniqueness
   //~ Methods ----------------------------------------------------------------
 
   public MetadataDef<BuiltInMetadata.ColumnUniqueness> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.ColumnUniqueness.DEF;
   }
 
   public Boolean areColumnsUnique(TableScan rel, RelMetadataQuery mq,

@@ -55,7 +55,7 @@ public class RelMdPercentageOriginalRows
   private RelMdPercentageOriginalRows() {}
 
   public MetadataDef<BuiltInMetadata.PercentageOriginalRows> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.PercentageOriginalRows.DEF;
   }
 
   public Double getPercentageOriginalRows(Aggregate rel, RelMetadataQuery mq) {

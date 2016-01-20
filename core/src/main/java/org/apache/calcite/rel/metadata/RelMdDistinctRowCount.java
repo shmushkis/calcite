@@ -58,7 +58,7 @@ public class RelMdDistinctRowCount
   //~ Methods ----------------------------------------------------------------
 
   public MetadataDef<BuiltInMetadata.DistinctRowCount> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.DistinctRowCount.DEF;
   }
 
   /** Catch-all implementation for

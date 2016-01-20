@@ -52,7 +52,7 @@ public class RelMdSelectivity
   //~ Methods ----------------------------------------------------------------
 
   public MetadataDef<BuiltInMetadata.Selectivity> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.Selectivity.DEF;
   }
 
   public Double getSelectivity(Union rel, RelMetadataQuery mq,

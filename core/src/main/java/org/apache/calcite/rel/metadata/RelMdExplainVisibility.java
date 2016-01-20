@@ -38,7 +38,7 @@ public class RelMdExplainVisibility
   //~ Methods ----------------------------------------------------------------
 
   public MetadataDef<BuiltInMetadata.ExplainVisibility> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.ExplainVisibility.DEF;
   }
 
   /** Catch-all implementation for

@@ -123,7 +123,7 @@ public class RelMdPredicates
   private static final List<RexNode> EMPTY_LIST = ImmutableList.of();
 
   public MetadataDef<BuiltInMetadata.Predicates> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.Predicates.DEF;
   }
 
   /** Catch-all implementation for

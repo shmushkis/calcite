@@ -59,7 +59,7 @@ public class RelMdDistribution
   //~ Methods ----------------------------------------------------------------
 
   public MetadataDef<BuiltInMetadata.Distribution> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.Distribution.DEF;
   }
 
   /** Fallback method to deduce distribution for any relational expression not

@@ -53,7 +53,7 @@ public class RelMdRowCount
   //~ Methods ----------------------------------------------------------------
 
   public MetadataDef<BuiltInMetadata.RowCount> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.RowCount.DEF;
   }
 
   /** Catch-all implementation for

@@ -46,7 +46,7 @@ public class RelMdParallelism
   //~ Methods ----------------------------------------------------------------
 
   public MetadataDef<BuiltInMetadata.Parallelism> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.Parallelism.DEF;
   }
 
   /** Catch-all implementation for

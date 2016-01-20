@@ -55,7 +55,7 @@ public class RelMdColumnOrigins
   //~ Methods ----------------------------------------------------------------
 
   public MetadataDef<BuiltInMetadata.ColumnOrigin> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.ColumnOrigin.DEF;
   }
 
   public Set<RelColumnOrigin> getColumnOrigins(Aggregate rel,

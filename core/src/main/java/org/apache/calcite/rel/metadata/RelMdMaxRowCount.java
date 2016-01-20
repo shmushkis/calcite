@@ -47,7 +47,7 @@ public class RelMdMaxRowCount
   //~ Methods ----------------------------------------------------------------
 
   public MetadataDef<BuiltInMetadata.MaxRowCount> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.MaxRowCount.DEF;
   }
 
   public Double getMaxRowCount(Union rel, RelMetadataQuery mq) {

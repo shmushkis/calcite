@@ -43,7 +43,7 @@ public class RelMdMemory implements MetadataHandler<BuiltInMetadata.Memory> {
   //~ Methods ----------------------------------------------------------------
 
   public MetadataDef<BuiltInMetadata.Memory> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.Memory.DEF;
   }
 
   /** Catch-all implementation for

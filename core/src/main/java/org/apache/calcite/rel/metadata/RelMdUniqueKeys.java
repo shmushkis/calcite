@@ -56,7 +56,7 @@ public class RelMdUniqueKeys
   //~ Methods ----------------------------------------------------------------
 
   public MetadataDef<BuiltInMetadata.UniqueKeys> getDef() {
-    throw new UnsupportedOperationException(); // TODO: return DEF
+    return BuiltInMetadata.UniqueKeys.DEF;
   }
 
   public Set<ImmutableBitSet> getUniqueKeys(Filter rel, RelMetadataQuery mq,
