@@ -31,8 +31,8 @@ import java.util.Map;
  * href="http://wiki.eigenbase.org/RelationalExpressionMetadata">wiki</a>.
  *
  * <p>If your provider is not a singleton, we recommend that you implement
- * {@link #equals(Object)} and {@link #hashCode()} methods. This makes the
- * cache of {@link JaninoRelMetadataProvider} more effective.
+ * {@link Object#equals(Object)} and {@link Object#hashCode()} methods. This
+ * makes the cache of {@link JaninoRelMetadataProvider} more effective.
  */
 public interface RelMetadataProvider {
   //~ Methods ----------------------------------------------------------------
