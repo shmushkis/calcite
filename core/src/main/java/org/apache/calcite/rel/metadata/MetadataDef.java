@@ -16,9 +16,13 @@
  */
 package org.apache.calcite.rel.metadata;
 
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.util.Pair;
+
 import com.google.common.collect.ImmutableList;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -27,29 +31,33 @@ import java.util.List;
  * @param <M> Kind of metadata
  */
 public class MetadataDef<M extends Metadata> {
-  final Class<M> metadataClass;
-  final Class<? extends MetadataHandler<M>> handlerClass;
-  final ImmutableList<Method> methods;
+  public final Class<M> metadataClass;
+  public final Class<? extends MetadataHandler<M>> handlerClass;
+  public final ImmutableList<Method> methods;
 
   private MetadataDef(Class<M> metadataClass,
       Class<? extends MetadataHandler<M>> handlerClass, Method... methods) {
     this.metadataClass = metadataClass;
     this.handlerClass = handlerClass;
     this.methods = ImmutableList.copyOf(methods);
+    final Method[] handlerMethods = handlerClass.getDeclaredMethods();
+
+    // Handler must have the same methods as Metadata, each method having
+    // additional "subclass-of-RelNode, RelMetadataQuery" parameters.
+    assert handlerMethods.length == methods.length;
+    for (Pair<Method, Method> pair : Pair.zip(methods, handlerMethods)) {
+      final List<Class<?>> leftTypes =
+          Arrays.asList(pair.left.getParameterTypes());
+      final List<Class<?>> rightTypes =
+          Arrays.asList(pair.right.getParameterTypes());
+      assert leftTypes.size() + 2 == rightTypes.size();
+      assert RelNode.class.isAssignableFrom(rightTypes.get(0));
+      assert RelMetadataQuery.class == rightTypes.get(1);
+      assert leftTypes.equals(rightTypes.subList(2, rightTypes.size()));
+    }
   }
 
-  public Class<M> getMetadataClass() {
-    return metadataClass;
-  }
-
-  public Class<? extends MetadataHandler<M>> getHandlerClass() {
-    return handlerClass;
-  }
-
-  public List<Method> getMethods() {
-    return methods;
-  }
-
+  /** Creates a {@link org.apache.calcite.rel.metadata.MetadataDef}. */
   public static <M extends Metadata> MetadataDef<M> of(Class<M> metadataClass,
       Class<? extends MetadataHandler<M>> handlerClass, Method... methods) {
     return new MetadataDef<>(metadataClass, handlerClass, methods);

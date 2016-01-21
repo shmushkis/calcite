@@ -25,6 +25,7 @@ import org.apache.calcite.interpreter.JaninoRexCompiler;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.ClassDeclaration;
 import org.apache.calcite.linq4j.tree.MemberDeclaration;
+import org.apache.calcite.linq4j.tree.Primitive;
 import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.plan.volcano.AbstractConverter;
 import org.apache.calcite.plan.volcano.RelSubset;
@@ -50,6 +51,7 @@ import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.logical.LogicalWindow;
 import org.apache.calcite.rel.stream.LogicalChi;
 import org.apache.calcite.rel.stream.LogicalDelta;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ControlFlowException;
 import org.apache.calcite.util.Pair;
 
@@ -58,7 +60,9 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 
 import org.codehaus.commons.compiler.CompileException;
 import org.codehaus.commons.compiler.CompilerFactoryFactory;
@@ -73,6 +77,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -84,10 +89,6 @@ import javax.annotation.Nonnull;
 /**
  * Implementation of the {@link RelMetadataProvider} interface that generates
  * a class that dispatches to the underlying providers.
- *
- * <p>TODO:
- * 1. Check that handler has the same methods as the provider but with just
- * 2 fewer parameters</p>
  */
 public class JaninoRelMetadataProvider implements RelMetadataProvider {
   private final RelMetadataProvider provider;
@@ -113,6 +114,8 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
             }
           });
 
+  // Pre-register the most common relational operators, to reduce the number of
+  // times we re-generate.
   static {
     DEFAULT.register(
         Arrays.asList(RelNode.class,
@@ -190,7 +193,7 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
       ImmutableList<Class<? extends RelNode>> relClasses) {
     final StringBuilder buff = new StringBuilder();
     final String name =
-        "GeneratedMetadataHandler_" + def.getMetadataClass().getSimpleName();
+        "GeneratedMetadataHandler_" + def.metadataClass.getSimpleName();
     final Set<MetadataHandler> providerSet = new HashSet<>();
     final List<Pair<String, MetadataHandler>> providerList = new ArrayList<>();
     //noinspection unchecked
@@ -211,6 +214,7 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
     buff.append("  public ").append(name).append("(java.util.List relClasses");
     for (Pair<String, MetadataHandler> pair : providerList) {
       buff.append(",\n")
+          .append("      ")
           .append(pair.right.getClass().getName())
           .append(' ')
           .append(pair.left);
@@ -225,28 +229,35 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
     buff.append("  }\n")
         .append("  public org.apache.calcite.rel.metadata.MetadataDef getDef() {\n")
         .append("    return ")
-        .append(def.getMetadataClass().getName())
+        .append(def.metadataClass.getName())
         .append(".DEF;\n")
         .append("  }\n");
-    for (Method method : def.methods) {
+    for (Ord<Method> method : Ord.zip(def.methods)) {
       buff.append("  public ")
-          .append(method.getReturnType().getName())
+          .append(method.e.getReturnType().getName())
           .append(" ")
-          .append(method.getName())
+          .append(method.e.getName())
           .append("(\n")
           .append("      org.apache.calcite.rel.RelNode r,\n")
           .append("      org.apache.calcite.rel.metadata.RelMetadataQuery mq");
-      paramList(buff, method)
+      paramList(buff, method.e)
           .append(") {\n");
       buff.append("    final java.util.List key = ")
           .append(
-              (method.getParameterTypes().length < 2
-                  ? org.apache.calcite.runtime.FlatLists.class
-                  : ImmutableList.class).getName())
+              (method.e.getParameterTypes().length < 4
+              ? org.apache.calcite.runtime.FlatLists.class
+              : ImmutableList.class).getName())
           .append(".of(")
-          .append(def.getMetadataClass().getName())
-          .append(".DEF, r");
-      argList(buff, method)
+          .append(def.metadataClass.getName());
+      if (method.i == 0) {
+        buff.append(".DEF");
+      } else {
+        buff.append(".DEF.methods.get(")
+            .append(method.i)
+            .append(")");
+      }
+      buff.append(", r");
+      safeArgList(buff, method.e)
           .append(");\n")
           .append("    if (!mq.set.add(key)) {\n")
           .append("      throw ")
@@ -255,32 +266,36 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
           .append("    }\n")
           .append("    try {\n")
           .append("      switch (relClasses.indexOf(r.getClass())) {\n");
+
+      // Build a list of clauses, grouping clauses that have the same action.
+      final Multimap<String, Integer> clauses = LinkedHashMultimap.create();
+      final StringBuilder buf2 = new StringBuilder();
       for (Ord<Class<? extends RelNode>> relClass : Ord.zip(relClasses)) {
-        buff.append("      case ").append(relClass.i).append(":\n");
         if (relClass.e == HepRelVertex.class) {
-          buff.append("      return ")
-              .append(method.getName())
+          buf2.append("        return ")
+              .append(method.e.getName())
               .append("(((")
               .append(relClass.e.getName())
               .append(") r).getCurrentRel(), mq");
-          argList(buff, method)
+          argList(buf2, method.e)
               .append(");\n");
-          continue;
+        } else {
+          final Method handler = space.find(relClass.e, method.e);
+          final String v = findProvider(providerList, handler.getDeclaringClass());
+          buf2.append("        return ")
+              .append(v)
+              .append(".")
+              .append(method.e.getName())
+              .append("((")
+              .append(handler.getParameterTypes()[0].getName())
+              .append(") r, mq");
+          argList(buf2, method.e)
+              .append(");\n");
         }
-        final Method handler = space.find(relClass.e, method);
-        final String v = findProvider(providerList, handler.getDeclaringClass());
-        buff.append("        return ")
-            .append(v)
-            .append(".")
-            .append(method.getName())
-            .append("((")
-            .append(relClass.e.getName())
-            .append(") r, mq");
-        argList(buff, method)
-            .append(");\n");
+        clauses.put(buf2.toString(), relClass.i);
+        buf2.setLength(0);
       }
-      buff.append("      default:\n")
-          .append("        throw new ")
+      buf2.append("        throw new ")
           .append(NoHandler.class.getName())
           .append("(r.getClass());\n")
           .append("      }\n")
@@ -288,6 +303,17 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
           .append("      mq.set.remove(key);\n")
           .append("    }\n")
           .append("  }\n");
+      clauses.put(buf2.toString(), -1);
+      for (Map.Entry<String, Collection<Integer>> pair : clauses.asMap().entrySet()) {
+        if (pair.getValue().contains(relClasses.indexOf(RelNode.class))) {
+          buff.append("      default:\n");
+        } else {
+          for (Integer integer : pair.getValue()) {
+            buff.append("      case ").append(integer).append(":\n");
+          }
+        }
+        buff.append(pair.getKey());
+      }
     }
     ClassDeclaration decl = new ClassDeclaration(0, name, Object.class,
         ImmutableList.<Type>of(), ImmutableList.<MemberDeclaration>of());
@@ -313,19 +339,37 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
   }
 
   /** Returns e.g. ", ignoreNulls". */
-  private static StringBuilder argList(StringBuilder b, Method method) {
+  private static StringBuilder argList(StringBuilder buff, Method method) {
     for (Ord<Class<?>> t : Ord.zip(method.getParameterTypes())) {
-      b.append(", a").append(t.i);
+      buff.append(", a").append(t.i);
     }
-    return b;
+    return buff;
+  }
+
+  /** Returns e.g. ", ignoreNulls". */
+  private static StringBuilder safeArgList(StringBuilder buff, Method method) {
+    for (Ord<Class<?>> t : Ord.zip(method.getParameterTypes())) {
+      if (Primitive.is(t.e)) {
+        buff.append(", a").append(t.i);
+      } else if (RexNode.class.isAssignableFrom(t.e)) {
+        // For RexNode, convert to string, because equals does not look deep.
+        //   a1 == null ? "" : a1.toString()
+        buff.append(", a").append(t.i).append(" == null ? \"\" : a")
+            .append(t.i).append(".toString()");
+      } else {
+        buff.append(", ") .append(NullSentinel.class.getName())
+            .append(".mask(a").append(t.i).append(")");
+      }
+    }
+    return buff;
   }
 
   /** Returns e.g. ",\n boolean ignoreNulls". */
-  private static StringBuilder paramList(StringBuilder b, Method method) {
+  private static StringBuilder paramList(StringBuilder buff, Method method) {
     for (Ord<Class<?>> t : Ord.zip(method.getParameterTypes())) {
-      b.append(",\n      ").append(t.e.getName()).append(" a").append(t.i);
+      buff.append(",\n      ").append(t.e.getName()).append(" a").append(t.i);
     }
-    return b;
+    return buff;
   }
 
   static <M extends Metadata> MetadataHandler<M>
@@ -340,7 +384,7 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
     }
     final IClassBodyEvaluator cbe = compilerFactory.newClassBodyEvaluator();
     cbe.setClassName(expr.name);
-    cbe.setImplementedInterfaces(new Class[]{def.getHandlerClass()});
+    cbe.setImplementedInterfaces(new Class[]{def.handlerClass});
     cbe.setParentClassLoader(JaninoRexCompiler.class.getClassLoader());
     if (CalcitePrepareImpl.DEBUG) {
       // Add line numbers to the generated janino class
@@ -357,7 +401,7 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
         | InvocationTargetException e) {
       throw Throwables.propagate(e);
     }
-    return def.getHandlerClass().cast(o);
+    return def.handlerClass.cast(o);
   }
 
   synchronized <M extends Metadata, H extends MetadataHandler<M>> H

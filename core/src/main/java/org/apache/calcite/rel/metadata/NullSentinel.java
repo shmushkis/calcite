@@ -17,18 +17,17 @@
 package org.apache.calcite.rel.metadata;
 
 /** Placeholder for null values. */
-// package-private
-enum NullSentinel {
+public enum NullSentinel {
   INSTANCE;
 
-  static Comparable mask(Comparable value) {
+  public static Comparable mask(Comparable value) {
     if (value == null) {
       return INSTANCE;
     }
     return value;
   }
 
-  static Object mask(Object value) {
+  public static Object mask(Object value) {
     if (value == null) {
       return INSTANCE;
     }
