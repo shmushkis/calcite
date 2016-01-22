@@ -60,6 +60,10 @@ public class RelMdColumnUniqueness {
       ReflectiveRelMetadataProvider.reflectiveSource(
           BuiltInMethod.COLUMN_UNIQUENESS.method, new RelMdColumnUniqueness());
 
+  public static final RelMetadataProvider SOURCE2 =
+      MethodHandleMetadataProvider.source(
+          BuiltInMethod.COLUMN_UNIQUENESS.method, new RelMdColumnUniqueness());
+
   //~ Constructors -----------------------------------------------------------
 
   private RelMdColumnUniqueness() {}

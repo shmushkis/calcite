@@ -17,6 +17,7 @@
 package org.apache.calcite.rel.metadata;
 
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.logical.LogicalAggregate;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -56,8 +57,12 @@ public class ChainedRelMetadataProvider implements RelMetadataProvider {
   //~ Methods ----------------------------------------------------------------
 
   public <M extends Metadata> UnboundMetadata<M>
-  apply(Class<? extends RelNode> relClass,
+  apply(final Class<? extends RelNode> relClass,
       final Class<? extends M> metadataClass) {
+    if (relClass == LogicalAggregate.class
+        && metadataClass == BuiltInMetadata.ColumnUniqueness.class) {
+      return RelMdColumnUniqueness.SOURCE2.apply(relClass, metadataClass);
+    }
     final List<UnboundMetadata<M>> functions = new ArrayList<>();
     for (RelMetadataProvider provider : providers) {
       final UnboundMetadata<M> function =

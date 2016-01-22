@@ -136,7 +136,7 @@ public class ReflectiveRelMetadataProvider
       }
     }
 
-    // This needs to be a councurrent map since RelMetadataProvider are cached in static
+    // This needs to be a concurrent map since RelMetadataProvider are cached in static
     // fields, thus the map is subject to concurrent modifications later.
     // See map.put in org.apache.calcite.rel.metadata.ReflectiveRelMetadataProvider.apply(
     // java.lang.Class<? extends org.apache.calcite.rel.RelNode>)
@@ -148,80 +148,14 @@ public class ReflectiveRelMetadataProvider
         builder.add(find(handlerMap, key, method));
       }
       final List<Method> handlerMethods = builder.build();
-      final UnboundMetadata function =
-          new UnboundMetadata() {
-            public Metadata bind(final RelNode rel,
-                final RelMetadataQuery mq) {
-              return (Metadata) Proxy.newProxyInstance(
-                  metadataClass0.getClassLoader(),
-                  new Class[]{metadataClass0},
-                  new InvocationHandler() {
-                    public Object invoke(Object proxy, Method method,
-                        Object[] args) throws Throwable {
-                      // Suppose we are an implementation of Selectivity
-                      // that wraps "filter", a LogicalFilter. Then we
-                      // implement
-                      //   Selectivity.selectivity(rex)
-                      // by calling method
-                      //   new SelectivityImpl().selectivity(filter, rex)
-                      if (method.equals(
-                          BuiltInMethod.METADATA_REL.method)) {
-                        return rel;
-                      }
-                      if (method.equals(
-                          BuiltInMethod.OBJECT_TO_STRING.method)) {
-                        return metadataClass0.getSimpleName() + "(" + rel
-                            + ")";
-                      }
-                      int i = methods.indexOf(method);
-                      if (i < 0) {
-                        throw new AssertionError("not handled: " + method
-                            + " for " + rel);
-                      }
-                      final Method handlerMethod = handlerMethods.get(i);
-                      if (handlerMethod == null) {
-                        throw new AssertionError("not handled: " + method
-                            + " for " + rel);
-                      }
-                      final Object[] args1;
-                      final List key;
-                      if (args == null) {
-                        args1 = new Object[]{rel, mq};
-                        key = FlatLists.of(rel, method);
-                      } else {
-                        args1 = new Object[args.length + 2];
-                        args1[0] = rel;
-                        args1[1] = mq;
-                        System.arraycopy(args, 0, args1, 2, args.length);
-
-                        final Object[] args2 = args1.clone();
-                        args2[1] = method; // replace RelMetadataQuery with method
-                        for (int j = 0; j < args2.length; j++) {
-                          if (args2[j] == null) {
-                            args2[j] = NullSentinel.INSTANCE;
-                          } else if (args2[j] instanceof RexNode) {
-                            // Can't use RexNode.equals - it is not deep
-                            args2[j] = args2[j].toString();
-                          }
-                        }
-                        key = FlatLists.copyOf(args2);
-                      }
-                      if (!mq.set.add(key)) {
-                        throw CyclicMetadataException.INSTANCE;
-                      }
-                      try {
-                        return handlerMethod.invoke(target, args1);
-                      } catch (InvocationTargetException
-                          | UndeclaredThrowableException e) {
-                        Throwables.propagateIfPossible(e.getCause());
-                        throw e;
-                      } finally {
-                        mq.set.remove(key);
-                      }
-                    }
-                  });
-            }
-          };
+      final UnboundMetadata function;
+      if (true) {
+        function = new MethodHandleMetadataProvider.MethodHandleUnboundMetadata(metadataClass0, methods,
+            handlerMethods, target);
+      } else {
+        function = new ReflectiveUnboundMetadata(metadataClass0, methods,
+            handlerMethods, target);
+      }
       methodsMap.put(key, function);
     }
     return new ReflectiveRelMetadataProvider(methodsMap, metadataClass0);
@@ -316,6 +250,96 @@ public class ReflectiveRelMetadataProvider
       } else {
         return null;
       }
+    }
+  }
+
+  /** Implementation of {@link UnboundMetadata} that dispatches via reflection. */
+  private static class ReflectiveUnboundMetadata implements UnboundMetadata {
+    private final Class<Metadata> metadataClass0;
+    private final ImmutableList<Method> methods;
+    private final List<Method> handlerMethods;
+    private final Object target;
+
+    public ReflectiveUnboundMetadata(Class<Metadata> metadataClass0,
+        ImmutableList<Method> methods,
+        List<Method> handlerMethods,
+        Object target) {
+      this.metadataClass0 = metadataClass0;
+      this.methods = methods;
+      this.handlerMethods = handlerMethods;
+      this.target = target;
+    }
+
+    public Metadata bind(final RelNode rel,
+        final RelMetadataQuery mq) {
+      return (Metadata) Proxy.newProxyInstance(
+          metadataClass0.getClassLoader(),
+          new Class[]{metadataClass0},
+          new InvocationHandler() {
+            public Object invoke(Object proxy, Method method,
+                Object[] args) throws Throwable {
+              // Suppose we are an implementation of Selectivity
+              // that wraps "filter", a LogicalFilter. Then we
+              // implement
+              //   Selectivity.selectivity(rex)
+              // by calling method
+              //   new SelectivityImpl().selectivity(filter, rex)
+              if (method.equals(
+                  BuiltInMethod.METADATA_REL.method)) {
+                return rel;
+              }
+              if (method.equals(
+                  BuiltInMethod.OBJECT_TO_STRING.method)) {
+                return metadataClass0.getSimpleName() + "(" + rel
+                    + ")";
+              }
+              int i = methods.indexOf(method);
+              if (i < 0) {
+                throw new AssertionError("not handled: " + method
+                    + " for " + rel);
+              }
+              final Method handlerMethod = handlerMethods.get(i);
+              if (handlerMethod == null) {
+                throw new AssertionError("not handled: " + method
+                    + " for " + rel);
+              }
+              final Object[] args1;
+              final List key1;
+              if (args == null) {
+                args1 = new Object[]{rel, mq};
+                key1 = FlatLists.of(rel, method);
+              } else {
+                args1 = new Object[args.length + 2];
+                args1[0] = rel;
+                args1[1] = mq;
+                System.arraycopy(args, 0, args1, 2, args.length);
+
+                final Object[] args2 = args1.clone();
+                args2[1] = method; // replace RelMetadataQuery with method
+                for (int j = 0; j < args2.length; j++) {
+                  if (args2[j] == null) {
+                    args2[j] = NullSentinel.INSTANCE;
+                  } else if (args2[j] instanceof RexNode) {
+                    // Can't use RexNode.equals - it is not deep
+                    args2[j] = args2[j].toString();
+                  }
+                }
+                key1 = FlatLists.copyOf(args2);
+              }
+              if (!mq.set.add(key1)) {
+                throw CyclicMetadataException.INSTANCE;
+              }
+              try {
+                return handlerMethod.invoke(target, args1);
+              } catch (InvocationTargetException
+                  | UndeclaredThrowableException e) {
+                Throwables.propagateIfPossible(e.getCause());
+                throw e;
+              } finally {
+                mq.set.remove(key1);
+              }
+            }
+          });
     }
   }
 }
