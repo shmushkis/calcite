@@ -15,9 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-!use post
-values 1;
-EXPR$0
-1
+!use scott
+select *
+from "scott".emp as e
+join "scott".dept as d using (deptno)
+where d.dname = (
+  select max(dname)
+  from "scott".dept as d2
+  where d2.deptno = d.deptno);
 !ok
 # End dummy.iq

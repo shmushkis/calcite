@@ -319,4 +319,26 @@ where e.job not in (
 !plan
 !}
 
+# [CALCITE-864] Incorrect rowType of correlate variable when correlated
+# sub-query has its left relation as a join
+select *
+from "scott".emp as e
+join "scott".dept as d using (deptno)
+where sal = (
+  select max(sal)
+  from "scott".emp as e2
+  join "scott".dept as d2 using (deptno)
+  where d2.deptno = d.deptno);
+!ok
+
+# Simpler test case for [CALCITE-864]
+select *
+from "scott".emp as e
+join "scott".dept as d using (deptno)
+where d.dname = (
+  select max(dname)
+  from "scott".dept as d2
+  where d2.deptno = d.deptno);
+!ok
+
 # End subquery.iq

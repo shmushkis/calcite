@@ -367,6 +367,7 @@ public class Programs {
       final CalciteConnectionConfig config =
           planner.getContext().unwrap(CalciteConnectionConfig.class);
       if (config != null && config.forceDecorrelate()) {
+        System.out.println("Before decorrelate:\n" + RelOptUtil.toString(rel));
         return RelDecorrelator.decorrelateQuery(rel);
       }
       return rel;
