@@ -18,7 +18,12 @@ package org.apache.calcite.rel.metadata;
 
 /** Placeholder for null values. */
 public enum NullSentinel {
-  INSTANCE;
+  /** Placeholder for a null value. */
+  INSTANCE,
+
+  /** Placeholder that means that a request for metadata is already active,
+   * therefore this request forms a cycle. */
+  ACTIVE;
 
   public static Comparable mask(Comparable value) {
     if (value == null) {

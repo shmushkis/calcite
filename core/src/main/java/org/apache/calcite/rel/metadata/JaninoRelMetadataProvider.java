@@ -259,20 +259,57 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
       buff.append(", r");
       safeArgList(buff, method.e)
           .append(");\n")
-          .append("    if (!mq.set.add(key)) {\n")
-          .append("      throw ")
+          .append("    final Object v = mq.map.get(key);\n")
+          .append("    if (v != null) {\n")
+          .append("      if (v == ")
+          .append(NullSentinel.class.getName())
+          .append(".ACTIVE) {\n")
+          .append("        throw ")
           .append(CyclicMetadataException.class.getName())
           .append(".INSTANCE;\n")
+          .append("      }\n")
+          .append("      return (")
+          .append(method.e.getReturnType().getName())
+          .append(") v;\n")
           .append("    }\n")
+          .append("    mq.map.put(key,")
+          .append(NullSentinel.class.getName())
+          .append(".ACTIVE);\n")
           .append("    try {\n")
-          .append("      switch (relClasses.indexOf(r.getClass())) {\n");
+          .append("      final ")
+          .append(method.e.getReturnType().getName())
+          .append(" x = ")
+          .append(method.e.getName())
+          .append("_(r, mq");
+      argList(buff, method.e)
+          .append(");\n")
+          .append("      mq.map.put(key, x);\n")
+          .append("      return x;\n")
+          .append("    } catch (")
+          .append(NoHandler.class.getName())
+          .append(" e) {\n")
+          .append("      mq.map.remove(key);\n")
+          .append("      throw e;\n")
+          .append("    }\n")
+          .append("  }\n")
+          .append("\n")
+          .append("  private ")
+          .append(method.e.getReturnType().getName())
+          .append(" ")
+          .append(method.e.getName())
+          .append("_(\n")
+          .append("      org.apache.calcite.rel.RelNode r,\n")
+          .append("      org.apache.calcite.rel.metadata.RelMetadataQuery mq");
+      paramList(buff, method.e)
+          .append(") {\n");
+      buff.append("    switch (relClasses.indexOf(r.getClass())) {\n");
 
       // Build a list of clauses, grouping clauses that have the same action.
       final Multimap<String, Integer> clauses = LinkedHashMultimap.create();
       final StringBuilder buf2 = new StringBuilder();
       for (Ord<Class<? extends RelNode>> relClass : Ord.zip(relClasses)) {
         if (relClass.e == HepRelVertex.class) {
-          buf2.append("        return ")
+          buf2.append("      return ")
               .append(method.e.getName())
               .append("(((")
               .append(relClass.e.getName())
@@ -282,7 +319,7 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
         } else {
           final Method handler = space.find(relClass.e, method.e);
           final String v = findProvider(providerList, handler.getDeclaringClass());
-          buf2.append("        return ")
+          buf2.append("      return ")
               .append(v)
               .append(".")
               .append(method.e.getName())
@@ -295,21 +332,18 @@ public class JaninoRelMetadataProvider implements RelMetadataProvider {
         clauses.put(buf2.toString(), relClass.i);
         buf2.setLength(0);
       }
-      buf2.append("        throw new ")
+      buf2.append("      throw new ")
           .append(NoHandler.class.getName())
           .append("(r.getClass());\n")
-          .append("      }\n")
-          .append("    } finally {\n")
-          .append("      mq.set.remove(key);\n")
           .append("    }\n")
           .append("  }\n");
       clauses.put(buf2.toString(), -1);
       for (Map.Entry<String, Collection<Integer>> pair : clauses.asMap().entrySet()) {
         if (pair.getValue().contains(relClasses.indexOf(RelNode.class))) {
-          buff.append("      default:\n");
+          buff.append("    default:\n");
         } else {
           for (Integer integer : pair.getValue()) {
-            buff.append("      case ").append(integer).append(":\n");
+            buff.append("    case ").append(integer).append(":\n");
           }
         }
         buff.append(pair.getKey());
