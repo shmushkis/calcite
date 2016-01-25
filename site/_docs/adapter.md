@@ -50,7 +50,7 @@ A driver allows you to connect to Calcite from your application.
 * <a href="{{ site.apiRoot }}/org/apache/calcite/jdbc/package-summary.html">JDBC driver</a>
 
 The JDBC driver is powered by
-[Avatica]({{ site.baseurl }}/docs/avatica_overvew.html).
+[Avatica]({{ site.baseurl }}/docs/avatica_overview.html).
 Connections can be local or remote (JSON over HTTP or Protobuf over HTTP).
 
 The basic form of the JDBC connect string is
