@@ -46,6 +46,8 @@ import java.util.Set;
  * targeted at any particular engine or calling convention.
  */
 public final class LogicalProject extends Project {
+  private final Set<CorrelationId> variablesSet;
+
   //~ Constructors -----------------------------------------------------------
 
   /**
@@ -64,26 +66,39 @@ public final class LogicalProject extends Project {
       RelTraitSet traitSet,
       RelNode input,
       List<? extends RexNode> projects,
-      RelDataType rowType) {
+      RelDataType rowType,
+      Set<CorrelationId> variablesSet) {
     super(cluster, traitSet, input, projects, rowType);
+    this.variablesSet = ImmutableSet.copyOf(variablesSet);
     assert traitSet.containsIfApplicable(Convention.NONE);
+  }
+
+  @Deprecated // to be removed before 2.0
+  public LogicalProject(
+      RelOptCluster cluster,
+      RelTraitSet traitSet,
+      RelNode input,
+      List<? extends RexNode> projects,
+      RelDataType rowType) {
+    this(cluster, traitSet, input, projects, rowType,
+        ImmutableSet.<CorrelationId>of());
   }
 
   @Deprecated // to be removed before 2.0
   public LogicalProject(RelOptCluster cluster, RelTraitSet traitSet,
       RelNode input, List<? extends RexNode> projects, RelDataType rowType,
       int flags) {
-    this(cluster, traitSet, input, projects, rowType);
+    this(cluster, traitSet, input, projects, rowType,
+        ImmutableSet.<CorrelationId>of());
     Util.discard(flags);
   }
 
   @Deprecated // to be removed before 2.0
   public LogicalProject(RelOptCluster cluster, RelNode input,
       List<RexNode> projects, List<String> fieldNames, int flags) {
-    this(cluster, cluster.traitSetOf(RelCollations.EMPTY),
-        input, projects,
+    this(cluster, cluster.traitSetOf(RelCollations.EMPTY), input, projects,
         RexUtil.createStructType(cluster.getTypeFactory(), projects,
-            fieldNames));
+            fieldNames), ImmutableSet.<CorrelationId>of());
     Util.discard(flags);
   }
 
@@ -92,6 +107,7 @@ public final class LogicalProject extends Project {
    */
   public LogicalProject(RelInput input) {
     super(input);
+    this.variablesSet = ImmutableSet.of();
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -140,12 +156,18 @@ public final class LogicalProject extends Project {
                     return RelMdCollation.project(mq, input, projects);
                   }
                 });
-    return new LogicalProject(cluster, traitSet, input, projects, rowType);
+    return new LogicalProject(cluster, traitSet, input, projects, rowType,
+        variablesSet);
   }
 
   @Override public LogicalProject copy(RelTraitSet traitSet, RelNode input,
       List<RexNode> projects, RelDataType rowType) {
-    return new LogicalProject(getCluster(), traitSet, input, projects, rowType);
+    return new LogicalProject(getCluster(), traitSet, input, projects, rowType,
+        variablesSet);
+  }
+
+  @Override public Set<CorrelationId> getVariablesSet() {
+    return variablesSet;
   }
 
   @Override public RelNode accept(RelShuttle shuttle) {

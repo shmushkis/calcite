@@ -15,9 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-!use post
-values 1;
-EXPR$0
-1
+!set outputformat mysql
+!use scott
+
+select deptno, (select min(empno) from "scott".emp where deptno = dept.deptno) as x from "scott".dept;
++--------+------+
+| DEPTNO | X    |
++--------+------+
+|     10 | 7782 |
+|     20 | 7369 |
+|     30 | 7499 |
+|     40 |      |
++--------+------+
+(4 rows)
+
 !ok
 # End dummy.iq
