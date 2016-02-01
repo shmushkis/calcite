@@ -31,7 +31,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /** Enumerator that reads from a Cassandra column family. */
-class CassandraEnumerator implements Enumerator<Object[]> {
+class CassandraEnumerator implements Enumerator<Object> {
   private Iterator<Row> iterator;
   private Row current;
   private List<RelDataTypeField> fieldTypes;
@@ -49,7 +49,7 @@ class CassandraEnumerator implements Enumerator<Object[]> {
     this.fieldTypes = protoRowType.apply(typeFactory).getFieldList();
   }
 
-  public Object[] current() {
+  public Object current() {
     Object[] row = new Object[fieldTypes.size()];
     for (int i = 0; i < fieldTypes.size(); i++) {
       SqlTypeName typeName = fieldTypes.get(i).getType().getSqlTypeName();
