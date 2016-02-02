@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.adapter.cassandra;
 
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTrait;
@@ -23,8 +24,15 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexVisitorImpl;
+import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.trace.CalciteTrace;
 
+import java.util.AbstractList;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -38,8 +46,40 @@ public class CassandraRules {
   protected static final Logger LOGGER = CalciteTrace.getPlannerTracer();
 
   public static final RelOptRule[] RULES = {
-    CassandraFilterRule.INSTANCE
+    CassandraFilterRule.INSTANCE,
+    CassandraProjectRule.INSTANCE
   };
+
+  static List<String> cassandraFieldNames(final RelDataType rowType) {
+    return SqlValidatorUtil.uniquify(
+        new AbstractList<String>() {
+          @Override public String get(int index) {
+            return rowType.getFieldList().get(index).getName();
+          }
+
+          @Override public int size() {
+            return rowType.getFieldCount();
+          }
+        });
+  }
+
+  /** Translator from {@link RexNode} to strings in Cassandra's expression
+   * language. */
+  static class RexToCassandraTranslator extends RexVisitorImpl<String> {
+    private final JavaTypeFactory typeFactory;
+    private final List<String> inFields;
+
+    protected RexToCassandraTranslator(JavaTypeFactory typeFactory,
+        List<String> inFields) {
+      super(true);
+      this.typeFactory = typeFactory;
+      this.inFields = inFields;
+    }
+
+    @Override public String visitInputRef(RexInputRef inputRef) {
+      return inFields.get(inputRef.getIndex());
+    }
+  }
 
   /** Base class for planner rules that convert a relational expression to
    * Cassandra calling convention. */
@@ -75,6 +115,27 @@ public class CassandraRules {
           traitSet,
           convert(filter.getInput(), out),
           filter.getCondition());
+    }
+  }
+
+  /**
+   * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalProject}
+   * to a {@link CassandraProject}.
+   */
+  private static class CassandraProjectRule extends CassandraConverterRule {
+    private static final CassandraProjectRule INSTANCE = new CassandraProjectRule();
+
+    private CassandraProjectRule() {
+      super(LogicalProject.class, Convention.NONE, CassandraRel.CONVENTION,
+            "CassandraProjectRule");
+    }
+
+    public RelNode convert(RelNode rel) {
+      final LogicalProject project = (LogicalProject) rel;
+      final RelTraitSet traitSet = project.getTraitSet().replace(out);
+      return new CassandraProject(project.getCluster(), traitSet,
+          convert(project.getInput(), out), project.getProjects(),
+          project.getRowType());
     }
   }
 }

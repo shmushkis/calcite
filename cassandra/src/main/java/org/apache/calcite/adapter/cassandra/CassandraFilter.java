@@ -25,6 +25,8 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
 
+import java.util.Collections;
+
 /**
  * Implementation of a {@link org.apache.calcite.rel.core.Filter}
  * relational expression in Cassandra.
@@ -52,8 +54,8 @@ public class CassandraFilter extends Filter implements CassandraRel {
 
   public void implement(Implementor implementor) {
     implementor.visitChild(0, getInput());
-    String match = "WHERE \"a\"=1";
-    implementor.add(match);
+    String match = "\"a\"=1";
+    implementor.add(null, Collections.singletonList(match));
   }
 }
 

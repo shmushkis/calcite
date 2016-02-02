@@ -27,13 +27,23 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeImpl;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.AbstractTableQueryable;
+import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.Util;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Table based on a Cassandra column family
@@ -62,10 +72,34 @@ public class CassandraTable extends AbstractQueryableTable
   }
 
   public Enumerable<Object> query(final Session session) {
+    return query(session, Collections.<Map.Entry<String, Class>>emptyList());
+  }
+
+  public Enumerable<Object> query(final Session session, List<Map.Entry<String, Class>> fields) {
+    final RelDataTypeFactory typeFactory =
+        new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
+    final RelDataTypeFactory.FieldInfoBuilder fieldInfo = typeFactory.builder();
+    final RelDataType rowType = protoRowType.apply(typeFactory);
+    List<String> fieldNames = new ArrayList<String>();
+    for (Map.Entry<String, Class> field : fields) {
+      String fieldName = field.getKey();
+      fieldNames.add(fieldName);
+      SqlTypeName typeName = rowType.getField(fieldName, true, false).getType().getSqlTypeName();
+      fieldInfo.add(fieldName, typeFactory.createSqlType(typeName)).nullable(true);
+    }
+    final RelProtoDataType resultRowType = RelDataTypeImpl.proto(fieldInfo.build());
+
+    final String selectFields;
+    if (fields.isEmpty()) {
+      selectFields = "*";
+    } else {
+      selectFields = Util.toString(fieldNames, "", ", ", "");
+    }
+
     return new AbstractEnumerable<Object>() {
       public Enumerator<Object> enumerator() {
-        final ResultSet results = session.execute("SELECT * FROM \"test\"");
-        return new CassandraEnumerator(results, protoRowType);
+        final ResultSet results = session.execute("SELECT " + selectFields + " FROM \"test\"");
+        return new CassandraEnumerator(results, resultRowType);
       }
     };
   }
@@ -111,8 +145,8 @@ public class CassandraTable extends AbstractQueryableTable
      * @see org.apache.calcite.adapter.mongodb.CassandraMethod#CASSANDRA_QUERYABLE_QUERY
      */
     @SuppressWarnings("UnusedDeclaration")
-    public Enumerable<Object> query() {
-      return getTable().query(getSession());
+    public Enumerable<Object> query(List<Map.Entry<String, Class>> fields) {
+      return getTable().query(getSession(), fields);
     }
   }
 }

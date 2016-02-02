@@ -35,13 +35,19 @@ public interface CassandraRel extends RelNode {
   /** Callback for the implementation process that converts a tree of
    * {@link CassandraRel} nodes into a CQL query. */
   class Implementor {
-    final List<String> list = new ArrayList<String>();
+    final List<String> selectFields = new ArrayList<String>();
+    final List<String> whereClause = new ArrayList<String>();
 
     RelOptTable table;
     CassandraTable cassandraTable;
 
-    public void add(String whereClause) {
-      list.add(whereClause);
+    public void add(List<String> fields, List<String> predicates) {
+      if (fields != null) {
+        selectFields.addAll(fields);
+      }
+      if (predicates != null) {
+        whereClause.addAll(predicates);
+      }
     }
 
     public void visitChild(int ordinal, RelNode input) {

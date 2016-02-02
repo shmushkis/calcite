@@ -50,21 +50,30 @@ class CassandraEnumerator implements Enumerator<Object> {
   }
 
   public Object current() {
-    Object[] row = new Object[fieldTypes.size()];
-    for (int i = 0; i < fieldTypes.size(); i++) {
-      SqlTypeName typeName = fieldTypes.get(i).getType().getSqlTypeName();
-      if (typeName == SqlTypeName.CHAR) {
-        row[i] = current.getString(i);
-      } else if (typeName == SqlTypeName.INTEGER) {
-        row[i] = current.getInt(i);
-      } else if (typeName == SqlTypeName.BIGINT) {
-        row[i] = current.getLong(i);
-      } else if (typeName == SqlTypeName.DOUBLE) {
-        row[i] = current.getDouble(i);
+    if (fieldTypes.size() == 1) {
+      return currentRowField(0, fieldTypes.get(0).getType().getSqlTypeName());
+    } else {
+      Object[] row = new Object[fieldTypes.size()];
+      for (int i = 0; i < fieldTypes.size(); i++) {
+        row[i] = currentRowField(i, fieldTypes.get(i).getType().getSqlTypeName());
       }
-    }
 
-    return row;
+      return row;
+    }
+  }
+
+  private Object currentRowField(int index, SqlTypeName typeName) {
+    if (typeName == SqlTypeName.CHAR) {
+      return current.getString(index);
+    } else if (typeName == SqlTypeName.INTEGER) {
+      return current.getInt(index);
+    } else if (typeName == SqlTypeName.BIGINT) {
+      return current.getLong(index);
+    } else if (typeName == SqlTypeName.DOUBLE) {
+      return current.getDouble(index);
+    } else {
+      return null;
+    }
   }
 
   public boolean moveNext() {
