@@ -33,6 +33,7 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.core.TableMetadata;
 import com.google.common.collect.ImmutableMap;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -91,6 +92,17 @@ public class CassandraSchema extends AbstractSchema {
     }
 
     return RelDataTypeImpl.proto(fieldInfo.build());
+  }
+
+  List<String> getKeyFields(String columnFamily) {
+    TableMetadata table = getKeyspace().getTable(columnFamily);
+    List<ColumnMetadata> keyColumns = table.getPrimaryKey();
+
+    List<String> keyFields = new ArrayList<String>();
+    for (ColumnMetadata column : keyColumns) {
+      keyFields.add(column.getName());
+    }
+    return keyFields;
   }
 
   @Override protected Map<String, Table> getTableMap() {

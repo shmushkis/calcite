@@ -40,7 +40,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 
 import java.util.AbstractList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -88,15 +87,17 @@ public class CassandraToEnumerableConverter
         list.append("table",
             cassandraImplementor.table.getExpression(
                 CassandraTable.CassandraQueryable.class));
-    List<String> opList = Collections.emptyList();
+    final Expression predicates =
+        list.append("predicates",
+            constantArrayList(cassandraImplementor.whereClause, String.class));
     Expression enumerable =
         list.append("enumerable",
             Expressions.call(table,
-                CassandraMethod.CASSANDRA_QUERYABLE_QUERY.method, fields));
+                CassandraMethod.CASSANDRA_QUERYABLE_QUERY.method, fields, predicates));
     if (CalcitePrepareImpl.DEBUG) {
-      System.out.println("Cassandra: " + opList);
+      System.out.println("Cassandra: " + predicates);
     }
-    Hook.QUERY_PLAN.run(opList);
+    Hook.QUERY_PLAN.run(predicates);
     list.add(
         Expressions.return_(null, enumerable));
     return implementor.result(physType, list.toBlock());

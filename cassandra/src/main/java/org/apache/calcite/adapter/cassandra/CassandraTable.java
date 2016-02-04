@@ -51,6 +51,7 @@ import java.util.Map;
 public class CassandraTable extends AbstractQueryableTable
     implements TranslatableTable {
   RelProtoDataType protoRowType;
+  List<String> keyFields;
   private final CassandraSchema schema;
   private final String columnFamily;
 
@@ -71,11 +72,20 @@ public class CassandraTable extends AbstractQueryableTable
     return protoRowType.apply(typeFactory);
   }
 
-  public Enumerable<Object> query(final Session session) {
-    return query(session, Collections.<Map.Entry<String, Class>>emptyList());
+  public List<String> getKeyFields() {
+    if (keyFields == null) {
+      keyFields = schema.getKeyFields(columnFamily);
+    }
+    return keyFields;
   }
 
-  public Enumerable<Object> query(final Session session, List<Map.Entry<String, Class>> fields) {
+  public Enumerable<Object> query(final Session session) {
+    return query(session, Collections.<Map.Entry<String, Class>>emptyList(),
+        Collections.<String>emptyList());
+  }
+
+  public Enumerable<Object> query(final Session session, List<Map.Entry<String, Class>> fields,
+        List<String> predicates) {
     final RelDataTypeFactory typeFactory =
         new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
     final RelDataTypeFactory.FieldInfoBuilder fieldInfo = typeFactory.builder();
@@ -96,9 +106,18 @@ public class CassandraTable extends AbstractQueryableTable
       selectFields = Util.toString(fieldNames, "", ", ", "");
     }
 
+    String whereClause = "";
+    if (!predicates.isEmpty()) {
+      whereClause = " WHERE ";
+      whereClause += Util.toString(predicates, "", " AND ", "");
+    }
+
+    final String query = "SELECT " + selectFields + " FROM \"" + columnFamily
+        + "\"" + whereClause;
+
     return new AbstractEnumerable<Object>() {
       public Enumerator<Object> enumerator() {
-        final ResultSet results = session.execute("SELECT " + selectFields + " FROM \"test\"");
+        final ResultSet results = session.execute(query);
         return new CassandraEnumerator(results, resultRowType);
       }
     };
@@ -145,8 +164,9 @@ public class CassandraTable extends AbstractQueryableTable
      * @see org.apache.calcite.adapter.mongodb.CassandraMethod#CASSANDRA_QUERYABLE_QUERY
      */
     @SuppressWarnings("UnusedDeclaration")
-    public Enumerable<Object> query(List<Map.Entry<String, Class>> fields) {
-      return getTable().query(getSession(), fields);
+    public Enumerable<Object> query(List<Map.Entry<String, Class>> fields,
+        List<String> predicates) {
+      return getTable().query(getSession(), fields, predicates);
     }
   }
 }
