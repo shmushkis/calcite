@@ -57,6 +57,7 @@ public class CassandraProject extends Project implements CassandraRel {
       final String name = pair.right;
       final String expr = pair.left.accept(translator);
 
+      // Alias the field if necessary
       if (name.equals(expr)) {
         fields.add(name);
       } else {

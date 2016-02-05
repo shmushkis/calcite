@@ -39,6 +39,7 @@ class CassandraEnumerator implements Enumerator<Object> {
   /** Creates a CassandraEnumerator.
    *
    * @param results Cassandra result set ({@link com.datastax.driver.core.ResultSet})
+   * @param protoRowType The type of resulting rows
    */
   public CassandraEnumerator(ResultSet results, RelProtoDataType protoRowType) {
     this.iterator = results.iterator();
@@ -49,10 +50,16 @@ class CassandraEnumerator implements Enumerator<Object> {
     this.fieldTypes = protoRowType.apply(typeFactory).getFieldList();
   }
 
+  /** Produce the next row from the results
+   *
+   * @return A new row from the results
+   */
   public Object current() {
     if (fieldTypes.size() == 1) {
+      // If we just have one field, produce it directly
       return currentRowField(0, fieldTypes.get(0).getType().getSqlTypeName());
     } else {
+      // Build an array with all fields in this row
       Object[] row = new Object[fieldTypes.size()];
       for (int i = 0; i < fieldTypes.size(); i++) {
         row[i] = currentRowField(i, fieldTypes.get(i).getType().getSqlTypeName());
@@ -62,6 +69,11 @@ class CassandraEnumerator implements Enumerator<Object> {
     }
   }
 
+  /** Get a field for the current row from the underlying object.
+   *
+   * @param index Index of the field within the Row object
+   * @param typeName Type of the field in this row
+   */
   private Object currentRowField(int index, SqlTypeName typeName) {
     if (typeName == SqlTypeName.CHAR) {
       return current.getString(index);

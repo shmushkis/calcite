@@ -61,6 +61,7 @@ public class CassandraToEnumerableConverter
   }
 
   public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
+    // Generates a call to "query" with the appropriate fields and predicates
     final BlockBuilder list = new BlockBuilder();
     final CassandraRel.Implementor cassandraImplementor = new CassandraRel.Implementor();
     cassandraImplementor.visitChild(0, getInput());

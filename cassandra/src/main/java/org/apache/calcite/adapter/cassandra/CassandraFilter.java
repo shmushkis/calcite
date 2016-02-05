@@ -63,7 +63,7 @@ public class CassandraFilter extends Filter implements CassandraRel {
     implementor.visitChild(0, getInput());
     Translator translator =
         new Translator(CassandraRules.cassandraFieldNames(getRowType()));
-    String match = translator.translateOr(condition);
+    String match = translator.translateMatch(condition);
     implementor.add(null, Collections.singletonList(match));
   }
 
@@ -75,11 +75,13 @@ public class CassandraFilter extends Filter implements CassandraRel {
       this.fieldNames = fieldNames;
     }
 
+    /** Produce the CQL predicate string for the given condition.
+     *
+     * @param condition Condition to translate
+     * @return CQL predicate string
+     */
     private String translateMatch(RexNode condition) {
-      return translateOr(condition);
-    }
-
-    private String translateOr(RexNode condition) {
+      // CQL does not support disjunctions
       List<RexNode> disjunctions = RelOptUtil.disjunctions(condition);
       if (disjunctions.size() == 1) {
         return translateAnd(disjunctions.get(0));
@@ -88,6 +90,11 @@ public class CassandraFilter extends Filter implements CassandraRel {
       }
     }
 
+    /** Conver the value of a literal to a string.
+     *
+     * @param literal Literal to translate
+     * @return String representation of the literal
+     */
     private static String literalValue(RexLiteral literal) {
       Object value = literal.getValue2();
       StringBuilder buf = new StringBuilder();
@@ -95,6 +102,11 @@ public class CassandraFilter extends Filter implements CassandraRel {
       return buf.toString();
     }
 
+    /** Translate a conjunctive predicate to a CQL string.
+     *
+     * @param condition A conjunctive predicate
+     * @return CQL string for the predicate
+     */
     private String translateAnd(RexNode condition) {
       List<String> predicates = new ArrayList<String>();
       for (RexNode node : RelOptUtil.conjunctions(condition)) {
@@ -104,7 +116,10 @@ public class CassandraFilter extends Filter implements CassandraRel {
       return Util.toString(predicates, "", " AND ", "");
     }
 
+    /** Translate a binary relation. */
     private String translateMatch2(RexNode node) {
+      // We currently only use equality, but inequalities on clustering keys
+      // should be possible in the future
       switch (node.getKind()) {
       case EQUALS:
         return translateBinary("=", "=", (RexCall) node);
@@ -112,8 +127,6 @@ public class CassandraFilter extends Filter implements CassandraRel {
         return translateBinary("<", ">", (RexCall) node);
       case LESS_THAN_OR_EQUAL:
         return translateBinary("<=", ">=", (RexCall) node);
-      case NOT_EQUALS:
-        return translateBinary("!=", "!=", (RexCall) node);
       case GREATER_THAN:
         return translateBinary(">", "<", (RexCall) node);
       case GREATER_THAN_OR_EQUAL:
@@ -154,12 +167,14 @@ public class CassandraFilter extends Filter implements CassandraRel {
         String name = fieldNames.get(left1.getIndex());
         return translateOp2(op, name, rightLiteral);
       case CAST:
+        // XXX: This might not actually work, needs testing
         return translateBinary2(op, ((RexCall) left).operands.get(0), right);
       default:
         return null;
       }
     }
 
+    /** Combines a field name, operator, and literal to produce a predicate string. */
     private String translateOp2(String op, String name, RexLiteral right) {
       return name + " " + op + " " + literalValue(right);
     }

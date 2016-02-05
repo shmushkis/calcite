@@ -130,9 +130,11 @@ public class CassandraRules {
     }
 
     @Override public boolean matches(RelOptRuleCall call) {
+      // Get the condition from the filter operation
       LogicalFilter filter = call.rel(0);
       RexNode condition = filter.getCondition();
 
+      // Get field names from the scan operation
       CassandraTableScan scan = call.rel(1);
       List<String> keyFields = scan.cassandraTable.getKeyFields();
       List<String> fieldNames = CassandraRules.cassandraFieldNames(filter.getInput().getRowType());
@@ -141,6 +143,7 @@ public class CassandraRules {
       if (disjunctions.size() != 1) {
         return false;
       } else {
+        // Check that all conjunctions are primary key equalities
         condition = disjunctions.get(0);
         for (RexNode predicate : RelOptUtil.conjunctions(condition)) {
           if (!isEqualityOnKey(predicate, fieldNames, keyFields)) {
@@ -152,6 +155,13 @@ public class CassandraRules {
       return true;
     }
 
+    /** Check if the node is a supported predicate (primary key equality).
+     *
+     * @param node Condition node to check
+     * @param fieldNames Names of all columns in the table
+     * @param keyFields Names of primary key columns
+     * @return True if the node represents an equality predicate on a primary key
+     */
     private boolean isEqualityOnKey(RexNode node, List<String> fieldNames,
         List<String> keyFields) {
       if (node.getKind() != SqlKind.EQUALS) {
@@ -165,6 +175,14 @@ public class CassandraRules {
           || isCompareKeyFieldWithLiteral(right, left, fieldNames, keyFields);
     }
 
+    /** Check if an equality operation is comparing a primary key column with a literal.
+     *
+     * @param left Left operand of the equality
+     * @param right Right operand of the equality
+     * @param fieldNames Names of all columns in the table
+     * @param keyFields Names of primary key columns
+     * @return True if the left operand is a component of the primary key and the right is a literal
+     */
     private boolean isCompareKeyFieldWithLiteral(RexNode left, RexNode right,
         List<String> fieldNames, List<String> keyFields) {
       if (left.getKind() == SqlKind.INPUT_REF && right.getKind() == SqlKind.LITERAL) {
@@ -176,7 +194,7 @@ public class CassandraRules {
       }
     }
 
-    /* @see org.apache.calcite.rel.convert.ConverterRule */
+    /** @see org.apache.calcite.rel.convert.ConverterRule */
     public void onMatch(RelOptRuleCall call) {
       RelNode rel = call.rel(0);
       if (rel.getTraitSet().contains(Convention.NONE)) {

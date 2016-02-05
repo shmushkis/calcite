@@ -72,6 +72,11 @@ public class CassandraTable extends AbstractQueryableTable
     return protoRowType.apply(typeFactory);
   }
 
+  /**
+   * Get all primary key columns from the underlying CQL table
+   *
+   * @return a list of field names that are part of the primary key
+   */
   public List<String> getKeyFields() {
     if (keyFields == null) {
       keyFields = schema.getKeyFields(columnFamily);
@@ -84,8 +89,16 @@ public class CassandraTable extends AbstractQueryableTable
         Collections.<String>emptyList());
   }
 
+  /** Executes a CQL query on the underlying table.
+   *
+   * @param session Cassandra session
+   * @param fields List of fields to project
+   * @param predicates A list of predicates which should be used in the query
+   * @return Enumerator of results
+   */
   public Enumerable<Object> query(final Session session, List<Map.Entry<String, Class>> fields,
         List<String> predicates) {
+    // Build the type of the resulting row based on the provided fields
     final RelDataTypeFactory typeFactory =
         new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
     final RelDataTypeFactory.FieldInfoBuilder fieldInfo = typeFactory.builder();
@@ -99,6 +112,7 @@ public class CassandraTable extends AbstractQueryableTable
     }
     final RelProtoDataType resultRowType = RelDataTypeImpl.proto(fieldInfo.build());
 
+    // Construct the list of fields to project
     final String selectFields;
     if (fields.isEmpty()) {
       selectFields = "*";
@@ -106,12 +120,14 @@ public class CassandraTable extends AbstractQueryableTable
       selectFields = Util.toString(fieldNames, "", ", ", "");
     }
 
+    // Combine all predicates conjunctively
     String whereClause = "";
     if (!predicates.isEmpty()) {
       whereClause = " WHERE ";
       whereClause += Util.toString(predicates, "", " AND ", "");
     }
 
+    // Build and issue the query and return an Enumerator over the results
     final String query = "SELECT " + selectFields + " FROM \"" + columnFamily
         + "\"" + whereClause;
 

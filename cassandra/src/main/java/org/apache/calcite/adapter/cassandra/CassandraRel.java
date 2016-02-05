@@ -41,6 +41,11 @@ public interface CassandraRel extends RelNode {
     RelOptTable table;
     CassandraTable cassandraTable;
 
+    /** Adds newly projected fields and restricted predicates.
+     *
+     * @param fields New fields to be projected from a query
+     * @param predicates New predicates to be applied to the query
+     */
     public void add(List<String> fields, List<String> predicates) {
       if (fields != null) {
         selectFields.addAll(fields);
