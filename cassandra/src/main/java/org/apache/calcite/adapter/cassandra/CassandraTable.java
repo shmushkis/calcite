@@ -35,6 +35,7 @@ import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.AbstractTableQueryable;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
 import com.datastax.driver.core.ResultSet;
@@ -51,7 +52,7 @@ import java.util.Map;
 public class CassandraTable extends AbstractQueryableTable
     implements TranslatableTable {
   RelProtoDataType protoRowType;
-  List<String> keyFields;
+  Pair<List<String>, List<String>> keyFields;
   private final CassandraSchema schema;
   private final String columnFamily;
 
@@ -72,12 +73,7 @@ public class CassandraTable extends AbstractQueryableTable
     return protoRowType.apply(typeFactory);
   }
 
-  /**
-   * Get all primary key columns from the underlying CQL table
-   *
-   * @return a list of field names that are part of the primary key
-   */
-  public List<String> getKeyFields() {
+  public Pair<List<String>, List<String>> getKeyFields() {
     if (keyFields == null) {
       keyFields = schema.getKeyFields(columnFamily);
     }

@@ -24,6 +24,7 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.Pair;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ColumnMetadata;
@@ -94,15 +95,27 @@ public class CassandraSchema extends AbstractSchema {
     return RelDataTypeImpl.proto(fieldInfo.build());
   }
 
-  List<String> getKeyFields(String columnFamily) {
+  /**
+   * Get all primary key columns from the underlying CQL table
+   *
+   * @return A list of field names that are part of the partition and clustering keys
+   */
+  Pair<List<String>, List<String>> getKeyFields(String columnFamily) {
     TableMetadata table = getKeyspace().getTable(columnFamily);
-    List<ColumnMetadata> keyColumns = table.getPrimaryKey();
 
-    List<String> keyFields = new ArrayList<String>();
-    for (ColumnMetadata column : keyColumns) {
-      keyFields.add(column.getName());
+    List<ColumnMetadata> partitionKey = table.getPartitionKey();
+    List<String> pKeyFields = new ArrayList<String>();
+    for (ColumnMetadata column : partitionKey) {
+      pKeyFields.add(column.getName());
     }
-    return keyFields;
+
+    List<ColumnMetadata> clusteringKey = table.getClusteringColumns();
+    List<String> cKeyFields = new ArrayList<String>();
+    for (ColumnMetadata column : clusteringKey) {
+      cKeyFields.add(column.getName());
+    }
+
+    return Pair.of(pKeyFields, cKeyFields);
   }
 
   @Override protected Map<String, Table> getTableMap() {

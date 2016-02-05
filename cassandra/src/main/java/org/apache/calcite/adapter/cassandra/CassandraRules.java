@@ -33,6 +33,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
+import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.trace.CalciteTrace;
 
 import com.google.common.base.Predicate;
@@ -136,7 +137,7 @@ public class CassandraRules {
 
       // Get field names from the scan operation
       CassandraTableScan scan = call.rel(1);
-      List<String> keyFields = scan.cassandraTable.getKeyFields();
+      Pair<List<String>, List<String>> keyFields = scan.cassandraTable.getKeyFields();
       List<String> fieldNames = CassandraRules.cassandraFieldNames(filter.getInput().getRowType());
 
       List<RexNode> disjunctions = RelOptUtil.disjunctions(condition);
@@ -163,7 +164,7 @@ public class CassandraRules {
      * @return True if the node represents an equality predicate on a primary key
      */
     private boolean isEqualityOnKey(RexNode node, List<String> fieldNames,
-        List<String> keyFields) {
+        Pair<List<String>, List<String>> keyFields) {
       if (node.getKind() != SqlKind.EQUALS) {
         return false;
       }
@@ -184,11 +185,11 @@ public class CassandraRules {
      * @return True if the left operand is a component of the primary key and the right is a literal
      */
     private boolean isCompareKeyFieldWithLiteral(RexNode left, RexNode right,
-        List<String> fieldNames, List<String> keyFields) {
+        List<String> fieldNames, Pair<List<String>, List<String>> keyFields) {
       if (left.getKind() == SqlKind.INPUT_REF && right.getKind() == SqlKind.LITERAL) {
         final RexInputRef left1 = (RexInputRef) left;
         String name = fieldNames.get(left1.getIndex());
-        return keyFields.contains(name);
+        return keyFields.left.contains(name) || keyFields.right.contains(name);
       } else {
         return false;
       }
