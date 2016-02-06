@@ -24,6 +24,7 @@ import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -53,6 +54,7 @@ public class CassandraTable extends AbstractQueryableTable
     implements TranslatableTable {
   RelProtoDataType protoRowType;
   Pair<List<String>, List<String>> keyFields;
+  List<RelFieldCollation> clusteringOrder;
   private final CassandraSchema schema;
   private final String columnFamily;
 
@@ -78,6 +80,13 @@ public class CassandraTable extends AbstractQueryableTable
       keyFields = schema.getKeyFields(columnFamily);
     }
     return keyFields;
+  }
+
+  public List<RelFieldCollation> getClusteringOrder() {
+    if (clusteringOrder == null) {
+      clusteringOrder = schema.getClusteringOrder(columnFamily);
+    }
+    return clusteringOrder;
   }
 
   public Enumerable<Object> query(final Session session) {

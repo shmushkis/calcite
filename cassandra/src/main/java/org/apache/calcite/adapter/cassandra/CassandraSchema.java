@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.adapter.cassandra;
 
+import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeImpl;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
@@ -118,6 +119,34 @@ public class CassandraSchema extends AbstractSchema {
 
     return Pair.of((List<String>) ImmutableList.copyOf(pKeyFields),
         (List<String>) ImmutableList.copyOf(cKeyFields));
+  }
+
+  /** Get the collation of all clustering key columns.
+   *
+   * @return A RelCollations representing the collation of all clustering keys
+   */
+  public List<RelFieldCollation> getClusteringOrder(String columnFamily) {
+    TableMetadata table = getKeyspace().getTable(columnFamily);
+    List<TableMetadata.Order> clusteringOrder = table.getClusteringOrder();
+    List<RelFieldCollation> keyCollations = new ArrayList<RelFieldCollation>();
+
+    int i = 0;
+    for (TableMetadata.Order order : clusteringOrder) {
+      RelFieldCollation.Direction direction;
+      switch(order) {
+      case DESC:
+        direction = RelFieldCollation.Direction.DESCENDING;
+        break;
+      case ASC:
+      default:
+        direction = RelFieldCollation.Direction.ASCENDING;
+        break;
+      }
+      keyCollations.add(new RelFieldCollation(i, direction));
+      i++;
+    }
+
+    return keyCollations;
   }
 
   @Override protected Map<String, Table> getTableMap() {
