@@ -125,7 +125,7 @@ public class CassandraTable extends AbstractQueryableTable
 
     // Build and issue the query and return an Enumerator over the results
     final String query = "SELECT " + selectFields + " FROM \"" + columnFamily
-        + "\"" + whereClause;
+        + "\"" + whereClause + " ALLOW FILTERING";
 
     return new AbstractEnumerable<Object>() {
       public Enumerator<Object> enumerator() {

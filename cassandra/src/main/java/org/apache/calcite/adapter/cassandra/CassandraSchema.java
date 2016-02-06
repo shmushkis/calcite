@@ -32,6 +32,7 @@ import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.TableMetadata;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.ArrayList;
@@ -115,7 +116,8 @@ public class CassandraSchema extends AbstractSchema {
       cKeyFields.add(column.getName());
     }
 
-    return Pair.of(pKeyFields, cKeyFields);
+    return Pair.of((List<String>) ImmutableList.copyOf(pKeyFields),
+        (List<String>) ImmutableList.copyOf(cKeyFields));
   }
 
   @Override protected Map<String, Table> getTableMap() {

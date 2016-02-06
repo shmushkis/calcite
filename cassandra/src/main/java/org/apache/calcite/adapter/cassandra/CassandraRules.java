@@ -40,7 +40,9 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 
 import java.util.AbstractList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -138,6 +140,7 @@ public class CassandraRules {
       // Get field names from the scan operation
       CassandraTableScan scan = call.rel(1);
       Pair<List<String>, List<String>> keyFields = scan.cassandraTable.getKeyFields();
+      Set<String> partitionKeys = new HashSet<String>(keyFields.left);
       List<String> fieldNames = CassandraRules.cassandraFieldNames(filter.getInput().getRowType());
 
       List<RexNode> disjunctions = RelOptUtil.disjunctions(condition);
@@ -147,13 +150,14 @@ public class CassandraRules {
         // Check that all conjunctions are primary key equalities
         condition = disjunctions.get(0);
         for (RexNode predicate : RelOptUtil.conjunctions(condition)) {
-          if (!isEqualityOnKey(predicate, fieldNames, keyFields)) {
+          if (!isEqualityOnKey(predicate, fieldNames, partitionKeys, keyFields.right)) {
             return false;
           }
         }
       }
 
-      return true;
+      // Either all of the partition keys must be specified or none
+      return partitionKeys.size() == keyFields.left.size() || partitionKeys.size() == 0;
     }
 
     /** Check if the node is a supported predicate (primary key equality).
@@ -164,7 +168,7 @@ public class CassandraRules {
      * @return True if the node represents an equality predicate on a primary key
      */
     private boolean isEqualityOnKey(RexNode node, List<String> fieldNames,
-        Pair<List<String>, List<String>> keyFields) {
+        Set<String> partitionKeys, List<String> clusteringKeys) {
       if (node.getKind() != SqlKind.EQUALS) {
         return false;
       }
@@ -172,8 +176,15 @@ public class CassandraRules {
       RexCall call = (RexCall) node;
       final RexNode left = call.operands.get(0);
       final RexNode right = call.operands.get(1);
-      return isCompareKeyFieldWithLiteral(left, right, fieldNames, keyFields)
-          || isCompareKeyFieldWithLiteral(right, left, fieldNames, keyFields);
+      String key = compareFieldWithLiteral(left, right, fieldNames);
+      if (key == null) {
+        key = compareFieldWithLiteral(right, left, fieldNames);
+      }
+      if (key != null) {
+        return partitionKeys.remove(key) || clusteringKeys.contains(key);
+      } else {
+        return false;
+      }
     }
 
     /** Check if an equality operation is comparing a primary key column with a literal.
@@ -181,17 +192,15 @@ public class CassandraRules {
      * @param left Left operand of the equality
      * @param right Right operand of the equality
      * @param fieldNames Names of all columns in the table
-     * @param keyFields Names of primary key columns
-     * @return True if the left operand is a component of the primary key and the right is a literal
+     * @return The field being compared or null if there is no key equality
      */
-    private boolean isCompareKeyFieldWithLiteral(RexNode left, RexNode right,
-        List<String> fieldNames, Pair<List<String>, List<String>> keyFields) {
+    private String compareFieldWithLiteral(RexNode left, RexNode right, List<String> fieldNames) {
       if (left.getKind() == SqlKind.INPUT_REF && right.getKind() == SqlKind.LITERAL) {
         final RexInputRef left1 = (RexInputRef) left;
         String name = fieldNames.get(left1.getIndex());
-        return keyFields.left.contains(name) || keyFields.right.contains(name);
+        return name;
       } else {
-        return false;
+        return null;
       }
     }
 
