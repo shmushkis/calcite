@@ -32,19 +32,29 @@ import org.apache.calcite.util.Util;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Implementation of a {@link org.apache.calcite.rel.core.Filter}
  * relational expression in Cassandra.
  */
 public class CassandraFilter extends Filter implements CassandraRel {
+  private final List<String> partitionKeys;
+  private Boolean singlePartition;
+
   public CassandraFilter(
       RelOptCluster cluster,
       RelTraitSet traitSet,
       RelNode child,
-      RexNode condition) {
+      RexNode condition,
+      List<String> partitionKeys) {
     super(cluster, traitSet, child, condition);
+
+    this.partitionKeys = partitionKeys;
+    this.singlePartition = false;
+
     assert getConvention() == CassandraRel.CONVENTION;
     assert getConvention() == child.getConvention();
   }
@@ -56,23 +66,42 @@ public class CassandraFilter extends Filter implements CassandraRel {
 
   public CassandraFilter copy(RelTraitSet traitSet, RelNode input,
       RexNode condition) {
-    return new CassandraFilter(getCluster(), traitSet, input, condition);
+    return new CassandraFilter(getCluster(), traitSet, input, condition, partitionKeys);
   }
 
   public void implement(Implementor implementor) {
     implementor.visitChild(0, getInput());
     Translator translator =
-        new Translator(CassandraRules.cassandraFieldNames(getRowType()));
+        new Translator(CassandraRules.cassandraFieldNames(getRowType()), partitionKeys);
     String match = translator.translateMatch(condition);
+    singlePartition = translator.isSinglePartition();
     implementor.add(null, Collections.singletonList(match));
+  }
+
+  /** Check if the filter restricts to a single partition.
+   *
+   * @return True if the filter will restrict the underlying to a single partition
+   */
+  public boolean isSinglePartition() {
+    return singlePartition;
   }
 
   /** Translates {@link RexNode} expressions into Cassandra expression strings. */
   static class Translator {
     private final List<String> fieldNames;
+    private final Set<String> partitionKeys;
 
-    Translator(List<String> fieldNames) {
+    Translator(List<String> fieldNames, List<String> partitionKeys) {
       this.fieldNames = fieldNames;
+      this.partitionKeys = new HashSet<String>(partitionKeys);
+    }
+
+    /** Check if the query spans only one partition.
+     *
+     * @return True if the matches translated so far have resulted in a single partition
+     */
+    public boolean isSinglePartition() {
+      return partitionKeys.isEmpty();
     }
 
     /** Produce the CQL predicate string for the given condition.
@@ -176,6 +205,10 @@ public class CassandraFilter extends Filter implements CassandraRel {
 
     /** Combines a field name, operator, and literal to produce a predicate string. */
     private String translateOp2(String op, String name, RexLiteral right) {
+      // In case this is a partition key, record that it is now restricted
+      if (op.equals("=")) {
+        partitionKeys.remove(name);
+      }
       return name + " " + op + " " + literalValue(right);
     }
   }

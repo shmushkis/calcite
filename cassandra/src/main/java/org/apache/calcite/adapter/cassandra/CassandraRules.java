@@ -206,23 +206,24 @@ public class CassandraRules {
 
     /** @see org.apache.calcite.rel.convert.ConverterRule */
     public void onMatch(RelOptRuleCall call) {
-      RelNode rel = call.rel(0);
-      if (rel.getTraitSet().contains(Convention.NONE)) {
-        final RelNode converted = convert(rel);
+      LogicalFilter filter = call.rel(0);
+      CassandraTableScan scan = call.rel(1);
+      if (filter.getTraitSet().contains(Convention.NONE)) {
+        final RelNode converted = convert(filter, scan);
         if (converted != null) {
           call.transformTo(converted);
         }
       }
     }
 
-    public RelNode convert(RelNode rel) {
-      final LogicalFilter filter = (LogicalFilter) rel;
+    public RelNode convert(LogicalFilter filter, CassandraTableScan scan) {
       final RelTraitSet traitSet = filter.getTraitSet().replace(CassandraRel.CONVENTION);
       return new CassandraFilter(
-          rel.getCluster(),
+          filter.getCluster(),
           traitSet,
           convert(filter.getInput(), CassandraRel.CONVENTION),
-          filter.getCondition());
+          filter.getCondition(),
+          scan.cassandraTable.getKeyFields().left);
     }
   }
 
