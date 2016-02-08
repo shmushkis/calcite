@@ -37,6 +37,8 @@ public interface CassandraRel extends RelNode {
   class Implementor {
     final List<String> selectFields = new ArrayList<String>();
     final List<String> whereClause = new ArrayList<String>();
+    String limitValue = null;
+    final List<String> order = new ArrayList<String>();
 
     RelOptTable table;
     CassandraTable cassandraTable;
@@ -53,6 +55,14 @@ public interface CassandraRel extends RelNode {
       if (predicates != null) {
         whereClause.addAll(predicates);
       }
+    }
+
+    public void addOrder(List<String> newOrder) {
+      order.addAll(newOrder);
+    }
+
+    public void setLimit(String limit) {
+      limitValue = limit;
     }
 
     public void visitChild(int ordinal, RelNode input) {

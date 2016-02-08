@@ -99,10 +99,13 @@ public class CassandraToEnumerableConverter
     final Expression predicates =
         list.append("predicates",
             constantArrayList(cassandraImplementor.whereClause, String.class));
+    final Expression order =
+        list.append("order",
+            constantArrayList(cassandraImplementor.order, String.class));
     Expression enumerable =
         list.append("enumerable",
             Expressions.call(table,
-                CassandraMethod.CASSANDRA_QUERYABLE_QUERY.method, fields, predicates));
+                CassandraMethod.CASSANDRA_QUERYABLE_QUERY.method, fields, predicates, order));
     if (CalcitePrepareImpl.DEBUG) {
       System.out.println("Cassandra: " + predicates);
     }

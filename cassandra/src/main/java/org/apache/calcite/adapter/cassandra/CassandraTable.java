@@ -91,7 +91,7 @@ public class CassandraTable extends AbstractQueryableTable
 
   public Enumerable<Object> query(final Session session) {
     return query(session, Collections.<Map.Entry<String, Class>>emptyList(),
-        Collections.<String>emptyList());
+        Collections.<String>emptyList(), Collections.<String>emptyList());
   }
 
   /** Executes a CQL query on the underlying table.
@@ -102,7 +102,7 @@ public class CassandraTable extends AbstractQueryableTable
    * @return Enumerator of results
    */
   public Enumerable<Object> query(final Session session, List<Map.Entry<String, Class>> fields,
-        List<String> predicates) {
+        List<String> predicates, List<String> order) {
     // Build the type of the resulting row based on the provided fields
     final RelDataTypeFactory typeFactory =
         new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
@@ -133,8 +133,15 @@ public class CassandraTable extends AbstractQueryableTable
     }
 
     // Build and issue the query and return an Enumerator over the results
-    final String query = "SELECT " + selectFields + " FROM \"" + columnFamily
-        + "\"" + whereClause + " ALLOW FILTERING";
+    StringBuilder queryBuilder = new StringBuilder("SELECT ");
+    queryBuilder.append(selectFields);
+    queryBuilder.append(" FROM \"" + columnFamily + "\"");
+    queryBuilder.append(whereClause);
+    if (!order.isEmpty()) {
+      queryBuilder.append(Util.toString(order, " ORDER BY ", ", ", ""));
+    }
+    queryBuilder.append(" ALLOW FILTERING");
+    final String query = queryBuilder.toString();
 
     return new AbstractEnumerable<Object>() {
       public Enumerator<Object> enumerator() {
@@ -186,8 +193,8 @@ public class CassandraTable extends AbstractQueryableTable
      */
     @SuppressWarnings("UnusedDeclaration")
     public Enumerable<Object> query(List<Map.Entry<String, Class>> fields,
-        List<String> predicates) {
-      return getTable().query(getSession(), fields, predicates);
+        List<String> predicates, List<String> order) {
+      return getTable().query(getSession(), fields, predicates, order);
     }
   }
 }

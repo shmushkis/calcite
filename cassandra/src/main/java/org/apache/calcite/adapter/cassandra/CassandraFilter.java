@@ -21,6 +21,9 @@ import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelCollations;
+import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
@@ -43,17 +46,32 @@ import java.util.Set;
 public class CassandraFilter extends Filter implements CassandraRel {
   private final List<String> partitionKeys;
   private Boolean singlePartition;
+  private final List<String> clusteringKeys;
+  private List<RelFieldCollation> implicitFieldCollations;
+  private RelCollation implicitCollation;
+  private String match;
 
   public CassandraFilter(
       RelOptCluster cluster,
       RelTraitSet traitSet,
       RelNode child,
       RexNode condition,
-      List<String> partitionKeys) {
+      List<String> partitionKeys,
+      List<String> clusteringKeys,
+      List<RelFieldCollation> implicitFieldCollations) {
     super(cluster, traitSet, child, condition);
 
     this.partitionKeys = partitionKeys;
     this.singlePartition = false;
+    this.clusteringKeys = new ArrayList<String>(clusteringKeys);
+    this.implicitFieldCollations = implicitFieldCollations;
+
+    Translator translator =
+        new Translator(CassandraRules.cassandraFieldNames(getRowType()),
+            partitionKeys, clusteringKeys, implicitFieldCollations);
+    this.match = translator.translateMatch(condition);
+    this.singlePartition = translator.isSinglePartition();
+    this.implicitCollation = translator.getImplicitCollation();
 
     assert getConvention() == CassandraRel.CONVENTION;
     assert getConvention() == child.getConvention();
@@ -66,15 +84,12 @@ public class CassandraFilter extends Filter implements CassandraRel {
 
   public CassandraFilter copy(RelTraitSet traitSet, RelNode input,
       RexNode condition) {
-    return new CassandraFilter(getCluster(), traitSet, input, condition, partitionKeys);
+    return new CassandraFilter(getCluster(), traitSet, input, condition,
+        partitionKeys, clusteringKeys, implicitFieldCollations);
   }
 
   public void implement(Implementor implementor) {
     implementor.visitChild(0, getInput());
-    Translator translator =
-        new Translator(CassandraRules.cassandraFieldNames(getRowType()), partitionKeys);
-    String match = translator.translateMatch(condition);
-    singlePartition = translator.isSinglePartition();
     implementor.add(null, Collections.singletonList(match));
   }
 
@@ -86,14 +101,29 @@ public class CassandraFilter extends Filter implements CassandraRel {
     return singlePartition;
   }
 
+  /** Get the resulting collation by the clustering keys after filtering.
+   *
+   * @return The implicit collation based on the natural sorting by clustering keys
+   */
+  public RelCollation getImplicitCollation() {
+    return implicitCollation;
+  }
+
   /** Translates {@link RexNode} expressions into Cassandra expression strings. */
   static class Translator {
     private final List<String> fieldNames;
     private final Set<String> partitionKeys;
+    private final List<String> clusteringKeys;
+    private int restrictedClusteringKeys;
+    private final List<RelFieldCollation> implicitFieldCollations;
 
-    Translator(List<String> fieldNames, List<String> partitionKeys) {
+    Translator(List<String> fieldNames, List<String> partitionKeys, List<String> clusteringKeys,
+        List<RelFieldCollation> implicitFieldCollations) {
       this.fieldNames = fieldNames;
       this.partitionKeys = new HashSet<String>(partitionKeys);
+      this.clusteringKeys = clusteringKeys;
+      this.restrictedClusteringKeys = 0;
+      this.implicitFieldCollations = implicitFieldCollations;
     }
 
     /** Check if the query spans only one partition.
@@ -102,6 +132,27 @@ public class CassandraFilter extends Filter implements CassandraRel {
      */
     public boolean isSinglePartition() {
       return partitionKeys.isEmpty();
+    }
+
+    /** Infer the implicit correlation from the unrestricted clustering keys.
+     *
+     * @return The collation of the filtered results
+     */
+    public RelCollation getImplicitCollation() {
+      // No collation applies if we aren't restricted to a single partition
+      if (!isSinglePartition()) {
+        return RelCollations.EMPTY;
+      }
+
+      // Pull out the correct fields along with their original collations
+      List<RelFieldCollation> fieldCollations = new ArrayList<RelFieldCollation>();
+      for (int i = restrictedClusteringKeys; i < clusteringKeys.size(); i++) {
+        int fieldIndex = fieldNames.indexOf(clusteringKeys.get(i));
+        RelFieldCollation.Direction direction = implicitFieldCollations.get(i).getDirection();
+        fieldCollations.add(new RelFieldCollation(fieldIndex, direction));
+      }
+
+      return RelCollations.of(fieldCollations);
     }
 
     /** Produce the CQL predicate string for the given condition.
@@ -205,9 +256,12 @@ public class CassandraFilter extends Filter implements CassandraRel {
 
     /** Combines a field name, operator, and literal to produce a predicate string. */
     private String translateOp2(String op, String name, RexLiteral right) {
-      // In case this is a partition key, record that it is now restricted
+      // In case this is a key, record that it is now restricted
       if (op.equals("=")) {
         partitionKeys.remove(name);
+        if (clusteringKeys.contains(name)) {
+          restrictedClusteringKeys++;
+        }
       }
       return name + " " + op + " " + literalValue(right);
     }

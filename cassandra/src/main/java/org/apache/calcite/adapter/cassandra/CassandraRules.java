@@ -20,10 +20,15 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
+import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelCollations;
+import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
+import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
@@ -57,7 +62,8 @@ public class CassandraRules {
 
   public static final RelOptRule[] RULES = {
     CassandraFilterRule.INSTANCE,
-    CassandraProjectRule.INSTANCE
+    CassandraProjectRule.INSTANCE,
+    CassandraSortRule.INSTANCE
   };
 
   static List<String> cassandraFieldNames(final RelDataType rowType) {
@@ -218,12 +224,15 @@ public class CassandraRules {
 
     public RelNode convert(LogicalFilter filter, CassandraTableScan scan) {
       final RelTraitSet traitSet = filter.getTraitSet().replace(CassandraRel.CONVENTION);
+      final Pair<List<String>, List<String>> keyFields = scan.cassandraTable.getKeyFields();
       return new CassandraFilter(
           filter.getCluster(),
           traitSet,
           convert(filter.getInput(), CassandraRel.CONVENTION),
           filter.getCondition(),
-          scan.cassandraTable.getKeyFields().left);
+          keyFields.left,
+          keyFields.right,
+          scan.cassandraTable.getClusteringOrder());
     }
   }
 
@@ -244,6 +253,118 @@ public class CassandraRules {
       return new CassandraProject(project.getCluster(), traitSet,
           convert(project.getInput(), out), project.getProjects(),
           project.getRowType());
+    }
+  }
+
+  /**
+   * Rule to convert a {@link org.apache.calcite.rel.core.Sort} to a
+   * {@link CassandraSort}.
+   */
+  private static class CassandraSortRule extends RelOptRule {
+    private static final Predicate<Sort> SORT_PREDICATE =
+        new Predicate<Sort>() {
+          public boolean apply(Sort input) {
+            // CQL has no support for offsets
+            return input.offset == null;
+          }
+        };
+    private static final Predicate<CassandraFilter> FILTER_PREDICATE =
+        new Predicate<CassandraFilter>() {
+          public boolean apply(CassandraFilter input) {
+            // We can only use implicit sorting within a single partition
+            return input.isSinglePartition();
+          }
+        };
+    private static final RelOptRuleOperand CASSANDRA_OP =
+        operand(CassandraToEnumerableConverter.class,
+        operand(CassandraFilter.class, null, FILTER_PREDICATE, any()));
+
+    private static final CassandraSortRule INSTANCE = new CassandraSortRule();
+
+    private CassandraSortRule() {
+      super(operand(Sort.class, null, SORT_PREDICATE, CASSANDRA_OP), "CassandraSortRule");
+    }
+
+    public RelNode convert(Sort sort, CassandraFilter filter) {
+      final RelTraitSet traitSet =
+          sort.getTraitSet().replace(CassandraRel.CONVENTION)
+              .replace(sort.getCollation());
+      return new CassandraSort(sort.getCluster(), traitSet,
+          convert(sort.getInput(), traitSet.replace(RelCollations.EMPTY)),
+          sort.getCollation(), filter.getImplicitCollation(), sort.fetch);
+    }
+
+    public boolean matches(RelOptRuleCall call) {
+      final Sort sort = call.rel(0);
+      final CassandraFilter filter = call.rel(2);
+      return collationsCompatible(sort.getCollation(), filter.getImplicitCollation());
+    }
+
+    /** Check if it is possible to exploit native CQL sorting for a given collation.
+     *
+     * @return True if it is possible to achieve this sort in Cassandra
+     */
+    private boolean collationsCompatible(RelCollation sortCollation,
+        RelCollation implicitCollation) {
+      List<RelFieldCollation> sortFieldCollations = sortCollation.getFieldCollations();
+      List<RelFieldCollation> implicitFieldCollations = implicitCollation.getFieldCollations();
+
+      if (sortFieldCollations.size() > implicitFieldCollations.size()) {
+        return false;
+      }
+
+      // Check if we need to reverse the order of the implicit collation
+      boolean reversed = reverseDirection(sortFieldCollations.get(0).getDirection())
+          == implicitFieldCollations.get(0).getDirection();
+
+      for (int i = 0; i < sortFieldCollations.size(); i++) {
+        RelFieldCollation sorted = sortFieldCollations.get(i);
+        RelFieldCollation implied = implicitFieldCollations.get(i);
+
+        // Check that the fields being sorted match
+        if (sorted.getFieldIndex() != implied.getFieldIndex()) {
+          return false;
+        }
+
+        // Either all fields must be sorted in the same direction
+        // or the opposite direction based on whether we decided
+        // if the sort direction should be reversed above
+        RelFieldCollation.Direction sortDirection = sorted.getDirection();
+        RelFieldCollation.Direction implicitDirection = implied.getDirection();
+        if ((!reversed && sortDirection != implicitDirection)
+            || (reversed && reverseDirection(sortDirection) != implicitDirection)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    /** Find the reverse of a given collation direction.
+     *
+     * @return Reverse of the input direction
+     */
+    private RelFieldCollation.Direction reverseDirection(RelFieldCollation.Direction direction) {
+      switch(direction) {
+      case ASCENDING:
+      case STRICTLY_ASCENDING:
+        return RelFieldCollation.Direction.DESCENDING;
+      case DESCENDING:
+      case STRICTLY_DESCENDING:
+        return RelFieldCollation.Direction.ASCENDING;
+      default:
+        return null;
+      }
+    }
+
+    /** @see org.apache.calcite.rel.convert.ConverterRule */
+    public void onMatch(RelOptRuleCall call) {
+      final Sort sort = call.rel(0);
+      CassandraFilter filter = call.rel(2);
+      final RelNode converted = convert(sort, filter);
+      if (converted != null) {
+        call.transformTo(converted);
+      }
     }
   }
 }
