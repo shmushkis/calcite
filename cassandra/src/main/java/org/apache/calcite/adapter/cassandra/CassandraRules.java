@@ -39,7 +39,6 @@ import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.Pair;
-import org.apache.calcite.util.trace.CalciteTrace;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -48,7 +47,6 @@ import java.util.AbstractList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Logger;
 
 /**
  * Rules and relational operators for
@@ -57,8 +55,6 @@ import java.util.logging.Logger;
  */
 public class CassandraRules {
   private CassandraRules() {}
-
-  protected static final Logger LOGGER = CalciteTrace.getPlannerTracer();
 
   public static final RelOptRule[] RULES = {
     CassandraFilterRule.INSTANCE,
