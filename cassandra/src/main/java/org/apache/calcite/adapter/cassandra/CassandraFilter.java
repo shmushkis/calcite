@@ -263,7 +263,13 @@ public class CassandraFilter extends Filter implements CassandraRel {
           restrictedClusteringKeys++;
         }
       }
-      return name + " " + op + " " + literalValue(right);
+
+      Object value = literalValue(right);
+      String valueString = value.toString();
+      if (value instanceof String) {
+        valueString = "'" + valueString + "'";
+      }
+      return name + " " + op + " " + valueString;
     }
   }
 }
