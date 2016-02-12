@@ -197,7 +197,12 @@ public class CassandraRules {
      * @return The field being compared or null if there is no key equality
      */
     private String compareFieldWithLiteral(RexNode left, RexNode right, List<String> fieldNames) {
-      if (left.getKind() == SqlKind.INPUT_REF && right.getKind() == SqlKind.LITERAL) {
+      // XXX Ignore casts for new and assume they aren't really necessary
+      if (left.isA(SqlKind.CAST)) {
+        left = ((RexCall) left).getOperands().get(0);
+      }
+
+      if (left.isA(SqlKind.INPUT_REF) && right.isA(SqlKind.LITERAL)) {
         final RexInputRef left1 = (RexInputRef) left;
         String name = fieldNames.get(left1.getIndex());
         return name;
