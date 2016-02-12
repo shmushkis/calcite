@@ -80,7 +80,8 @@ public class CassandraSchema extends AbstractSchema {
 
       // TODO: This mapping of types can be done much better
       SqlTypeName typeName = SqlTypeName.ANY;
-      if (type == DataType.ascii() || type == DataType.text() || type == DataType.varchar()) {
+      if (type == DataType.ascii() || type == DataType.text() || type == DataType.varchar()
+            || type == DataType.uuid() || type == DataType.timeuuid()) {
         typeName = SqlTypeName.CHAR;
       } else if (type == DataType.cint() || type == DataType.varint()) {
         typeName = SqlTypeName.INTEGER;

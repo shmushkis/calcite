@@ -24,6 +24,7 @@ import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 
@@ -75,14 +76,17 @@ class CassandraEnumerator implements Enumerator<Object> {
    * @param typeName Type of the field in this row
    */
   private Object currentRowField(int index, SqlTypeName typeName) {
-    if (typeName == SqlTypeName.CHAR) {
+    DataType type = current.getColumnDefinitions().getType(index);
+    if (type == DataType.ascii() || type == DataType.text() || type == DataType.varchar()) {
       return current.getString(index);
-    } else if (typeName == SqlTypeName.INTEGER) {
+    } else if (type == DataType.cint() || type == DataType.varint()) {
       return current.getInt(index);
-    } else if (typeName == SqlTypeName.BIGINT) {
+    } else if (type == DataType.bigint()) {
       return current.getLong(index);
-    } else if (typeName == SqlTypeName.DOUBLE) {
+    } else if (type == DataType.cdouble() || type == DataType.cfloat()) {
       return current.getDouble(index);
+    } else if (type == DataType.uuid() || type == DataType.timeuuid()) {
+      return current.getUUID(index).toString();
     } else {
       return null;
     }
