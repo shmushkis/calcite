@@ -85,6 +85,18 @@ public class CassandraAdapterIT {
             + "  CassandraSort(sort0=[$1], dir0=[DESC])\n"
             + "    CassandraFilter(condition=[=(CAST($0):CHAR(8) CHARACTER SET \"ISO-8859-1\" COLLATE \"ISO-8859-1$en_US$primary\", '!PUBLIC!')])\n");
   }
+
+  @Test public void testProject() {
+    CalciteAssert.that()
+        .enable(enabled())
+        .with(TWISSANDRA)
+        .query("select \"tweet_id\" from \"userline\" where \"username\" = '!PUBLIC!' limit 1")
+        .returns("tweet_id=f3c329de-d05b-11e5-b58b-90e2ba530b12\n")
+        .explainContains("PLAN=CassandraToEnumerableConverter\n"
+                + "  CassandraProject(tweet_id=[$2])\n"
+                + "    CassandraSort(fetch=[1])\n"
+                + "      CassandraFilter(condition=[=(CAST($0):CHAR(8) CHARACTER SET \"ISO-8859-1\" COLLATE \"ISO-8859-1$en_US$primary\", '!PUBLIC!')])\n");
+  }
 }
 
 // End CassandraAdapterIT.java

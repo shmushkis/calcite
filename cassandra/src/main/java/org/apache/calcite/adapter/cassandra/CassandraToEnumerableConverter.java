@@ -102,10 +102,14 @@ public class CassandraToEnumerableConverter
     final Expression order =
         list.append("order",
             constantArrayList(cassandraImplementor.order, String.class));
+    final Expression limit =
+        list.append("limit",
+            Expressions.constant(cassandraImplementor.limitValue));
     Expression enumerable =
         list.append("enumerable",
             Expressions.call(table,
-                CassandraMethod.CASSANDRA_QUERYABLE_QUERY.method, fields, predicates, order));
+                CassandraMethod.CASSANDRA_QUERYABLE_QUERY.method, fields,
+                predicates, order, limit));
     if (CalcitePrepareImpl.DEBUG) {
       System.out.println("Cassandra: " + predicates);
     }

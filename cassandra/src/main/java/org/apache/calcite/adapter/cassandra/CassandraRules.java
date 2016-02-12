@@ -313,6 +313,9 @@ public class CassandraRules {
       if (sortFieldCollations.size() > implicitFieldCollations.size()) {
         return false;
       }
+      if (sortFieldCollations.size() == 0) {
+        return true;
+      }
 
       // Check if we need to reverse the order of the implicit collation
       boolean reversed = reverseDirection(sortFieldCollations.get(0).getDirection())
