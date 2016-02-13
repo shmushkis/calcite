@@ -197,7 +197,7 @@ public class CassandraRules {
      * @return The field being compared or null if there is no key equality
      */
     private String compareFieldWithLiteral(RexNode left, RexNode right, List<String> fieldNames) {
-      // XXX Ignore casts for new and assume they aren't really necessary
+      // FIXME Ignore casts for new and assume they aren't really necessary
       if (left.isA(SqlKind.CAST)) {
         left = ((RexCall) left).getOperands().get(0);
       }

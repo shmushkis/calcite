@@ -247,7 +247,7 @@ public class CassandraFilter extends Filter implements CassandraRel {
         String name = fieldNames.get(left1.getIndex());
         return translateOp2(op, name, rightLiteral);
       case CAST:
-        // XXX: This might not actually work, needs testing
+        // FIXME This will not work in all cases (for example, we ignore string encoding)
         return translateBinary2(op, ((RexCall) left).operands.get(0), right);
       default:
         return null;
