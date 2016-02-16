@@ -166,7 +166,8 @@ public class CassandraRules {
      *
      * @param node Condition node to check
      * @param fieldNames Names of all columns in the table
-     * @param keyFields Names of primary key columns
+     * @param partitionKeys Names of primary key columns
+     * @param clusteringKeys Names of primary key columns
      * @return True if the node represents an equality predicate on a primary key
      */
     private boolean isEqualityOnKey(RexNode node, List<String> fieldNames,

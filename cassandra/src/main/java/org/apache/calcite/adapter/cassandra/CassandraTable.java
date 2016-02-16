@@ -192,7 +192,7 @@ public class CassandraTable extends AbstractQueryableTable
 
     /** Called via code-generation.
      *
-     * @see org.apache.calcite.adapter.mongodb.CassandraMethod#CASSANDRA_QUERYABLE_QUERY
+     * @see org.apache.calcite.adapter.cassandra.CassandraMethod#CASSANDRA_QUERYABLE_QUERY
      */
     @SuppressWarnings("UnusedDeclaration")
     public Enumerable<Object> query(List<Map.Entry<String, Class>> fields,
