@@ -858,9 +858,30 @@ public class RexProgramTest {
     final RexLiteral true_ = rexBuilder.makeLiteral(true);
     final RexLiteral null_ = rexBuilder.constantNull();
     final RexLiteral ten = rexBuilder.makeExactLiteral(BigDecimal.TEN);
+    final RexLiteral one = rexBuilder.makeExactLiteral(BigDecimal.ONE);
+
+    // case: if we have checked that values are not null, either in the current
+    // predicate or previous predicates that evaluated to false, do not check
+    // again
+    String expected = ""
+        + "CASE(AND(IS NOT NULL(?0.i), >(CAST(?0.i):INTEGER NOT NULL, 10)),"
+        + "  CASE(IS NULL(?0.j), null, +(CAST(?0.j):INTEGER NOT NULL, 1)),"
+        + "  IS NULL(?0.j),"
+        + "  CAST(1):INTEGER,"
+        + "  AND(IS NOT NULL(?0.i), <(CAST(?0.i):INTEGER NOT NULL, 1)),"
+        + "  +(CAST(?0.j):INTEGER NOT NULL, CAST(?0.i):INTEGER NOT NULL),"
+        + "  CAST(10):INTEGER)";
+    checkNullSafe(
+        case_(gt(iRef, ten), plus(jRef, one), // j may be null at this point
+            isNull(jRef), one,
+            lt(iRef, one), plus(jRef, iRef), // we know i and j are not null
+            ten),
+        expected);
+
+    assert false;
 
     // and: remove duplicates and true
-    String expected = ""
+    expected = ""
         + "CASE(OR(IS NULL(?0.a), IS NULL(?0.b)),"
         + "  CASE(OR(AND(IS NOT NULL(?0.a), NOT(CAST(?0.a):BOOLEAN NOT NULL)),"
         + "    AND(IS NOT NULL(?0.b), NOT(CAST(?0.b):BOOLEAN NOT NULL))),"
@@ -988,6 +1009,24 @@ public class RexProgramTest {
     // case: make sure returned values are all of same type
     checkNullSafe(case_(aRef, null_, true_),
         "CASE(AND(IS NOT NULL(?0.a), CAST(?0.a):BOOLEAN NOT NULL), null, CAST(true):BOOLEAN)");
+
+    // case: if we have checked that values are not null, either in the current
+    // predicate or previous predicates that evaluated to false, do not check
+    // again
+    expected = ""
+        + "CASE(AND(IS NOT NULL(?0.i), >(CAST(?0.i):INTEGER NOT NULL, 10)),"
+        + "  CASE(IS NULL(?0.j), null, +(CAST(?0.j):INTEGER NOT NULL, 1)),"
+        + "  IS NULL(?0.j),"
+        + "  CAST(1):INTEGER,"
+        + "  AND(IS NOT NULL(?0.i), <(CAST(?0.i):INTEGER NOT NULL, 1)),"
+        + "  +(CAST(?0.j):INTEGER NOT NULL, CAST(?0.i):INTEGER NOT NULL),"
+        + "  CAST(10):INTEGER)";
+    checkNullSafe(
+        case_(gt(iRef, ten), plus(jRef, one), // j may be null at this point
+            isNull(jRef), one,
+            lt(iRef, one), plus(jRef, iRef), // we know i and j are not null
+            ten),
+        expected);
 
     checkNullSafe(isTrue(or(lt(iRef, ten), isNotNull(iRef))),
         "IS NOT NULL(?0.i)");

@@ -155,11 +155,19 @@ class NullSafeVisitor {
       assert e instanceof RexCall;
       call = (RexCall) e;
       newOperands = new ArrayList<>();
+      final List<RexNode> clauseIsNulls = new ArrayList<>();
       for (Ord<RexNode> operand : Ord.zip(call.getOperands())) {
         if (RexUtil.isCasePredicate(call, operand.i)) {
           newOperands.add(isTrue(operand.e));
+          clauseIsNulls.clear();
+          gatherIsNotNulls(clauseIsNulls, operand.e);
         } else {
-          newOperands.add(cast(operand.e, call.type));
+          try (Mark ignore = mark()) {
+            for (RexNode e2 : clauseIsNulls) {
+              registerNotNull(e2);
+            }
+            newOperands.add(cast(operand.e, call.type));
+          }
         }
       }
       return case_(newOperands);
