@@ -155,17 +155,28 @@ class NullSafeVisitor {
       assert e instanceof RexCall;
       call = (RexCall) e;
       newOperands = new ArrayList<>();
-      final List<RexNode> clauseIsNulls = new ArrayList<>();
+      final List<RexNode> allTruths = new ArrayList<>();
+      RexNode previousPredicate = null;
       for (Ord<RexNode> operand : Ord.zip(call.getOperands())) {
-        if (RexUtil.isCasePredicate(call, operand.i)) {
-          newOperands.add(isTrue(operand.e));
-          clauseIsNulls.clear();
-          gatherIsNotNulls(clauseIsNulls, operand.e);
-        } else {
-          try (Mark ignore = mark()) {
-            for (RexNode e2 : clauseIsNulls) {
-              registerNotNull(e2);
-            }
+        try (Mark ignore = mark()) {
+          // Consider CASE THEN p0 THEN e0 WHEN p1 THEN e1 ... ELSE e END
+          // In pN, we know that p0 ... pN-1 are not true
+          // In eN, we know that p0 ... pN-1 are not true, pN is true
+          final List<RexNode> truths = new ArrayList<>();
+          truths.addAll(allTruths);
+          if (previousPredicate != null) {
+            assert !RexUtil.isCasePredicate(call, operand.i);
+            truths.add(previousPredicate);
+            allTruths.add(isNotTrue(previousPredicate)); // for next time
+            previousPredicate = null;
+          }
+          registerTrue(truths);
+
+          if (RexUtil.isCasePredicate(call, operand.i)) {
+            newOperands.add(isTrue(operand.e));
+
+            previousPredicate = operand.e;
+          } else {
             newOperands.add(cast(operand.e, call.type));
           }
         }
@@ -236,6 +247,31 @@ class NullSafeVisitor {
   private void registerNotNull(RexNode operand) {
     notNullNodes.push(operand);
   }
+
+  private void registerNotNullDeep(RexNode e) {
+    registerNotNull(e);
+    if (e instanceof RexCall) {
+      final RexCall call = (RexCall) e;
+      if (RexUtil.isCoStrict(call.getOperator())) {
+        for (RexNode operand : call.getOperands()) {
+          registerNotNullDeep(operand);
+        }
+      }
+    }
+  }
+
+  /** Given a list of expressions known to be true, populate
+   * {@link #notNullNodes} with a list of expressions known to be not null. */
+  private void registerTrue(List<RexNode> truths) {
+    for (RexNode e : truths) {
+      registerNotNullDeep(e);
+      switch (e.getKind()) {
+      case IS_NOT_NULL:
+        registerNotNullDeep(((RexCall) e).getOperands().get(0));
+      }
+    }
+  }
+
 
   /** Returns a marker that will allow us to restore the stack to its previous
    * state. */
@@ -537,13 +573,14 @@ class NullSafeVisitor {
    * {@code CASE WHEN c THEN NULL WHEN c2 THEN notNull ELSE NULL END}
    * then we populate {@code c OR }
    * </p>*/
-  private void gatherIsNotNulls(List<RexNode> list, RexNode e) {
+  private void gatherIsNotNulls(List<RexNode> list, RexNode e,
+      Deque<RexNode> notNullNodes) {
     if (mayBeNull(e)) {
       if (e instanceof RexCall) {
         final RexCall call = (RexCall) e;
         if (RexUtil.isCoStrict(call.getOperator())) {
           for (RexNode operand : call.getOperands()) {
-            gatherIsNotNulls(list, operand);
+            gatherIsNotNulls(list, operand, notNullNodes);
           }
         } else {
           list.add(isNotNull(e));
@@ -551,8 +588,14 @@ class NullSafeVisitor {
       } else {
         list.add(isNotNull(e));
       }
-      registerNotNull(e);
+      if (notNullNodes != null) {
+        notNullNodes.push(e);
+      }
     }
+  }
+
+  private void gatherIsNotNulls(List<RexNode> list, RexNode e) {
+    gatherIsNotNulls(list, e, notNullNodes);
   }
 
   RelDataType notNullable(RelDataType type) {

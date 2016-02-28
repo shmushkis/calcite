@@ -86,6 +86,7 @@ import org.junit.runners.Suite;
     TraitPropagationTest.class,
     RelWriterTest.class,
     RexProgramTest.class,
+    NullSafeTest.class,
     RexTransformerTest.class,
     BinarySearchTest.class,
     EnumerablesTest.class,
