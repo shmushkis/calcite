@@ -36,6 +36,7 @@ import org.apache.calcite.sql.test.SqlOperatorTest;
 import org.apache.calcite.sql.test.SqlPrettyWriterTest;
 import org.apache.calcite.sql.test.SqlTypeNameTest;
 import org.apache.calcite.test.enumerable.EnumerableCorrelateTest;
+import org.apache.calcite.test.stream.StreamTckTestImpl;
 import org.apache.calcite.tools.FrameworksTest;
 import org.apache.calcite.tools.PlannerTest;
 import org.apache.calcite.util.BitSetsTest;
@@ -129,6 +130,7 @@ import org.junit.runners.Suite;
     JdbcTest.class,
     CalciteRemoteDriverTest.class,
     StreamTest.class,
+    StreamTckTestImpl.class,
 
     // test cases
     TableInRootSchemaTest.class,
