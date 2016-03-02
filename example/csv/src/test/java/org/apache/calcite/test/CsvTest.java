@@ -25,7 +25,6 @@ import org.apache.calcite.sql2rel.SqlToRelConverter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 
-import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -38,13 +37,16 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.isA;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit test of the Calcite adapter for CSV.
@@ -248,9 +250,9 @@ public class CsvTest {
         try {
           final List<String> lines = new ArrayList<>();
           CsvTest.collect(lines, resultSet);
-          Assert.assertEquals(Arrays.asList(expected), lines);
+          assertThat(lines, is(Arrays.asList(expected)));
         } catch (SQLException e) {
-          throw new RuntimeException(e);
+          throw Throwables.propagate(e);
         }
         return null;
       }
@@ -396,20 +398,9 @@ public class CsvTest {
 
     try (Connection connection
         = DriverManager.getConnection("jdbc:calcite:", info)) {
-      ResultSet res = connection.getMetaData().getColumns(null, null,
-          "DATE", "JOINEDAT");
-      res.next();
-      Assert.assertEquals(res.getInt("DATA_TYPE"), java.sql.Types.DATE);
-
-      res = connection.getMetaData().getColumns(null, null,
-          "DATE", "JOINTIME");
-      res.next();
-      Assert.assertEquals(res.getInt("DATA_TYPE"), java.sql.Types.TIME);
-
-      res = connection.getMetaData().getColumns(null, null,
-          "DATE", "JOINTIMES");
-      res.next();
-      Assert.assertEquals(res.getInt("DATA_TYPE"), java.sql.Types.TIMESTAMP);
+      assertColumn(connection, "DATE", "JOINEDAT", Types.DATE);
+      assertColumn(connection, "DATE", "JOINTIME", Types.TIME);
+      assertColumn(connection, "DATE", "JOINTIMES", Types.TIMESTAMP);
 
       Statement statement = connection.createStatement();
       ResultSet resultSet = statement.executeQuery(
@@ -417,22 +408,28 @@ public class CsvTest {
       resultSet.next();
 
       // date
-      Assert.assertEquals(java.sql.Date.class, resultSet.getDate(1).getClass());
-      Assert.assertEquals(java.sql.Date.valueOf("1996-08-03"),
-          resultSet.getDate(1));
+      assertThat(resultSet.getDate(1), isA(java.sql.Date.class));
+      assertThat(resultSet.getDate(1), is(java.sql.Date.valueOf("1996-08-03")));
 
       // time
-      Assert.assertEquals(java.sql.Time.class, resultSet.getTime(2).getClass());
-      Assert.assertEquals(java.sql.Time.valueOf("00:01:02"),
-          resultSet.getTime(2));
+      assertThat(resultSet.getTime(2), isA(java.sql.Time.class));
+      assertThat(resultSet.getTime(2).getTime(),
+          is(java.sql.Time.valueOf("00:01:02").getTime()));
 
       // timestamp
-      Assert.assertEquals(java.sql.Timestamp.class,
-          resultSet.getTimestamp(3).getClass());
-      Assert.assertEquals(java.sql.Timestamp.valueOf("1996-08-03 00:01:02"),
-          resultSet.getTimestamp(3));
-
+      assertThat(resultSet.getTimestamp(3), isA(java.sql.Timestamp.class));
+      assertThat(resultSet.getTimestamp(3),
+          is(java.sql.Timestamp.valueOf("1996-08-03 00:01:02")));
     }
+  }
+
+  private void assertColumn(Connection connection, String tableName,
+      String columnName, int type) throws SQLException {
+    ResultSet res =
+        connection.getMetaData().getColumns(null, null, tableName, columnName);
+    assertTrue(res.next());
+    assertThat(res.getInt("DATA_TYPE"), is(type));
+    res.close();
   }
 
   /** Test case for
@@ -501,6 +498,72 @@ public class CsvTest {
       final ResultSet resultSet1 = statement2.executeQuery();
       Function1<ResultSet, Void> expect = expect("DEPTNO=10; NAME=Sales");
       expect.apply(resultSet1);
+    }
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-1075">[CALCITE-1075]
+   * Invalid generated code for UDF that returns DATE</a>. */
+  @Test public void testGroupByDateTimeUdf() throws SQLException {
+    Properties info = new Properties();
+    info.put("model", jsonPath("bug"));
+
+    try (Connection connection
+        = DriverManager.getConnection("jdbc:calcite:", info)) {
+      assertColumn(connection, "DATE", "JOINEDAT", Types.DATE);
+      assertColumn(connection, "DATE", "JOINTIME", Types.TIME);
+      assertColumn(connection, "DATE", "JOINTIMES", Types.TIMESTAMP);
+
+      Statement statement = connection.createStatement();
+      ResultSet resultSet = statement.executeQuery(
+          "select min(m1) from (select \"func\"(\"JOINEDAT\") as d1, count(\"EMPNO\") as m1 from \"DATE\" group by \"func\"(\"JOINEDAT\"))");
+      resultSet.next();
+
+      // date
+      assertThat(1, is(resultSet.getInt(1)));
+    }
+  }
+
+  @Test public void testSelectDateTimeUdf() throws SQLException {
+    Properties info = new Properties();
+    info.put("model", jsonPath("bug"));
+
+    try (Connection connection
+        = DriverManager.getConnection("jdbc:calcite:", info)) {
+      assertColumn(connection, "DATE", "JOINEDAT", Types.DATE);
+      assertColumn(connection, "DATE", "JOINTIME", Types.TIME);
+      assertColumn(connection, "DATE", "JOINTIMES", Types.TIMESTAMP);
+
+      Statement statement = connection.createStatement();
+      ResultSet resultSet = statement.executeQuery(
+          "select \"func\"(\"JOINEDAT\"), \"JOINTIMES\" from \"DATE\" ");
+      resultSet.next();
+
+      // date
+      assertThat(resultSet.getDate(1), isA(java.sql.Date.class));
+      assertThat(resultSet.getDate(1), is(java.sql.Date.valueOf("1996-08-03")));
+    }
+  }
+
+  @Test public void testUdfWithSameNameAndDifferentArgType() throws SQLException {
+    Properties info = new Properties();
+    info.put("model", jsonPath("bug"));
+
+    try (Connection connection
+        = DriverManager.getConnection("jdbc:calcite:", info)) {
+      assertColumn(connection, "DATE", "JOINEDAT", Types.DATE);
+      assertColumn(connection, "DATE", "JOINTIME", Types.TIME);
+      assertColumn(connection, "DATE", "JOINTIMES", Types.TIMESTAMP);
+
+      Statement statement = connection.createStatement();
+      ResultSet resultSet = statement.executeQuery(
+          "select \"func\"(\"JOINTIMES\"), \"JOINEDAT\" from \"DATE\" ");
+      resultSet.next();
+
+      // timestamp
+      assertThat(resultSet.getTimestamp(1), isA(java.sql.Timestamp.class));
+      assertThat(resultSet.getTimestamp(1).getTime(),
+          is(java.sql.Date.valueOf("1996-08-03 00:01:02").getTime()));
     }
   }
 }
