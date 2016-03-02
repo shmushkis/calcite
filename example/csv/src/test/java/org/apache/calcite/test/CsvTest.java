@@ -31,12 +31,15 @@ import org.junit.Test;
 import java.io.PrintStream;
 import java.net.URL;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -408,18 +411,18 @@ public class CsvTest {
       resultSet.next();
 
       // date
-      assertThat(resultSet.getDate(1), isA(java.sql.Date.class));
-      assertThat(resultSet.getDate(1), is(java.sql.Date.valueOf("1996-08-03")));
+      assertThat(resultSet.getDate(1), isA(Date.class));
+      assertThat(resultSet.getDate(1), is(Date.valueOf("1996-08-03")));
 
       // time
       assertThat(resultSet.getTime(2), isA(java.sql.Time.class));
       assertThat(resultSet.getTime(2).getTime(),
-          is(java.sql.Time.valueOf("00:01:02").getTime()));
+          is(Time.valueOf("00:01:02").getTime()));
 
       // timestamp
       assertThat(resultSet.getTimestamp(3), isA(java.sql.Timestamp.class));
       assertThat(resultSet.getTimestamp(3),
-          is(java.sql.Timestamp.valueOf("1996-08-03 00:01:02")));
+          is(Timestamp.valueOf("1996-08-03 00:01:02")));
     }
   }
 
@@ -540,8 +543,8 @@ public class CsvTest {
       resultSet.next();
 
       // date
-      assertThat(resultSet.getDate(1), isA(java.sql.Date.class));
-      assertThat(resultSet.getDate(1), is(java.sql.Date.valueOf("1996-08-03")));
+      assertThat(resultSet.getDate(1), isA(Date.class));
+      assertThat(resultSet.getDate(1), is(Date.valueOf("1996-08-03")));
     }
   }
 
@@ -561,9 +564,9 @@ public class CsvTest {
       resultSet.next();
 
       // timestamp
-      assertThat(resultSet.getTimestamp(1), isA(java.sql.Timestamp.class));
+      assertThat(resultSet.getTimestamp(1), isA(Timestamp.class));
       assertThat(resultSet.getTimestamp(1).getTime(),
-          is(java.sql.Date.valueOf("1996-08-03 00:01:02").getTime()));
+          is(Timestamp.valueOf("1996-08-03 00:01:02").getTime()));
     }
   }
 }

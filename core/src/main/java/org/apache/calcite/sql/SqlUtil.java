@@ -567,7 +567,8 @@ public abstract class SqlUtil {
                           return false;
                         }
                         final RelDataType paramType = paramTypes.get(argType.i);
-                        return precList.compareTypePrecedence(paramType, bestMatch) >= 0;
+                        return precList.containsType(paramType)
+                            && precList.compareTypePrecedence(paramType, bestMatch) >= 0;
                       }
                     }));
       }
@@ -585,6 +586,9 @@ public abstract class SqlUtil {
         continue;
       }
       final RelDataType paramType = paramTypes.get(i);
+      if (!precList.containsType(paramType)) {
+        continue;
+      }
       if (bestMatch == null) {
         bestMatch = paramType;
       } else {

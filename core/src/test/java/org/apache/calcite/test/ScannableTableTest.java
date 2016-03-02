@@ -404,7 +404,7 @@ public class ScannableTableTest {
     public Enumerable<Object[]> scan(DataContext root) {
       return new AbstractEnumerable<Object[]>() {
         public Enumerator<Object[]> enumerator() {
-          return beatles(new StringBuilder(), null, null);
+          return beatles(new StringBuilder(), null, null, BEATLES2);
         }
       };
     }
@@ -434,7 +434,7 @@ public class ScannableTableTest {
       final Integer filter = getFilter(cooperative, filters);
       return new AbstractEnumerable<Object[]>() {
         public Enumerator<Object[]> enumerator() {
-          return beatles(buf, filter, null);
+          return beatles(buf, filter, null, BEATLES3);
         }
       };
     }
@@ -466,7 +466,7 @@ public class ScannableTableTest {
       final Integer filter = getFilter(cooperative, filters);
       return new AbstractEnumerable<Object[]>() {
         public Enumerator<Object[]> enumerator() {
-          return beatles(buf, filter, projects);
+          return beatles(buf, filter, projects, BEATLES3);
         }
       };
     }
@@ -500,7 +500,14 @@ public class ScannableTableTest {
     };
   }
 
-  private static final Object[][] BEATLES = {
+  private static final Object[][] BEATLES2 = {
+    {4, "John"},
+    {4, "Paul"},
+    {6, "George"},
+    {5, "Ringo"}
+  };
+
+  private static final Object[][] BEATLES3 = {
     {4, "John", 1940},
     {4, "Paul", 1942},
     {6, "George", 1943},
@@ -508,7 +515,7 @@ public class ScannableTableTest {
   };
 
   private static Enumerator<Object[]> beatles(final StringBuilder buf,
-      final Integer filter, final int[] projects) {
+      final Integer filter, final int[] projects, final Object[][] rows) {
     return new Enumerator<Object[]>() {
       int row = -1;
       int returnCount = 0;
@@ -519,8 +526,8 @@ public class ScannableTableTest {
       }
 
       public boolean moveNext() {
-        while (++row < 4) {
-          Object[] current = BEATLES[row % 4];
+        while (++row < rows.length) {
+          Object[] current = rows[row % 4];
           if (filter == null || filter.equals(current[0])) {
             if (projects == null) {
               this.current = current;
