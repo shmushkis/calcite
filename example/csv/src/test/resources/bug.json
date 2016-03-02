@@ -24,7 +24,14 @@
       factory: 'org.apache.calcite.adapter.csv.CsvSchemaFactory',
       operand: {
         directory: 'bug'
-      }
+      },
+      functions: [
+         {
+         	 name: 'timeFuncs',
+         	 className: 'org.apache.calcite.adapter.csv.TimeFunction',
+         	 methodName: '*'
+         }
+      ]
     }
   ]
 }
