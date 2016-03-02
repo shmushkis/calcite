@@ -19,6 +19,7 @@ package org.apache.calcite.adapter.csv;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.tree.Primitive;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,8 +48,7 @@ enum CsvFieldType {
   private final Class clazz;
   private final String simpleName;
 
-  private static final Map<String, CsvFieldType> MAP =
-    new HashMap<String, CsvFieldType>();
+  private static final Map<String, CsvFieldType> MAP = new HashMap<>();
 
   static {
     for (CsvFieldType value : values()) {
@@ -66,7 +66,16 @@ enum CsvFieldType {
   }
 
   public RelDataType toType(JavaTypeFactory typeFactory) {
-    return typeFactory.createJavaType(clazz);
+    switch (this) {
+    case DATE:
+      return typeFactory.createSqlType(SqlTypeName.DATE);
+    case TIME:
+      return typeFactory.createSqlType(SqlTypeName.TIME);
+    case TIMESTAMP:
+      return typeFactory.createSqlType(SqlTypeName.TIMESTAMP);
+    default:
+      return typeFactory.createJavaType(clazz);
+    }
   }
 
   public static CsvFieldType of(String typeString) {

@@ -50,15 +50,17 @@ public class ReflectiveCallImplementor implements CallImplementor {
         translator.translateList(call.getOperands());
     translatedOperands =
         EnumUtils.fromInternal(method.getParameterTypes(), translatedOperands);
+    final Expression e;
     if ((method.getModifiers() & Modifier.STATIC) != 0) {
-      return Expressions.call(method, translatedOperands);
+      e = Expressions.call(method, translatedOperands);
     } else {
       // The UDF class must have a public zero-args constructor.
       // Assume that the validator checked already.
       final NewExpression target =
           Expressions.new_(method.getDeclaringClass());
-      return Expressions.call(target, method, translatedOperands);
+      e = Expressions.call(target, method, translatedOperands);
     }
+    return EnumUtils.toInternal(e, call.getType());
   }
 
 }

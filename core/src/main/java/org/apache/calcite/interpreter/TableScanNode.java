@@ -17,6 +17,7 @@
 package org.apache.calcite.interpreter;
 
 import org.apache.calcite.DataContext;
+import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.linq4j.function.Function1;
@@ -36,8 +37,10 @@ import org.apache.calcite.schema.QueryableTable;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.util.Bug;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.ImmutableIntList;
+import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.mapping.Mapping;
 import org.apache.calcite.util.mapping.Mappings;
@@ -49,6 +52,7 @@ import com.google.common.collect.Lists;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -59,6 +63,13 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * {@link org.apache.calcite.rel.core.TableScan}.
  */
 public class TableScanNode implements Node {
+
+  /** Whether to verify and sanitize values from the user-defined table.
+   * If true, checks that each value is the right type for its column.
+   * Converts DATE and TIME to int (or Integer if nullable)
+   * and TIMESTAMP to long (or Long if nullable). */
+  private static final boolean SAFE = Bug.value(true);
+
   private TableScanNode(Interpreter interpreter, TableScan rel,
       Enumerable<Row> enumerable) {
     interpreter.enumerable(rel, enumerable);
@@ -113,10 +124,22 @@ public class TableScanNode implements Node {
   private static TableScanNode createScannable(Interpreter interpreter,
       TableScan rel, ImmutableList<RexNode> filters, ImmutableIntList projects,
       ScannableTable scannableTable) {
-    final Enumerable<Row> rowEnumerable =
-        Enumerables.toRow(scannableTable.scan(interpreter.getDataContext()));
+    final Enumerable<Object[]> enumerable =
+        scannableTable.scan(interpreter.getDataContext());
+    final Enumerable<Row> rowEnumerable = toRow(enumerable, rel.getRowType());
     return createEnumerable(interpreter, rel, rowEnumerable, null, filters,
         projects);
+  }
+
+  private static Enumerable<Row> toRow(Enumerable<Object[]> enumerable,
+      RelDataType rowType) {
+    Enumerable<Row> rowEnumerable;
+    if (SAFE) {
+      rowEnumerable = enumerable.select(new SanitizeFunction(rowType));
+    } else {
+      rowEnumerable = Enumerables.toRow(enumerable);
+    }
+    return rowEnumerable;
   }
 
   private static TableScanNode createQueryable(Interpreter interpreter,
@@ -179,7 +202,7 @@ public class TableScanNode implements Node {
         throw RESOURCE.filterableTableInventedFilter(filter.toString()).ex();
       }
     }
-    final Enumerable<Row> rowEnumerable = Enumerables.toRow(enumerable);
+    final Enumerable<Row> rowEnumerable = toRow(enumerable, rel.getRowType());
     return createEnumerable(interpreter, rel, rowEnumerable, null,
         mutableFilters, projects);
   }
@@ -198,7 +221,7 @@ public class TableScanNode implements Node {
       } else {
         projectInts = projects.toIntArray();
       }
-      final Enumerable<Object[]> enumerable1 =
+      final Enumerable<Object[]> enumerable =
           pfTable.scan(root, mutableFilters, projectInts);
       for (RexNode filter : mutableFilters) {
         if (!filters.contains(filter)) {
@@ -225,7 +248,18 @@ public class TableScanNode implements Node {
           continue;
         }
       }
-      final Enumerable<Row> rowEnumerable = Enumerables.toRow(enumerable1);
+      final RelDataType rowType;
+      if (projectInts == null) {
+        rowType = rel.getRowType();
+      } else {
+        final RelDataTypeFactory.FieldInfoBuilder builder =
+            rel.getCluster().getTypeFactory().builder();
+        for (int i : projectInts) {
+          builder.add(rel.getTable().getRowType().getFieldList().get(i));
+        }
+        rowType = builder.build();
+      }
+      final Enumerable<Row> rowEnumerable = toRow(enumerable, rowType);
       final ImmutableIntList rejectedProjects;
       if (Objects.equals(projects, originalProjects)) {
         rejectedProjects = null;
@@ -293,6 +327,50 @@ public class TableScanNode implements Node {
           });
     }
     return new TableScanNode(interpreter, rel, enumerable);
+  }
+
+  /** Function that converts an array of values to a {@link Row}, ensuring that
+   * their types are consistent with a row type. */
+  private static class SanitizeFunction implements Function1<Object[], Row> {
+    final List<RelDataTypeField> fields;
+    final List<RelDataType> fieldTypes;
+
+    SanitizeFunction(RelDataType rowType) {
+      fields = rowType.getFieldList();
+      fieldTypes = ImmutableList.copyOf(Pair.right(fields));
+    }
+
+    public Row apply(Object[] values) {
+      if (values.length != fieldTypes.size()) {
+        throw new IllegalArgumentException("Column value count mismatch");
+      }
+      for (int i = 0; i < values.length; i++) {
+        Object value = values[i];
+        final RelDataType type = fieldTypes.get(i);
+        if (value == null) {
+          if (!type.isNullable()) {
+            throw new IllegalArgumentException("Not-null field "
+                + fields.get(i).getName() + " had null value");
+          }
+        } else if (value instanceof Date) {
+          final Date date = (Date) value;
+          switch (type.getSqlTypeName()) {
+          case DATE:
+            values[i] =
+                (int) (date.getTime() / DateTimeUtils.MILLIS_PER_DAY);
+            break;
+          case TIME:
+            values[i] =
+                (int) (date.getTime() % DateTimeUtils.MILLIS_PER_DAY);
+            break;
+          case TIMESTAMP:
+            values[i] = date.getTime();
+            break;
+          }
+        }
+      }
+      return Row.asCopy(values);
+    }
   }
 }
 

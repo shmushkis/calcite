@@ -172,7 +172,9 @@ public class EnumUtils {
 
   /** Converts from internal representation to JDBC representation used by
    * arguments of user-defined functions. For example, converts date values from
-   * {@code int} to {@link java.sql.Date}. */
+   * {@code int} to {@link java.sql.Date}.
+   *
+   * <p>Converse is {@link #toInternal(Expression, RelDataType)}. */
   static Expression fromInternal(Expression e, Class<?> targetType) {
     if (e == ConstantUntypedNull.INSTANCE) {
       return e;
@@ -218,6 +220,18 @@ public class EnumUtils {
       return long.class;
     }
     return type;
+  }
+
+  static Expression toInternal(Expression e, RelDataType type) {
+    switch (type.getSqlTypeName()) {
+    case DATE:
+    case TIME:
+      return enforce(type.isNullable() ? Integer.class : int.class, e);
+    case TIMESTAMP:
+      return enforce(type.isNullable() ? Long.class : long.class, e);
+    default:
+      return e;
+    }
   }
 
   static Type toInternal(RelDataType type) {
