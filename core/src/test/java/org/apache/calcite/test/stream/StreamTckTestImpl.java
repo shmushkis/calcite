@@ -29,6 +29,8 @@ public class StreamTckTestImpl extends StreamTckTest {
     };
   }
 
+  /** Extension to {@code Sql} that can run statements using a JDBC connection
+   * to Calcite. */
   private static class SqlImpl extends StreamAssert.Sql {
     public SqlImpl(String sql) {
       super(sql);

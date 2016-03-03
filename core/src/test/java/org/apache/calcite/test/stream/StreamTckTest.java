@@ -52,7 +52,7 @@ public abstract class StreamTckTest {
   }
 
   @Test public void testWhere() {
-    final String sql = "select stream * from Orders where units < 6";
+    final String sql = "select stream * from Orders where units > 6";
     getTester()
         .sql(sql)
         .input(0, "Orders")
