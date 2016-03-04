@@ -30,6 +30,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.regex.Pattern;
 
 /**
@@ -72,7 +73,7 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
   private static final Set<Class> DETERMINISTIC_CLASSES =
       ImmutableSet.<Class>of(Byte.class, Boolean.class, Short.class,
           Integer.class, Long.class, BigInteger.class, BigDecimal.class,
-          String.class, Math.class);
+          String.class, Math.class, TimeZone.class);
 
   /**
    * Creates a child optimizer.

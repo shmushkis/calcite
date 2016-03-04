@@ -42,6 +42,7 @@ import java.lang.reflect.Type;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TimeZone;
 
 /**
  * Utilities for generating programs in the Enumerable (functional)
@@ -294,22 +295,39 @@ public class EnumUtils {
           return Expressions.call(BuiltInMethod.DATE_TO_INT_OPTIONAL.method, e);
         }
       } else if (e.type == java.sql.Time.class) {
+        // We assume that values of type java.sql.Time (and also
+        // java.sql.Timestamp, below) have been created by hand and are in UTC.
+        // That is, new Timestamp(0) represents TIMESTAMP '1970-1-1 0:0:0'.
+        //
+        // But this is not valid for values that have come from a JDBC data
+        // source or have been returned by a UDF; these are in local time, per
+        // the JDBC specification.
         if (storageType == int.class) {
-          return Expressions.call(BuiltInMethod.TIME_TO_INT.method, e);
+          return Expressions.call(BuiltInMethod.TIME_TO_INT_OFFSET.method, e,
+              utc());
         }
         if (storageType == Integer.class) {
-          return Expressions.call(BuiltInMethod.TIME_TO_INT_OPTIONAL.method, e);
+          return Expressions.call(
+              BuiltInMethod.TIME_TO_INT_OPTIONAL_OFFSET.method, e, utc());
         }
       } else if (e.type == java.sql.Timestamp.class) {
         if (storageType == long.class) {
-          return Expressions.call(BuiltInMethod.TIMESTAMP_TO_LONG.method, e);
+          return Expressions.call(BuiltInMethod.TIMESTAMP_TO_LONG_OFFSET.method,
+              e, utc());
         }
         if (storageType == Long.class) {
-          return Expressions.call(BuiltInMethod.TIMESTAMP_TO_LONG_OPTIONAL.method, e);
+          return Expressions.call(
+              BuiltInMethod.TIMESTAMP_TO_LONG_OPTIONAL_OFFSET.method, e, utc());
         }
       }
     }
     return e;
+  }
+
+  /** Returns an expression for the UTC time zone. */
+  private static Expression utc() {
+    return Expressions.call(TimeZone.class, "getTimeZone",
+        Expressions.constant("UTC"));
   }
 }
 

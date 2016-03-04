@@ -1071,10 +1071,18 @@ public class SqlFunctions {
    *
    * <p>Converse of {@link #internalToTime(int)}. */
   public static int toInt(java.sql.Time v) {
-    return (int) (toLong(v) % DateTimeUtils.MILLIS_PER_DAY);
+    return toInt(v, LOCAL_TZ);
+  }
+
+  public static int toInt(java.sql.Time v, TimeZone timeZone) {
+    return (int) (toLong(v, timeZone) % DateTimeUtils.MILLIS_PER_DAY);
   }
 
   public static Integer toIntOptional(java.sql.Time v) {
+    return v == null ? null : toInt(v, LOCAL_TZ);
+  }
+
+  public static Integer toIntOptional(java.sql.Time v, TimeZone timeZone) {
     return v == null ? null : toInt(v);
   }
 
