@@ -17,17 +17,8 @@
 #
 !set outputformat mysql
 !use scott
-
-select deptno, (select min(empno) from "scott".emp where deptno = dept.deptno) as x from "scott".dept;
-+--------+------+
-| DEPTNO | X    |
-+--------+------+
-|     10 | 7782 |
-|     20 | 7369 |
-|     30 | 7499 |
-|     40 |      |
-+--------+------+
-(4 rows)
-
+SELECT SUM(
+  (select char_length(dname) from "scott".dept where dept.deptno = emp.empno)) as s
+FROM "scott".emp;
 !ok
 # End dummy.iq
