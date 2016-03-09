@@ -69,7 +69,7 @@ public class VolcanoPlannerTest {
   /**
    * Private calling convention representing a physical implementation.
    */
-  private static final Convention PHYS_CALLING_CONVENTION =
+  static final Convention PHYS_CALLING_CONVENTION =
       new Convention.Impl(
           "PHYS",
           RelNode.class);
@@ -480,7 +480,7 @@ public class VolcanoPlannerTest {
   //~ Inner Classes ----------------------------------------------------------
 
   /** Leaf relational expression. */
-  private abstract static class TestLeafRel extends AbstractRelNode {
+  abstract static class TestLeafRel extends AbstractRelNode {
     private String label;
 
     protected TestLeafRel(
@@ -516,7 +516,7 @@ public class VolcanoPlannerTest {
   }
 
   /** Relational expression with one input. */
-  private abstract static class TestSingleRel extends SingleRel {
+  abstract static class TestSingleRel extends SingleRel {
     protected TestSingleRel(
         RelOptCluster cluster,
         RelTraitSet traits,
@@ -537,7 +537,7 @@ public class VolcanoPlannerTest {
   }
 
   /** Relational expression with one input and convention NONE. */
-  private static class NoneSingleRel extends TestSingleRel {
+  static class NoneSingleRel extends TestSingleRel {
     protected NoneSingleRel(
         RelOptCluster cluster,
         RelNode child) {
@@ -556,7 +556,7 @@ public class VolcanoPlannerTest {
   }
 
   /** Relational expression with zero inputs and convention NONE. */
-  private static class NoneLeafRel extends TestLeafRel {
+  static class NoneLeafRel extends TestLeafRel {
     protected NoneLeafRel(
         RelOptCluster cluster,
         String label) {
@@ -574,7 +574,7 @@ public class VolcanoPlannerTest {
   }
 
   /** Relational expression with zero inputs and convention PHYS. */
-  private static class PhysLeafRel extends TestLeafRel {
+  static class PhysLeafRel extends TestLeafRel {
     PhysLeafRel(
         RelOptCluster cluster,
         String label) {
@@ -598,7 +598,7 @@ public class VolcanoPlannerTest {
   }
 
   /** Relational expression with one input and convention PHYS. */
-  private static class PhysSingleRel extends TestSingleRel {
+  static class PhysSingleRel extends TestSingleRel {
     PhysSingleRel(
         RelOptCluster cluster,
         RelNode child) {
@@ -644,7 +644,7 @@ public class VolcanoPlannerTest {
 
   /** Planner rule that converts {@link NoneLeafRel} to PHYS
    * convention. */
-  private static class PhysLeafRule extends RelOptRule {
+  static class PhysLeafRule extends RelOptRule {
     PhysLeafRule() {
       super(operand(NoneLeafRel.class, any()));
     }
@@ -665,7 +665,7 @@ public class VolcanoPlannerTest {
   }
 
   /** Planner rule that matches a {@link NoneSingleRel} and succeeds. */
-  private static class GoodSingleRule extends RelOptRule {
+  static class GoodSingleRule extends RelOptRule {
     GoodSingleRule() {
       super(operand(NoneSingleRel.class, any()));
     }

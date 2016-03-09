@@ -83,8 +83,8 @@ public class RelCollationTraitDef extends RelTraitDef<RelCollation> {
 
   public boolean canConvert(
       RelOptPlanner planner, RelCollation fromTrait, RelCollation toTrait) {
-    return true;
+    // There is no need to create a converter if toTrait is already satisfied by fromTrait.
+    return !fromTrait.satisfies(toTrait);
   }
 }
-
 // End RelCollationTraitDef.java

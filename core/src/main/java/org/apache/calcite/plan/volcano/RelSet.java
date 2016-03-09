@@ -16,10 +16,12 @@
  */
 package org.apache.calcite.plan.volcano;
 
+import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptListener;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTrait;
+import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.CorrelationId;
@@ -158,11 +160,66 @@ class RelSet {
       final VolcanoPlanner planner =
           (VolcanoPlanner) cluster.getPlanner();
 
+      // Converters from newly introduced subset to all the remaining one, only if possible to
+      // convert.  No point adding converters if it is not possible.
+      for (RelSubset other : subsets) {
+        if (other.getConvention() == Convention.NONE) {
+          continue;
+        }
+
+        assert other.getTraitSet().size() == subset.getTraitSet().size();
+
+        final ImmutableList<RelTrait> otherTrait =
+                other.getTraitSet().difference(subset.getTraitSet());
+        final ImmutableList<RelTrait> thisTrait =
+                subset.getTraitSet().difference(other.getTraitSet());
+        assert otherTrait.size() == thisTrait.size();
+
+        if (otherTrait.size() == 1 && thisTrait.size() == 1) {
+          RelTraitDef traitDef = otherTrait.get(0).getTraitDef();
+          boolean canConvert = traitDef.canConvert(
+                  cluster.getPlanner(), thisTrait.get(0), otherTrait.get(0));
+
+          if (canConvert) {
+            final AbstractConverter converter =
+                    new AbstractConverter(cluster, subset, traitDef, other.getTraitSet());
+            planner.register(converter, other);
+          }
+        }
+      }
+
       subsets.add(subset);
 
-      if (planner.root != null
-          && planner.root.set == this) {
-        planner.ensureRootConverters();
+      // Converters from newly introduced subset to all the remaining one, only if possible to
+      // convert.  No point adding converters if it is not possible.
+      for (RelSubset other : subsets) {
+        if (other == subset) {
+          continue;
+        }
+
+        if (other.getConvention() == Convention.NONE) {
+          continue;
+        }
+
+        assert other.getTraitSet().size() == subset.getTraitSet().size();
+
+        final ImmutableList<RelTrait> otherTrait =
+                other.getTraitSet().difference(subset.getTraitSet());
+        final ImmutableList<RelTrait> thisTrait =
+                subset.getTraitSet().difference(other.getTraitSet());
+        assert otherTrait.size() == thisTrait.size();
+
+        if (otherTrait.size() == 1 && thisTrait.size() == 1) {
+          RelTraitDef traitDef = otherTrait.get(0).getTraitDef();
+          boolean canConvert = traitDef.canConvert(
+                  cluster.getPlanner(), otherTrait.get(0), thisTrait.get(0));
+
+          if (canConvert) {
+            final AbstractConverter converter =
+                    new AbstractConverter(cluster, other, traitDef, subset.getTraitSet());
+            planner.register(converter, subset);
+          }
+        }
       }
 
       if (planner.listener != null) {
