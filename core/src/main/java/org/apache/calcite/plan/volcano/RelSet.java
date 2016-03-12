@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.plan.volcano;
 
-import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptListener;
 import org.apache.calcite.plan.RelOptUtil;
@@ -167,7 +166,7 @@ class RelSet {
       // Converters from newly introduced subset to all the remaining one (vice versa), only if
       // can convert.  No point adding converters if it is not possible.
       for (RelSubset other : subsets) {
-        if (other == subset || other.getConvention() == Convention.NONE) {
+        if (other == subset) {
           continue;
         }
 
