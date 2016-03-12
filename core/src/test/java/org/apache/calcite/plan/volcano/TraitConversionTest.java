@@ -246,8 +246,8 @@ public class TraitConversionTest {
 
       if ((fromTrait == toTrait)
               || (toTrait == simpleDistributionAny)
-              || (toTrait == simpleDistributionSingleton
-                && fromTrait == simpleDistributionRandom)) {
+              || (fromTrait == simpleDistributionSingleton
+                && toTrait == simpleDistributionRandom)) {
         return true;
       }
 

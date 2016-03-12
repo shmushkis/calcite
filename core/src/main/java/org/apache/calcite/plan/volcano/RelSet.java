@@ -159,12 +159,8 @@ class RelSet {
       final VolcanoPlanner planner =
           (VolcanoPlanner) cluster.getPlanner();
 
-      // Need to first add to subset before adding the abstract converters (for others->subset)
-      // since otherwise during register() the planner will try to add this subset again.
-      subsets.add(subset);
-
       // Converters from newly introduced subset to all the remaining one (vice versa), only if
-      // can convert.  No point adding converters if it is not possible.
+      // we can convert.  No point adding converters if it is not possible.
       for (RelSubset other : subsets) {
         if (other == subset) {
           continue;
@@ -172,16 +168,22 @@ class RelSet {
 
         assert other.getTraitSet().size() == subset.getTraitSet().size();
 
-        final ImmutableList<RelTrait> otherTrait =
-                other.getTraitSet().difference(subset.getTraitSet());
         final ImmutableList<RelTrait> thisTrait =
+                other.getTraitSet().difference(subset.getTraitSet());
+        final ImmutableList<RelTrait> otherTrait =
                 subset.getTraitSet().difference(other.getTraitSet());
-        assert otherTrait.size() == thisTrait.size();
+        assert thisTrait.size() == otherTrait.size();
 
-        if (otherTrait.size() == 1 && thisTrait.size() == 1) {
-          RelTraitDef traitDef = thisTrait.get(0).getTraitDef();
+        if (thisTrait.size() == 1 && otherTrait.size() == 1) {
+
+          assert thisTrait.get(0).getTraitDef() == otherTrait.get(0).getTraitDef();
+
+          RelTraitDef traitDef = otherTrait.get(0).getTraitDef();
+
+          // We can convert from subset to other.  So, add converter with subset as child and
+          // traitset as the other's traitset.
           boolean canConvert = traitDef.canConvert(
-                  cluster.getPlanner(), thisTrait.get(0), otherTrait.get(0));
+                  cluster.getPlanner(), thisTrait.get(0), otherTrait.get(0), subset);
           boolean needConvert = !thisTrait.get(0).satisfies(otherTrait.get(0));
 
           if (canConvert && needConvert) {
@@ -189,19 +191,12 @@ class RelSet {
                     new AbstractConverter(cluster, subset, traitDef, other.getTraitSet());
             planner.register(converter, other);
           }
-
-          traitDef = otherTrait.get(0).getTraitDef();
-          canConvert = traitDef.canConvert(
-                  cluster.getPlanner(), otherTrait.get(0), thisTrait.get(0));
-          needConvert = !otherTrait.get(0).satisfies(thisTrait.get(0));
-
-          if (canConvert && needConvert) {
-            final AbstractConverter converter =
-                    new AbstractConverter(cluster, other, traitDef, subset.getTraitSet());
-            planner.register(converter, subset);
-          }
         }
       }
+
+      // Need to first add to subset before adding the abstract converters (for others->subset)
+      // since otherwise during register() the planner will try to add this subset again.
+      subsets.add(subset);
 
       if (planner.listener != null) {
         postEquivalenceEvent(planner, subset);
