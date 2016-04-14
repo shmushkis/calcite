@@ -39,12 +39,11 @@ public class WebReader implements Iterable<Elements> {
 
   private static final String DEFAULT_CHARSET = "UTF-8";
 
-  private URL url;
-  private String selector;
-  private Integer index;
-  private String charset = DEFAULT_CHARSET;
+  private final URL url;
+  private final String selector;
+  private final Integer index;
+  private final String charset = DEFAULT_CHARSET;
   private Element tableElement;
-  private WebReaderIterator iterator;
   private Elements headings;
 
   public WebReader(String url, String selector, Integer index) throws WebReaderException {
@@ -104,7 +103,7 @@ public class WebReader implements Iterable<Elements> {
 
       el = list.first();
     } else {
-      el = list.get(this.index.intValue());
+      el = list.get(this.index);
     }
 
     // verify element is a table
@@ -140,12 +139,12 @@ public class WebReader implements Iterable<Elements> {
     return bestTable;
   }
 
-  public void refresh() throws WebReaderException {
+  void refresh() throws WebReaderException {
     this.headings = null;
     getTable();
   }
 
-  public Elements getHeadings() throws WebReaderException {
+  Elements getHeadings() throws WebReaderException {
 
     if (this.headings == null) {
       this.iterator();
@@ -168,19 +167,19 @@ public class WebReader implements Iterable<Elements> {
       }
     }
 
-    this.iterator = new WebReaderIterator(this.tableElement.select("tr"));
+    WebReaderIterator iterator = new WebReaderIterator(this.tableElement.select("tr"));
 
     // if we haven't cached the headings, get them
     // TODO: this needs to be reworked to properly cache the headings
     //if (this.headings == null) {
     if (true) {
       // first row must contain headings
-      Elements headings = this.iterator.next("th");
+      Elements headings = iterator.next("th");
       // if not, generate some default column names
       if (headings.size() == 0) {
         // rewind and peek at the first row of data
-        this.iterator = new WebReaderIterator(this.tableElement.select("tr"));
-        Elements firstRow = this.iterator.next("td");
+        iterator = new WebReaderIterator(this.tableElement.select("tr"));
+        Elements firstRow = iterator.next("td");
         int i = 0;
         headings = new Elements();
         for (Element td : firstRow) {
@@ -190,22 +189,22 @@ public class WebReader implements Iterable<Elements> {
           headings.add(th);
         }
         // rewind, so queries see the first row
-        this.iterator = new WebReaderIterator(this.tableElement.select("tr"));
+        iterator = new WebReaderIterator(this.tableElement.select("tr"));
       }
       this.headings = headings;
     }
 
-    return this.iterator;
+    return iterator;
   }
 
   public void close() {
   }
 
   /** Iterates over HTML tables, returning an Elements per row. */
-  public class WebReaderIterator implements Iterator<Elements> {
+  private class WebReaderIterator implements Iterator<Elements> {
     Iterator<Element> rowIterator;
 
-    public WebReaderIterator(Elements rows) {
+    WebReaderIterator(Elements rows) {
       this.rowIterator = rows.iterator();
     }
 
@@ -213,7 +212,7 @@ public class WebReader implements Iterable<Elements> {
       return this.rowIterator.hasNext();
     }
 
-    public Elements next(String selector) {
+    Elements next(String selector) {
       Element row = this.rowIterator.next();
 
       return row.select(selector);
