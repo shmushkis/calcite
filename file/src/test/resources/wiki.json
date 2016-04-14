@@ -78,12 +78,12 @@
             index: 0,
             fields: [
               {th: "State", selector: "a", selectedElement: 0},
-              {th: "Largest city[A][7]", name: "Largest City"},
+              {th: "Largest city[A][10]", name: "Largest City"},
               {th: "Statehood[B]", name: "Statehood", type: "Date"},
-              {th: "Population (2013 est)[8]", name: "Population", type: "double"},
-              {th: "Total area in mi2 (km2)[C][9]", name: "Total Area", type: "double"},
-              {th: "Land area in mi2 (km2)[C][9]", name: "Land Area", type: "double"},
-              {th: "Water area in mi2 (km2)[C][9]", name: "Water Area", type: "double"}
+              {th: "Population (2013 est)[11]", name: "Population", type: "double"},
+              {th: "Total area in mi2 (km2)[C][12]", name: "Total Area", type: "double"},
+              {th: "Land area in mi2 (km2)[C][12]", name: "Land Area", type: "double"},
+              {th: "Water area in mi2 (km2)[C][12]", name: "Water Area", type: "double"}
             ]
         }
 	]
