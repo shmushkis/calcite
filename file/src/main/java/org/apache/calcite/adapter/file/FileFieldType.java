@@ -28,52 +28,53 @@ import java.util.Map;
  *
  * <p>Usually, and unless specified explicitly in the header row, a field is
  * of type {@link #STRING}. But specifying the field type in the fields
- * makes it easier to write SQL.</p>
- * <p>Trivially modified from CsvFieldType</p>
+ * makes it easier to write SQL.
+ *
+ * <p>Trivially modified from CsvFieldType.
  */
 enum WebFieldType {
-    STRING(null, String.class),
-    BOOLEAN(Primitive.BOOLEAN),
-    BYTE(Primitive.BYTE),
-    CHAR(Primitive.CHAR),
-    SHORT(Primitive.SHORT),
-    INT(Primitive.INT),
-    LONG(Primitive.LONG),
-    FLOAT(Primitive.FLOAT),
-    DOUBLE(Primitive.DOUBLE),
-    DATE(null, java.sql.Date.class),
-    TIME(null, java.sql.Time.class),
-    TIMESTAMP(null, java.sql.Timestamp.class);
+  STRING(null, String.class),
+  BOOLEAN(Primitive.BOOLEAN),
+  BYTE(Primitive.BYTE),
+  CHAR(Primitive.CHAR),
+  SHORT(Primitive.SHORT),
+  INT(Primitive.INT),
+  LONG(Primitive.LONG),
+  FLOAT(Primitive.FLOAT),
+  DOUBLE(Primitive.DOUBLE),
+  DATE(null, java.sql.Date.class),
+  TIME(null, java.sql.Time.class),
+  TIMESTAMP(null, java.sql.Timestamp.class);
 
-    private final Primitive primitive;
-    private final Class clazz;
-    private static final Map<String, WebFieldType> MAP = new HashMap<String, WebFieldType>();
+  private final Primitive primitive;
+  private final Class clazz;
+  private static final Map<String, WebFieldType> MAP = new HashMap<String, WebFieldType>();
 
-    static {
-        for (WebFieldType value : values()) {
-            MAP.put(value.clazz.getSimpleName(), value);
+  static {
+    for (WebFieldType value : values()) {
+      MAP.put(value.clazz.getSimpleName(), value);
 
-            if (value.primitive != null) {
-                MAP.put(value.primitive.primitiveClass.getSimpleName(), value);
-            }
-        }
+      if (value.primitive != null) {
+        MAP.put(value.primitive.primitiveClass.getSimpleName(), value);
+      }
     }
+  }
 
-    WebFieldType(Primitive primitive) {
-        this(primitive, primitive.boxClass);
-    }
+  WebFieldType(Primitive primitive) {
+    this(primitive, primitive.boxClass);
+  }
 
-    WebFieldType(Primitive primitive, Class clazz) {
-        this.primitive = primitive;
-        this.clazz = clazz;
-    }
+  WebFieldType(Primitive primitive, Class clazz) {
+    this.primitive = primitive;
+    this.clazz = clazz;
+  }
 
-    public RelDataType toType(JavaTypeFactory typeFactory) {
-        return typeFactory.createJavaType(clazz);
-    }
+  public RelDataType toType(JavaTypeFactory typeFactory) {
+    return typeFactory.createJavaType(clazz);
+  }
 
-    public static WebFieldType of(String typeString) {
-        return MAP.get(typeString);
-    }
+  public static WebFieldType of(String typeString) {
+    return MAP.get(typeString);
+  }
 }
 // End WebFieldType.java

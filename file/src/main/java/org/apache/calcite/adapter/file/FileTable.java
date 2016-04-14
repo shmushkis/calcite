@@ -36,86 +36,83 @@ import org.apache.calcite.schema.Statistics;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.AbstractTableQueryable;
 
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.Map;
 
 /**
- * WebTable - table implementation wrapping a URL / HTML table.
- *
- * hpo - 2/23/2014
- *
+ * Table implementation wrapping a URL / HTML table.
  */
-public class WebTable extends AbstractQueryableTable
+class WebTable extends AbstractQueryableTable
     implements TranslatableTable {
 
-    private final RelProtoDataType protoRowType;
-    private WebReader reader;
-    private WebRowConverter converter;
+  private final RelProtoDataType protoRowType;
+  private WebReader reader;
+  private WebRowConverter converter;
 
-    /** Creates a WebTable. */
-    WebTable(Map<String, Object> tableDef, RelProtoDataType protoRowType) throws Exception {
-        super(Object[].class);
+  /** Creates a WebTable. */
+  WebTable(Map<String, Object> tableDef, RelProtoDataType protoRowType) throws Exception {
+    super(Object[].class);
 
-        this.protoRowType = protoRowType;
-        ArrayList<Map<String, Object>> fieldConfigs =
-                (ArrayList<Map<String, Object>>) tableDef.get("fields");
-        String url = (String) tableDef.get("url");
-        String selector = (String) tableDef.get("selector");
-        Integer index = (Integer) tableDef.get("index");
-        this.reader = new WebReader(url, selector, index);
-        this.converter = new WebRowConverter(this.reader, fieldConfigs);
-        //System.out.println("Created WebTable: " + (String) tableDef.get("name"));
+    this.protoRowType = protoRowType;
+    @SuppressWarnings("unchecked") ArrayList<Map<String, Object>> fieldConfigs =
+        (ArrayList<Map<String, Object>>) tableDef.get("fields");
+    String url = (String) tableDef.get("url");
+    String selector = (String) tableDef.get("selector");
+    Integer index = (Integer) tableDef.get("index");
+    this.reader = new WebReader(url, selector, index);
+    this.converter = new WebRowConverter(this.reader, fieldConfigs);
+    //System.out.println("Created WebTable: " + (String) tableDef.get("name"));
 
+  }
+
+  public String toString() {
+    return "WebTable";
+  }
+
+  public Statistic getStatistic() {
+    return Statistics.UNKNOWN;
+  }
+
+  public RelDataType getRowType(RelDataTypeFactory typeFactory) {
+    if (protoRowType != null) {
+      return protoRowType.apply(typeFactory);
     }
+    return this.converter.getRowType((JavaTypeFactory) typeFactory);
+  }
 
-    public String toString() {
-        return "WebTable";
-    }
-
-    public Statistic getStatistic() {
-        return Statistics.UNKNOWN;
-    }
-
-    public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-        if (protoRowType != null) {
-            return protoRowType.apply(typeFactory);
+  public <T> Queryable<T> asQueryable(QueryProvider queryProvider,
+      SchemaPlus schema, String tableName) {
+    return new AbstractTableQueryable<T>(queryProvider, schema, this,
+        tableName) {
+      public Enumerator<T> enumerator() {
+        try {
+          WebEnumerator enumerator = new WebEnumerator(reader.iterator(), converter);
+          //noinspection unchecked
+          return (Enumerator<T>) enumerator;
+        } catch (Exception e) {
+          throw new RuntimeException(e);
         }
-        return this.converter.getRowType((JavaTypeFactory) typeFactory);
-    }
+      }
+    };
+  }
 
-    public <T> Queryable<T> asQueryable(QueryProvider queryProvider, SchemaPlus schema, String tableName) {
-        return new AbstractTableQueryable<T>(queryProvider, schema, this,
-            tableName) {
-                public Enumerator<T> enumerator() {
-                    //noinspection unchecked
-                    try {
-                        WebEnumerator enumerator = new WebEnumerator(reader.iterator(), converter);
-                        return (Enumerator<T>) enumerator;
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-            }
-        };
-    }
+  /** Returns an enumerable over a given projection of the fields. */
+  public Enumerable<Object> project(final int[] fields) {
+    return new AbstractEnumerable<Object>() {
+      public Enumerator<Object> enumerator() {
+        try {
+          return new WebEnumerator(reader.iterator(), converter, fields);
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+  }
 
-    /** Returns an enumerable over a given projection of the fields. */
-    public Enumerable<Object> project(final int[] fields) {
-        return new AbstractEnumerable<Object>() {
-                public Enumerator<Object> enumerator() {
-                    try {
-                        WebEnumerator enumerator = new WebEnumerator(reader.iterator(), converter, fields);
-                        return enumerator;
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            };
-    }
-
-    public RelNode toRel(RelOptTable.ToRelContext context, RelOptTable relOptTable) {
-        return new EnumerableTableScan(context.getCluster(),
-            context.getCluster().traitSetOf(EnumerableConvention.INSTANCE),
-            relOptTable, (Class) getElementType());
-    }
+  public RelNode toRel(RelOptTable.ToRelContext context, RelOptTable relOptTable) {
+    return new EnumerableTableScan(context.getCluster(),
+        context.getCluster().traitSetOf(EnumerableConvention.INSTANCE),
+        relOptTable, (Class) getElementType());
+  }
 }
 // End WebTable.java

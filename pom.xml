@@ -133,6 +133,7 @@ limitations under the License.
     <module>druid</module>
     <module>elasticsearch</module>
     <module>example</module>
+    <module>file</module>
     <module>linq4j</module>
     <module>mongodb</module>
     <module>piglet</module>

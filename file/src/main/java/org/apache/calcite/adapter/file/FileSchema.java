@@ -16,53 +16,53 @@
  */
 package net.hydromatic.optiq.impl.web;
 
-import com.google.common.collect.ImmutableMap;
-
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 
-import java.util.*;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Schema mapped onto a set of URLs / HTML tables. Each table in the schema
  * is an HTML table on a URL.
  */
-public class WebSchema extends AbstractSchema {
-    private ArrayList<Map<String, Object>> tables;
+class WebSchema extends AbstractSchema {
+  private ImmutableList<Map<String, Object>> tables;
 
-    /**
-     * Creates an HTML tables schema.
-     *
-     * @param parentSchema Parent schema
-     * @param name Schema name
-     * @param tables ArrayList containing HTML table identifiers
-     * @param smart      Whether to instantiate smart tables that undergo
-     *                   query optimization
-     */
-    public WebSchema(SchemaPlus parentSchema, String name,
-        ArrayList<Map<String, Object>> tables, boolean smart) {
-        this.tables = tables;
+  /**
+   * Creates an HTML tables schema.
+   *
+   * @param parentSchema Parent schema
+   * @param name Schema name
+   * @param tables ArrayList containing HTML table identifiers
+   * @param smart      Whether to instantiate smart tables that undergo
+   *                   query optimization
+   */
+  WebSchema(SchemaPlus parentSchema, String name,
+      List<Map<String, Object>> tables, boolean smart) {
+    this.tables = ImmutableList.copyOf(tables);
+  }
+
+  @Override protected Map<String, Table> getTableMap() {
+    final ImmutableMap.Builder<String, Table> builder = ImmutableMap.builder();
+
+    for (Map<String, Object> tableDef : this.tables) {
+      String tableName = (String) tableDef.get("name");
+
+      try {
+        WebTable table = new WebTable(tableDef, null);
+        builder.put(tableName, table);
+      } catch (Exception e) {
+        e.printStackTrace();
+        System.out.println("Unable to instantiate table for: " + tableName);
+      }
     }
 
-    @Override
-    protected Map<String, Table> getTableMap() {
-
-        final ImmutableMap.Builder<String, Table> builder = ImmutableMap.builder();
-
-        for (Map<String, Object> tableDef : this.tables) {
-            String tableName = (String) tableDef.get("name");
-
-            try {
-                WebTable table = new WebTable(tableDef, null);
-                builder.put(tableName, table);
-            } catch (Exception e) {
-                e.printStackTrace();
-                System.out.println("Unable to instantiate table for: " + tableName);
-            }
-        }
-
-        return builder.build();
-    }
+    return builder.build();
+  }
 }
 // End WebSchema.java

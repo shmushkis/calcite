@@ -21,11 +21,16 @@ import org.apache.calcite.linq4j.function.Function1;
 import org.junit.Assume;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
 import java.io.PrintStream;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Properties;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * System test of the Optiq adapter for web tables.
@@ -67,7 +72,9 @@ public class SQLTest {
   @Test
   public void testURLSelect() throws SQLException {
     Assume.assumeTrue(AllTests.hazNetwork());
-    checkSql("wiki", "select \"State\", \"Statehood\" from \"States\" where \"State\" = 'California'",
+    final String sql = "select \"State\", \"Statehood\" from \"States\"\n"
+        + "where \"State\" = 'California'";
+    checkSql("wiki", sql,
         "State=California; Statehood=1850-09-09\n");
   }
 
@@ -87,15 +94,15 @@ public class SQLTest {
   }
 
   private void checkSql(String model, String sql, final String expected)
-    throws SQLException {
+      throws SQLException {
     checkSql(sql, model, new Function1<ResultSet, Void>() {
       public Void apply(ResultSet resultSet) {
         try {
           String actual = SQLTest.toString(resultSet);
           if (!expected.equals(actual)) {
-                System.out.println("Assertion failure:");
-                System.out.println("\tExpected: '" + expected + "'");
-                System.out.println("\tActual: '" + actual + "'");
+            System.out.println("Assertion failure:");
+            System.out.println("\tExpected: '" + expected + "'");
+            System.out.println("\tActual: '" + actual + "'");
           }
           assertEquals(expected, actual);
         } catch (SQLException e) {
@@ -107,7 +114,7 @@ public class SQLTest {
   }
 
   private void checkSql(String sql, String model, Function1<ResultSet, Void> fn)
-    throws SQLException {
+      throws SQLException {
     Connection connection = null;
     Statement statement = null;
     try {
@@ -142,7 +149,7 @@ public class SQLTest {
   }
 
   private void output(ResultSet resultSet, PrintStream out)
-    throws SQLException {
+      throws SQLException {
     final ResultSetMetaData metaData = resultSet.getMetaData();
     final int columnCount = metaData.getColumnCount();
     while (resultSet.next()) {

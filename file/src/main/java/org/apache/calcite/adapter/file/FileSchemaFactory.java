@@ -27,21 +27,21 @@ import java.util.Map;
 /**
  * Factory that creates a {@link WebSchema}.
  *
- * <p>Allows a custom schema to be included in a model.json file.</p>
+ * <p>Allows a custom schema to be included in a model.json file.
  */
 @SuppressWarnings("UnusedDeclaration")
 public class WebSchemaFactory implements SchemaFactory {
-    // public constructor, per factory contract
-    public WebSchemaFactory() {
-    }
+  // public constructor, per factory contract
+  public WebSchemaFactory() {
+  }
 
-    public Schema create(SchemaPlus parentSchema, String name,
-        Map<String, Object> operand) {
-        ArrayList tables = (ArrayList) operand.get("tables");
-        Boolean smart = (Boolean) operand.get("smart");
+  public Schema create(SchemaPlus parentSchema, String name,
+      Map<String, Object> operand) {
+    ArrayList tables = (ArrayList) operand.get("tables");
+    Boolean smart = (Boolean) operand.get("smart");
 
-        return new WebSchema(parentSchema, name, tables,
-            (smart != null) && smart);
-    }
+    return new WebSchema(parentSchema, name, tables,
+        (smart != null) && smart);
+  }
 }
 // End WebSchemaFactory.java

@@ -17,15 +17,15 @@
 package net.hydromatic.optiq.impl.web;
 
 /**
- * Indicates that the WebReader failed
+ * Indicates that the WebReader failed.
  */
-public class WebReaderException extends Exception {
-    public WebReaderException(String message) {
-        super(message);
-    }
-    public WebReaderException(String message, Throwable e) {
-        super(message, e);
-    }
+class WebReaderException extends Exception {
+  WebReaderException(String message) {
+    super(message);
+  }
+  WebReaderException(String message, Throwable e) {
+    super(message, e);
+  }
 }
 
 // End WebReaderException.java

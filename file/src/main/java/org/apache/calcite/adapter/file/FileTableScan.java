@@ -47,7 +47,8 @@ public class WebTableScan extends TableScan implements EnumerableRel {
   final WebTable webTable;
   final int[] fields;
 
-  protected WebTableScan(RelOptCluster cluster, RelOptTable table, WebTable webTable, int[] fields) {
+  protected WebTableScan(RelOptCluster cluster, RelOptTable table,
+      WebTable webTable, int[] fields) {
     super(cluster, cluster.traitSetOf(EnumerableConvention.INSTANCE), table);
     this.webTable = webTable;
     this.fields = fields;

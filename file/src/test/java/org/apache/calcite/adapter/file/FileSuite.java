@@ -29,28 +29,29 @@ import java.net.Socket;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({ WebReaderTest.class, SQLTest.class })
 public class AllTests {
+  private AllTests() {}
 
-    private static final String TEST_HOST = "en.wikipedia.org";
+  private static final String TEST_HOST = "en.wikipedia.org";
 
-    static boolean hazNetwork() {
-        Socket socket = null;
-        boolean reachable = false;
+  static boolean hazNetwork() {
+    Socket socket = null;
+    boolean reachable = false;
+    try {
+      socket = new Socket(AllTests.TEST_HOST, 80);
+      reachable = true;
+    } catch (Exception e) {
+      // do nothing
+    } finally {
+      if (socket != null) {
         try {
-            socket = new Socket(AllTests.TEST_HOST, 80);
-            reachable = true;
-        } catch (Exception e) {
-                // do nothing
-        } finally {
-                if (socket != null) {
-                        try {
-                            socket.close();
-                        } catch (IOException e) {
-                            // do nothing
-                        }
-                }
+          socket.close();
+        } catch (IOException e) {
+          // do nothing
         }
-        return reachable;
+      }
     }
+    return reachable;
+  }
 
 }
 
