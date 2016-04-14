@@ -16,20 +16,16 @@
  */
 package net.hydromatic.optiq.impl.web;
 
-import net.hydromatic.optiq.impl.java.JavaTypeFactory;
-
-import org.eigenbase.reltype.*;
-
-import org.eigenbase.util.Pair;
-
 import com.google.common.base.Joiner;
 
 import com.joestelmach.natty.*;
 
+import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.util.Pair;
+
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-
-import java.io.*;
 
 import java.text.NumberFormat;
 import java.text.ParseException;

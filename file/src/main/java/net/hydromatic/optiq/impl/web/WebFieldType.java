@@ -16,11 +16,9 @@
  */
 package net.hydromatic.optiq.impl.web;
 
-import net.hydromatic.optiq.impl.java.JavaTypeFactory;
-
-import net.hydromatic.linq4j.expressions.Primitive;
-
-import org.eigenbase.reltype.RelDataType;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.linq4j.tree.Primitive;
+import org.apache.calcite.rel.type.RelDataType;
 
 import java.util.HashMap;
 import java.util.Map;

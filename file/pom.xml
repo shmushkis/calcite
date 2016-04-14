@@ -108,23 +108,14 @@ limitations under the License.
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>net.hydromatic</groupId>
-      <artifactId>optiq-core</artifactId>
-      <!--
-      <version>LATEST</version>
-      <version>0.4.19-SNAPSHOT</version>
-      -->
-      <version>0.5</version>
-    </dependency>
-    <dependency>
-      <groupId>net.hydromatic</groupId>
-      <artifactId>linq4j</artifactId>
-      <version>0.1.13</version>
+      <groupId>org.apache.calcite</groupId>
+      <artifactId>calcite-core</artifactId>
+      <version>1.4.0-incubating</version>
     </dependency>
     <dependency>
       <groupId>sqlline</groupId>
       <artifactId>sqlline</artifactId>
-      <version>1.1.7</version>
+      <version>1.1.9</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -140,10 +131,10 @@ limitations under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.8.1</version>
+        <version>2.9.1</version>
         <configuration>
           <links>
-            <link>http://docs.oracle.com/javase/7/docs/api/</link>
+            <link>http://docs.oracle.com/javase/8/docs/api/</link>
           </links>
         </configuration>
       </plugin>
@@ -151,17 +142,6 @@ limitations under the License.
   </reporting>
 
   <repositories>
-    <repository>
-      <releases>
-        <enabled>true</enabled>
-        <updatePolicy>always</updatePolicy>
-        <checksumPolicy>warn</checksumPolicy>
-      </releases>
-      <id>pentaho</id>
-      <name>Pentaho</name>
-      <url>http://repo.pentaho.org/artifactory/repo</url>
-      <layout>default</layout>
-    </repository>
     <repository>
       <releases>
         <enabled>true</enabled>
@@ -179,7 +159,7 @@ limitations under the License.
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-          <version>2.3.2</version>
+          <version>3.1</version>
           <configuration>
           <source>1.5</source>
           <target>1.5</target>
@@ -223,7 +203,7 @@ limitations under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.16</version>
+        <version>2.18</version>
       </plugin>
 
       <plugin>
@@ -260,7 +240,7 @@ limitations under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
-        <version>2.4.1</version>
+        <version>2.5.1</version>
       </plugin>
     </plugins>
   </build>

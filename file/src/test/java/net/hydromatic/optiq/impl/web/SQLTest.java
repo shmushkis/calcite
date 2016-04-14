@@ -16,7 +16,7 @@
  */
 package net.hydromatic.optiq.impl.web;
 
-import net.hydromatic.linq4j.function.Function1;
+import org.apache.calcite.linq4j.function.Function1;
 
 import org.junit.Assume;
 import org.junit.Test;
@@ -97,7 +97,7 @@ public class SQLTest {
                 System.out.println("\tExpected: '" + expected + "'");
                 System.out.println("\tActual: '" + actual + "'");
           }
-          assertTrue(expected.equals(actual));
+          assertEquals(expected, actual);
         } catch (SQLException e) {
           throw new RuntimeException(e);
         }
@@ -113,7 +113,7 @@ public class SQLTest {
     try {
       Properties info = new Properties();
       info.put("model", "target/test-classes/" + model + ".json");
-      connection = DriverManager.getConnection("jdbc:optiq:", info);
+      connection = DriverManager.getConnection("jdbc:calcite:", info);
       statement = connection.createStatement();
       final ResultSet resultSet =
           statement.executeQuery(

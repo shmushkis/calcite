@@ -16,15 +16,25 @@
  */
 package net.hydromatic.optiq.impl.web;
 
-import net.hydromatic.optiq.rules.java.*;
+import org.apache.calcite.adapter.enumerable.EnumerableConvention;
+import org.apache.calcite.adapter.enumerable.EnumerableRel;
+import org.apache.calcite.adapter.enumerable.EnumerableRelImplementor;
+import org.apache.calcite.adapter.enumerable.PhysType;
+import org.apache.calcite.adapter.enumerable.PhysTypeImpl;
+import org.apache.calcite.linq4j.tree.Blocks;
+import org.apache.calcite.linq4j.tree.Expressions;
+import org.apache.calcite.linq4j.tree.Primitive;
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelWriter;
+import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
 
-import net.hydromatic.linq4j.expressions.*;
-
-import org.eigenbase.rel.*;
-import org.eigenbase.relopt.*;
-import org.eigenbase.reltype.*;
-
-import java.util.*;
+import java.util.List;
 
 /**
  * Relational expression representing a scan of an HTML table.
@@ -32,7 +42,7 @@ import java.util.*;
  * <p>Like any table scan, it serves as a leaf node of a query tree.</p>
  * <p>Trivially modified from CsvTableScan</p>
  */
-public class WebTableScan extends TableAccessRelBase implements EnumerableRel {
+public class WebTableScan extends TableScan implements EnumerableRel {
 
   final WebTable webTable;
   final int[] fields;

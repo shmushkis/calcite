@@ -16,13 +16,10 @@
  */
 package net.hydromatic.optiq.impl.web;
 
-import net.hydromatic.linq4j.Enumerator;
-
-import org.eigenbase.reltype.*;
+import org.apache.calcite.linq4j.Enumerator;
+import org.apache.calcite.rel.type.RelDataType;
 
 import org.jsoup.select.Elements;
-
-import java.io.*;
 
 import java.util.Iterator;
 
@@ -35,7 +32,7 @@ import java.util.Iterator;
 class WebEnumerator implements Enumerator<Object> {
 
     private Iterator<Elements> iterator = null;
-    private WebRowConverter converter = null;;
+    private WebRowConverter converter = null;
     private int[] fields;
     private RelDataType rowType;
     private Object current;

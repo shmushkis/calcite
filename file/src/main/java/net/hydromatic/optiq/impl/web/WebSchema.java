@@ -16,12 +16,11 @@
  */
 package net.hydromatic.optiq.impl.web;
 
-import net.hydromatic.optiq.*;
-import net.hydromatic.optiq.impl.AbstractSchema;
-
 import com.google.common.collect.ImmutableMap;
 
-import java.io.*;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.AbstractSchema;
 
 import java.util.*;
 
@@ -43,7 +42,6 @@ public class WebSchema extends AbstractSchema {
      */
     public WebSchema(SchemaPlus parentSchema, String name,
         ArrayList<Map<String, Object>> tables, boolean smart) {
-        super(parentSchema, name);
         this.tables = tables;
     }
 
