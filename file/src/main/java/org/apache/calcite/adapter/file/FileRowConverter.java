@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.web;
+package org.apache.calcite.adapter.file;
 
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.rel.type.RelDataType;
@@ -42,21 +42,21 @@ import java.util.regex.Pattern;
 
 
 /**
- * WebRowConverter.
+ * FileRowConverter.
  */
-class WebRowConverter {
+class FileRowConverter {
 
   // cache for lazy initialization
-  private WebReader webReader;
-  private ArrayList<Map<String, Object>> fieldConfigs;
+  private final FileReader fileReader;
+  private final List<Map<String, Object>> fieldConfigs;
   private boolean initialized = false;
 
   // row parser configuration
   private ArrayList<FieldDef> fields;
 
   // constructor
-  WebRowConverter(WebReader webReader, ArrayList<Map<String, Object>> fieldConfigs) {
-    this.webReader = webReader;
+  FileRowConverter(FileReader fileReader, List<Map<String, Object>> fieldConfigs) {
+    this.fileReader = fileReader;
     this.fieldConfigs = fieldConfigs;
   }
 
@@ -69,7 +69,7 @@ class WebRowConverter {
     }
     try {
       this.fields = new ArrayList<>();
-      final Elements headerElements = this.webReader.getHeadings();
+      final Elements headerElements = this.fileReader.getHeadings();
 
       // create a name to index map for HTML table elements
       final Map<String, Integer> headerMap = new HashMap<>();
@@ -92,7 +92,7 @@ class WebRowConverter {
             String thName = (String) fieldConfig.get("th");
             String name = thName;
             String newName;
-            WebFieldType type = null;
+            FileFieldType type = null;
             boolean skip = false;
 
             if (!headerMap.containsKey(thName)) {
@@ -107,7 +107,7 @@ class WebRowConverter {
 
             String typeString = (String) fieldConfig.get("type");
             if (typeString != null) {
-              type = WebFieldType.of(typeString);
+              type = FileFieldType.of(typeString);
             }
 
             String sSkip = (String) fieldConfig.get("skip");
@@ -141,8 +141,8 @@ class WebRowConverter {
     this.initialized = true;
   }
 
-  // add another field definition to the WebRowConverter during initialization
-  private void addFieldDef(String name, WebFieldType type,
+  // add another field definition to the FileRowConverter during initialization
+  private void addFieldDef(String name, FileFieldType type,
       Map<String, Object> config, int sourceCol) {
     this.fields.add(new FieldDef(name, type, config, sourceCol));
   }
@@ -173,7 +173,7 @@ class WebRowConverter {
     for (FieldDef f : this.fields) {
       names.add(f.getName());
 
-      WebFieldType fieldType = f.getType();
+      FileFieldType fieldType = f.getType();
       RelDataType type;
 
       if (fieldType == null) {
@@ -281,12 +281,12 @@ class WebRowConverter {
    * and for converting an Element to a java data type. */
   private class FieldDef {
     String name;
-    WebFieldType type;
+    FileFieldType type;
     Map<String, Object> config;
     CellReader cellReader;
     int cellSeq;
 
-    FieldDef(String name, WebFieldType type, Map<String, Object> config, int cellSeq) {
+    FieldDef(String name, FileFieldType type, Map<String, Object> config, int cellSeq) {
       this.name = name;
       this.type = type;
       this.config = config;
@@ -302,7 +302,7 @@ class WebRowConverter {
       return this.name;
     }
 
-    WebFieldType getType() {
+    FileFieldType getType() {
       return this.type;
     }
 
@@ -313,7 +313,7 @@ class WebRowConverter {
       return group.getDates().get(0);
     }
 
-    private Object toObject(WebFieldType fieldType, String string) {
+    private Object toObject(FileFieldType fieldType, String string) {
       if ((string == null) || (string.length() == 0)) {
         return null;
       }
@@ -388,4 +388,4 @@ class WebRowConverter {
   }
 }
 
-// End WebRowConverter.java
+// End FileRowConverter.java

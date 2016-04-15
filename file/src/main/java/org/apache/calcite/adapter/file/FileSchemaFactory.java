@@ -14,34 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.web;
+package org.apache.calcite.adapter.file;
 
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaFactory;
 import org.apache.calcite.schema.SchemaPlus;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
-
 /**
- * Factory that creates a {@link WebSchema}.
+ * Factory that creates a {@link FileSchema}.
  *
  * <p>Allows a custom schema to be included in a model.json file.
+ * See <a href="http://calcite.apache.org/docs/file.html">File adapter</a>.
  */
 @SuppressWarnings("UnusedDeclaration")
-public class WebSchemaFactory implements SchemaFactory {
+public class FileSchemaFactory implements SchemaFactory {
   // public constructor, per factory contract
-  public WebSchemaFactory() {
+  public FileSchemaFactory() {
   }
 
   public Schema create(SchemaPlus parentSchema, String name,
       Map<String, Object> operand) {
-    ArrayList tables = (ArrayList) operand.get("tables");
-    Boolean smart = (Boolean) operand.get("smart");
+    @SuppressWarnings("unchecked") List<Map<String, Object>> tables =
+        (List) operand.get("tables");
 
-    return new WebSchema(parentSchema, name, tables,
-        (smart != null) && smart);
+    return new FileSchema(parentSchema, name, tables);
   }
 }
-// End WebSchemaFactory.java
+
+// End FileSchemaFactory.java

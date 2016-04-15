@@ -14,18 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.web;
+package org.apache.calcite.adapter.file;
 
 /**
- * Indicates that the WebReader failed.
+ * Indicates that the FileReader failed.
  */
-class WebReaderException extends Exception {
-  WebReaderException(String message) {
+class FileReaderException extends Exception {
+  FileReaderException(String message) {
     super(message);
   }
-  WebReaderException(String message, Throwable e) {
+  FileReaderException(String message, Throwable e) {
     super(message, e);
   }
 }
 
-// End WebReaderException.java
+// End FileReaderException.java

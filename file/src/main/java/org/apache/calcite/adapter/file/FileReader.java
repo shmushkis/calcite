@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.web;
+package org.apache.calcite.adapter.file;
 
 import org.jsoup.Jsoup;
 
@@ -35,7 +35,7 @@ import java.util.Iterator;
 /**
  * Scrapes HTML tables from URLs using Jsoup.
  */
-public class WebReader implements Iterable<Elements> {
+public class FileReader implements Iterable<Elements> {
 
   private static final String DEFAULT_CHARSET = "UTF-8";
 
@@ -46,29 +46,29 @@ public class WebReader implements Iterable<Elements> {
   private Element tableElement;
   private Elements headings;
 
-  public WebReader(String url, String selector, Integer index) throws WebReaderException {
+  public FileReader(String url, String selector, Integer index) throws FileReaderException {
     if (url == null) {
-      throw new WebReaderException("URL must not be null");
+      throw new FileReaderException("URL must not be null");
     }
 
     try {
       this.url = new URL(url);
     } catch (MalformedURLException e) {
-      throw new WebReaderException("Malformed URL: '" + url + "'", e);
+      throw new FileReaderException("Malformed URL: '" + url + "'", e);
     }
     this.selector = selector;
     this.index = index;
   }
 
-  public WebReader(String url, String selector) throws WebReaderException {
+  public FileReader(String url, String selector) throws FileReaderException {
     this(url, selector, null);
   }
 
-  public WebReader(String url) throws WebReaderException {
+  public FileReader(String url) throws FileReaderException {
     this(url, null, null);
   }
 
-  private void getTable() throws WebReaderException {
+  private void getTable() throws FileReaderException {
 
     Document doc;
     try {
@@ -79,7 +79,7 @@ public class WebReader implements Iterable<Elements> {
         doc = Jsoup.connect(this.url.toString()).get();
       }
     } catch (IOException e) {
-      throw new WebReaderException("Cannot read " + this.url.toString(), e);
+      throw new FileReaderException("Cannot read " + this.url.toString(), e);
     }
 
     this.tableElement = (this.selector != null && !this.selector.equals(""))
@@ -87,7 +87,7 @@ public class WebReader implements Iterable<Elements> {
 
   }
 
-  private Element getSelectedTable(Document doc, String selector) throws WebReaderException {
+  private Element getSelectedTable(Document doc, String selector) throws FileReaderException {
 
     // get selected elements
     Elements list = doc.select(selector);
@@ -97,7 +97,7 @@ public class WebReader implements Iterable<Elements> {
 
     if (this.index == null) {
       if (list.size() != 1) {
-        throw new WebReaderException("" + list.size()
+        throw new FileReaderException("" + list.size()
             + " HTML element(s) selected");
       }
 
@@ -110,12 +110,12 @@ public class WebReader implements Iterable<Elements> {
     if (el.tag().getName().equals("table")) {
       return el;
     } else {
-      throw new WebReaderException("selected (" + selector + ") element is a "
+      throw new FileReaderException("selected (" + selector + ") element is a "
           + el.tag().getName() + ", not a table");
     }
   }
 
-  private Element getBestTable(Document doc) throws WebReaderException {
+  private Element getBestTable(Document doc) throws FileReaderException {
     Element bestTable = null;
     int bestScore = -1;
 
@@ -133,18 +133,18 @@ public class WebReader implements Iterable<Elements> {
     }
 
     if (bestTable == null) {
-      throw new WebReaderException("no tables found");
+      throw new FileReaderException("no tables found");
     }
 
     return bestTable;
   }
 
-  void refresh() throws WebReaderException {
+  void refresh() throws FileReaderException {
     this.headings = null;
     getTable();
   }
 
-  Elements getHeadings() throws WebReaderException {
+  Elements getHeadings() throws FileReaderException {
 
     if (this.headings == null) {
       this.iterator();
@@ -157,7 +157,7 @@ public class WebReader implements Iterable<Elements> {
     return "Table: {url: " + this.url + ", selector: " + this.selector;
   }
 
-  public WebReaderIterator iterator() {
+  public FileReaderIterator iterator() {
     if (this.tableElement == null) {
       try {
         getTable();
@@ -167,7 +167,7 @@ public class WebReader implements Iterable<Elements> {
       }
     }
 
-    WebReaderIterator iterator = new WebReaderIterator(this.tableElement.select("tr"));
+    FileReaderIterator iterator = new FileReaderIterator(this.tableElement.select("tr"));
 
     // if we haven't cached the headings, get them
     // TODO: this needs to be reworked to properly cache the headings
@@ -178,7 +178,7 @@ public class WebReader implements Iterable<Elements> {
       // if not, generate some default column names
       if (headings.size() == 0) {
         // rewind and peek at the first row of data
-        iterator = new WebReaderIterator(this.tableElement.select("tr"));
+        iterator = new FileReaderIterator(this.tableElement.select("tr"));
         Elements firstRow = iterator.next("td");
         int i = 0;
         headings = new Elements();
@@ -189,7 +189,7 @@ public class WebReader implements Iterable<Elements> {
           headings.add(th);
         }
         // rewind, so queries see the first row
-        iterator = new WebReaderIterator(this.tableElement.select("tr"));
+        iterator = new FileReaderIterator(this.tableElement.select("tr"));
       }
       this.headings = headings;
     }
@@ -201,10 +201,10 @@ public class WebReader implements Iterable<Elements> {
   }
 
   /** Iterates over HTML tables, returning an Elements per row. */
-  private class WebReaderIterator implements Iterator<Elements> {
+  private class FileReaderIterator implements Iterator<Elements> {
     Iterator<Element> rowIterator;
 
-    WebReaderIterator(Elements rows) {
+    FileReaderIterator(Elements rows) {
       this.rowIterator = rows.iterator();
     }
 
@@ -229,4 +229,4 @@ public class WebReader implements Iterable<Elements> {
   }
 }
 
-// End WebReader.java
+// End FileReader.java

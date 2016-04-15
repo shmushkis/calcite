@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.web;
+package org.apache.calcite.adapter.file;
 
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
@@ -30,7 +30,7 @@ import java.util.Map;
  * Schema mapped onto a set of URLs / HTML tables. Each table in the schema
  * is an HTML table on a URL.
  */
-class WebSchema extends AbstractSchema {
+class FileSchema extends AbstractSchema {
   private ImmutableList<Map<String, Object>> tables;
 
   /**
@@ -38,12 +38,10 @@ class WebSchema extends AbstractSchema {
    *
    * @param parentSchema Parent schema
    * @param name Schema name
-   * @param tables ArrayList containing HTML table identifiers
-   * @param smart      Whether to instantiate smart tables that undergo
-   *                   query optimization
+   * @param tables List containing HTML table identifiers
    */
-  WebSchema(SchemaPlus parentSchema, String name,
-      List<Map<String, Object>> tables, boolean smart) {
+  FileSchema(SchemaPlus parentSchema, String name,
+      List<Map<String, Object>> tables) {
     this.tables = ImmutableList.copyOf(tables);
   }
 
@@ -54,7 +52,7 @@ class WebSchema extends AbstractSchema {
       String tableName = (String) tableDef.get("name");
 
       try {
-        WebTable table = new WebTable(tableDef, null);
+        FileTable table = new FileTable(tableDef, null);
         builder.put(tableName, table);
       } catch (Exception e) {
         e.printStackTrace();
@@ -65,4 +63,4 @@ class WebSchema extends AbstractSchema {
     return builder.build();
   }
 }
-// End WebSchema.java
+// End FileSchema.java

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.web;
+package org.apache.calcite.adapter.file;
 
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.adapter.enumerable.EnumerableTableScan;
@@ -42,15 +42,15 @@ import java.util.Map;
 /**
  * Table implementation wrapping a URL / HTML table.
  */
-class WebTable extends AbstractQueryableTable
+class FileTable extends AbstractQueryableTable
     implements TranslatableTable {
 
   private final RelProtoDataType protoRowType;
-  private WebReader reader;
-  private WebRowConverter converter;
+  private FileReader reader;
+  private FileRowConverter converter;
 
-  /** Creates a WebTable. */
-  WebTable(Map<String, Object> tableDef, RelProtoDataType protoRowType) throws Exception {
+  /** Creates a FileTable. */
+  FileTable(Map<String, Object> tableDef, RelProtoDataType protoRowType) throws Exception {
     super(Object[].class);
 
     this.protoRowType = protoRowType;
@@ -59,14 +59,14 @@ class WebTable extends AbstractQueryableTable
     String url = (String) tableDef.get("url");
     String selector = (String) tableDef.get("selector");
     Integer index = (Integer) tableDef.get("index");
-    this.reader = new WebReader(url, selector, index);
-    this.converter = new WebRowConverter(this.reader, fieldConfigs);
-    //System.out.println("Created WebTable: " + (String) tableDef.get("name"));
+    this.reader = new FileReader(url, selector, index);
+    this.converter = new FileRowConverter(this.reader, fieldConfigs);
+    //System.out.println("Created FileTable: " + (String) tableDef.get("name"));
 
   }
 
   public String toString() {
-    return "WebTable";
+    return "FileTable";
   }
 
   public Statistic getStatistic() {
@@ -86,7 +86,7 @@ class WebTable extends AbstractQueryableTable
         tableName) {
       public Enumerator<T> enumerator() {
         try {
-          WebEnumerator enumerator = new WebEnumerator(reader.iterator(), converter);
+          FileEnumerator enumerator = new FileEnumerator(reader.iterator(), converter);
           //noinspection unchecked
           return (Enumerator<T>) enumerator;
         } catch (Exception e) {
@@ -101,7 +101,7 @@ class WebTable extends AbstractQueryableTable
     return new AbstractEnumerable<Object>() {
       public Enumerator<Object> enumerator() {
         try {
-          return new WebEnumerator(reader.iterator(), converter, fields);
+          return new FileEnumerator(reader.iterator(), converter, fields);
         } catch (Exception e) {
           throw new RuntimeException(e);
         }
@@ -115,4 +115,5 @@ class WebTable extends AbstractQueryableTable
         relOptTable, (Class) getElementType());
   }
 }
-// End WebTable.java
+
+// End FileTable.java

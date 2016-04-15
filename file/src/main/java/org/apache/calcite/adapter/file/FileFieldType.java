@@ -14,13 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.web;
+package org.apache.calcite.adapter.file;
 
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.tree.Primitive;
 import org.apache.calcite.rel.type.RelDataType;
 
-import java.util.HashMap;
+import com.google.common.collect.ImmutableMap;
+
 import java.util.Map;
 
 /**
@@ -32,7 +33,7 @@ import java.util.Map;
  *
  * <p>Trivially modified from CsvFieldType.
  */
-enum WebFieldType {
+enum FileFieldType {
   STRING(null, String.class),
   BOOLEAN(Primitive.BOOLEAN),
   BYTE(Primitive.BYTE),
@@ -48,23 +49,27 @@ enum WebFieldType {
 
   private final Primitive primitive;
   private final Class clazz;
-  private static final Map<String, WebFieldType> MAP = new HashMap<String, WebFieldType>();
+
+  private static final Map<String, FileFieldType> MAP;
 
   static {
-    for (WebFieldType value : values()) {
-      MAP.put(value.clazz.getSimpleName(), value);
+    ImmutableMap.Builder<String, FileFieldType> builder =
+        ImmutableMap.builder();
+    for (FileFieldType value : values()) {
+      builder.put(value.clazz.getSimpleName(), value);
 
       if (value.primitive != null) {
-        MAP.put(value.primitive.primitiveClass.getSimpleName(), value);
+        builder.put(value.primitive.primitiveClass.getSimpleName(), value);
       }
     }
+    MAP = builder.build();
   }
 
-  WebFieldType(Primitive primitive) {
+  FileFieldType(Primitive primitive) {
     this(primitive, primitive.boxClass);
   }
 
-  WebFieldType(Primitive primitive, Class clazz) {
+  FileFieldType(Primitive primitive, Class clazz) {
     this.primitive = primitive;
     this.clazz = clazz;
   }
@@ -73,8 +78,8 @@ enum WebFieldType {
     return typeFactory.createJavaType(clazz);
   }
 
-  public static WebFieldType of(String typeString) {
+  public static FileFieldType of(String typeString) {
     return MAP.get(typeString);
   }
 }
-// End WebFieldType.java
+// End FileFieldType.java

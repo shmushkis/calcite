@@ -81,7 +81,7 @@ limitations under the License.
         <version>2.18</version>
         <configuration>
           <includes>
-            <include>net/hydromatic/optiq/impl/web/AllTests.java</include>
+            <include>org/apache/calcite/adapter/file/FileSuite.java</include>
           </includes>
         </configuration>
       </plugin>

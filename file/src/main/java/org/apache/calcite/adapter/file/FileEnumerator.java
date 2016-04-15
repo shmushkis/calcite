@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.web;
+package org.apache.calcite.adapter.file;
 
 import org.apache.calcite.linq4j.Enumerator;
 
@@ -23,23 +23,23 @@ import org.jsoup.select.Elements;
 import java.util.Iterator;
 
 /**
- * Wraps WebReader and WebRowConverter, enumerates tr Elements as
+ * Wraps WebReader and FileRowConverter, enumerates tr Elements as
  * table rows.
  */
-class WebEnumerator implements Enumerator<Object> {
+class FileEnumerator implements Enumerator<Object> {
 
   private final Iterator<Elements> iterator;
-  private final WebRowConverter converter;
+  private final FileRowConverter converter;
   private final int[] fields;
   private Object current;
 
-  public WebEnumerator(Iterator<Elements> iterator, WebRowConverter converter) {
+  public FileEnumerator(Iterator<Elements> iterator, FileRowConverter converter) {
     this.iterator = iterator;
     this.converter = converter;
     this.fields = identityList(this.converter.width());
   }
 
-  public WebEnumerator(Iterator<Elements> iterator,  WebRowConverter converter, int[] fields) {
+  public FileEnumerator(Iterator<Elements> iterator,  FileRowConverter converter, int[] fields) {
     this.iterator = iterator;
     this.converter = converter;
     this.fields = fields;
@@ -89,4 +89,4 @@ class WebEnumerator implements Enumerator<Object> {
 
 }
 
-// End WebEnumerator.java
+// End FileEnumerator.java

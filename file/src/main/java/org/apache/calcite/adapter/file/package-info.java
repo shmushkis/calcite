@@ -16,12 +16,12 @@
  */
 
 /**
- * Optiq query provider that reads from web tables (HTML).
+ * Calcite query provider that reads from web tables (HTML).
  *
- * <p>An optiq schema that maps onto multiple URLs / HTML Tables.
- * Each HTML table appears as a table.  Full select SQL operations are available on
- * those tables.</p>
+ * <p>A Calcite schema that maps onto multiple URLs / HTML Tables.
+ * Each HTML table appears as a table.
+ * Full select SQL operations are available on those tables.
  */
-package net.hydromatic.optiq.impl.web;
+package org.apache.calcite.adapter.file;
 
 // End package-info.java

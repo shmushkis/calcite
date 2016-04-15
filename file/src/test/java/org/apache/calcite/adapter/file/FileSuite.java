@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.web;
+package org.apache.calcite.adapter.file;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -24,12 +24,12 @@ import java.io.IOException;
 import java.net.Socket;
 
 /**
- * Unit test suite for optiq-web.
+ * Unit test suite for Calcite File adapter.
  */
 @RunWith(Suite.class)
-@Suite.SuiteClasses({ WebReaderTest.class, SQLTest.class })
-public class AllTests {
-  private AllTests() {}
+@Suite.SuiteClasses({ FileReaderTest.class, SqlTest.class })
+public class FileSuite {
+  private FileSuite() {}
 
   private static final String TEST_HOST = "en.wikipedia.org";
 
@@ -37,7 +37,7 @@ public class AllTests {
     Socket socket = null;
     boolean reachable = false;
     try {
-      socket = new Socket(AllTests.TEST_HOST, 80);
+      socket = new Socket(FileSuite.TEST_HOST, 80);
       reachable = true;
     } catch (Exception e) {
       // do nothing
@@ -55,4 +55,4 @@ public class AllTests {
 
 }
 
-// End AllTests.java
+// End FileSuite.java

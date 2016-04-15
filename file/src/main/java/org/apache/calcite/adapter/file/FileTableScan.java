@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.hydromatic.optiq.impl.web;
+package org.apache.calcite.adapter.file;
 
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.adapter.enumerable.EnumerableRel;
@@ -39,16 +39,16 @@ import java.util.List;
 /**
  * Relational expression representing a scan of an HTML table.
  *
- * <p>Like any table scan, it serves as a leaf node of a query tree.</p>
- * <p>Trivially modified from CsvTableScan</p>
+ * <p>Like any table scan, it serves as a leaf node of a query tree.
+ *
+ * <p>Trivially modified from CsvTableScan.
  */
-public class WebTableScan extends TableScan implements EnumerableRel {
+class FileTableScan extends TableScan implements EnumerableRel {
+  private final FileTable webTable;
+  private final int[] fields;
 
-  final WebTable webTable;
-  final int[] fields;
-
-  protected WebTableScan(RelOptCluster cluster, RelOptTable table,
-      WebTable webTable, int[] fields) {
+  protected FileTableScan(RelOptCluster cluster, RelOptTable table,
+      FileTable webTable, int[] fields) {
     super(cluster, cluster.traitSetOf(EnumerableConvention.INSTANCE), table);
     this.webTable = webTable;
     this.fields = fields;
@@ -58,7 +58,7 @@ public class WebTableScan extends TableScan implements EnumerableRel {
 
   @Override public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
     assert inputs.isEmpty();
-    return new WebTableScan(getCluster(), table, webTable, fields);
+    return new FileTableScan(getCluster(), table, webTable, fields);
   }
 
   @Override public RelWriter explainTerms(RelWriter pw) {
@@ -86,9 +86,9 @@ public class WebTableScan extends TableScan implements EnumerableRel {
     return implementor.result(
         physType,
         Blocks.toBlock(
-            Expressions.call(table.getExpression(WebTable.class), "project",
+            Expressions.call(table.getExpression(FileTable.class), "project",
                 Expressions.constant(fields))));
   }
 }
 
-// End WebTableScan.java
+// End FileTableScan.java
