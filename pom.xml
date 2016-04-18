@@ -90,6 +90,7 @@ limitations under the License.
     <jcip-annotations.version>1.0-1</jcip-annotations.version>
     <jetty.version>9.2.15.v20160210</jetty.version>
     <jmh.version>1.12</jmh.version>
+    <jsoup.version>1.7.3</jsoup.version>
     <junit.version>4.12</junit.version>
     <maven-checkstyle-plugin.version>2.12.1</maven-checkstyle-plugin.version>
     <maven-dependency-plugin.version>2.10</maven-dependency-plugin.version>
@@ -100,6 +101,7 @@ limitations under the License.
     <mockito-all.version>1.10.19</mockito-all.version>
     <mongo-java-driver.version>2.12.3</mongo-java-driver.version>
     <mysql-driver.version>5.1.20</mysql-driver.version>
+    <natty.version>0.8</natty.version>
     <opencsv.version>2.3</opencsv.version>
     <oracle-jdbc6-driver.version>11.2.0.2.0</oracle-jdbc6-driver.version>
     <aggdesigner.version>6.0</aggdesigner.version>
@@ -113,8 +115,6 @@ limitations under the License.
     <sqlline.version>1.2.0</sqlline.version>
     <xalan.version>2.7.1</xalan.version>
     <xerces.version>2.9.1</xerces.version>
-      <natty.version>0.8</natty.version>
-      <jsoup.version>1.7.3</jsoup.version>
   </properties>
 
   <issueManagement>
@@ -176,6 +176,11 @@ limitations under the License.
       </dependency>
       <dependency>
         <groupId>org.apache.calcite</groupId>
+        <artifactId>calcite-example-csv</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.calcite</groupId>
         <artifactId>calcite-linq4j</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -227,6 +232,11 @@ limitations under the License.
         <version>${guava.version}</version>
       </dependency>
       <dependency>
+        <groupId>com.joestelmach</groupId>
+        <artifactId>natty</artifactId>
+        <version>${natty.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.oracle</groupId>
         <artifactId>ojdbc6</artifactId>
         <version>${oracle-jdbc6-driver.version}</version>
@@ -235,11 +245,6 @@ limitations under the License.
         <groupId>com.h2database</groupId>
         <artifactId>h2</artifactId>
         <version>${h2.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.joestelmach</groupId>
-        <artifactId>natty</artifactId>
-        <version>${natty.version}</version>
       </dependency>
       <dependency>
         <groupId>javax.servlet</groupId>

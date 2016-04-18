@@ -8,13 +8,13 @@
     "operand": {
       "tables": [ {
         "name": "T1",
-        "url": "file:target/test-classes/tableOK.html"
+        "url": "file:tableOK.html"
       }, {
         "name": "T1_NO_TH",
-        "url": "file:target/test-classes/tableNoTH.html"
+        "url": "file:tableNoTH.html"
       }, {
         "name": "TABLEX2",
-        "url": "file:target/test-classes/tableX2.html"
+        "url": "file:tableX2.html"
       } ]
     }
   } ]

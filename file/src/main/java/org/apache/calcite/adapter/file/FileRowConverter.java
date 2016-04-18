@@ -17,6 +17,7 @@
 package org.apache.calcite.adapter.file;
 
 import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.util.Pair;
 
@@ -307,9 +308,9 @@ class FileRowConverter {
     }
 
     private java.util.Date parseDate(String string) {
-      Parser parser = new Parser();
-      List groups = parser.parse(string);
-      DateGroup group = (DateGroup) groups.get(0);
+      Parser parser = new Parser(DateTimeUtils.GMT_ZONE);
+      List<DateGroup> groups = parser.parse(string);
+      DateGroup group = groups.get(0);
       return group.getDates().get(0);
     }
 

@@ -8,10 +8,10 @@
     "operand": {
       "tables": [ {
         "name": "EMPS",
-        "url": "file:file/src/test/resources/sales/EMPS.html"
+        "url": "file:sales/EMPS.html"
       }, {
         "name": "DEPTS",
-        "url": "file:file/src/test/resources/sales/DEPTS.html"
+        "url": "file:sales/DEPTS.html"
       } ]
     }
   } ]

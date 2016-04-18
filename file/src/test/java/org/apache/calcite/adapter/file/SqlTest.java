@@ -52,8 +52,13 @@ public class SqlTest {
     });
   }
 
-  private void checkSql(String model, String sql, final String expected)
+  private void checkSql(String model, String sql, final String... expecteds)
       throws SQLException {
+    final StringBuilder b = new StringBuilder();
+    for (String s : expecteds) {
+      b.append(s).append('\n');
+    }
+    final String expected = b.toString();
     checkSql(sql, model, new Function<ResultSet, Void>() {
       public Void apply(ResultSet resultSet) {
         try {
@@ -143,43 +148,53 @@ public class SqlTest {
 
   // tests
 
-  /**
-   * Reads from a local file and checks the result
-   */
-  @Test
-  public void testFileSelect() throws SQLException {
-    checkSql("testModel", "select H1 from T1 where H0 = 'R1C0'", "H1=R1C1\n");
+  /** Reads from a local file and checks the result. */
+  @Test public void testFileSelect() throws SQLException {
+    final String sql = "select H1 from T1 where H0 = 'R1C0'";
+    checkSql("testModel", sql, "H1=R1C1");
   }
 
-  /**
-   * Reads from a local file without table headers <TH> and checks the result
-   */
-  @Test
-  public void testNoTHSelect() throws SQLException {
+  /** Reads from a local file without table headers &lt;TH&gt; and checks the
+   * result. */
+  @Test public void testNoThSelect() throws SQLException {
     Assume.assumeTrue(FileSuite.hazNetwork());
-    checkSql("testModel", "select \"col1\" from T1_NO_TH where \"col0\" like 'R0%'",
-        "col1=R0C1\n");
+    final String sql = "select \"col1\" from T1_NO_TH where \"col0\" like 'R0%'";
+    checkSql("testModel", sql, "col1=R0C1");
   }
 
-  /**
-   * Reads from a local file - finds larger table even without <TH> elements
-   */
-  @Test
-  public void testFindBiggerNoTH() throws SQLException {
-    checkSql("testModel", "select \"col4\" from TABLEX2 where \"col0\" like 'R1%'",
-        "col4=R1C4\n");
+  /** Reads from a local file - finds larger table even without &lt;TH&gt;
+   * elements. */
+  @Test public void testFindBiggerNoTh() throws SQLException {
+    final String sql = "select \"col4\" from TABLEX2 where \"col0\" like 'R1%'";
+    checkSql("testModel", sql, "col4=R1C4");
   }
 
-  /**
-   * Reads from a URL and checks the result
-   */
-  @Test
-  public void testURLSelect() throws SQLException {
+  /** Reads from a URL and checks the result. */
+  @Test public void testUrlSelect() throws SQLException {
     Assume.assumeTrue(FileSuite.hazNetwork());
     final String sql = "select \"State\", \"Statehood\" from \"States\"\n"
         + "where \"State\" = 'California'";
-    checkSql("wiki", sql,
-        "State=California; Statehood=1850-09-09\n");
+    checkSql("wiki", sql, "State=California; Statehood=1850-09-09");
+  }
+
+  /** Reads the EMPS table. */
+  @Test public void testSalesEmps() throws SQLException {
+    final String sql = "select * from sales.emps";
+    checkSql("sales", sql,
+        "EMPNO=100; DEPTNO=30; NAME=Fred",
+        "EMPNO=110; DEPTNO=20; NAME=Eric",
+        "EMPNO=110; DEPTNO=40; NAME=John",
+        "EMPNO=120; DEPTNO=20; NAME=Wilma",
+        "EMPNO=130; DEPTNO=40; NAME=Alice");
+  }
+
+  /** Reads the DEPTS table. */
+  @Test public void testSalesDepts() throws SQLException {
+    final String sql = "select * from sales.depts";
+    checkSql("sales", sql,
+        "DEPTNO=10; NAME=Sales",
+        "DEPTNO=20; NAME=Marketing",
+        "DEPTNO=30; NAME=Accounts");
   }
 
 }
