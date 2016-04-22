@@ -23,6 +23,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.Util;
 
 import com.google.common.base.Function;
@@ -317,8 +318,13 @@ class NullSafeVisitor {
   public RexNode castNotNull(RexNode e) {
     if (e instanceof RexCall) {
       final RexCall call = (RexCall) e;
-      if (RexUtil.isCoStrict(call.getOperator())
-          && call.getKind() != SqlKind.CAST) {
+      if (call.getKind() == SqlKind.CAST
+          && call.getType().isNullable()
+          && !call.getOperands().get(0).getType().isNullable()
+          && SqlTypeUtil.equalSansNullability(typeFactory, call.getType(), call.getOperands().get(0).getType())) {
+        return call.getOperands().get(0);
+      } else if (RexUtil.isCoStrict(call.getOperator())
+          && call.getKind() != SqlKind.CAST ) {
         final List<RexNode> newOperands = new ArrayList<>();
         try (Mark ignore = mark()) {
           for (RexNode operand : values(call.getOperands())) {
