@@ -1969,6 +1969,18 @@ public abstract class SqlOperatorBaseTest {
         Boolean.TRUE);
     tester.checkBoolean(
         "cast('a ' as varchar(30))=cast('a' as varchar(30))",
+        Boolean.FALSE);
+    tester.checkBoolean(
+        "cast(' a' as varchar(30))=cast(' a' as varchar(30))",
+        Boolean.TRUE);
+    tester.checkBoolean(
+        "cast('a ' as varchar(15))=cast('a ' as varchar(30))",
+        Boolean.TRUE);
+    tester.checkBoolean(
+        "cast(' ' as varchar(3))=cast(' ' as varchar(2))",
+        Boolean.TRUE);
+    tester.checkBoolean(
+        "cast('abcd' as varchar(2))='ab'",
         Boolean.TRUE);
     tester.checkBoolean(
         "cast('a' as varchar(30))=cast('b' as varchar(30))",

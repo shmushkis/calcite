@@ -351,23 +351,6 @@ public class RexToLixTranslator {
     if (convert == null) {
       convert = convert(operand, typeFactory.getJavaClass(targetType));
     }
-    // Going from CHAR(n), trim.
-    switch (sourceType.getSqlTypeName()) {
-    case CHAR:
-      switch (targetType.getSqlTypeName()) {
-      case VARCHAR:
-        convert = Expressions.call(
-            BuiltInMethod.RTRIM.method, convert);
-      }
-      break;
-    case BINARY:
-      switch (targetType.getSqlTypeName()) {
-      case VARBINARY:
-        convert = Expressions.call(
-            BuiltInMethod.RTRIM.method, convert);
-      }
-      break;
-    }
     // Going from anything to CHAR(n) or VARCHAR(n), make sure value is no
     // longer than n.
   truncate:

@@ -504,11 +504,6 @@ public class RexBuilder {
               || (type.getPrecision()
                   >= ((ByteString) value).length()))) {
         switch (typeName) {
-        case CHAR:
-          if (value instanceof NlsString) {
-            value = ((NlsString) value).rtrim();
-          }
-          break;
         case TIMESTAMP:
         case TIME:
           assert value instanceof Calendar;
