@@ -353,11 +353,14 @@ public class RexToLixTranslator {
     }
     // Going from anything to CHAR(n) or VARCHAR(n), make sure value is no
     // longer than n.
-  truncate:
+    boolean pad = false;
+    boolean truncate = true;
     switch (targetType.getSqlTypeName()) {
     case CHAR:
-    case VARCHAR:
     case BINARY:
+      pad = true;
+      // fall through
+    case VARCHAR:
     case VARBINARY:
       final int targetPrecision = targetType.getPrecision();
       if (targetPrecision >= 0) {
@@ -371,14 +374,25 @@ public class RexToLixTranslator {
           if (sourcePrecision < 0
               || sourcePrecision >= 0
               && sourcePrecision <= targetPrecision) {
-            break truncate;
+            truncate = false;
           }
+          // If this is a widening cast, no need to pad.
+          if (sourcePrecision < 0
+              || sourcePrecision >= 0
+              && sourcePrecision >= targetPrecision) {
+            pad = false;
+          }
+          // fall through
         default:
-          convert =
-              Expressions.call(
-                  BuiltInMethod.TRUNCATE.method,
-                  convert,
-                  Expressions.constant(targetPrecision));
+          if (truncate || pad) {
+            convert =
+                Expressions.call(
+                    pad
+                        ? BuiltInMethod.TRUNCATE_OR_PAD.method
+                        : BuiltInMethod.TRUNCATE.method,
+                    convert,
+                    Expressions.constant(targetPrecision));
+          }
         }
       }
       break;
