@@ -1000,7 +1000,7 @@ public abstract class RelOptUtil {
 
     if (condition instanceof RexCall) {
       RexCall call = (RexCall) condition;
-      if (call.getOperator() == SqlStdOperatorTable.AND) {
+      if (call.getKind() == SqlKind.AND) {
         for (RexNode operand : call.getOperands()) {
           splitJoinCondition(
               sysFieldList,
@@ -1022,7 +1022,7 @@ public abstract class RelOptUtil {
       List<RelDataTypeField> rightFields = null;
       boolean reverse = false;
 
-      call = collapseExpandedIsNotDistinctFromExpr(call, cluster.getRexBuilder());
+      call = collapseExpandedIsNotDistinctFromExpr(call, rexBuilder);
       SqlKind kind = call.getKind();
 
       // Only consider range operators if we haven't already seen one
@@ -1373,8 +1373,8 @@ public abstract class RelOptUtil {
       List<RexNode> nonEquiList) {
     if (condition instanceof RexCall) {
       RexCall call = (RexCall) condition;
-      SqlOperator operator = call.getOperator();
-      if (operator == SqlStdOperatorTable.AND) {
+      SqlKind kind = call.getKind();
+      if (kind == SqlKind.AND) {
         for (RexNode operand : call.getOperands()) {
           splitJoinCondition(
               rexBuilder,
@@ -1390,13 +1390,13 @@ public abstract class RelOptUtil {
 
       if (filterNulls != null) {
         call = collapseExpandedIsNotDistinctFromExpr(call, rexBuilder);
-        operator = call.getOperator();
+        kind = call.getKind();
       }
 
       // "=" and "IS NOT DISTINCT FROM" are the same except for how they
       // treat nulls.
-      if (operator == SqlStdOperatorTable.EQUALS
-          || (filterNulls != null && operator == SqlStdOperatorTable.IS_NOT_DISTINCT_FROM)) {
+      if (kind == SqlKind.EQUALS
+          || (filterNulls != null && kind == SqlKind.IS_NOT_DISTINCT_FROM)) {
         final List<RexNode> operands = call.getOperands();
         if ((operands.get(0) instanceof RexInputRef)
             && (operands.get(1) instanceof RexInputRef)) {
@@ -1424,7 +1424,7 @@ public abstract class RelOptUtil {
           leftKeys.add(leftField.getIndex());
           rightKeys.add(rightField.getIndex() - leftFieldCount);
           if (filterNulls != null) {
-            filterNulls.add(operator == SqlStdOperatorTable.EQUALS);
+            filterNulls.add(kind == SqlKind.EQUALS);
           }
           return;
         }
@@ -1444,12 +1444,13 @@ public abstract class RelOptUtil {
    * {@link #splitJoinCondition(RexBuilder, int, RexNode, List, List, List, List)} and
    * {@link #splitJoinCondition(List, List, RexNode, List, List, List, List)}.
    *
-   * If the given expr <code>call</code> is and expanded version of
+   * <p>If the given expr <code>call</code> is an expanded version of
    * IS NOT DISTINCT FROM function call, collapse it and return a
    * IS NOT DISTINCT FROM function call.
    *
-   * Eg: t1.key IS NOT DISTINCT FROM t2.key can rewritten in expanded form as
-   *   t1.key = t2.key OR (t1.key IS NULL AND t2.key IS NULL)
+   * <p>For example: {@code t1.key IS NOT DISTINCT FROM t2.key}
+   * can rewritten in expanded form as
+   * {@code t1.key = t2.key OR (t1.key IS NULL AND t2.key IS NULL)}.
    *
    * @param call       Function expression to try collapsing.
    * @param rexBuilder {@link RexBuilder} instance to create new {@link RexCall} instances.
@@ -1459,7 +1460,7 @@ public abstract class RelOptUtil {
    */
   private static RexCall collapseExpandedIsNotDistinctFromExpr(final RexCall call,
       final RexBuilder rexBuilder) {
-    if (call.getOperator() != SqlStdOperatorTable.OR || call.getOperands().size() != 2) {
+    if (call.getKind() != SqlKind.OR || call.getOperands().size() != 2) {
       return call;
     }
 
@@ -1473,33 +1474,27 @@ public abstract class RelOptUtil {
     RexCall opEqCall = (RexCall) op0;
     RexCall opNullEqCall = (RexCall) op1;
 
-    if (opEqCall.getOperator() == SqlStdOperatorTable.AND
-        && opNullEqCall.getOperator() == SqlStdOperatorTable.EQUALS) {
+    if (opEqCall.getKind() == SqlKind.AND
+        && opNullEqCall.getKind() == SqlKind.EQUALS) {
       RexCall temp = opEqCall;
       opEqCall = opNullEqCall;
       opNullEqCall = temp;
     }
 
-    if (opNullEqCall.getOperator() != SqlStdOperatorTable.AND
+    if (opNullEqCall.getKind() != SqlKind.AND
         || opNullEqCall.getOperands().size() != 2
-        || opEqCall.getOperator() != SqlStdOperatorTable.EQUALS) {
+        || opEqCall.getKind() != SqlKind.EQUALS) {
       return call;
     }
-
-    final RexNode isNullInput0;
-    final RexNode isNullInput1;
 
     final RexNode op10 = opNullEqCall.getOperands().get(0);
     final RexNode op11 = opNullEqCall.getOperands().get(1);
-    if (op10 instanceof RexCall && op11 instanceof RexCall
-        && ((RexCall) op10).getOperator() == SqlStdOperatorTable.IS_NULL
-        && ((RexCall) op11).getOperator() == SqlStdOperatorTable.IS_NULL) {
-      // now get the operands of IS_NULL operators
-      isNullInput0 = ((RexCall) op10).getOperands().get(0);
-      isNullInput1 = ((RexCall) op11).getOperands().get(0);
-    } else {
+    if (op10.getKind() != SqlKind.IS_NULL
+        || op11.getKind() != SqlKind.IS_NULL) {
       return call;
     }
+    final RexNode isNullInput0 = ((RexCall) op10).getOperands().get(0);
+    final RexNode isNullInput1 = ((RexCall) op11).getOperands().get(0);
 
     final String isNullInput0Digest = isNullInput0.toString();
     final String isNullInput1Digest = isNullInput1.toString();
@@ -1507,9 +1502,9 @@ public abstract class RelOptUtil {
     final String equalsInput1Digest = opEqCall.getOperands().get(1).toString();
 
     if ((isNullInput0Digest.equals(equalsInput0Digest)
-        && isNullInput1Digest.equals(equalsInput1Digest))
+            && isNullInput1Digest.equals(equalsInput1Digest))
         || (isNullInput1Digest.equals(equalsInput0Digest)
-        && isNullInput0Digest.equals(equalsInput1Digest))) {
+            && isNullInput0Digest.equals(equalsInput1Digest))) {
       return (RexCall) rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_DISTINCT_FROM,
           ImmutableList.of(isNullInput0, isNullInput1));
     }
