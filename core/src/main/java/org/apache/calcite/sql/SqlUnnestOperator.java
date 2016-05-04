@@ -18,10 +18,7 @@ package org.apache.calcite.sql;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.sql.type.ArraySqlType;
-import org.apache.calcite.sql.type.MultisetSqlType;
-import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.*;
 
 /**
  * The <code>UNNEST</code> operator.
@@ -44,7 +41,8 @@ public class SqlUnnestOperator extends SqlFunctionalOperator {
         true,
         null,
         null,
-        OperandTypes.SCALAR_OR_RECORD_COLLECTION);
+        OperandTypes.repeat(SqlOperandCountRanges.from(1),
+            OperandTypes.SCALAR_OR_RECORD_COLLECTION));
     this.withOrdinality = withOrdinality;
   }
 

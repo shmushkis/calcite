@@ -19,7 +19,9 @@ package org.apache.calcite.runtime;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.avatica.util.ByteString;
 import org.apache.calcite.avatica.util.DateTimeUtils;
+import org.apache.calcite.linq4j.AbstractEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
+import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.linq4j.function.Deterministic;
 import org.apache.calcite.linq4j.function.Function1;
@@ -32,11 +34,7 @@ import java.math.MathContext;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
@@ -64,6 +62,28 @@ public class SqlFunctions {
       new Function1<List<Object>, Enumerable<Object>>() {
         public Enumerable<Object> apply(List<Object> list) {
           return Linq4j.asEnumerable(list);
+        }
+      };
+
+  private static final Function1<Object[], Enumerable<Object[]>>
+  ARRAY_CARTESIAN_PRODUCT =
+      new Function1<Object[], Enumerable<Object[]>>() {
+        public Enumerable<Object[]> apply(Object[] lists) {
+          final List<Enumerator<Object>> enumerators = new ArrayList<>();
+          for (Object list : lists) {
+            enumerators.add(Linq4j.enumerator((List) list));
+          }
+          final Enumerator<List<Object>> product = Linq4j.product(enumerators);
+          return new AbstractEnumerable<Object[]>() {
+            public Enumerator<Object[]> enumerator() {
+              return Linq4j.transform(product,
+                  new Function1<List<Object>, Object[]>() {
+                    public Object[] apply(List<Object> list) {
+                      return list.toArray();
+                    }
+                  });
+            }
+          };
         }
       };
 
@@ -1427,6 +1447,14 @@ public class SqlFunctions {
   public static <E> Function1<List<E>, Enumerable<E>> listToEnumerable() {
     //noinspection unchecked
     return (Function1<List<E>, Enumerable<E>>) (Function1) LIST_AS_ENUMERABLE;
+  }
+
+  /** Returns a lambda that converts an array of lists to an enumerable over
+   * the cartesian product of those lists. */
+  public static <E> Function1<List<E>[], Enumerable<E[]>> arrayCartesianProduct() {
+    //noinspection unchecked
+    return (Function1<List<E>[], Enumerable<E[]>>)
+        (Function1) ARRAY_CARTESIAN_PRODUCT;
   }
 
   public static Object[] array(Object... args) {

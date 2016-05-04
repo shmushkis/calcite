@@ -192,6 +192,7 @@ public enum BuiltInMethod {
   AS_ENUMERABLE2(Linq4j.class, "asEnumerable", Iterable.class),
   ENUMERABLE_TO_LIST(ExtendedEnumerable.class, "toList"),
   LIST_TO_ENUMERABLE(SqlFunctions.class, "listToEnumerable"),
+  ARRAY_CARTESIAN_PRODUCT(SqlFunctions.class, "arrayCartesianProduct"),
   AS_LIST(Primitive.class, "asList", Object.class),
   ENUMERATOR_CURRENT(Enumerator.class, "current"),
   ENUMERATOR_MOVE_NEXT(Enumerator.class, "moveNext"),

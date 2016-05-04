@@ -123,7 +123,14 @@ public class EnumerableUncollect extends Uncollect implements EnumerableRel {
               Expressions.call(BuiltInMethod.AS_ENUMERABLE2.method, list_)));
       lambda = Expressions.lambda(builder2.toBlock(), o_);
     } else {
-      lambda = Expressions.call(BuiltInMethod.LIST_TO_ENUMERABLE.method);
+      switch (child.getRowType().getFieldCount()) {
+      case 1:
+        lambda = Expressions.call(BuiltInMethod.LIST_TO_ENUMERABLE.method);
+        break;
+      default:
+        lambda = Expressions.call(BuiltInMethod.ARRAY_CARTESIAN_PRODUCT.method);
+        break;
+      }
     }
     builder.add(
         Expressions.return_(null,

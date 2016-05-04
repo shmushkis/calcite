@@ -2248,6 +2248,17 @@ public class JdbcTest {
             "name=Sales; empid=150; deptno=10; name0=Sebastian; salary=7000.0; commission=null");
   }
 
+  @Test public void testUnnestArrayColumn2() {
+    CalciteAssert.hr()
+        .query("select d.\"name\", e.*\n"
+            + "from \"hr\".\"depts\" as d,\n"
+            + " UNNEST(d.\"employees\", array[1, 2]) as e")
+        .returnsUnordered(
+            "name=HR; empid=200; deptno=20; name0=Eric; salary=8000.0; commission=500",
+            "name=Sales; empid=100; deptno=10; name0=Bill; salary=10000.0; commission=1000",
+            "name=Sales; empid=150; deptno=10; name0=Sebastian; salary=7000.0; commission=null");
+  }
+
   private CalciteAssert.AssertQuery withFoodMartQuery(int id)
       throws IOException {
     final FoodmartTest.FoodMartQuerySet set =
