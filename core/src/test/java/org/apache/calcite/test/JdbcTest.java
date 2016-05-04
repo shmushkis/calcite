@@ -2237,7 +2237,6 @@ public class JdbcTest {
   }
 
   /** Per SQL std, UNNEST is implicitly LATERAL. */
-  @Ignore
   @Test public void testUnnestArrayColumn() {
     CalciteAssert.hr()
         .query("select d.\"name\", e.*\n"
