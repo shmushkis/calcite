@@ -195,6 +195,12 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       new IdentityHashMap<>();
 
   /**
+   * Maps a {@link SqlNode} node to the scope used by its JOIN clauses.
+   */
+  private final Map<SqlNode, SqlValidatorScope> joinScopes =
+      new IdentityHashMap<>();
+
+  /**
    * Maps a {@link SqlSelect} node to the scope used by its SELECT and HAVING
    * clauses.
    */
@@ -888,7 +894,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
   }
 
   public SqlValidatorScope getJoinScope(SqlNode node) {
-    return scopes.get(stripAs(node));
+    return joinScopes.get(stripAs(node));
   }
 
   public SqlValidatorScope getOverScope(SqlNode node) {
@@ -1877,7 +1883,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       final SqlJoin join = (SqlJoin) node;
       final JoinScope joinScope =
           new JoinScope(parentScope, usingScope, join);
-      scopes.put(join, joinScope);
+      joinScopes.put(join, joinScope);
       final SqlNode left = join.getLeft();
       final SqlNode right = join.getRight();
       final boolean rightIsLateral = isLateral(right);
@@ -1907,6 +1913,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       if (newLeft != left) {
         join.setLeft(newLeft);
       }
+      joinScopes.put(stripAs(newLeft), parentScope);
       final SqlValidatorScope rightParentScope;
       if (rightIsLateral) {
         rightParentScope = joinScope;
@@ -1925,6 +1932,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       if (newRight != right) {
         join.setRight(newRight);
       }
+      joinScopes.put(stripAs(newRight), rightParentScope);
       registerSubqueries(joinScope, join.getCondition());
       final JoinNamespace joinNamespace = new JoinNamespace(this, join);
       registerNamespace(null, null, joinNamespace, forceNullable);
@@ -2772,7 +2780,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     boolean natural = join.isNatural();
     final JoinType joinType = join.getJoinType();
     final JoinConditionType conditionType = join.getConditionType();
-    final SqlValidatorScope joinScope = scopes.get(join);
+    final SqlValidatorScope joinScope = joinScopes.get(join);
     validateFrom(left, unknownType, joinScope);
     validateFrom(right, unknownType, joinScope);
 
