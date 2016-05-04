@@ -28,7 +28,9 @@ import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.tools.RelBuilderFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -43,7 +45,7 @@ import java.util.List;
  */
 public class MaterializedViewFilterScanRule extends RelOptRule {
   public static final MaterializedViewFilterScanRule INSTANCE =
-      new MaterializedViewFilterScanRule();
+      new MaterializedViewFilterScanRule(RelFactories.LOGICAL_BUILDER);
 
   private final HepProgram program = new HepProgramBuilder()
       .addRuleInstance(FilterProjectTransposeRule.INSTANCE)
@@ -53,9 +55,9 @@ public class MaterializedViewFilterScanRule extends RelOptRule {
   //~ Constructors -----------------------------------------------------------
 
   /** Creates a MaterializedViewFilterScanRule. */
-  protected MaterializedViewFilterScanRule() {
+  protected MaterializedViewFilterScanRule(RelBuilderFactory relBuilderFactory) {
     super(operand(Filter.class, operand(TableScan.class, null, none())),
-        "MaterializedViewFilterScanRule");
+        relBuilderFactory, "MaterializedViewFilterScanRule");
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -70,7 +72,7 @@ public class MaterializedViewFilterScanRule extends RelOptRule {
     RelOptPlanner planner = call.getPlanner();
     List<RelOptMaterialization> materializations =
         (planner instanceof VolcanoPlanner)
-            ? ((VolcanoPlanner) planner).getMaterialization()
+            ? ((VolcanoPlanner) planner).getMaterializations()
             : ImmutableList.<RelOptMaterialization>of();
     if (!materializations.isEmpty()) {
       RelNode root = filter.copy(filter.getTraitSet(),

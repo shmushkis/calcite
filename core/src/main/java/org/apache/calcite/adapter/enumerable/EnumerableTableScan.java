@@ -88,6 +88,16 @@ public class EnumerableTableScan
     return new EnumerableTableScan(cluster, traitSet, relOptTable, elementType);
   }
 
+  @Override public boolean equals(Object obj) {
+    return obj == this
+        || obj instanceof EnumerableTableScan
+        && table.equals(((EnumerableTableScan) obj).table);
+  }
+
+  @Override public int hashCode() {
+    return table.hashCode();
+  }
+
   /** Returns whether EnumerableTableScan can generate code to handle a
    * particular variant of the Table SPI. */
   public static boolean canHandle(Table table) {
@@ -232,15 +242,6 @@ public class EnumerableTableScan
 
   @Override public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
     return new EnumerableTableScan(getCluster(), traitSet, table, elementType);
-  }
-
-  @Override public boolean equals(Object obj) {
-    return obj instanceof EnumerableTableScan
-        && this.table.equals(((EnumerableTableScan) obj).getTable());
-  }
-
-  @Override public int hashCode() {
-    return this.table.hashCode();
   }
 
   public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
