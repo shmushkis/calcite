@@ -18,7 +18,11 @@ package org.apache.calcite.sql;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.sql.type.*;
+import org.apache.calcite.sql.type.ArraySqlType;
+import org.apache.calcite.sql.type.MultisetSqlType;
+import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.SqlOperandCountRanges;
+import org.apache.calcite.sql.type.SqlTypeName;
 
 /**
  * The <code>UNNEST</code> operator.

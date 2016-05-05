@@ -34,7 +34,12 @@ import java.math.MathContext;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
@@ -1451,6 +1456,8 @@ public class SqlFunctions {
 
   /** Returns a lambda that converts an array of lists to an enumerable over
    * the cartesian product of those lists. */
+  // Turn off spurious messages: '>' is followed by whitespace
+  // CHECKSTYLE: IGNORE 3
   public static <E> Function1<List<E>[], Enumerable<E[]>> arrayCartesianProduct() {
     //noinspection unchecked
     return (Function1<List<E>[], Enumerable<E[]>>)

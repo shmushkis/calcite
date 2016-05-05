@@ -20,10 +20,10 @@ import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.util.Util;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.calcite.util.Util;
 
 import java.util.AbstractList;
 import java.util.List;
