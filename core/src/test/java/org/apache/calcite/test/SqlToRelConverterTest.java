@@ -1708,7 +1708,7 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
   }
 
   @Test public void testStructType() {
-    sql("select * from struct.t").convertsTo("");
+    sql("select * from struct.t").convertsTo("${plan}");
   }
 
   /**
@@ -1881,6 +1881,14 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
             }.init();
           }
         });
+  }
+
+  @Test public void testUnionInFrom() {
+    final String sql = "select x0, x1 from (\n"
+        + "  select 'a' as x0, 'a' as x1, 'a' as x2 from emp\n"
+        + "  union all\n"
+        + "  select 'bb' as x0, 'bb' as x1, 'bb' as x2 from dept)";
+    sql(sql).ok();
   }
 
   /**
