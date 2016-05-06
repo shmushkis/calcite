@@ -20,6 +20,7 @@ import org.apache.calcite.DataContext;
 import org.apache.calcite.avatica.util.ByteString;
 import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.linq4j.AbstractEnumerable;
+import org.apache.calcite.linq4j.CartesianProductEnumerator;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
@@ -35,6 +36,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -1448,24 +1450,108 @@ public class SqlFunctions {
     }
   }
 
-  /** Returns a lambda that converts a list to an enumerable. */
-  public static <E> Function1<List<E>, Enumerable<E>> listToEnumerable() {
-    //noinspection unchecked
-    return (Function1<List<E>, Enumerable<E>>) (Function1) LIST_AS_ENUMERABLE;
+  public static <E extends Comparable>
+  Function1<Object, Enumerable<FlatLists.ComparableList<E>>>
+  flatProduct(final int[] fieldCounts, final boolean withOrdinality) {
+    if (fieldCounts.length == 1) {
+      if (!withOrdinality) {
+        //noinspection unchecked
+        return (Function1) LIST_AS_ENUMERABLE;
+      } else {
+        return new Function1<Object, Enumerable<FlatLists.ComparableList<E>>>() {
+          public Enumerable<FlatLists.ComparableList<E>> apply(Object row) {
+            return p2(new Object[] {row}, fieldCounts, true);
+          }
+        };
+      }
+    }
+    return new Function1<Object, Enumerable<FlatLists.ComparableList<E>>>() {
+      public Enumerable<FlatLists.ComparableList<E>> apply(Object lists) {
+        return p2((Object[]) lists, fieldCounts, withOrdinality);
+      }
+    };
   }
 
-  /** Returns a lambda that converts an array of lists to an enumerable over
-   * the cartesian product of those lists. */
-  // Turn off spurious messages: '>' is followed by whitespace
-  // CHECKSTYLE: IGNORE 3
-  public static <E> Function1<List<E>[], Enumerable<E[]>> arrayCartesianProduct() {
-    //noinspection unchecked
-    return (Function1<List<E>[], Enumerable<E[]>>)
-        (Function1) ARRAY_CARTESIAN_PRODUCT;
+  private static <E extends Comparable>
+  Enumerable<FlatLists.ComparableList<E>> p2(Object[] lists, int[] fieldCounts,
+      boolean withOrdinality) {
+    final List<Enumerator<List<E>>> enumerators = new ArrayList<>();
+    int totalFieldCount = 0;
+    for (int i = 0; i < lists.length; i++) {
+      int fieldCount = fieldCounts[i];
+      if (fieldCount < 0) {
+        ++totalFieldCount;
+        @SuppressWarnings("unchecked")
+        List<E> list = (List<E>) lists[i];
+        enumerators.add(
+            Linq4j.transform(
+                Linq4j.enumerator(list),
+                new Function1<E, List<E>>() {
+                  public List<E> apply(E a0) {
+                    return FlatLists.of(a0);
+                  }
+                }));
+      } else {
+        totalFieldCount += fieldCount;
+        @SuppressWarnings("unchecked")
+        List<List<E>> list = (List<List<E>>) lists[i];
+        enumerators.add(Linq4j.enumerator(list));
+      }
+    }
+    if (withOrdinality) {
+      ++totalFieldCount;
+    }
+    return product(enumerators, totalFieldCount, withOrdinality);
   }
 
   public static Object[] array(Object... args) {
     return args;
+  }
+
+  /** Similar to {@link Linq4j#product(Iterable)} but each resulting list
+   * implements {@link FlatLists.ComparableList}. */
+  public static <E extends Comparable>
+  Enumerable<FlatLists.ComparableList<E>>
+  product(final List<Enumerator<List<E>>> enumerators, final int fieldCount,
+      final boolean withOrdinality) {
+    return new AbstractEnumerable<FlatLists.ComparableList<E>>() {
+      public Enumerator<FlatLists.ComparableList<E>> enumerator() {
+        return new ProductComparableListEnumerator<>(enumerators, fieldCount,
+            withOrdinality);
+      }
+    };
+  }
+
+  /** Enumerates over the cartesian product of the given lists, returning
+   * a comparable list for each row. */
+  private static class ProductComparableListEnumerator<E extends Comparable>
+      extends CartesianProductEnumerator<List<E>, FlatLists.ComparableList<E>> {
+    final E[] flatElements;
+    final List<E> list;
+    private final boolean withOrdinality;
+    private int ordinality;
+
+    ProductComparableListEnumerator(List<Enumerator<List<E>>> enumerators,
+        int fieldCount, boolean withOrdinality) {
+      super(enumerators);
+      this.withOrdinality = withOrdinality;
+      flatElements = (E[]) new Comparable[fieldCount];
+      list = Arrays.asList(flatElements);
+    }
+
+    public FlatLists.ComparableList<E> current() {
+      int i = 0;
+      for (Object element : (Object[]) elements) {
+        final List list2 = (List) element;
+        Object[] a = list2.toArray();
+        System.arraycopy(a, 0, flatElements, i, a.length);
+        i += a.length;
+      }
+      if (withOrdinality) {
+        flatElements[i] = (E) new Integer(++ordinality); // 1-based
+      }
+      return FlatLists.ofComparable(list);
+    }
   }
 }
 
