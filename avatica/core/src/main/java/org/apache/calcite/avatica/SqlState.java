@@ -59,6 +59,13 @@ import java.util.Map;
  * </tr>
  * <tr>
  *   <td>X</td>
+ *   <td>cli specific condition</td>
+ *   <td>HY</td>
+ *   <td>(no subclass)</td>
+ *   <td>000</td>
+ * </tr>
+ * <tr>
+ *   <td>X</td>
  *   <td>cardinality violation</td>
  *   <td>21</td>
  *   <td>(no subclass)</td>
@@ -1060,6 +1067,20 @@ import java.util.Map;
  * </tr>
  * <tr>
  *   <td>X</td>
+ *   <td>syntax error or access rule violation in direct statement</td>
+ *   <td>2A</td>
+ *   <td>(no subclass)</td>
+ *   <td>000</td>
+ * </tr>
+ * <tr>
+ *   <td>X</td>
+ *   <td>syntax error or access rule violation in dynamic statement</td>
+ *   <td>37</td>
+ *   <td>(no subclass)</td>
+ *   <td>000</td>
+ * </tr>
+ * <tr>
+ *   <td>X</td>
  *   <td>target table disagrees with cursor specification</td>
  *   <td>0T</td>
  *   <td>(no subclass)</td>
@@ -1258,6 +1279,8 @@ public enum SqlState {
   /** 0V000: attempt to assign to ordering column */
   ATTEMPT_TO_ASSIGN_TO_ORDERING_COLUMN_NO_SUBCLASS(Category.X,
       "attempt to assign to ordering column", "0V", null, null),
+  /** HY000: cli specific condition */
+  CLI_SPECIFIC_CONDITION_NO_SUBCLASS(Category.X, "cli specific condition", "HY", null, null),
   /** 21000: cardinality violation */
   CARDINALITY_VIOLATION_NO_SUBCLASS(Category.X, "cardinality violation", "21", null, null),
   /** 08000: connection exception */
@@ -1462,7 +1485,7 @@ public enum SqlState {
   /** 0Z000: diagnostics exception */
   DIAGNOSTICS_EXCEPTION_NO_SUBCLASS(Category.X, "diagnostics exception", "0Z", null, null),
   /** 0Z001: diagnostics exception: maximum number of stacked diagnostics areas exceeded */
-  DIAGNOSTICS_EXCEPTION_MAXIMUM_NUMBER_OF_STACKED_DIAGNOSTICS_AREAS_EXCEEDED(Category.X,
+  DIAGNOSTICS_EXCEPTION_MAXIMUM_NUMBER_OF_DIAGNOSTICS_AREAS_EXCEEDED(Category.X,
       "diagnostics exception", "0Z", "maximum number of stacked diagnostics areas exceeded", "001"),
   /** 07000: dynamic SQL error */
   DYNAMIC_SQL_ERROR_NO_SUBCLASS(Category.X, "dynamic SQL error", "07", null, null),
@@ -1498,11 +1521,11 @@ public enum SqlState {
   DYNAMIC_SQL_ERROR_UNDEFINED_DATA_VALUE(Category.X, "dynamic SQL error", "07",
       "undefined DATA value", "00C"),
   /** 07001: dynamic SQL error: using clause does not match dynamic parameter specifications */
-  DYNAMIC_SQL_ERROR_USING_CLAUSE_DOES_NOT_MATCH_DYNAMIC_PARAMETER_SPECIFICATIONS(Category.X,
+  DYNAMIC_SQL_ERROR_USING_CLAUSE_DOES_NOT_MATCH_DYNAMIC_PARAMETER_SPEC(Category.X,
       "dynamic SQL error", "07", "using clause does not match dynamic parameter specifications",
       "001"),
   /** 07002: dynamic SQL error: using clause does not match target specifications */
-  DYNAMIC_SQL_ERROR_USING_CLAUSE_DOES_NOT_MATCH_TARGET_SPECIFICATIONS(Category.X,
+  DYNAMIC_SQL_ERROR_USING_CLAUSE_DOES_NOT_MATCH_TARGET_SPEC(Category.X,
       "dynamic SQL error", "07", "using clause does not match target specifications", "002"),
   /** 07004: dynamic SQL error: using clause required for dynamic parameters */
   DYNAMIC_SQL_ERROR_USING_CLAUSE_REQUIRED_FOR_DYNAMIC_PARAMETERS(Category.X, "dynamic SQL error",
@@ -1517,14 +1540,14 @@ public enum SqlState {
   EXTERNAL_ROUTINE_EXCEPTION_CONTAINING_SQL_NOT_PERMITTED(Category.X, "external routine exception",
       "38", "containing SQL not permitted", "001"),
   /** 38002: external routine exception: modifying SQL-data not permitted */
-  EXTERNAL_ROUTINE_EXCEPTION_MODIFYING_SQLDATA_NOT_PERMITTED(Category.X,
+  EXTERNAL_ROUTINE_EXCEPTION_MODIFYING_SQL_DATA_NOT_PERMITTED(Category.X,
       "external routine exception", "38", "modifying SQL-data not permitted", "002"),
   /** 38003: external routine exception: prohibited SQL-statement attempted */
-  EXTERNAL_ROUTINE_EXCEPTION_PROHIBITED_SQLSTATEMENT_ATTEMPTED(Category.X,
+  EXTERNAL_ROUTINE_EXCEPTION_PROHIBITED_SQL_STATEMENT_ATTEMPTED(Category.X,
       "external routine exception", "38", "prohibited SQL-statement attempted", "003"),
   /** 38004: external routine exception: reading SQL-data not permitted */
-  EXTERNAL_ROUTINE_EXCEPTION_READING_SQLDATA_NOT_PERMITTED(Category.X, "external routine exception",
-      "38", "reading SQL-data not permitted", "004"),
+  EXTERNAL_ROUTINE_EXCEPTION_READING_SQL_DATA_NOT_PERMITTED(Category.X,
+      "external routine exception", "38", "reading SQL-data not permitted", "004"),
   /** 39000: external routine invocation exception */
   EXTERNAL_ROUTINE_INVOCATION_EXCEPTION_NO_SUBCLASS(Category.X,
       "external routine invocation exception", "39", null, null),
@@ -1534,7 +1557,7 @@ public enum SqlState {
   /** 0A000: feature not supported */
   FEATURE_NOT_SUPPORTED_NO_SUBCLASS(Category.X, "feature not supported", "0A", null, null),
   /** 0A001: feature not supported: multiple server transactions */
-  FEATURE_NOT_SUPPORTED_MULTIPLE_SERVER_TRANSACTIONS(Category.X, "feature not supported", "0A",
+  FEATURE_NOT_SUPPORTED_MULTIPLE_ENVIRONMENT_TRANSACTIONS(Category.X, "feature not supported", "0A",
       "multiple server transactions", "001"),
   /** 23000: integrity constraint violation */
   INTEGRITY_CONSTRAINT_VIOLATION_NO_SUBCLASS(Category.X, "integrity constraint violation", "23",
@@ -1562,9 +1585,9 @@ public enum SqlState {
   /** 24000: invalid cursor state */
   INVALID_CURSOR_STATE_NO_SUBCLASS(Category.X, "invalid cursor state", "24", null, null),
   /** 0L000: invalid grantor */
-  INVALID_GRANTOR_NO_SUBCLASS(Category.X, "invalid grantor", "0L", null, null),
+  INVALID_GRANTOR_STATE_NO_SUBCLASS(Category.X, "invalid grantor", "0L", null, null),
   /** 0P000: invalid role specification */
-  INVALID_ROLE_SPECIFICATION_NO_SUBCLASS(Category.X, "invalid role specification", "0P", null,
+  INVALID_ROLE_SPECIFICATION(Category.X, "invalid role specification", "0P", null,
       null),
   /** 3F000: invalid schema name */
   INVALID_SCHEMA_NAME_NO_SUBCLASS(Category.X, "invalid schema name", "3F", null, null),
@@ -1577,7 +1600,7 @@ public enum SqlState {
   INVALID_SQL_DESCRIPTOR_NAME_NO_SUBCLASS(Category.X, "invalid SQL descriptor name", "33", null,
       null),
   /** 0M000: invalid SQL-invoked procedure reference */
-  INVALID_SQLINVOKED_PROCEDURE_REFERENCE_NO_SUBCLASS(Category.X,
+  INVALID_SQL_INVOKED_PROCEDURE_REFERENCE_NO_SUBCLASS(Category.X,
       "invalid SQL-invoked procedure reference", "0M", null, null),
   /** 26000: invalid SQL statement name */
   INVALID_SQL_STATEMENT_NAME_NO_SUBCLASS(Category.X, "invalid SQL statement name", "26", null,
@@ -1591,7 +1614,7 @@ public enum SqlState {
   /** 25000: invalid transaction state */
   INVALID_TRANSACTION_STATE_NO_SUBCLASS(Category.X, "invalid transaction state", "25", null, null),
   /** 25001: invalid transaction state: active SQL-transaction */
-  INVALID_TRANSACTION_STATE_ACTIVE_SQLTRANSACTION(Category.X, "invalid transaction state", "25",
+  INVALID_TRANSACTION_STATE_ACTIVE_SQL_TRANSACTION(Category.X, "invalid transaction state", "25",
       "active SQL-transaction", "001"),
   /** 25002: invalid transaction state: branch transaction already active */
   INVALID_TRANSACTION_STATE_BRANCH_TRANSACTION_ALREADY_ACTIVE(Category.X,
@@ -1607,10 +1630,10 @@ public enum SqlState {
       "invalid transaction state", "25", "inappropriate isolation level for branch transaction",
       "004"),
   /** 25005: invalid transaction state: no active SQL-transaction for branch transaction */
-  INVALID_TRANSACTION_STATE_NO_ACTIVE_SQLTRANSACTION_FOR_BRANCH_TRANSACTION(Category.X,
+  INVALID_TRANSACTION_STATE_NO_ACTIVE_SQL_TRANSACTION_FOR_BRANCH_TRANSACTION(Category.X,
       "invalid transaction state", "25", "no active SQL-transaction for branch transaction", "005"),
   /** 25006: invalid transaction state: read-only SQL-transaction */
-  INVALID_TRANSACTION_STATE_READ_ONLY_SQLTRANSACTION(Category.X, "invalid transaction state", "25",
+  INVALID_TRANSACTION_STATE_READ_ONLY_SQL_TRANSACTION(Category.X, "invalid transaction state", "25",
       "read-only SQL-transaction", "006"),
   /** 25007: invalid transaction state: schema and data statement mixing not supported */
   INVALID_TRANSACTION_STATE_SCHEMA_AND_DATA_STATEMENT_MIXING_NOT_SUPPORTED(Category.X,
@@ -1632,12 +1655,11 @@ public enum SqlState {
   NO_DATA_NO_ADDITIONAL_RESULT_SETS_RETURNED(Category.N, "no data", "02",
       "no additional result sets returned", "001"),
   /** 0W000: prohibited statement encountered during trigger execution */
-  PROHIBITED_STATEMENT_ENCOUNTERED_DURING_TRIGGER_EXECUTION_NO_SUBCLASS(Category.X,
+  PROHIBITED_STATEMENT_DURING_TRIGGER_EXECUTION_NO_SUBCLASS(Category.X,
       "prohibited statement encountered during trigger execution", "0W", null, null),
   /** 0W001: prohibited statement encountered during trigger execution: modify table modified by
    * data change delta table */
-  //CHECKSTYLE: IGNORE 1
-  PROHIBITED_STATEMENT_ENCOUNTERED_DURING_TRIGGER_EXECUTION_MODIFY_TABLE_MODIFIED_BY_DATA_CHANGE_DELTA_TABLE(
+  PROHIBITED_STATEMENT_DURING_TRIGGER_EXECUTION_MODIFY_TABLE_MODIFIED_BY_DATA_CHANGE_DELTA_TABLE(
       Category.X, "prohibited statement encountered during trigger execution", "0W",
       "modify table modified by data change delta table", "001"),
   /** HZ: Remote Database Access
@@ -1659,19 +1681,25 @@ public enum SqlState {
   SQL_ROUTINE_EXCEPTION_FUNCTION_EXECUTED_NO_RETURN_STATEMENT(Category.X, "SQL routine exception",
       "2F", "function executed no return statement", "005"),
   /** 2F002: SQL routine exception: modifying SQL-data not permitted */
-  SQL_ROUTINE_EXCEPTION_MODIFYING_SQLDATA_NOT_PERMITTED(Category.X, "SQL routine exception", "2F",
+  SQL_ROUTINE_EXCEPTION_MODIFYING_SQL_DATA_NOT_PERMITTED(Category.X, "SQL routine exception", "2F",
       "modifying SQL-data not permitted", "002"),
   /** 2F003: SQL routine exception: prohibited SQL-statement attempted */
-  SQL_ROUTINE_EXCEPTION_PROHIBITED_SQLSTATEMENT_ATTEMPTED(Category.X, "SQL routine exception", "2F",
-      "prohibited SQL-statement attempted", "003"),
+  SQL_ROUTINE_EXCEPTION_PROHIBITED_SQL_STATEMENT_ATTEMPTED(Category.X, "SQL routine exception",
+      "2F", "prohibited SQL-statement attempted", "003"),
   /** 2F004: SQL routine exception: reading SQL-data not permitted */
-  SQL_ROUTINE_EXCEPTION_READING_SQLDATA_NOT_PERMITTED(Category.X, "SQL routine exception", "2F",
+  SQL_ROUTINE_EXCEPTION_READING_SQL_DATA_NOT_PERMITTED(Category.X, "SQL routine exception", "2F",
       "reading SQL-data not permitted", "004"),
   /** 00000: successful completion */
   SUCCESSFUL_COMPLETION_NO_SUBCLASS(Category.S, "successful completion", "00", null, null),
   /** 42000: syntax error or access rule violation */
   SYNTAX_ERROR_OR_ACCESS_RULE_VIOLATION_NO_SUBCLASS(Category.X,
       "syntax error or access rule violation", "42", null, null),
+  /** 2A000: syntax error or access rule violation */
+  SYNTAX_ERROR_OR_ACCESS_RULE_VIOLATION_IN_DIRECT_STATEMENT_NO_SUBCLASS(Category.X,
+      "syntax error or access rule violation in direct statement", "2A", null, null),
+  /** 37000: syntax error or access rule violation */
+  SYNTAX_ERROR_OR_ACCESS_RULE_VIOLATION_IN_DYNAMIC_STATEMENT_NO_SUBCLASS(Category.X,
+      "syntax error or access rule violation in dynamic statement", "37", null, null),
   /** 0T000: target table disagrees with cursor specification */
   TARGET_TABLE_DISAGREES_WITH_CURSOR_SPECIFICATION_NO_SUBCLASS(Category.X,
       "target table disagrees with cursor specification", "0T", null, null),
@@ -1735,7 +1763,7 @@ public enum SqlState {
   WARNING_QUERY_EXPRESSION_TOO_LONG_FOR_INFORMATION_SCHEMA(Category.W, "warning", "01",
       "query expression too long for information schema", "00A"),
   /** 0100C: warning: result sets returned */
-  WARNING_RESULT_SETS_RETURNED(Category.W, "warning", "01", "result sets returned", "00C"),
+  WARNING_DYNAMIC_RESULT_SETS_RETURNED(Category.W, "warning", "01", "result sets returned", "00C"),
   /** 01009: warning: search condition too long for information schema */
   WARNING_SEARCH_CONDITION_TOO_LONG_FOR_INFORMATION_SCHEMA(Category.W, "warning", "01",
       "search condition too long for information schema", "009"),
@@ -1743,8 +1771,8 @@ public enum SqlState {
   WARNING_STATEMENT_TOO_LONG_FOR_INFORMATION_SCHEMA(Category.W, "warning", "01",
       "statement too long for information schema", "00F"),
   /** 01004: warning: string data, right truncation */
-  WARNING_STRING_DATA_RIGHT_TRUNCATION(Category.W, "warning", "01", "string data, right truncation",
-      "004"),
+  WARNING_STRING_DATA_RIGHT_TRUNCATION_WARNING(Category.W, "warning", "01",
+      "string data, right truncation", "004"),
   /** 44000: with check option violation */
   WITH_CHECK_OPTION_VIOLATION_NO_SUBCLASS(Category.X, "with check option violation", "44", null,
       null);
@@ -1755,6 +1783,10 @@ public enum SqlState {
   public final String subCondition;
   public final String subClass;
   public final String code;
+
+  /** Alias for backwards compatibility with previous versions of SQL spec. */
+  public static final SqlState INVALID_SQL_STATEMENT =
+      INVALID_SQL_STATEMENT_IDENTIFIER_NO_SUBCLASS;
 
   public static final Map<String, SqlState> BY_CODE;
 
@@ -1808,7 +1840,16 @@ public enum SqlState {
   }
 
   /** Severity types. */
-  enum Category { X, S, W, N }
+  enum Category {
+    /** Success (class 00). */
+    S,
+    /** Warning (class 01). */
+    W,
+    /** No data (class 02). */
+    N,
+    /** Exception (all other classes). */
+    X,
+  }
 
 }
 
