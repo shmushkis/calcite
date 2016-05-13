@@ -150,31 +150,30 @@ public abstract class DelegatingScope implements SqlValidatorScope {
 
     String columnName;
     switch (identifier.names.size()) {
-    case 1: {
+    case 1:
       columnName = identifier.names.get(0);
       final Pair<String, SqlValidatorNamespace> pair =
           findQualifyingTableName(columnName, identifier);
       final String tableName = pair.left;
       final SqlValidatorNamespace namespace = pair.right;
 
-      final RelDataTypeField field =
+      final RelDataTypeField field0 =
           validator.catalogReader.field(namespace.getRowType(), columnName);
 
-      checkAmbiguousUnresolvedStar(namespace.getRowType(), field, identifier, columnName);
+      checkAmbiguousUnresolvedStar(namespace.getRowType(), field0, identifier, columnName);
 
       // todo: do implicit collation here
       final SqlParserPos pos = identifier.getParserPosition();
       SqlIdentifier expanded =
           new SqlIdentifier(
-              ImmutableList.of(tableName, field.getName()),  // use resolved field name
+              ImmutableList.of(tableName, field0.getName()),  // use resolved field name
               null,
               pos,
               ImmutableList.of(SqlParserPos.ZERO, pos));
       validator.setOriginal(expanded, identifier);
       return SqlQualified.create(this, 1, namespace, expanded);
-    }
 
-    default: {
+    default:
       SqlValidatorNamespace fromNs = null;
       final int size = identifier.names.size();
       int i = size - 1;
@@ -192,20 +191,25 @@ public abstract class DelegatingScope implements SqlValidatorScope {
       }
       RelDataType fromRowType = fromNs.getRowType();
       for (int j = i; j < size; j++) {
-        final SqlIdentifier last = identifier.getComponent(j);
-        columnName = last.getSimple();
-        final RelDataTypeField field =
-            validator.catalogReader.field(fromRowType, columnName);
-        if (field == null) {
-          throw validator.newValidationError(last,
-              RESOURCE.columnNotFoundInTable(columnName,
-                  identifier.getComponent(0, j).toString()));
+        final RelDataTypeField field;
+        if (j == size - 1 && identifier.isDynamicStar()) {
+          assert fromRowType instanceof DynamicRecordType;
+          field = validator.catalogReader.field(fromRowType, "");
+        } else {
+          final SqlIdentifier last = identifier.getComponent(j);
+          columnName = last.getSimple();
+          field = validator.catalogReader.field(fromRowType, columnName);
+          if (field == null) {
+            throw validator.newValidationError(last,
+                RESOURCE.columnNotFoundInTable(columnName,
+                    identifier.getComponent(0, j).toString()));
+          }
+          checkAmbiguousUnresolvedStar(fromRowType, field, identifier, columnName);
+
+          // normalize case to match definition, in a copy of the identifier
+          identifier = identifier.setName(j, field.getName());
         }
 
-        checkAmbiguousUnresolvedStar(fromRowType, field, identifier, columnName);
-
-        // normalize case to match definition, in a copy of the identifier
-        identifier = identifier.setName(j, field.getName());
         fromRowType = field.getType();
       }
       if (i > 1) {
@@ -219,7 +223,6 @@ public abstract class DelegatingScope implements SqlValidatorScope {
         identifier = identifier.getComponent(i - 1, identifier.names.size());
       }
       return SqlQualified.create(this, i, fromNs, identifier);
-    }
     }
   }
 

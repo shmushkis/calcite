@@ -34,7 +34,7 @@ public abstract class DynamicRecordType extends RelDataTypeImpl {
    * Return true if the column name starts with DYNAMIC_STAR_PREFIX.
    */
   public static boolean isDynamicStarColName(String name) {
-    return name.startsWith(DYNAMIC_STAR_PREFIX);
+    return name.equals("");
   }
 
 }

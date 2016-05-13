@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.sql;
 
-import org.apache.calcite.rel.type.DynamicRecordType;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
@@ -49,6 +48,8 @@ public class SqlIdentifier extends SqlNode {
           return s.equals("") ? "*" : s.equals("*") ? "\"*\"" : s;
         }
       };
+
+  private static final SqlParserPos STAR_STAR_ZERO = new SqlParserPos(0, 0);
 
   //~ Instance fields --------------------------------------------------------
 
@@ -132,6 +133,17 @@ public class SqlIdentifier extends SqlNode {
       List<SqlParserPos> componentPositions) {
     return new SqlIdentifier(Lists.transform(names, STAR_TO_EMPTY), null, pos,
         componentPositions);
+  }
+
+  /** Creates an identifier that ends in a wildcard star. */
+  public static SqlIdentifier dynamicStar(List<String> names, SqlParserPos pos,
+      List<SqlParserPos> componentPositions) {
+    final List<String> names2 =
+        ImmutableList.<String>builder().addAll(names).add("").build();
+    final List<SqlParserPos> componentPositions2 =
+        ImmutableList.<SqlParserPos>builder().addAll(componentPositions)
+            .add(STAR_STAR_ZERO).build();
+    return new SqlIdentifier(names2, null, pos, componentPositions2);
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -321,7 +333,18 @@ public class SqlIdentifier extends SqlNode {
    * Returns whether this identifier is a star, such as "*" or "foo.bar.*".
    */
   public boolean isStar() {
-    return Util.last(names).equals("");
+    return Util.last(names).equals("")
+        && !(componentPositions != null
+            && Util.last(componentPositions) != STAR_STAR_ZERO);
+  }
+
+  /**
+   * Returns whether this identifier ends in a dynamic star.
+   */
+  public boolean isDynamicStar() {
+    return Util.last(names).equals("")
+        && componentPositions != null
+        && Util.last(componentPositions) == STAR_STAR_ZERO;
   }
 
   /**
@@ -329,12 +352,12 @@ public class SqlIdentifier extends SqlNode {
    * "FOO.*" and "FOO.BAR" are not.
    */
   public boolean isSimple() {
-    return names.size() == 1 && !isStar();
+    return names.size() == 1 && !Util.last(names).equals("");
   }
 
   public SqlMonotonicity getMonotonicity(SqlValidatorScope scope) {
     // for "star" column, whether it's static or dynamic return not_monotonic directly.
-    if (Util.last(names).equals("") || DynamicRecordType.isDynamicStarColName(Util.last(names))) {
+    if (Util.last(names).equals("")) {
       return SqlMonotonicity.NOT_MONOTONIC;
     }
 

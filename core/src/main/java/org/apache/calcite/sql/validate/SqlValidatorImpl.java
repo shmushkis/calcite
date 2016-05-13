@@ -463,9 +463,8 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
           // don't expand star if the underneath table is dynamic.
           // Treat this star as a special field in validation/conversion and
           // wait until execution time to expand this star.
-          final SqlNode exp = new SqlIdentifier(
-                  ImmutableList.of(p.left, DynamicRecordType.DYNAMIC_STAR_PREFIX),
-                  startPosition);
+          final SqlNode exp = SqlIdentifier.dynamicStar(ImmutableList.of(p.left),
+              startPosition, ImmutableList.of(startPosition));
           addToSelectList(
                selectItems,
                aliases,
