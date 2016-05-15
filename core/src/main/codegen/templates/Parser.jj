@@ -1654,8 +1654,9 @@ SqlNode JoinTable(SqlNode e) :
 /**
  * Parses the FROM clause for a SELECT.
  *
- * <p>FROM is mandatory in standard SQL, optional in dialects
- * such as MySQL, PostgreSQL.
+ * <p>FROM is mandatory in standard SQL, optional in dialects such as MySQL,
+ * PostgreSQL. The parser allows SELECT without FROM, but the validator fails
+ * if conformance is, say, STRICT_2003.
  */
 SqlNode FromClause() :
 {
