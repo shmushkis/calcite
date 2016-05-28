@@ -522,9 +522,9 @@ public interface Meta {
    * Response from a collection of SQL commands or parameter values in a single batch.
    */
   class ExecuteBatchResult {
-    public final int[] updateCounts;
+    public final long[] updateCounts;
 
-    public ExecuteBatchResult(int[] updateCounts) {
+    public ExecuteBatchResult(long[] updateCounts) {
       this.updateCounts = Objects.requireNonNull(updateCounts);
     }
   }

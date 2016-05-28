@@ -155,13 +155,12 @@ public abstract class AvaticaStatement
   /**
    * Executes a collection of updates in a single batch RPC.
    *
-   * @return an array of integers mapping to the update count per SQL command.
+   * @return an array of long mapping to the update count per SQL command.
    */
-  protected int[] executeBatchInternal() throws SQLException {
+  protected long[] executeBatchInternal() throws SQLException {
     for (int i = 0; i < connection.maxRetriesPerExecute; i++) {
       try {
-        Meta.ExecuteBatchResult result = connection.prepareAndUpdateBatch(this, batchedSql);
-        return result.updateCounts;
+        return connection.prepareAndUpdateBatch(this, batchedSql).updateCounts;
       } catch (NoSuchStatementException e) {
         resetStatement();
       }
@@ -390,6 +389,10 @@ public abstract class AvaticaStatement
   }
 
   public int[] executeBatch() throws SQLException {
+    return convertToIntegers(executeLargeBatch());
+  }
+
+  public long[] executeLargeBatch() throws SQLException {
     try {
       return executeBatchInternal();
     } finally {
@@ -550,6 +553,21 @@ public abstract class AvaticaStatement
       }
     }
     return parameterValues;
+  }
+
+  /**
+   * Converts an array of long values to an array of integer values. Long values which cannot be
+   * represented as integers are truncated to {@link Integer#MAX_VALUE}.
+   *
+   * @param longUpdates An array of longs
+   * @return An array of integers
+   */
+  protected int[] convertToIntegers(long[] longUpdates) {
+    final int[] intUpdates = new int[longUpdates.length];
+    for (int i = 0; i < longUpdates.length; i++) {
+      intUpdates[i] = (int) Math.min((long) Integer.MAX_VALUE, longUpdates[i]);
+    }
+    return intUpdates;
   }
 }
 
