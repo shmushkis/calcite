@@ -245,7 +245,7 @@ class RemoteMeta extends MetaImpl {
 
   @Override public ExecuteResult prepareAndExecute(StatementHandle h, String sql, long maxRowCount,
       PrepareCallback callback) throws NoSuchStatementException {
-    return prepareAndExecute(h, sql, maxRowCount, (int) maxRowCount, callback);
+    return prepareAndExecute(h, sql, maxRowCount, -1, callback);
   }
 
   @Override public ExecuteResult prepareAndExecute(final StatementHandle h, final String sql,

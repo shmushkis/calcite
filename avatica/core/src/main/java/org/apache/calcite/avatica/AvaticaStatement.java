@@ -218,7 +218,7 @@ public abstract class AvaticaStatement
   }
 
   public final int executeUpdate(String sql) throws SQLException {
-    return (int) executeLargeUpdate(sql);
+    return AvaticaUtils.toSaturatedInt(executeLargeUpdate(sql));
   }
 
   public long executeLargeUpdate(String sql) throws SQLException {
@@ -265,7 +265,7 @@ public abstract class AvaticaStatement
   }
 
   public final int getMaxRows() {
-    return (int) getLargeMaxRows();
+    return AvaticaUtils.toSaturatedInt(getLargeMaxRows());
   }
 
   public long getLargeMaxRows() {
@@ -345,7 +345,7 @@ public abstract class AvaticaStatement
   }
 
   public int getUpdateCount() throws SQLException {
-    return (int) updateCount;
+    return AvaticaUtils.toSaturatedInt(updateCount);
   }
 
   public long getLargeUpdateCount() throws SQLException {
@@ -389,7 +389,7 @@ public abstract class AvaticaStatement
   }
 
   public int[] executeBatch() throws SQLException {
-    return convertToIntegers(executeLargeBatch());
+    return AvaticaUtils.toSaturatedInts(executeLargeBatch());
   }
 
   public long[] executeLargeBatch() throws SQLException {
@@ -555,20 +555,6 @@ public abstract class AvaticaStatement
     return parameterValues;
   }
 
-  /**
-   * Converts an array of long values to an array of integer values. Long values which cannot be
-   * represented as integers are truncated to {@link Integer#MAX_VALUE}.
-   *
-   * @param longUpdates An array of longs
-   * @return An array of integers
-   */
-  protected int[] convertToIntegers(long[] longUpdates) {
-    final int[] intUpdates = new int[longUpdates.length];
-    for (int i = 0; i < longUpdates.length; i++) {
-      intUpdates[i] = (int) Math.min((long) Integer.MAX_VALUE, longUpdates[i]);
-    }
-    return intUpdates;
-  }
 }
 
 // End AvaticaStatement.java

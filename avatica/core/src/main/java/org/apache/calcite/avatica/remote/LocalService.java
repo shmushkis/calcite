@@ -16,8 +16,8 @@
  */
 package org.apache.calcite.avatica.remote;
 
+import org.apache.calcite.avatica.AvaticaUtils;
 import org.apache.calcite.avatica.Meta;
-
 import org.apache.calcite.avatica.Meta.ExecuteBatchResult;
 import org.apache.calcite.avatica.MetaImpl;
 import org.apache.calcite.avatica.MissingResultsException;
@@ -266,7 +266,7 @@ public class LocalService implements Service {
     try (final Context ctx = executeTimer.start()) {
       try {
         final Meta.ExecuteResult executeResult = meta.execute(request.statementHandle,
-            request.parameterValues, request.maxRowCount);
+            request.parameterValues, AvaticaUtils.toSaturatedInt(request.maxRowCount));
 
         final List<ResultSetResponse> results = new ArrayList<>(executeResult.resultSets.size());
         for (Meta.MetaResultSet metaResultSet : executeResult.resultSets) {

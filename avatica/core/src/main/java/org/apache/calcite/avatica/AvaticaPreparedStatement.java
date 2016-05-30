@@ -244,7 +244,7 @@ public abstract class AvaticaPreparedStatement
   }
 
   @Override public int[] executeBatch() throws SQLException {
-    return convertToIntegers(executeLargeBatch());
+    return AvaticaUtils.toSaturatedInts(executeLargeBatch());
   }
 
   public long[] executeLargeBatch() throws SQLException {
