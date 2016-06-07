@@ -28,6 +28,7 @@ import org.apache.calcite.util.Util;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -46,17 +47,18 @@ public class DruidTableFactory implements TableFactory {
     final String dataSource = (String) operand.get("dataSource");
     final Set<String> metricNameBuilder = new LinkedHashSet<>();
     String timestampColumnName = (String) operand.get("timestampColumn");
-    final ImmutableMap.Builder<String, SqlTypeName> fieldBuilder =
-        ImmutableMap.builder();
-    if (operand.get("dimensions") != null) {
+    final Map<String, SqlTypeName> fieldBuilder = new LinkedHashMap<>();
+    final Object dimensionsRaw = operand.get("dimensions");
+    if (dimensionsRaw instanceof List) {
       //noinspection unchecked
-      final List<String> dimensions = (List<String>) operand.get("dimensions");
+      final List<String> dimensions = (List<String>) dimensionsRaw;
       for (String dimension : dimensions) {
         fieldBuilder.put(dimension, SqlTypeName.VARCHAR);
       }
     }
-    if (operand.get("metrics") != null) {
-      final List metrics = (List) operand.get("metrics");
+    final Object metricsRaw = operand.get("metrics");
+    if (metricsRaw instanceof List) {
+      final List metrics = (List) metricsRaw;
       for (Object metric : metrics) {
         final SqlTypeName sqlTypeName;
         final String metricName;
@@ -83,11 +85,19 @@ public class DruidTableFactory implements TableFactory {
         metricNameBuilder.add(metricName);
       }
     }
-    fieldBuilder.put(timestampColumnName, SqlTypeName.VARCHAR);
-    final ImmutableMap<String, SqlTypeName> fields = fieldBuilder.build();
+    if (timestampColumnName != null) {
+      fieldBuilder.put(timestampColumnName, SqlTypeName.VARCHAR);
+    }
+    final String dataSourceName = Util.first(dataSource, name);
     String interval = Util.first((String) operand.get("interval"),
         "1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z");
-    return new DruidTable(druidSchema, Util.first(dataSource, name),
+    if (dimensionsRaw == null || metricsRaw == null) {
+      DruidConnectionImpl c = new DruidConnectionImpl(druidSchema.url);
+      c.metadata(dataSourceName, interval, fieldBuilder, metricNameBuilder);
+    }
+    final ImmutableMap<String, SqlTypeName> fields =
+        ImmutableMap.copyOf(fieldBuilder);
+    return new DruidTable(druidSchema, dataSourceName,
         new MapRelProtoDataType(fields),
         ImmutableSet.copyOf(metricNameBuilder), interval, timestampColumnName);
   }

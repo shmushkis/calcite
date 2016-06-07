@@ -446,7 +446,7 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
     }
   }
 
-  private static void writeField(JsonGenerator generator, String fieldName,
+  static void writeField(JsonGenerator generator, String fieldName,
       Object o) throws IOException {
     generator.writeFieldName(fieldName);
     writeObject(generator, o);
@@ -520,6 +520,24 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
               }));
     }
     return Pair.of(aboveNodes, belowNodes);
+  }
+
+  /** Generates a JSON string to query metadata about a data source. */
+  static String metadataQuery(String dataSourceName, String interval) {
+    final StringWriter sw = new StringWriter();
+    final JsonFactory factory = new JsonFactory();
+    try {
+      final JsonGenerator generator = factory.createGenerator(sw);
+      generator.writeStartObject();
+      generator.writeStringField("queryType", "segmentMetadata");
+      generator.writeStringField("dataSource", dataSourceName);
+      writeField(generator, "intervals", ImmutableList.of(interval));
+      generator.writeEndObject();
+      generator.close();
+    } catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+    return sw.toString();
   }
 
   /** Druid query specification. */

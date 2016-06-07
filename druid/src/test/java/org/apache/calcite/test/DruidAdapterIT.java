@@ -31,6 +31,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -71,6 +72,13 @@ public class DruidAdapterIT {
   public static final ImmutableMap<String, String> WIKI =
       ImmutableMap.of("model",
           DruidAdapterIT.class.getResource("/druid-wiki-model.json")
+              .getPath());
+
+  /** Connection factory based on the "druid-wiki-auto" model
+   * and the "wikiticker" data set. */
+  public static final ImmutableMap<String, String> WIKI_AUTO =
+      ImmutableMap.of("model",
+          DruidAdapterIT.class.getResource("/druid-wiki-auto-model.json")
               .getPath());
 
   /** Whether to run Druid tests. Enabled by default, however test is only
@@ -128,20 +136,17 @@ public class DruidAdapterIT {
     };
   }
 
-  /** Creates a query against the {@link #FOODMART} data set. */
-  private CalciteAssert.AssertQuery sql(String sql) {
+  /** Creates a query against a data set given by a map. */
+  private CalciteAssert.AssertQuery sql(String sql, Map<String, String> map) {
     return CalciteAssert.that()
         .enable(enabled())
-        .with(FOODMART)
+        .with(map)
         .query(sql);
   }
 
-  /** Creates a query against the {@link #WIKI} data set. */
-  private CalciteAssert.AssertQuery wiki(String sql) {
-    return CalciteAssert.that()
-        .enable(enabled())
-        .with(WIKI)
-        .query(sql);
+  /** Creates a query against the {@link #FOODMART} data set. */
+  private CalciteAssert.AssertQuery sql(String sql) {
+    return sql(sql, FOODMART);
   }
 
   /** Tests a query against the {@link #WIKI} data set.
@@ -161,7 +166,7 @@ public class DruidAdapterIT {
         + "'filter':{'type':'selector','dimension':'page','value':'Jeremy Corbyn'},"
         + "'aggregations':[{'type':'longSum','name':'unit_sales','fieldName':'unit_sales'}],"
         + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}";
-    wiki(sql)
+    sql(sql, WIKI)
         .returnsUnordered("countryName=United Kingdom",
             "countryName=null")
         .explainContains(explain)
@@ -181,6 +186,26 @@ public class DruidAdapterIT {
         .returnsUnordered("state_province=CA",
             "state_province=OR",
             "state_province=WA")
+        .explainContains(explain)
+        .queryContains(druidChecker(druidQuery));
+  }
+
+  @Test public void testSelectDistinctAutoSchema() {
+    final String explain = "PLAN="
+        + "EnumerableInterpreter\n"
+        + "  DruidQuery(table=[[wiki, wiki]], filter=[=(CAST($12):VARCHAR(13) CHARACTER SET \"ISO-8859-1\" COLLATE \"ISO-8859-1$en_US$primary\", 'Jeremy Corbyn')], groups=[{4}], aggs=[[]])\n";
+    final String sql = "select distinct \"countryName\"\n"
+        + "from \"wiki\"\n"
+        + "where \"page\" = 'Jeremy Corbyn'";
+    final String druidQuery = "{'queryType':'groupBy',"
+        + "'dataSource':'wikiticker','granularity':'all',"
+        + "'dimensions':['countryName'],"
+        + "'filter':{'type':'selector','dimension':'page','value':'Jeremy Corbyn'},"
+        + "'aggregations':[{'type':'longSum','name':'unit_sales','fieldName':'unit_sales'}],"
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}";
+    sql(sql, WIKI_AUTO)
+        .returnsUnordered("countryName=United Kingdom",
+            "countryName=null")
         .explainContains(explain)
         .queryContains(druidChecker(druidQuery));
   }

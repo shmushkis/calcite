@@ -23,11 +23,13 @@ import org.apache.calcite.linq4j.AbstractEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.prepare.CalcitePrepareImpl;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Holder;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -38,6 +40,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -288,6 +291,42 @@ class DruidConnectionImpl implements DruidConnection {
         return enumerator;
       }
     };
+  }
+
+  void metadata(String dataSourceName, String interval,
+      Map<String, SqlTypeName> fieldBuilder, Set<String> metricNameBuilder) {
+    if (CalcitePrepareImpl.DEBUG) {
+      System.out.println("Druid: segmentMetadata {dataSource: '"
+          + dataSourceName + "'}");
+    }
+    final Map<String, String> requestHeaders =
+        ImmutableMap.of("Content-Type", "application/json");
+    String data = DruidQuery.metadataQuery(dataSourceName, interval);
+
+    try {
+      InputStream in = post(url, data, requestHeaders, 10000, 1800000);
+      if (CalcitePrepareImpl.DEBUG) {
+        try {
+          final byte[] bytes = AvaticaUtils.readFullyToBytes(in);
+          System.out.println("Response: " + new String(bytes));
+          in = new ByteArrayInputStream(bytes);
+        } catch (IOException e) {
+          throw Throwables.propagate(e);
+        }
+      }
+      in.close();
+      final ObjectMapper mapper = new ObjectMapper();
+      List list = mapper.readValue(in, List.class);
+      for (Object o : list) {
+        Map<String, Object> map = (Map<String, Object>) o;
+        String id = (String) map.get("id");
+        Map<String, Object> columns = (Map<String, Object>) map.get("columns");
+        Map<String, Object> aggregators = (Map<String, Object>) map.get("aggregators");
+        System.out.println("columns: " + columns);
+      }
+    } catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   /** A {@link Sink} that is also {@link Runnable}. */
