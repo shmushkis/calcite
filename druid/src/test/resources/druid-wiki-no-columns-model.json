@@ -13,17 +13,33 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Druid model that has one table defined, and table has no columns, so adapter
+ * needs to discover columns.
  */
-package org.apache.calcite.adapter.druid;
-
-/**
- * Reads metadata from Druid.
- */
-class DruidMetadata {
-  private DruidMetadata() {}
-
-  static void create() {
-  }
+{
+  "version": "1.0",
+  "defaultSchema": "wiki",
+  "schemas": [
+    {
+      "type": "custom",
+      "name": "wiki",
+      "factory": "org.apache.calcite.adapter.druid.DruidSchemaFactory",
+      "operand": {
+        "url": "http://localhost:8082",
+        "coordinatorUrl": "http://localhost:8081"
+      },
+      "tables": [
+        {
+          "name": "wiki",
+          "factory": "org.apache.calcite.adapter.druid.DruidTableFactory",
+          "operand": {
+            "dataSource": "wikiticker",
+            "interval": "1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z",
+            "timestampColumn": "time"
+          }
+        }
+      ]
+    }
+  ]
 }
-
-// End DruidMetadata.java

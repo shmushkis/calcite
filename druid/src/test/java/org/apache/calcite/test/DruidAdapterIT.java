@@ -22,19 +22,16 @@ import org.apache.calcite.util.Util;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.net.URL;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
@@ -61,25 +58,24 @@ import static org.junit.Assert.assertTrue;
  * </ul>
  */
 public class DruidAdapterIT {
-  /** Connection factory based on the "druid-foodmart" model. */
-  public static final ImmutableMap<String, String> FOODMART =
-      ImmutableMap.of("model",
-          DruidAdapterIT.class.getResource("/druid-foodmart-model.json")
-              .getPath());
+  /** URL of the "druid-foodmart" model. */
+  public static final URL FOODMART =
+      DruidAdapterIT.class.getResource("/druid-foodmart-model.json");
 
-  /** Connection factory based on the "druid-wiki" model
+  /** URL of the "druid-wiki" model
    * and the "wikiticker" data set. */
-  public static final ImmutableMap<String, String> WIKI =
-      ImmutableMap.of("model",
-          DruidAdapterIT.class.getResource("/druid-wiki-model.json")
-              .getPath());
+  public static final URL WIKI =
+      DruidAdapterIT.class.getResource("/druid-wiki-model.json");
 
-  /** Connection factory based on the "druid-wiki-auto" model
+  /** URL of the "druid-wiki-no-columns" model
    * and the "wikiticker" data set. */
-  public static final ImmutableMap<String, String> WIKI_AUTO =
-      ImmutableMap.of("model",
-          DruidAdapterIT.class.getResource("/druid-wiki-auto-model.json")
-              .getPath());
+  public static final URL WIKI_AUTO =
+      DruidAdapterIT.class.getResource("/druid-wiki-no-columns-model.json");
+
+  /** URL of the "druid-wiki-no-tables" model
+   * and the "wikiticker" data set. */
+  public static final URL WIKI_AUTO2 =
+      DruidAdapterIT.class.getResource("/druid-wiki-no-tables-model.json");
 
   /** Whether to run Druid tests. Enabled by default, however test is only
    * included if "it" profile is activated ({@code -Pit}). To disable,
@@ -108,39 +104,11 @@ public class DruidAdapterIT {
     };
   }
 
-  /** Similar to {@link CalciteAssert#checkResultUnordered}, but filters strings
-   * before comparing them. */
-  static Function<ResultSet, Void> checkResultUnordered(
-      final String... lines) {
-    return new Function<ResultSet, Void>() {
-      public Void apply(ResultSet resultSet) {
-        try {
-          final List<String> expectedList = Lists.newArrayList(lines);
-          Collections.sort(expectedList);
-
-          final List<String> actualList = Lists.newArrayList();
-          CalciteAssert.toStringList(resultSet, actualList);
-          for (int i = 0; i < actualList.size(); i++) {
-            String s = actualList.get(i);
-            actualList.set(i,
-                s.replaceAll("\\.0;", ";").replaceAll("\\.0$", ""));
-          }
-          Collections.sort(actualList);
-
-          assertThat(actualList, equalTo(expectedList));
-          return null;
-        } catch (SQLException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    };
-  }
-
   /** Creates a query against a data set given by a map. */
-  private CalciteAssert.AssertQuery sql(String sql, Map<String, String> map) {
+  private CalciteAssert.AssertQuery sql(String sql, URL url) {
     return CalciteAssert.that()
         .enable(enabled())
-        .with(map)
+        .with(ImmutableMap.of("model", url.getPath()))
         .query(sql);
   }
 
@@ -157,8 +125,36 @@ public class DruidAdapterIT {
     final String explain = "PLAN="
         + "EnumerableInterpreter\n"
         + "  DruidQuery(table=[[wiki, wiki]], filter=[=(CAST($12):VARCHAR(13) CHARACTER SET \"ISO-8859-1\" COLLATE \"ISO-8859-1$en_US$primary\", 'Jeremy Corbyn')], groups=[{4}], aggs=[[]])\n";
+    checkSelectDistinctWiki(WIKI, "wiki")
+        .explainContains(explain);
+  }
+
+  @Test public void testSelectDistinctWikiNoColumns() {
+    final String explain = "PLAN="
+        + "EnumerableInterpreter\n"
+        + "  DruidQuery(table=[[wiki, wiki]], filter=[=(CAST($18):VARCHAR(13) CHARACTER SET \"ISO-8859-1\" COLLATE \"ISO-8859-1$en_US$primary\", 'Jeremy Corbyn')], groups=[{8}], aggs=[[]])\n";
+    checkSelectDistinctWiki(WIKI_AUTO, "wiki")
+        .explainContains(explain);
+  }
+
+  @Test public void testSelectDistinctWikiNoTables() {
+    // Compared to testSelectDistinctWiki, table name is different (because it
+    // is the raw dataSource name from Druid) and the field offsets are
+    // different. This is expected.
+    final String explain = "PLAN="
+        + "EnumerableInterpreter\n"
+        + "  DruidQuery(table=[[wiki, wikiticker]], filter=[=(CAST($17):VARCHAR(13) CHARACTER SET \"ISO-8859-1\" COLLATE \"ISO-8859-1$en_US$primary\", 'Jeremy Corbyn')], groups=[{7}], aggs=[[]])\n";
+    checkSelectDistinctWiki(WIKI_AUTO2, "wikiticker")
+        .explainContains(explain);
+
+    // Because no tables are declared, foodmart is automatically present.
+    sql("select count(*) as c from \"foodmart\"", WIKI_AUTO2)
+        .returnsUnordered("C=86829");
+  }
+
+  private CalciteAssert.AssertQuery checkSelectDistinctWiki(URL url, String tableName) {
     final String sql = "select distinct \"countryName\"\n"
-        + "from \"wiki\"\n"
+        + "from \"" + tableName + "\"\n"
         + "where \"page\" = 'Jeremy Corbyn'";
     final String druidQuery = "{'queryType':'groupBy',"
         + "'dataSource':'wikiticker','granularity':'all',"
@@ -166,10 +162,9 @@ public class DruidAdapterIT {
         + "'filter':{'type':'selector','dimension':'page','value':'Jeremy Corbyn'},"
         + "'aggregations':[{'type':'longSum','name':'unit_sales','fieldName':'unit_sales'}],"
         + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}";
-    sql(sql, WIKI)
+    return sql(sql, url)
         .returnsUnordered("countryName=United Kingdom",
             "countryName=null")
-        .explainContains(explain)
         .queryContains(druidChecker(druidQuery));
   }
 
@@ -186,26 +181,6 @@ public class DruidAdapterIT {
         .returnsUnordered("state_province=CA",
             "state_province=OR",
             "state_province=WA")
-        .explainContains(explain)
-        .queryContains(druidChecker(druidQuery));
-  }
-
-  @Test public void testSelectDistinctAutoSchema() {
-    final String explain = "PLAN="
-        + "EnumerableInterpreter\n"
-        + "  DruidQuery(table=[[wiki, wiki]], filter=[=(CAST($12):VARCHAR(13) CHARACTER SET \"ISO-8859-1\" COLLATE \"ISO-8859-1$en_US$primary\", 'Jeremy Corbyn')], groups=[{4}], aggs=[[]])\n";
-    final String sql = "select distinct \"countryName\"\n"
-        + "from \"wiki\"\n"
-        + "where \"page\" = 'Jeremy Corbyn'";
-    final String druidQuery = "{'queryType':'groupBy',"
-        + "'dataSource':'wikiticker','granularity':'all',"
-        + "'dimensions':['countryName'],"
-        + "'filter':{'type':'selector','dimension':'page','value':'Jeremy Corbyn'},"
-        + "'aggregations':[{'type':'longSum','name':'unit_sales','fieldName':'unit_sales'}],"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}";
-    sql(sql, WIKI_AUTO)
-        .returnsUnordered("countryName=United Kingdom",
-            "countryName=null")
         .explainContains(explain)
         .queryContains(druidChecker(druidQuery));
   }

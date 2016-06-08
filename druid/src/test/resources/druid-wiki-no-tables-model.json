@@ -13,6 +13,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Druid model where there are no table definitions.
  */
 {
   "version": "1.0",
@@ -23,19 +25,9 @@
       "name": "wiki",
       "factory": "org.apache.calcite.adapter.druid.DruidSchemaFactory",
       "operand": {
-        "url": "http://localhost:8082/druid/v2/?pretty"
-      },
-      "tables": [
-        {
-          "name": "wiki",
-          "factory": "org.apache.calcite.adapter.druid.DruidTableFactory",
-          "operand": {
-            "dataSource": "wikiticker",
-            "interval": "1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z",
-            "timestampColumn": "time"
-          }
-        }
-      ]
+        "url": "http://localhost:8082",
+        "coordinatorUrl": "http://localhost:8081"
+      }
     }
   ]
 }

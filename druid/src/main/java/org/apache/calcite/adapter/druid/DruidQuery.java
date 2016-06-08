@@ -376,8 +376,7 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
         writeFieldIf(generator, "filter", jsonFilter);
         writeField(generator, "aggregations", aggregations);
         writeFieldIf(generator, "postAggregations", null);
-        writeField(generator, "intervals",
-            ImmutableList.of(druidTable.interval));
+        writeField(generator, "intervals", druidTable.intervals);
         writeFieldIf(generator, "having", null);
 
         generator.writeEndObject();
@@ -389,8 +388,7 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
         generator.writeStringField("queryType", "select");
         generator.writeStringField("dataSource", druidTable.dataSource);
         generator.writeStringField("descending", "false");
-        writeField(generator, "intervals",
-            ImmutableList.of(druidTable.interval));
+        writeField(generator, "intervals", druidTable.intervals);
         writeFieldIf(generator, "filter", jsonFilter);
         writeField(generator, "dimensions", translator.dimensions);
         writeField(generator, "metrics", translator.metrics);
@@ -399,9 +397,8 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
         generator.writeFieldName("pagingSpec");
         generator.writeStartObject();
         final int fetch =
-            Integer.parseInt(
-                CalciteConnectionProperty.DRUID_FETCH.wrap(new Properties())
-                    .getString());
+            CalciteConnectionProperty.DRUID_FETCH.wrap(new Properties())
+                .getInt();
         generator.writeNumberField("threshold", fetch);
         generator.writeEndObject();
 
@@ -523,7 +520,7 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
   }
 
   /** Generates a JSON string to query metadata about a data source. */
-  static String metadataQuery(String dataSourceName, String interval) {
+  static String metadataQuery(String dataSourceName, List<String> intervals) {
     final StringWriter sw = new StringWriter();
     final JsonFactory factory = new JsonFactory();
     try {
@@ -531,7 +528,7 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
       generator.writeStartObject();
       generator.writeStringField("queryType", "segmentMetadata");
       generator.writeStringField("dataSource", dataSourceName);
-      writeField(generator, "intervals", ImmutableList.of(interval));
+      writeFieldIf(generator, "intervals", intervals);
       generator.writeEndObject();
       generator.close();
     } catch (IOException e) {
@@ -679,7 +676,8 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
     public void run() throws InterruptedException {
       try {
         final DruidConnectionImpl connection =
-            new DruidConnectionImpl(query.druidTable.schema.url);
+            new DruidConnectionImpl(query.druidTable.schema.url,
+                query.druidTable.schema.coordinatorUrl);
         final DruidConnectionImpl.Page page = new DruidConnectionImpl.Page();
         int previousOffset;
         do {

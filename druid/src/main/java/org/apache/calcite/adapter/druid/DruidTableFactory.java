@@ -17,16 +17,13 @@
 package org.apache.calcite.adapter.druid;
 
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TableFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Util;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableList;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -40,6 +37,11 @@ import java.util.Set;
  * <p>A table corresponds to what Druid calls a "data source".
  */
 public class DruidTableFactory implements TableFactory {
+  @SuppressWarnings("unused")
+  public static final DruidTableFactory INSTANCE = new DruidTableFactory();
+
+  private DruidTableFactory() {}
+
   public Table create(SchemaPlus schema, String name, Map operand,
       RelDataType rowType) {
     final DruidSchema druidSchema = schema.unwrap(DruidSchema.class);
@@ -89,36 +91,19 @@ public class DruidTableFactory implements TableFactory {
       fieldBuilder.put(timestampColumnName, SqlTypeName.VARCHAR);
     }
     final String dataSourceName = Util.first(dataSource, name);
-    String interval = Util.first((String) operand.get("interval"),
-        "1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z");
+    DruidConnectionImpl c;
     if (dimensionsRaw == null || metricsRaw == null) {
-      DruidConnectionImpl c = new DruidConnectionImpl(druidSchema.url);
-      c.metadata(dataSourceName, interval, fieldBuilder, metricNameBuilder);
+      c = new DruidConnectionImpl(druidSchema.url, druidSchema.url.replace(":8082", ":8081"));
+    } else {
+      c = null;
     }
-    final ImmutableMap<String, SqlTypeName> fields =
-        ImmutableMap.copyOf(fieldBuilder);
-    return new DruidTable(druidSchema, dataSourceName,
-        new MapRelProtoDataType(fields),
-        ImmutableSet.copyOf(metricNameBuilder), interval, timestampColumnName);
+    final Object interval = operand.get("interval");
+    final List<String> intervals = interval instanceof String
+        ? ImmutableList.of((String) interval) : null;
+    return DruidTable.create(druidSchema, dataSourceName, intervals,
+        fieldBuilder, metricNameBuilder, timestampColumnName, c);
   }
 
-  /** Creates a {@link org.apache.calcite.rel.type.RelDataType} from a map of
-   * field names and types. */
-  private static class MapRelProtoDataType implements RelProtoDataType {
-    private final ImmutableMap<String, SqlTypeName> fields;
-
-    public MapRelProtoDataType(ImmutableMap<String, SqlTypeName> fields) {
-      this.fields = fields;
-    }
-
-    public RelDataType apply(RelDataTypeFactory typeFactory) {
-      final RelDataTypeFactory.FieldInfoBuilder builder = typeFactory.builder();
-      for (Map.Entry<String, SqlTypeName> field : fields.entrySet()) {
-        builder.add(field.getKey(), field.getValue()).nullable(true);
-      }
-      return builder.build();
-    }
-  }
 }
 
 // End DruidTableFactory.java
