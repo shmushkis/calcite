@@ -227,7 +227,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   }
 
   public void lookupOperatorOverloads(final SqlIdentifier opName,
-      final SqlFunctionCategory category,
+      SqlFunctionCategory category,
       SqlSyntax syntax,
       List<SqlOperator> operatorList) {
     if (syntax != SqlSyntax.FUNCTION) {
@@ -235,18 +235,20 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
     }
 
     final Predicate<Function> predicate;
-    if (category == null || !category.isTableFunction()) {
+    if (category == null) {
       predicate = Predicates.alwaysTrue();
     } else if (category.isTableFunction()) {
       predicate = new Predicate<Function>() {
         public boolean apply(Function function) {
-          return function instanceof TableMacro || function instanceof TableFunction;
+          return function instanceof TableMacro
+              || function instanceof TableFunction;
         }
       };
     } else {
       predicate = new Predicate<Function>() {
         public boolean apply(Function function) {
-          return !(function instanceof TableMacro || function instanceof TableFunction);
+          return !(function instanceof TableMacro
+              || function instanceof TableFunction);
         }
       };
     }

@@ -16,7 +16,13 @@
  */
 package org.apache.calcite.sql.validate;
 
-import org.apache.calcite.sql.*;
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.util.Util;
 

@@ -55,12 +55,13 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Test for lookupOperatorOverloads() in {@link CalciteCatalogReader}
+ * Test for lookupOperatorOverloads() in {@link CalciteCatalogReader}.
  */
 public class LookupOperatorOverloadsTest {
 
-  private void functionTypeChecker(int size, String name, List<SqlOperator> operatorList) {
-    assertThat(size, is((Object) operatorList.size()));
+  private void checkFunctionType(int size, String name,
+      List<SqlOperator> operatorList) {
+    assertThat(size, is(operatorList.size()));
 
     for (SqlOperator op : operatorList) {
       assertTrue(op instanceof SqlUserDefinedTableFunction);
@@ -122,46 +123,51 @@ public class LookupOperatorOverloadsTest {
     final String funcName = "MyFUNC";
     final String anotherName = "AnotherFunc";
 
-    Connection connection = DriverManager.getConnection("jdbc:calcite:");
-    CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
-    SchemaPlus rootSchema = calciteConnection.getRootSchema();
-    SchemaPlus schema = rootSchema.add(schemaName, new AbstractSchema());
-    final TableFunction table = TableFunctionImpl.create(Smalls.MAZE_METHOD);
-    schema.add(funcName, table);
-    schema.add(anotherName, table);
-    final TableFunction table2 = TableFunctionImpl.create(Smalls.MAZE3_METHOD);
-    schema.add(funcName, table2);
+    try (Connection connection = DriverManager.getConnection("jdbc:calcite:")) {
+      CalciteConnection calciteConnection =
+          connection.unwrap(CalciteConnection.class);
+      SchemaPlus rootSchema = calciteConnection.getRootSchema();
+      SchemaPlus schema = rootSchema.add(schemaName, new AbstractSchema());
+      final TableFunction table = TableFunctionImpl.create(Smalls.MAZE_METHOD);
+      schema.add(funcName, table);
+      schema.add(anotherName, table);
+      final TableFunction table2 =
+          TableFunctionImpl.create(Smalls.MAZE3_METHOD);
+      schema.add(funcName, table2);
 
-    final CalciteServerStatement statement =
-        connection.createStatement().unwrap(CalciteServerStatement.class);
-    final CalcitePrepare.Context prepareContext = statement.createPrepareContext();
-    final JavaTypeFactory typeFactory = prepareContext.getTypeFactory();
-    CalciteCatalogReader reader =
-        new CalciteCatalogReader(prepareContext.getRootSchema(), false, null, typeFactory);
+      final CalciteServerStatement statement =
+          connection.createStatement().unwrap(CalciteServerStatement.class);
+      final CalcitePrepare.Context prepareContext =
+          statement.createPrepareContext();
+      final JavaTypeFactory typeFactory = prepareContext.getTypeFactory();
+      CalciteCatalogReader reader =
+          new CalciteCatalogReader(prepareContext.getRootSchema(), false, null,
+              typeFactory);
 
-    final List<SqlOperator> operatorList = new ArrayList<>();
-    SqlIdentifier myFuncIdentifier =
-        new SqlIdentifier(Lists.newArrayList(schemaName, funcName), null,
-            SqlParserPos.ZERO, null);
-    reader.lookupOperatorOverloads(myFuncIdentifier,
-        SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION, SqlSyntax.FUNCTION,
-        operatorList);
-    functionTypeChecker(2, funcName, operatorList);
+      final List<SqlOperator> operatorList = new ArrayList<>();
+      SqlIdentifier myFuncIdentifier =
+          new SqlIdentifier(Lists.newArrayList(schemaName, funcName), null,
+              SqlParserPos.ZERO, null);
+      reader.lookupOperatorOverloads(myFuncIdentifier,
+          SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION, SqlSyntax.FUNCTION,
+          operatorList);
+      checkFunctionType(2, funcName, operatorList);
 
-    operatorList.clear();
-    reader.lookupOperatorOverloads(myFuncIdentifier,
-        SqlFunctionCategory.USER_DEFINED_FUNCTION, SqlSyntax.FUNCTION,
-        operatorList);
-    functionTypeChecker(0, null, operatorList);
+      operatorList.clear();
+      reader.lookupOperatorOverloads(myFuncIdentifier,
+          SqlFunctionCategory.USER_DEFINED_FUNCTION, SqlSyntax.FUNCTION,
+          operatorList);
+      checkFunctionType(0, null, operatorList);
 
-    operatorList.clear();
-    SqlIdentifier anotherFuncIdentifier =
-        new SqlIdentifier(Lists.newArrayList(schemaName, anotherName), null,
-            SqlParserPos.ZERO, null);
-    reader.lookupOperatorOverloads(anotherFuncIdentifier,
-        SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION, SqlSyntax.FUNCTION,
-        operatorList);
-    functionTypeChecker(1, anotherName, operatorList);
+      operatorList.clear();
+      SqlIdentifier anotherFuncIdentifier =
+          new SqlIdentifier(Lists.newArrayList(schemaName, anotherName), null,
+              SqlParserPos.ZERO, null);
+      reader.lookupOperatorOverloads(anotherFuncIdentifier,
+          SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION, SqlSyntax.FUNCTION,
+          operatorList);
+      checkFunctionType(1, anotherName, operatorList);
+    }
   }
 }
 
