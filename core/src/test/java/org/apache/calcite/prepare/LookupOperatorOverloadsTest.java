@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.prepare;
 
-
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.jdbc.CalcitePrepare;
@@ -41,6 +40,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.apache.calcite.sql.SqlFunctionCategory.USER_DEFINED_CONSTRUCTOR;
@@ -50,10 +50,9 @@ import static org.apache.calcite.sql.SqlFunctionCategory.USER_DEFINED_SPECIFIC_F
 import static org.apache.calcite.sql.SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION;
 import static org.apache.calcite.sql.SqlFunctionCategory.USER_DEFINED_TABLE_SPECIFIC_FUNCTION;
 
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-
-import static java.util.Arrays.asList;
 
 /**
  * Test for lookupOperatorOverloads() in {@link CalciteCatalogReader}
@@ -61,7 +60,7 @@ import static java.util.Arrays.asList;
 public class LookupOperatorOverloadsTest {
 
   private void functionTypeChecker(int size, String name, List<SqlOperator> operatorList) {
-    assertEquals(operatorList.size(), size);
+    assertThat(size, is((Object) operatorList.size()));
 
     for (SqlOperator op : operatorList) {
       assertTrue(op instanceof SqlUserDefinedTableFunction);
@@ -69,66 +68,56 @@ public class LookupOperatorOverloadsTest {
     }
   }
 
-  @Test
-  public void testIsUserDefined() throws SQLException {
-    List<SqlFunctionCategory> cats = new ArrayList<>();
-    for (SqlFunctionCategory sqlFunctionCategory : SqlFunctionCategory.values()) {
-      if (sqlFunctionCategory.isUserDefined()) {
-        cats.add(sqlFunctionCategory);
-      }
-    }
-    assertEquals(
-        asList(
-            USER_DEFINED_FUNCTION,
-            USER_DEFINED_PROCEDURE,
-            USER_DEFINED_CONSTRUCTOR,
-            USER_DEFINED_SPECIFIC_FUNCTION,
-            USER_DEFINED_TABLE_FUNCTION,
-            USER_DEFINED_TABLE_SPECIFIC_FUNCTION),
-        cats);
+  private static void check(List<SqlFunctionCategory> actuals,
+      SqlFunctionCategory... expecteds) {
+    assertThat(actuals, is(Arrays.asList(expecteds)));
   }
 
-  @Test
-  public void testIsTableFunction() throws SQLException {
+  @Test public void testIsUserDefined() throws SQLException {
     List<SqlFunctionCategory> cats = new ArrayList<>();
-    for (SqlFunctionCategory sqlFunctionCategory : SqlFunctionCategory.values()) {
-      if (sqlFunctionCategory.isTableFunction()) {
-        cats.add(sqlFunctionCategory);
+    for (SqlFunctionCategory c : SqlFunctionCategory.values()) {
+      if (c.isUserDefined()) {
+        cats.add(c);
       }
     }
-    assertEquals(
-        asList(USER_DEFINED_TABLE_FUNCTION, USER_DEFINED_TABLE_SPECIFIC_FUNCTION),
-        cats);
+    check(cats, USER_DEFINED_FUNCTION, USER_DEFINED_PROCEDURE,
+        USER_DEFINED_CONSTRUCTOR, USER_DEFINED_SPECIFIC_FUNCTION,
+        USER_DEFINED_TABLE_FUNCTION, USER_DEFINED_TABLE_SPECIFIC_FUNCTION);
   }
 
-  @Test
-  public void testIsSpecific() throws SQLException {
+  @Test public void testIsTableFunction() throws SQLException {
     List<SqlFunctionCategory> cats = new ArrayList<>();
-    for (SqlFunctionCategory sqlFunctionCategory : SqlFunctionCategory.values()) {
-      if (sqlFunctionCategory.isSpecific()) {
-        cats.add(sqlFunctionCategory);
+    for (SqlFunctionCategory c : SqlFunctionCategory.values()) {
+      if (c.isTableFunction()) {
+        cats.add(c);
       }
     }
-    assertEquals(
-        asList(USER_DEFINED_SPECIFIC_FUNCTION, USER_DEFINED_TABLE_SPECIFIC_FUNCTION),
-        cats);
+    check(cats, USER_DEFINED_TABLE_FUNCTION,
+        USER_DEFINED_TABLE_SPECIFIC_FUNCTION);
   }
 
-  @Test
-  public void testIsUserDefinedNotSpecificFunction() throws SQLException {
+  @Test public void testIsSpecific() throws SQLException {
+    List<SqlFunctionCategory> cats = new ArrayList<>();
+    for (SqlFunctionCategory c : SqlFunctionCategory.values()) {
+      if (c.isSpecific()) {
+        cats.add(c);
+      }
+    }
+    check(cats, USER_DEFINED_SPECIFIC_FUNCTION,
+        USER_DEFINED_TABLE_SPECIFIC_FUNCTION);
+  }
+
+  @Test public void testIsUserDefinedNotSpecificFunction() throws SQLException {
     List<SqlFunctionCategory> cats = new ArrayList<>();
     for (SqlFunctionCategory sqlFunctionCategory : SqlFunctionCategory.values()) {
       if (sqlFunctionCategory.isUserDefinedNotSpecificFunction()) {
         cats.add(sqlFunctionCategory);
       }
     }
-    assertEquals(
-        asList(USER_DEFINED_FUNCTION, USER_DEFINED_TABLE_FUNCTION),
-        cats);
+    check(cats, USER_DEFINED_FUNCTION, USER_DEFINED_TABLE_FUNCTION);
   }
 
-  @Test
-  public void test() throws SQLException {
+  @Test public void test() throws SQLException {
     final String schemaName = "MySchema";
     final String funcName = "MyFUNC";
     final String anotherName = "AnotherFunc";
@@ -144,33 +133,36 @@ public class LookupOperatorOverloadsTest {
     schema.add(funcName, table2);
 
     final CalciteServerStatement statement =
-            connection.createStatement().unwrap(CalciteServerStatement.class);
+        connection.createStatement().unwrap(CalciteServerStatement.class);
     final CalcitePrepare.Context prepareContext = statement.createPrepareContext();
     final JavaTypeFactory typeFactory = prepareContext.getTypeFactory();
     CalciteCatalogReader reader =
-            new CalciteCatalogReader(prepareContext.getRootSchema(), false, null, typeFactory);
+        new CalciteCatalogReader(prepareContext.getRootSchema(), false, null, typeFactory);
 
-    List<SqlOperator> operatorList = new ArrayList<>();
-    SqlIdentifier myFuncIdentifier = new SqlIdentifier(
-            Lists.newArrayList(schemaName, funcName), null, SqlParserPos.ZERO, null);
-    reader.lookupOperatorOverloads(
-            myFuncIdentifier, SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION,
-            SqlSyntax.FUNCTION, operatorList);
+    final List<SqlOperator> operatorList = new ArrayList<>();
+    SqlIdentifier myFuncIdentifier =
+        new SqlIdentifier(Lists.newArrayList(schemaName, funcName), null,
+            SqlParserPos.ZERO, null);
+    reader.lookupOperatorOverloads(myFuncIdentifier,
+        SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION, SqlSyntax.FUNCTION,
+        operatorList);
     functionTypeChecker(2, funcName, operatorList);
 
     operatorList.clear();
-    reader.lookupOperatorOverloads(
-            myFuncIdentifier, SqlFunctionCategory.USER_DEFINED_FUNCTION,
-            SqlSyntax.FUNCTION, operatorList);
+    reader.lookupOperatorOverloads(myFuncIdentifier,
+        SqlFunctionCategory.USER_DEFINED_FUNCTION, SqlSyntax.FUNCTION,
+        operatorList);
     functionTypeChecker(0, null, operatorList);
 
     operatorList.clear();
-    SqlIdentifier anotherFuncIdentifier = new SqlIdentifier(
-            Lists.newArrayList(schemaName, anotherName), null, SqlParserPos.ZERO, null);
-    reader.lookupOperatorOverloads(
-            anotherFuncIdentifier, SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION,
-            SqlSyntax.FUNCTION, operatorList);
+    SqlIdentifier anotherFuncIdentifier =
+        new SqlIdentifier(Lists.newArrayList(schemaName, anotherName), null,
+            SqlParserPos.ZERO, null);
+    reader.lookupOperatorOverloads(anotherFuncIdentifier,
+        SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION, SqlSyntax.FUNCTION,
+        operatorList);
     functionTypeChecker(1, anotherName, operatorList);
   }
 }
+
 // End LookupOperatorOverloadsTest.java

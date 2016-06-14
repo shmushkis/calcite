@@ -16,21 +16,13 @@
  */
 package org.apache.calcite.sql.validate;
 
-import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.*;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.Lists;
 
 import java.util.List;
-
-import static org.apache.calcite.sql.SqlKind.QUERY;
-import static org.apache.calcite.sql.SqlSyntax.FUNCTION;
 
 /**
  * Visitor which looks for an aggregate function inside a tree of
@@ -112,11 +104,11 @@ class AggFinder extends SqlBasicVisitor<Void> {
     }
     // User-defined function may not be resolved yet.
     if (operator instanceof SqlFunction) {
-      SqlFunction sqlFunction = (SqlFunction) operator;
+      final SqlFunction sqlFunction = (SqlFunction) operator;
       if (sqlFunction.getFunctionType().isUserDefinedNotSpecificFunction()) {
         final List<SqlOperator> list = Lists.newArrayList();
         opTab.lookupOperatorOverloads(sqlFunction.getSqlIdentifier(),
-            sqlFunction.getFunctionType(), FUNCTION, list);
+            sqlFunction.getFunctionType(), SqlSyntax.FUNCTION, list);
         for (SqlOperator sqlOperator : list) {
           if (sqlOperator.isAggregator()) {
             // If nested aggregates disallowed or found aggregate at invalid level
@@ -127,7 +119,7 @@ class AggFinder extends SqlBasicVisitor<Void> {
         }
       }
     }
-    if (call.isA(QUERY)) {
+    if (call.isA(SqlKind.QUERY)) {
       // don't traverse into queries
       return null;
     }

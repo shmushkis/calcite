@@ -53,6 +53,7 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.Util;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -63,8 +64,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-
-import javax.annotation.Nullable;
 
 /**
  * Implementation of {@link org.apache.calcite.prepare.Prepare.CatalogReader}
@@ -234,24 +233,25 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
     if (syntax != SqlSyntax.FUNCTION) {
       return;
     }
-    final Collection<Function> functionsOld = getFunctionsFrom(opName.names);
 
-    final Collection<Function> functions = Collections2.filter(functionsOld,
-      new Predicate<Function>() {
-        @Override public boolean apply(@Nullable Function function) {
-          if (function instanceof TableMacro || function instanceof TableFunction) {
-            if (category == null || !category.isTableFunction()) {
-              return false;
-            }
-          } else {
-            if (category != null && category.isTableFunction()) {
-              return false;
-            }
-          }
-          return true;
+    final Predicate<Function> predicate;
+    if (category == null || !category.isTableFunction()) {
+      predicate = Predicates.alwaysTrue();
+    } else if (category.isTableFunction()) {
+      predicate = new Predicate<Function>() {
+        public boolean apply(Function function) {
+          return function instanceof TableMacro || function instanceof TableFunction;
         }
-      }
-    );
+      };
+    } else {
+      predicate = new Predicate<Function>() {
+        public boolean apply(Function function) {
+          return !(function instanceof TableMacro || function instanceof TableFunction);
+        }
+      };
+    }
+    final Collection<Function> functions =
+        Collections2.filter(getFunctionsFrom(opName.names), predicate);
     if (functions.isEmpty()) {
       return;
     }

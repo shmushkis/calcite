@@ -18,14 +18,13 @@ package org.apache.calcite.sql;
 
 import org.apache.calcite.util.Util;
 
-import static org.apache.calcite.sql.SqlFunctionCategoryProperty.FUNCTION;
-import static org.apache.calcite.sql.SqlFunctionCategoryProperty.SPECIFIC;
-import static org.apache.calcite.sql.SqlFunctionCategoryProperty.TABLE_FUNCTION;
-import static org.apache.calcite.sql.SqlFunctionCategoryProperty.USER_DEFINED;
+import static org.apache.calcite.sql.SqlFunctionCategory.Property.FUNCTION;
+import static org.apache.calcite.sql.SqlFunctionCategory.Property.SPECIFIC;
+import static org.apache.calcite.sql.SqlFunctionCategory.Property.TABLE_FUNCTION;
+import static org.apache.calcite.sql.SqlFunctionCategory.Property.USER_DEFINED;
 
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.EnumSet;
 
 /**
  * Enumeration of the categories of
@@ -36,58 +35,56 @@ public enum SqlFunctionCategory {
   NUMERIC("NUMERIC", "Numeric function", FUNCTION),
   TIMEDATE("TIMEDATE", "Time and date function", FUNCTION),
   SYSTEM("SYSTEM", "System function", FUNCTION),
-  USER_DEFINED_FUNCTION("UDF", "User-defined function", USER_DEFINED, FUNCTION),
+  USER_DEFINED_FUNCTION("UDF", "User-defined function", USER_DEFINED,
+      FUNCTION),
   USER_DEFINED_PROCEDURE("UDP", "User-defined procedure", USER_DEFINED),
   USER_DEFINED_CONSTRUCTOR("UDC", "User-defined constructor", USER_DEFINED),
-  USER_DEFINED_SPECIFIC_FUNCTION(
-      "UDF_SPECIFIC", "User-defined function with SPECIFIC name", USER_DEFINED, SPECIFIC, FUNCTION),
-  USER_DEFINED_TABLE_FUNCTION(
-      "TABLE_UDF", "User-defined table function", USER_DEFINED, TABLE_FUNCTION),
+  USER_DEFINED_SPECIFIC_FUNCTION("UDF_SPECIFIC",
+      "User-defined function with SPECIFIC name", USER_DEFINED, SPECIFIC,
+      FUNCTION),
+  USER_DEFINED_TABLE_FUNCTION("TABLE_UDF", "User-defined table function",
+      USER_DEFINED, TABLE_FUNCTION),
   USER_DEFINED_TABLE_SPECIFIC_FUNCTION("TABLE_UDF_SPECIFIC",
-      "User-defined table function with SPECIFIC name", USER_DEFINED, TABLE_FUNCTION, SPECIFIC);
+      "User-defined table function with SPECIFIC name", USER_DEFINED,
+      TABLE_FUNCTION, SPECIFIC);
 
-  private final boolean userDefined;
-  private final boolean tableFunction;
-  private final boolean specific;
-  private final boolean function;
+  private final EnumSet<Property> properties;
 
-  SqlFunctionCategory(String abbrev, String description, SqlFunctionCategoryProperty... types) {
+  SqlFunctionCategory(String abbrev, String description,
+      Property... properties) {
     Util.discard(abbrev);
     Util.discard(description);
-    Set<SqlFunctionCategoryProperty> typeSet = new HashSet<>(Arrays.asList(types));
-    this.userDefined = typeSet.contains(USER_DEFINED);
-    this.tableFunction = typeSet.contains(TABLE_FUNCTION);
-    this.specific = typeSet.contains(SPECIFIC);
-    this.function = typeSet.contains(FUNCTION);
+    this.properties = EnumSet.copyOf(Arrays.asList(properties));
   }
 
   public boolean isUserDefined() {
-    return userDefined;
+    return properties.contains(USER_DEFINED);
   }
 
   public boolean isTableFunction() {
-    return tableFunction;
+    return properties.contains(TABLE_FUNCTION);
   }
 
   public boolean isFunction() {
-    return function;
+    return properties.contains(FUNCTION);
   }
 
   public boolean isSpecific() {
-    return specific;
+    return properties.contains(SPECIFIC);
   }
 
   public boolean isUserDefinedNotSpecificFunction() {
-    return userDefined && (function || tableFunction) && !specific;
+    return isUserDefined()
+        && (isFunction() || isTableFunction())
+        && !isSpecific();
   }
 
-}
-
-/**
- * Properties of a SqlFunctionCategory
- */
-enum SqlFunctionCategoryProperty {
-  USER_DEFINED, TABLE_FUNCTION, SPECIFIC, FUNCTION;
+  /**
+   * Property of a SqlFunctionCategory.
+   */
+  enum Property {
+    USER_DEFINED, TABLE_FUNCTION, SPECIFIC, FUNCTION
+  }
 }
 
 // End SqlFunctionCategory.java

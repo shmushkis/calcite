@@ -702,8 +702,7 @@ public class RelStructuredTypeFlattener implements ReflectiveVisitor {
             RelStructuredTypeFlattener.class,
             RelNode.class);
 
-    // implement RelVisitor
-    public void visit(RelNode p, int ordinal, RelNode parent) {
+    @Override public void visit(RelNode p, int ordinal, RelNode parent) {
       // rewrite children first
       super.visit(p, ordinal, parent);
 
@@ -721,9 +720,8 @@ public class RelStructuredTypeFlattener implements ReflectiveVisitor {
           // no transformation is required
           rewriteGeneric(p);
         } else {
-          throw Util.newInternal(
-              "no '" + visitMethodName + "' method found for class "
-              + p.getClass().getName());
+          throw new AssertionError("no '" + visitMethodName
+              + "' method found for class " + p.getClass().getName());
         }
       }
     }
