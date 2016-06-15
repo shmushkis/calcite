@@ -163,8 +163,8 @@ public class QuidemTest {
                 return Bug.CALCITE_1045_FIXED;
               case "calcite1048":
                 return Bug.CALCITE_1048_FIXED;
-              case "calciteXxx":
-                return false;
+              case "calcite1293":
+                return Bug.CALCITE_1293_FIXED;
               }
               return null;
             }

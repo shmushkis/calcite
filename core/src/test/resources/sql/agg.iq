@@ -54,6 +54,41 @@ group by gender;
 
 !ok
 
+select count(distinct deptno) as cdd
+from emp
+group by deptno;
++-----+
+| CDD |
++-----+
+|   0 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(6 rows)
+
+!ok
+
+!if (fixed.calcite1293) {
+# [CALCITE-1293] Bad code generated when argument to COUNT(DISTINCT) is a GROUP BY column
+select count(distinct deptno) as cdd, count(*) as c
+from emp
+group by deptno;
+!ok
+
+select count(distinct deptno) as cdd, count(*) as c
+from emp
+group by gender, deptno;
+!ok
+
+select count(*) as c, count(distinct deptno) as cdd
+from emp
+group by deptno;
+!ok
+!}
+
 select gender
 from emp
 group by gender
@@ -66,24 +101,6 @@ having count(distinct deptno) < count(*);
 (1 row)
 
 !ok
-
-!if (fixed.calciteXxx) {
-# [CALCITE-xxxx] Error when COUNT(DISTINCT) on column in GROUP BY clause
-select count(distinct deptno) as cdd, count(*) as c
-from emp
-group by gender, deptno;
-!ok
-
-select count(distinct deptno) as cdd, count(*) as c
-from emp
-group by deptno;
-!ok
-
-select count(*) as c, count(distinct deptno) as cdd
-from emp
-group by deptno;
-!ok
-!}
 
 select sum(char_length(ename)) as sle, sum(distinct deptno) as sdd, sum(deptno) as sd
 from emp
