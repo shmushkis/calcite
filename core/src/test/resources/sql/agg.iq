@@ -29,6 +29,75 @@ select count(ename) as c from emp;
 
 !ok
 
+# [CALCITE-1288] Evaluate a single COUNT(DISTINCT) without using a JOIN
+select count(distinct deptno) as cdd, count(*) as c
+from emp;
++-----+---+
+| CDD | C |
++-----+---+
+|   5 | 9 |
++-----+---+
+(1 row)
+
+!ok
+
+select count(distinct deptno) as cdd, count(*) as c
+from emp
+group by gender;
++-----+---+
+| CDD | C |
++-----+---+
+|   3 | 3 |
+|   4 | 6 |
++-----+---+
+(2 rows)
+
+!ok
+
+select gender
+from emp
+group by gender
+having count(distinct deptno) < count(*);
++--------+
+| GENDER |
++--------+
+| F      |
++--------+
+(1 row)
+
+!ok
+
+!if (fixed.calciteXxx) {
+# [CALCITE-xxxx] Error when COUNT(DISTINCT) on column in GROUP BY clause
+select count(distinct deptno) as cdd, count(*) as c
+from emp
+group by gender, deptno;
+!ok
+
+select count(distinct deptno) as cdd, count(*) as c
+from emp
+group by deptno;
+!ok
+
+select count(*) as c, count(distinct deptno) as cdd
+from emp
+group by deptno;
+!ok
+!}
+
+select sum(char_length(ename)) as sle, sum(distinct deptno) as sdd, sum(deptno) as sd
+from emp
+group by gender;
++-----+-----+-----+
+| SLE | SDD | SD  |
++-----+-----+-----+
+|  11 |  80 |  80 |
+|  27 | 150 | 180 |
++-----+-----+-----+
+(2 rows)
+
+!ok
+
 # count of not-nullable column same as count(*)
 select count(ename) as c from emp;
 +---+

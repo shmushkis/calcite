@@ -67,6 +67,17 @@ public class QuidemTest {
     this.method = findMethod(path);
   }
 
+  /** If you want to run individual scripts, this is a convenient entry
+   * point. */
+  public static void main(String[] args) throws Exception {
+    if (args.length == 0) {
+      args = new String[] {"sql/agg.iq"};
+    }
+    for (String arg : args) {
+      new QuidemTest(arg).test();
+    }
+  }
+
   private Method findMethod(String path) {
     // E.g. path "sql/agg.iq" gives method "testSqlAgg"
     String methodName =
@@ -152,6 +163,8 @@ public class QuidemTest {
                 return Bug.CALCITE_1045_FIXED;
               case "calcite1048":
                 return Bug.CALCITE_1048_FIXED;
+              case "calciteXxx":
+                return false;
               }
               return null;
             }
