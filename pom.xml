@@ -91,7 +91,7 @@ limitations under the License.
     <javacc-maven-plugin.version>2.4</javacc-maven-plugin.version>
     <jcip-annotations.version>1.0-1</jcip-annotations.version>
     <jetty.version>9.2.15.v20160210</jetty.version>
-    <jmh.version>1.11.2</jmh.version>
+    <jmh.version>1.12</jmh.version>
     <junit.version>4.12</junit.version>
     <maven-checkstyle-plugin.version>2.12.1</maven-checkstyle-plugin.version>
     <maven-dependency-plugin.version>2.10</maven-dependency-plugin.version>
@@ -144,12 +144,7 @@ limitations under the License.
     <module>plus</module>
     <module>spark</module>
     <module>splunk</module>
-    <!-- Disable ubenchmark module for JDK9 to work around
-         https://bugs.openjdk.java.net/browse/JDK-8152842
-
-         Annotation generator had thrown the exception. java.lang.NoClassDefFoundError: javax/annotation/Generated
     <module>ubenchmark</module>
-    -->
   </modules>
 
   <!-- No dependencies here. Declare dependency VERSIONS in
