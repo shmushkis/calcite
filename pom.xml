@@ -46,6 +46,8 @@ limitations under the License.
   </mailingLists>
 
   <properties>
+    <javac.source>1.7</javac.source>
+    <javac.target>1.7</javac.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <top.dir>${project.basedir}</top.dir>
     <version.major>1</version.major>
@@ -142,7 +144,12 @@ limitations under the License.
     <module>plus</module>
     <module>spark</module>
     <module>splunk</module>
+    <!-- Disable ubenchmark module for JDK9 to work around
+         https://bugs.openjdk.java.net/browse/JDK-8152842
+
+         Annotation generator had thrown the exception. java.lang.NoClassDefFoundError: javax/annotation/Generated
     <module>ubenchmark</module>
+    -->
   </modules>
 
   <!-- No dependencies here. Declare dependency VERSIONS in
@@ -499,8 +506,8 @@ limitations under the License.
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
+          <source>${javac.source}</source>
+          <target>${javac.target}</target>
         </configuration>
       </plugin>
       <plugin>
@@ -732,7 +739,7 @@ limitations under the License.
             <threadCount>1</threadCount>
             <perCoreThreadCount>true</perCoreThreadCount>
             <parallel>both</parallel>
-            <argLine>-Xmx1536m -XX:MaxPermSize=256m -Duser.timezone=${user.timezone}</argLine>
+            <argLine>-Xmx1536m -Duser.timezone=${user.timezone}</argLine>
           </configuration>
         </plugin>
         <plugin>

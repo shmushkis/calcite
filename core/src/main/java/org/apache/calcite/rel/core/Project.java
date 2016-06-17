@@ -274,7 +274,7 @@ public abstract class Project extends SingleRel {
     Mappings.TargetMapping mapping =
         Mappings.create(MappingType.INVERSE_SURJECTION,
             inputFieldCount, projects.size());
-    for (Ord<RexNode> exp : Ord.zip(projects)) {
+    for (Ord<? extends RexNode> exp : Ord.zip(projects)) {
       if (!(exp.e instanceof RexInputRef)) {
         return null;
       }
@@ -301,7 +301,7 @@ public abstract class Project extends SingleRel {
     Mappings.TargetMapping mapping =
         Mappings.create(MappingType.INVERSE_FUNCTION,
             inputFieldCount, projects.size());
-    for (Ord<RexNode> exp : Ord.zip(projects)) {
+    for (Ord<? extends RexNode> exp : Ord.zip(projects)) {
       if (exp.e instanceof RexInputRef) {
         mapping.set(((RexInputRef) exp.e).getIndex(), exp.i);
       }

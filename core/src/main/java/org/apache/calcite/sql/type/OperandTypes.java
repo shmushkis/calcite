@@ -128,7 +128,8 @@ public abstract class OperandTypes {
       SqlSingleOperandTypeChecker... rules) {
     return new CompositeOperandTypeChecker(
         CompositeOperandTypeChecker.Composition.SEQUENCE,
-        ImmutableList.copyOf(rules), allowedSignatures, null);
+        ImmutableList.<SqlOperandTypeChecker>copyOf(rules), allowedSignatures,
+        null);
   }
 
   /**
@@ -139,7 +140,7 @@ public abstract class OperandTypes {
       SqlSingleOperandTypeChecker... rules) {
     return new CompositeOperandTypeChecker(
         CompositeOperandTypeChecker.Composition.REPEAT,
-        ImmutableList.copyOf(rules), null, range);
+        ImmutableList.<SqlOperandTypeChecker>copyOf(rules), null, range);
   }
 
   // ----------------------------------------------------------------------

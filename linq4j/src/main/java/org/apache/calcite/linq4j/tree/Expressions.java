@@ -282,7 +282,7 @@ public abstract class Expressions {
    */
   public static BlockStatement block(Type type,
       Iterable<? extends Statement> expressions) {
-    List<Statement> list = toList(expressions);
+    List<Statement> list = Expressions.<Statement>toList(expressions);
     if (type == null) {
       if (list.size() > 0) {
         type = list.get(list.size() - 1).getType();

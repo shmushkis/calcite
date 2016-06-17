@@ -39,9 +39,12 @@ public class CompositeSingleOperandTypeChecker
    */
   CompositeSingleOperandTypeChecker(
       CompositeOperandTypeChecker.Composition composition,
-      ImmutableList<? extends SqlSingleOperandTypeChecker> allowedRules,
+      ImmutableList<SqlSingleOperandTypeChecker> allowedRules,
       String allowedSignatures) {
-    super(composition, allowedRules, allowedSignatures, null);
+    //noinspection unchecked
+    super(composition,
+        (ImmutableList<SqlOperandTypeChecker>) (Object) allowedRules,
+        allowedSignatures, null);
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -49,7 +52,8 @@ public class CompositeSingleOperandTypeChecker
   @SuppressWarnings("unchecked")
   @Override public ImmutableList<? extends SqlSingleOperandTypeChecker>
   getRules() {
-    return (ImmutableList<? extends SqlSingleOperandTypeChecker>) allowedRules;
+    return (ImmutableList<? extends SqlSingleOperandTypeChecker>)
+        (ImmutableList) allowedRules;
   }
 
   public boolean checkSingleOperandType(

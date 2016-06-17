@@ -54,7 +54,7 @@ public class Ord<E> implements Map.Entry<Integer, E> {
   public static <E> Iterable<Ord<E>> zip(final Iterable<? extends E> iterable) {
     return new Iterable<Ord<E>>() {
       public Iterator<Ord<E>> iterator() {
-        return zip(iterable.iterator());
+        return Ord.<E>zip(iterable.iterator());
       }
     };
   }
@@ -113,7 +113,7 @@ public class Ord<E> implements Map.Entry<Integer, E> {
    * (0, "a").
    */
   public static <E> Iterable<Ord<E>> reverse(Iterable<? extends E> elements) {
-    final ImmutableList<E> elementList = ImmutableList.copyOf(elements);
+    final ImmutableList<E> elementList = ImmutableList.<E>copyOf(elements);
     return new Iterable<Ord<E>>() {
       public Iterator<Ord<E>> iterator() {
         return new Iterator<Ord<E>>() {

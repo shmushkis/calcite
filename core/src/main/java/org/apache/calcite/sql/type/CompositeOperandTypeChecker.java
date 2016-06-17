@@ -87,7 +87,7 @@ public class CompositeOperandTypeChecker implements SqlOperandTypeChecker {
 
   //~ Instance fields --------------------------------------------------------
 
-  protected final ImmutableList<? extends SqlOperandTypeChecker> allowedRules;
+  protected final ImmutableList<SqlOperandTypeChecker> allowedRules;
   protected final Composition composition;
   private final String allowedSignatures;
 
@@ -99,7 +99,7 @@ public class CompositeOperandTypeChecker implements SqlOperandTypeChecker {
    */
   CompositeOperandTypeChecker(
       Composition composition,
-      ImmutableList<? extends SqlOperandTypeChecker> allowedRules,
+      ImmutableList<SqlOperandTypeChecker> allowedRules,
       @Nullable String allowedSignatures,
       @Nullable SqlOperandCountRange range) {
     this.allowedRules = Preconditions.checkNotNull(allowedRules);

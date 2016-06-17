@@ -88,7 +88,7 @@ public class SortNode extends AbstractSingleNode<Sort> {
     if (rel.getCollation().getFieldCollations().size() == 1) {
       return comparator(rel.getCollation().getFieldCollations().get(0));
     }
-    return Ordering.compound(
+    return Ordering.<Row>compound(
         Iterables.transform(rel.getCollation().getFieldCollations(),
             new Function<RelFieldCollation, Comparator<? super Row>>() {
               public Comparator<? super Row> apply(RelFieldCollation input) {

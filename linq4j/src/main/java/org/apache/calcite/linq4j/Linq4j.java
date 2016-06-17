@@ -113,7 +113,7 @@ public abstract class Linq4j {
           (Enumerable) iterable;
       return enumerable.enumerator();
     }
-    return new IterableEnumerator<>(iterable);
+    return new IterableEnumerator<T>(iterable);
   }
 
   /**
@@ -191,11 +191,11 @@ public abstract class Linq4j {
       //noinspection unchecked
       return listEnumerator((List) values);
     }
-    return iterableEnumerator(values);
+    return Linq4j.<V>iterableEnumerator(values);
   }
 
   private static <V> Enumerator<V> listEnumerator(List<? extends V> list) {
-    return new ListEnumerator<>(list);
+    return new ListEnumerator<V>(list);
   }
 
   /** Applies a function to each element of an Enumerator.
