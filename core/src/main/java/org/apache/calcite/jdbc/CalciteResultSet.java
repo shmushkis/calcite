@@ -22,13 +22,16 @@ import org.apache.calcite.avatica.AvaticaStatement;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Handler;
 import org.apache.calcite.avatica.Meta;
+import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.avatica.util.Cursor;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.runtime.ArrayEnumeratorCursor;
 import org.apache.calcite.runtime.ObjectEnumeratorCursor;
+import org.apache.calcite.util.CancelFlag;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 
 import java.sql.ResultSet;
@@ -37,16 +40,25 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.TimeZone;
 
+import static org.apache.calcite.util.Static.RESOURCE;
+
 /**
  * Implementation of {@link ResultSet}
  * for the Calcite engine.
  */
 public class CalciteResultSet extends AvaticaResultSet {
+  private final CancelFlag cancelFlag;
+
   CalciteResultSet(AvaticaStatement statement,
       CalcitePrepare.CalciteSignature calciteSignature,
       ResultSetMetaData resultSetMetaData, TimeZone timeZone,
       Meta.Frame firstFrame) {
     super(statement, null, calciteSignature, resultSetMetaData, timeZone, firstFrame);
+    try {
+      cancelFlag = getCalciteConnection().getCancelFlag(statement.handle);
+    } catch (NoSuchStatementException e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   @Override protected CalciteResultSet execute() throws SQLException {
@@ -64,6 +76,18 @@ public class CalciteResultSet extends AvaticaResultSet {
 
     super.execute();
     return this;
+  }
+
+  @Override protected void cancel() {
+    cancelFlag.requestCancel();
+  }
+
+  @Override public boolean next() throws SQLException {
+    final boolean next = super.next();
+    if (cancelFlag.isCancelRequested()) {
+      throw new SQLException(RESOURCE.statementCanceled().str());
+    }
+    return next;
   }
 
   @Override public ResultSet create(ColumnMetaData.AvaticaType elementType,

@@ -279,8 +279,23 @@ abstract class CalciteConnectionImpl
       map.put("?" + o.i, o.e.toLocal());
     }
     map.putAll(signature.internalParameters);
+    final CancelFlag cancelFlag;
+    try {
+      cancelFlag = getCancelFlag(handle);
+    } catch (NoSuchStatementException e) {
+      throw Throwables.propagate(e);
+    }
+    map.put(DataContext.Variable.CANCEL_FLAG.camelName, cancelFlag);
     final DataContext dataContext = createDataContext(map);
     return signature.enumerable(dataContext);
+  }
+
+  /** Returns the flag that is used to request or check cancel for a particular
+   * statement. */
+  CancelFlag getCancelFlag(Meta.StatementHandle handle)
+      throws NoSuchStatementException {
+    final CalciteServerStatement serverStatement = server.getStatement(handle);
+    return ((CalciteServerStatementImpl) serverStatement).cancelFlag;
   }
 
   public DataContext createDataContext(Map<String, Object> parameterValues) {
@@ -302,7 +317,7 @@ abstract class CalciteConnectionImpl
 
   /** Implementation of Queryable. */
   static class CalciteQueryable<T> extends BaseQueryable<T> {
-    public CalciteQueryable(CalciteConnection connection, Type elementType,
+    CalciteQueryable(CalciteConnection connection, Type elementType,
         Expression expression) {
       super(connection, elementType, expression);
     }
@@ -379,7 +394,6 @@ abstract class CalciteConnectionImpl
       builder.put(Variable.UTC_TIMESTAMP.camelName, time)
           .put(Variable.CURRENT_TIMESTAMP.camelName, time + currentOffset)
           .put(Variable.LOCAL_TIMESTAMP.camelName, time + localOffset)
-          .put(Variable.CANCEL_FLAG.camelName, new CancelFlag())
           .put(Variable.TIME_ZONE.camelName, timeZone);
       for (Map.Entry<String, Object> entry : parameters.entrySet()) {
         Object e = entry.getValue();
@@ -434,7 +448,7 @@ abstract class CalciteConnectionImpl
   static class ContextImpl implements CalcitePrepare.Context {
     private final CalciteConnectionImpl connection;
 
-    public ContextImpl(CalciteConnectionImpl connection) {
+    ContextImpl(CalciteConnectionImpl connection) {
       this.connection = Preconditions.checkNotNull(connection);
     }
 
@@ -493,8 +507,9 @@ abstract class CalciteConnectionImpl
     private final CalciteConnectionImpl connection;
     private Iterator<Object> iterator;
     private Meta.Signature signature;
+    private final CancelFlag cancelFlag = new CancelFlag();
 
-    public CalciteServerStatementImpl(CalciteConnectionImpl connection) {
+    CalciteServerStatementImpl(CalciteConnectionImpl connection) {
       this.connection = Preconditions.checkNotNull(connection);
     }
 

@@ -16,14 +16,16 @@
  */
 package org.apache.calcite.adapter.csv;
 
-import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.Enumerator;
 
 import java.io.File;
 import java.io.IOException;
 
 /**
- * Csv Streaming enumerator
+ * Csv Streaming enumerator.
+ *
+ * <p>TODO: obsolete
+ *
  * @param <E> Row type
  */
 public class CsvStreamEnumerator<E> implements Enumerator<E> {
@@ -42,10 +44,6 @@ public class CsvStreamEnumerator<E> implements Enumerator<E> {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  public void setDataContext(DataContext root) {
-    this.streamReader.setDataContext(root);
   }
 
   public boolean moveNext() {

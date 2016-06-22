@@ -27,6 +27,7 @@ import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.StreamableTable;
 import org.apache.calcite.schema.Table;
+import org.apache.calcite.util.CancelFlag;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -49,7 +50,7 @@ public class CsvStreamScannableTable extends CsvScannableTable
       return protoRowType.apply(typeFactory);
     }
     if (fieldTypes == null) {
-      fieldTypes = new ArrayList<CsvFieldType>();
+      fieldTypes = new ArrayList<>();
       return CsvEnumerator.deduceRowType((JavaTypeFactory) typeFactory, file, fieldTypes, true);
     } else {
       return CsvEnumerator.deduceRowType((JavaTypeFactory) typeFactory, file, null, true);
@@ -62,13 +63,11 @@ public class CsvStreamScannableTable extends CsvScannableTable
 
   public Enumerable<Object[]> scan(DataContext root) {
     final int[] fields = CsvEnumerator.identityList(fieldTypes.size());
-    final DataContext theContext = root;
+    final CancelFlag cancelFlag = DataContext.Variable.CANCEL_FLAG.get(root);
     return new AbstractEnumerable<Object[]>() {
       public Enumerator<Object[]> enumerator() {
-        CsvStreamEnumerator result = new CsvStreamEnumerator<Object[]>(file,
-            null, new CsvEnumerator.ArrayRowConverter(fieldTypes, fields, true));
-        result.setDataContext(theContext);
-        return result;
+        return new CsvEnumerator<>(file, cancelFlag, true, null,
+            new CsvEnumerator.ArrayRowConverter(fieldTypes, fields, true));
       }
     };
   }

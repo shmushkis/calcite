@@ -27,6 +27,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.FilterableTable;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.util.CancelFlag;
 
 import java.io.File;
 import java.util.Iterator;
@@ -58,9 +59,10 @@ public class CsvFilterableTable extends CsvTable
       }
     }
     final int[] fields = CsvEnumerator.identityList(fieldTypes.size());
+    final CancelFlag cancelFlag = DataContext.Variable.CANCEL_FLAG.get(root);
     return new AbstractEnumerable<Object[]>() {
       public Enumerator<Object[]> enumerator() {
-        return new CsvEnumerator<Object[]>(file, filterValues,
+        return new CsvEnumerator<>(file, cancelFlag, false, filterValues,
             new CsvEnumerator.ArrayRowConverter(fieldTypes, fields));
       }
     };

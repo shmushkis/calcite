@@ -28,10 +28,23 @@ import java.util.Map;
  * Factory that creates a {@link CsvSchema}.
  *
  * <p>Allows a custom schema to be included in a <code><i>model</i>.json</code>
- * file.</p>
+ * file.
+ *
+ * <p>TODO:
+ * <ul>
+ *   <li>Obsolete {@link #ROWTIME_COLUMN_NAME} and the ROWTIME column, or
+ *   at least let the person defining the schema define a timestamp column
+ *   in the data, and turn off the implicitly created ROWTIME column
+ *   <li>Propagate the sorted timestamp column in the table metadata; do
+ *   not rely on it being called ROWTIME
+ * </ul>
  */
 @SuppressWarnings("UnusedDeclaration")
 public class CsvSchemaFactory implements SchemaFactory {
+  /** Name of the column that is implicitly created in a CSV stream table
+   * to hold the data arrival time. */
+  public static final String ROWTIME_COLUMN_NAME = "ROWTIME";
+
   // public constructor, per factory contract
   public CsvSchemaFactory() {
   }
