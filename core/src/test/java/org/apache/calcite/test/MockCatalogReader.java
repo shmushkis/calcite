@@ -319,6 +319,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
     ordersStream.addMonotonic("ROWTIME");
     ordersStream.addColumn("PRODUCTID", intType);
     ordersStream.addColumn("ORDERID", intType);
+    ordersStream.addColumn("UNITPRICE", intType);
     registerTable(ordersStream);
 
     // Register "SHIPMENTS" stream.

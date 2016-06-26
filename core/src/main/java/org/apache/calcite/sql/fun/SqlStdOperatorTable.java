@@ -1622,6 +1622,47 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
         }
       };
 
+  /** The TUMBLE group function. */
+  public static final SqlGroupFunction TUMBLE =
+      new SqlGroupFunction(SqlKind.TUMBLE, null,
+          OperandTypes.or(OperandTypes.DATETIME_INTERVAL,
+              OperandTypes.DATETIME_INTERVAL_TIME));
+
+  /** The TUMBLE_START auxiliary function of the TUMBLE group function. */
+  public static final SqlFunction TUMBLE_START =
+      TUMBLE.auxiliary(SqlKind.TUMBLE_START);
+
+  /** The TUMBLE_END auxiliary function of the TUMBLE group function. */
+  public static final SqlFunction TUMBLE_END =
+      TUMBLE.auxiliary(SqlKind.TUMBLE_END);
+
+  /** The HOP group function. */
+  public static final SqlGroupFunction HOP =
+      new SqlGroupFunction(SqlKind.HOP, null,
+          OperandTypes.or(OperandTypes.DATETIME_INTERVAL_INTERVAL,
+              OperandTypes.DATETIME_INTERVAL_INTERVAL_TIME));
+
+  /** The HOP_START auxiliary function of the HOP group function. */
+  public static final SqlFunction HOP_START =
+      HOP.auxiliary(SqlKind.HOP_START);
+
+  /** The HOP_END auxiliary function of the HOP group function. */
+  public static final SqlFunction HOP_END =
+      HOP.auxiliary(SqlKind.HOP_END);
+
+  /** The SESSION group function. */
+  public static final SqlGroupFunction SESSION =
+      new SqlGroupFunction(SqlKind.SESSION, null,
+          OperandTypes.DATETIME_INTERVAL);
+
+  /** The SESSION_START auxiliary function of the SESSION group function. */
+  public static final SqlFunction SESSION_START =
+      SESSION.auxiliary(SqlKind.SESSION_START);
+
+  /** The SESSION_END auxiliary function of the SESSION group function. */
+  public static final SqlFunction SESSION_END =
+      SESSION.auxiliary(SqlKind.SESSION_END);
+
   //~ Methods ----------------------------------------------------------------
 
   /**
@@ -1637,6 +1678,25 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
     }
     return instance;
   }
+
+  /** Returns the group function for which a given kind is an auxiliary
+   * function, or null if it is not an auxiliary function. */
+  public static SqlGroupFunction auxiliaryToGroup(SqlKind kind) {
+    switch (kind) {
+    case HOP_START:
+    case HOP_END:
+      return HOP;
+    case TUMBLE_START:
+    case TUMBLE_END:
+      return TUMBLE;
+    case SESSION_START:
+    case SESSION_END:
+      return SESSION;
+    default:
+      return null;
+    }
+  }
+
 }
 
 // End SqlStdOperatorTable.java

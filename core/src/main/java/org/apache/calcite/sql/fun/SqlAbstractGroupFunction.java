@@ -31,7 +31,8 @@ import org.apache.calcite.sql.validate.SelectScope;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
-import org.apache.calcite.util.Static;
+
+import static org.apache.calcite.util.Static.RESOURCE;
 
 /**
  * Base class for grouping functions {@code GROUP_ID}, {@code GROUPING_ID},
@@ -67,14 +68,14 @@ public class SqlAbstractGroupFunction extends SqlFunction {
     final SqlSelect select = selectScope.getNode();
     if (!validator.isAggregate(select)) {
       throw validator.newValidationError(call,
-          Static.RESOURCE.groupingInAggregate(getName()));
+          RESOURCE.groupingInAggregate(getName()));
     }
     final AggregatingSelectScope aggregatingSelectScope =
         SqlValidatorUtil.getEnclosingAggregateSelectScope(scope);
     if (aggregatingSelectScope == null) {
       // We're probably in the GROUP BY clause
       throw validator.newValidationError(call,
-          Static.RESOURCE.groupingInWrongClause(getName()));
+          RESOURCE.groupingInWrongClause(getName()));
     }
     for (SqlNode operand : call.getOperandList()) {
       if (scope instanceof OrderByScope) {
@@ -84,7 +85,7 @@ public class SqlAbstractGroupFunction extends SqlFunction {
       }
       if (!aggregatingSelectScope.resolved.get().isGroupingExpr(operand)) {
         throw validator.newValidationError(operand,
-            Static.RESOURCE.groupingArgument(getName()));
+            RESOURCE.groupingArgument(getName()));
       }
     }
   }

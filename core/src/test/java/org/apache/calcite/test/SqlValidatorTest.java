@@ -7974,6 +7974,101 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         .fails(STR_AGG_REQUIRES_MONO);
   }
 
+  @Test public void testStreamTumble() {
+    // TUMBLE
+    sql("select stream tumble_end(rowtime, interval '2' hour) as rowtime\n"
+        + "from orders\n"
+        + "group by tumble(rowtime, interval '2' hour), productId").ok();
+    sql("select stream ^tumble(rowtime, interval '2' hour)^ as rowtime\n"
+        + "from orders\n"
+        + "group by tumble(rowtime, interval '2' hour), productId")
+        .fails("Group function 'TUMBLE' can only appear in GROUP BY clause");
+    // TUMBLE with align argument
+    sql("select stream\n"
+        + "  tumble_end(rowtime, interval '2' hour, time '00:12:00') as rowtime\n"
+        + "from orders\n"
+        + "group by tumble(rowtime, interval '2' hour, time '00:12:00')").ok();
+    // TUMBLE_END without corresponding TUMBLE
+    sql("select stream\n"
+        + "  ^tumble_end(rowtime, interval '2' hour, time '00:13:00')^ as rowtime\n"
+        + "from orders\n"
+        + "group by floor(rowtime to hour)")
+        .fails("Call to auxiliary group function 'TUMBLE_END' must have "
+            + "matching call to group function 'TUMBLE' in GROUP BY clause");
+    // Arguments to TUMBLE_END are slightly different to arguments to TUMBLE
+    sql("select stream\n"
+        + "  ^tumble_start(rowtime, interval '2' hour, time '00:13:00')^ as rowtime\n"
+        + "from orders\n"
+        + "group by tumble(rowtime, interval '2' hour, time '00:12:00')")
+        .fails("Call to auxiliary group function 'TUMBLE_START' must have "
+            + "matching call to group function 'TUMBLE' in GROUP BY clause");
+    // Even though align defaults to TIME '00:00:00', we need structural
+    // equivalence, not semantic equivalence.
+    sql("select stream\n"
+        + "  ^tumble_end(rowtime, interval '2' hour, time '00:00:00')^ as rowtime\n"
+        + "from orders\n"
+        + "group by tumble(rowtime, interval '2' hour)")
+        .fails("Call to auxiliary group function 'TUMBLE_END' must have "
+            + "matching call to group function 'TUMBLE' in GROUP BY clause");
+    // TUMBLE query produces no monotonic column - OK
+    sql("select stream productId\n"
+        + "from orders\n"
+        + "group by tumble(rowtime, interval '2' hour), productId").ok();
+    sql("select stream productId\n"
+        + "from orders\n"
+        + "^group by productId,\n"
+        + "  tumble(timestamp '1990-03-04 12:34:56', interval '2' hour)^")
+        .fails(STR_AGG_REQUIRES_MONO);
+  }
+
+  @Test public void testStreamHop() {
+    // HOP
+    sql("select stream\n"
+        + "  hop_start(rowtime, interval '1' hour, interval '3' hour) as rowtime,\n"
+        + "  count(*) as c\n"
+        + "from orders\n"
+        + "group by hop(rowtime, interval '1' hour, interval '3' hour)").ok();
+    sql("select stream\n"
+        + "  ^hop_start(rowtime, interval '1' hour, interval '2' hour)^,\n"
+        + "  count(*) as c\n"
+        + "from orders\n"
+        + "group by hop(rowtime, interval '1' hour, interval '3' hour)")
+        .fails("Call to auxiliary group function 'HOP_START' must have "
+            + "matching call to group function 'HOP' in GROUP BY clause");
+    // HOP with align
+    sql("select stream\n"
+        + "  hop_start(rowtime, interval '1' hour, interval '3' hour,\n"
+        + "    time '12:34:56') as rowtime,\n"
+        + "  count(*) as c\n"
+        + "from orders\n"
+        + "group by hop(rowtime, interval '1' hour, interval '3' hour,\n"
+        + "    time '12:34:56')").ok();
+  }
+
+  @Ignore("need interval / interval")
+  @Test public void testStreamExpDecayingAvg() {
+    // a complex query using HOP: exponentially decaying moving average
+    sql("SELECT STREAM HOP_END(rowtime, INTERVAL '1' SECOND, INTERVAL '1' HOUR),\n"
+        + "  productId,\n"
+        + "  SUM(unitPrice\n"
+        + "      * EXP((rowtime - HOP_START(rowtime, INTERVAL '1' SECOND, INTERVAL '1' HOUR)) SECOND\n"
+        + "          / INTERVAL '1' HOUR))\n"
+        + "    / SUM(\n"
+        + "        EXP((rowtime - HOP_START(rowtime, INTERVAL '1' SECOND, INTERVAL '1' HOUR)) SECOND\n"
+        + "            / INTERVAL '1' HOUR))\n"
+        + "FROM Orders\n"
+        + "GROUP BY HOP(rowtime, INTERVAL '1' SECOND, INTERVAL '1' HOUR),\n"
+        + "  productId\n").ok();
+  }
+
+  @Test public void testStreamSession() {
+    sql("select stream session_start(rowtime, interval '1' hour) as rowtime,\n"
+        + "  session_end(rowtime, interval '1' hour),\n"
+        + "  count(*) as c\n"
+        + "from orders\n"
+        + "group by session(rowtime, interval '1' hour)").ok();
+  }
+
   @Test public void testStreamHaving() {
     sql("select stream rowtime, productId, count(*) as c\n"
         + "from orders\n"
