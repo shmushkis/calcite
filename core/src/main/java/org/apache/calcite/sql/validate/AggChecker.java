@@ -16,13 +16,16 @@
  */
 package org.apache.calcite.sql.validate;
 
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.util.Litmus;
 
@@ -160,6 +163,22 @@ class AggChecker extends SqlBasicVisitor<Void> {
       // This call matches an expression in the GROUP BY clause.
       return null;
     }
+    final SqlCall groupCall = convertAuxiliaryToGroupCall(call);
+    if (groupCall != null) {
+      if (isGroupExpr(groupCall)) {
+        // This call is an auxiliary function that matches a group call in the
+        // GROUP BY clause.
+        //
+        // For example HOP_START is an auxiliary of the HOP group function, and
+        //   HOP_START(rowtime, INTERVAL '1' HOUR)
+        // matches
+        //   HOP(rowtime, INTERVAL '1' HOUR')
+        return null;
+      }
+      throw validator.newValidationError(groupCall,
+          RESOURCE.auxiliaryWithoutMatchingGroupCall(
+              call.getOperator().getName(), groupCall.getOperator().getName()));
+    }
     if (call.isA(SqlKind.QUERY)) {
       // Allow queries for now, even though they may contain
       // references to forbidden columns.
@@ -178,6 +197,17 @@ class AggChecker extends SqlBasicVisitor<Void> {
     scopes.pop();
     return null;
   }
+
+  private SqlCall convertAuxiliaryToGroupCall(SqlCall call) {
+    SqlOperator op = SqlStdOperatorTable.auxiliaryToGroup(call.getKind());
+    if (op == null) {
+      return null;
+    }
+    final List<SqlNode> list = call.getOperandList();
+    return new SqlBasicCall(op, list.toArray(new SqlNode[list.size()]),
+        call.getParserPosition());
+  }
+
 }
 
 // End AggChecker.java

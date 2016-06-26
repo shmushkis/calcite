@@ -81,7 +81,6 @@ import org.apache.calcite.util.BitString;
 import org.apache.calcite.util.ImmutableNullableList;
 import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Pair;
-import org.apache.calcite.util.Static;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.trace.CalciteTrace;
 
@@ -225,6 +224,8 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
   private final AggFinder aggFinder;
   private final AggFinder aggOrOverFinder;
   private final AggFinder overFinder;
+  private final AggFinder aggOrOverOrGroupFinder;
+  private final AggFinder groupFinder;
   private final SqlConformance conformance;
   private final Map<SqlNode, SqlNode> originalExprs = new HashMap<>();
 
@@ -275,9 +276,11 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
     rewriteCalls = true;
     expandColumnReferences = true;
-    aggFinder = new AggFinder(opTab, false, true, null);
-    aggOrOverFinder = new AggFinder(opTab, true, true, null);
-    overFinder = new AggFinder(opTab, true, false, aggOrOverFinder);
+    aggFinder = new AggFinder(opTab, false, true, false, null);
+    aggOrOverFinder = new AggFinder(opTab, true, true, false, null);
+    overFinder = new AggFinder(opTab, true, false, false, aggOrOverFinder);
+    groupFinder = new AggFinder(opTab, false, false, true, null);
+    aggOrOverOrGroupFinder = new AggFinder(opTab, true, true, true, null);
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -2224,7 +2227,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
         if (!isAggregate(select)) {
           // Since this is not an aggregating query,
           // there cannot be any aggregates in the ORDER BY clause.
-          SqlNode agg = aggFinder.findAgg(orderList);
+          SqlCall agg = aggFinder.findAgg(orderList);
           if (agg != null) {
             throw newValidationError(agg, RESOURCE.aggregateIllegalInOrderBy());
           }
@@ -2524,7 +2527,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     return getAgg(select);
   }
 
-  private SqlNode getAgg(SqlSelect select) {
+  private SqlCall getAgg(SqlSelect select) {
     final SelectScope selectScope = getRawSelectScope(select);
     if (selectScope != null) {
       final List<SqlNode> selectList = selectScope.getExpandedSelectList();
@@ -2894,19 +2897,26 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
    * Throws an error if there is an aggregate or windowed aggregate in the
    * given clause.
    *
-   * @param condition Parse tree
+   * @param aggFinder Finder for the particular kind(s) of aggregate function
+   * @param node      Parse tree
    * @param clause    Name of clause: "WHERE", "GROUP BY", "ON"
    */
-  private void validateNoAggs(SqlNode condition, String clause) {
-    final SqlNode agg = aggOrOverFinder.findAgg(condition);
-    if (agg != null) {
-      if (SqlUtil.isCallTo(agg, SqlStdOperatorTable.OVER)) {
-        throw newValidationError(agg,
-            RESOURCE.windowedAggregateIllegalInClause(clause));
-      } else {
-        throw newValidationError(agg,
-            RESOURCE.aggregateIllegalInClause(clause));
-      }
+  private void validateNoAggs(AggFinder aggFinder, SqlNode node,
+      String clause) {
+    final SqlCall agg = aggFinder.findAgg(node);
+    if (agg == null) {
+      return;
+    }
+    final SqlOperator op = agg.getOperator();
+    if (op == SqlStdOperatorTable.OVER) {
+      throw newValidationError(agg,
+          RESOURCE.windowedAggregateIllegalInClause(clause));
+    } else if (op.isGroup() || op.isGroupAuxiliary()) {
+      throw newValidationError(agg,
+          RESOURCE.groupFunctionMustAppearInGroupByClause(op.getName()));
+    } else {
+      throw newValidationError(agg,
+          RESOURCE.aggregateIllegalInClause(clause));
     }
   }
 
@@ -3019,7 +3029,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     } else if (query.getKind() == SqlKind.VALUES) {
       switch (modality) {
       case STREAM:
-        throw newValidationError(query, Static.RESOURCE.cannotStreamValues());
+        throw newValidationError(query, RESOURCE.cannotStreamValues());
       }
     } else {
       assert query.isA(SqlKind.SET_QUERY);
@@ -3027,7 +3037,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       for (SqlNode operand : call.getOperandList()) {
         if (deduceModality(operand) != modality) {
           throw newValidationError(operand,
-              Static.RESOURCE.streamSetOpInconsistentInputs());
+              RESOURCE.streamSetOpInconsistentInputs());
         }
         validateModality(operand);
       }
@@ -3061,7 +3071,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
           if (!namespace.right.supportsModality(modality)) {
             if (fail) {
               throw newValidationError(namespace.right.getNode(),
-                  Static.RESOURCE.cannotConvertToStream(namespace.left));
+                  RESOURCE.cannotConvertToStream(namespace.left));
             } else {
               return false;
             }
@@ -3084,7 +3094,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
             String inputs = Joiner.on(", ").join(inputList);
 
             throw newValidationError(select,
-                Static.RESOURCE.cannotStreamResultsForNonStreamingInputs(inputs));
+                RESOURCE.cannotStreamResultsForNonStreamingInputs(inputs));
           } else {
             return false;
           }
@@ -3096,7 +3106,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
         if (!namespace.right.supportsModality(modality)) {
           if (fail) {
             throw newValidationError(namespace.right.getNode(),
-                Static.RESOURCE.cannotConvertToRelation(namespace.left));
+                RESOURCE.cannotConvertToRelation(namespace.left));
           } else {
             return false;
           }
@@ -3114,7 +3124,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
             || !SqlValidatorUtil.containsMonotonic(scope, groupList)) {
           if (fail) {
             throw newValidationError(aggregateNode,
-                Static.RESOURCE.streamMustGroupByMonotonic());
+                RESOURCE.streamMustGroupByMonotonic());
           } else {
             return false;
           }
@@ -3130,7 +3140,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
         if (!hasSortedPrefix(scope, orderList)) {
           if (fail) {
             throw newValidationError(orderList.get(0),
-                Static.RESOURCE.streamMustOrderByMonotonic());
+                RESOURCE.streamMustOrderByMonotonic());
           } else {
             return false;
           }
@@ -3335,7 +3345,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     if (groupList == null) {
       return;
     }
-    validateNoAggs(groupList, "GROUP BY");
+    validateNoAggs(aggOrOverFinder, groupList, "GROUP BY");
     final SqlValidatorScope groupScope = getGroupScope(select);
     inferUnknownTypes(unknownType, groupScope, groupList);
 
@@ -3379,7 +3389,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       validateGroupItem(groupScope, aggregatingScope, groupItem);
     }
 
-    SqlNode agg = aggFinder.findAgg(groupList);
+    SqlCall agg = aggFinder.findAgg(groupList);
     if (agg != null) {
       throw newValidationError(agg, RESOURCE.aggregateIllegalInGroupBy());
     }
@@ -3426,7 +3436,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       SqlValidatorScope scope,
       SqlNode condition,
       String keyword) {
-    validateNoAggs(condition, keyword);
+    validateNoAggs(aggOrOverOrGroupFinder, condition, keyword);
     inferUnknownTypes(
         booleanType,
         scope,
@@ -3524,6 +3534,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     inferUnknownTypes(targetRowType, selectScope, newSelectList);
 
     for (SqlNode selectItem : expandedSelectItems) {
+      validateNoAggs(groupFinder, selectItem, "SELECT");
       validateExpr(selectItem, selectScope);
     }
 

@@ -2216,7 +2216,7 @@ from orders]]>
         <Resource name="plan">
             <![CDATA[
 LogicalDelta
-  LogicalProject(ROWTIME=[$0], PRODUCTID=[$1], ORDERID=[$2], C=[COUNT() OVER (PARTITION BY $1 ORDER BY $0 RANGE BETWEEN 1000 PRECEDING AND CURRENT ROW)])
+  LogicalProject(ROWTIME=[$0], PRODUCTID=[$1], ORDERID=[$2], UNITPRICE=[$3], C=[COUNT() OVER (PARTITION BY $1 ORDER BY $0 RANGE BETWEEN 1000 PRECEDING AND CURRENT ROW)])
     LogicalTableScan(table=[[CATALOG, SALES, ORDERS]])
 ]]>
         </Resource>
