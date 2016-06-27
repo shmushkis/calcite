@@ -167,6 +167,31 @@ public class StreamTest {
             startsWith("ROWTIME=2015-02-15 10:00:00; PRODUCT=paint; C=2"));
   }
 
+  @Ignore
+  @Test public void testStreamGroupByHavingInfinite() {
+    CalciteAssert.model(STREAM_MODEL)
+        .withDefaultSchema("INFINITE_STREAMS")
+        .query("select stream floor(rowtime to hour) as rowtime,\n"
+            + "  product, count(*) as c\n"
+            + "from orders\n"
+            + "group by floor(rowtime to hour), product\n"
+            + "having count(*) > 1")
+        .convertContains(
+            "LogicalDelta\n"
+                + "  LogicalFilter(condition=[>($2, 1)])\n"
+                + "    LogicalAggregate(group=[{0, 1}], C=[COUNT()])\n"
+                + "      LogicalProject(ROWTIME=[FLOOR($0, FLAG(HOUR))], PRODUCT=[$2])\n"
+                + "        LogicalTableScan(table=[[INFINITE_STREAMS, ORDERS]])\n")
+        .explainContains(
+            "EnumerableCalc(expr#0..2=[{inputs}], expr#3=[1], expr#4=[>($t2, $t3)], proj#0..2=[{exprs}], $condition=[$t4])\n"
+                + "  EnumerableAggregate(group=[{0, 1}], C=[COUNT()])\n"
+                + "    EnumerableCalc(expr#0..3=[{inputs}], expr#4=[FLAG(HOUR)], expr#5=[FLOOR($t0, $t4)], ROWTIME=[$t5], PRODUCT=[$t2])\n"
+                + "      EnumerableInterpreter\n"
+                + "        BindableTableScan(table=[[INFINITE_STREAMS, ORDERS, (STREAM)]])")
+        .returns(
+            startsWith("ROWTIME=2015-02-15 10:00:00; PRODUCT=paint; C=2"));
+  }
+
   @Test public void testStreamOrderBy() {
     CalciteAssert.model(STREAM_MODEL)
         .withDefaultSchema("STREAMS")
