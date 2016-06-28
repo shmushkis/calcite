@@ -912,18 +912,13 @@ public class CalcitePrepareImpl implements CalcitePrepare {
   private static String getTypeName(RelDataType type) {
     final SqlTypeName sqlTypeName = type.getSqlTypeName();
     switch (sqlTypeName) {
-    case INTERVAL_YEAR_MONTH:
-    case INTERVAL_DAY_TIME:
-      // e.g. "INTERVAL_MONTH" or "INTERVAL_YEAR_MONTH"
-      return "INTERVAL_"
-          + type.getIntervalQualifier().toString().replace(' ', '_');
     case ARRAY:
     case MULTISET:
     case MAP:
     case ROW:
       return type.toString(); // e.g. "INTEGER ARRAY"
     default:
-      return sqlTypeName.getName(); // e.g. "DECIMAL"
+      return sqlTypeName.getName(); // e.g. "DECIMAL", "INTERVAL_YEAR_MONTH"
     }
   }
 

@@ -509,7 +509,16 @@ public class RexBuilder {
                   calendar.getTimeInMillis(),
                   DateTimeUtils.powerX(10, 3 - scale)));
           break;
-        case INTERVAL_DAY_TIME:
+        case INTERVAL_DAY:
+        case INTERVAL_DAY_HOUR:
+        case INTERVAL_DAY_MINUTE:
+        case INTERVAL_DAY_SECOND:
+        case INTERVAL_HOUR:
+        case INTERVAL_HOUR_MINUTE:
+        case INTERVAL_HOUR_SECOND:
+        case INTERVAL_MINUTE:
+        case INTERVAL_MINUTE_SECOND:
+        case INTERVAL_SECOND:
           assert value instanceof BigDecimal;
           typeName = type.getSqlTypeName();
           switch (typeName) {
@@ -1080,8 +1089,7 @@ public class RexBuilder {
     return makeLiteral(
         v,
         typeFactory.createSqlIntervalType(intervalQualifier),
-        intervalQualifier.isYearMonth() ? SqlTypeName.INTERVAL_YEAR_MONTH
-            : SqlTypeName.INTERVAL_DAY_TIME);
+        intervalQualifier.typeName());
   }
 
   /**
@@ -1257,8 +1265,19 @@ public class RexBuilder {
       return makeDateLiteral((Calendar) value);
     case TIMESTAMP:
       return makeTimestampLiteral((Calendar) value, type.getPrecision());
+    case INTERVAL_YEAR:
     case INTERVAL_YEAR_MONTH:
-    case INTERVAL_DAY_TIME:
+    case INTERVAL_MONTH:
+    case INTERVAL_DAY:
+    case INTERVAL_DAY_HOUR:
+    case INTERVAL_DAY_MINUTE:
+    case INTERVAL_DAY_SECOND:
+    case INTERVAL_HOUR:
+    case INTERVAL_HOUR_MINUTE:
+    case INTERVAL_HOUR_SECOND:
+    case INTERVAL_MINUTE:
+    case INTERVAL_MINUTE_SECOND:
+    case INTERVAL_SECOND:
       return makeIntervalLiteral((BigDecimal) value,
           type.getIntervalQualifier());
     case MAP:
@@ -1330,8 +1349,19 @@ public class RexBuilder {
     case INTEGER:
     case BIGINT:
     case DECIMAL:
+    case INTERVAL_YEAR:
     case INTERVAL_YEAR_MONTH:
-    case INTERVAL_DAY_TIME:
+    case INTERVAL_MONTH:
+    case INTERVAL_DAY:
+    case INTERVAL_DAY_HOUR:
+    case INTERVAL_DAY_MINUTE:
+    case INTERVAL_DAY_SECOND:
+    case INTERVAL_HOUR:
+    case INTERVAL_HOUR_MINUTE:
+    case INTERVAL_HOUR_SECOND:
+    case INTERVAL_MINUTE:
+    case INTERVAL_MINUTE_SECOND:
+    case INTERVAL_SECOND:
       if (o instanceof BigDecimal) {
         return o;
       }

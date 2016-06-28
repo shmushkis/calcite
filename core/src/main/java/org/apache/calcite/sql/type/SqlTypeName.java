@@ -23,6 +23,8 @@ import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 import java.math.BigDecimal;
 import java.sql.Types;
@@ -30,6 +32,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Enumeration of the type names which can be used to construct a SQL type.
@@ -59,9 +62,35 @@ public enum SqlTypeName {
       SqlTypeFamily.TIME),
   TIMESTAMP(PrecScale.NO_NO | PrecScale.YES_NO, false, Types.TIMESTAMP,
       SqlTypeFamily.TIMESTAMP),
+  INTERVAL_YEAR_MONTH_(PrecScale.NO_NO, false, Types.OTHER,
+      SqlTypeFamily.INTERVAL_YEAR_MONTH),
+  INTERVAL_YEAR(PrecScale.NO_NO, false, Types.OTHER,
+      SqlTypeFamily.INTERVAL_YEAR_MONTH),
   INTERVAL_YEAR_MONTH(PrecScale.NO_NO, false, Types.OTHER,
       SqlTypeFamily.INTERVAL_YEAR_MONTH),
-  INTERVAL_DAY_TIME(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
+  INTERVAL_MONTH(PrecScale.NO_NO, false, Types.OTHER,
+      SqlTypeFamily.INTERVAL_YEAR_MONTH),
+  INTERVAL_DAY_TIME_(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
+      false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
+  INTERVAL_DAY(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
+      false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
+  INTERVAL_DAY_HOUR(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
+      false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
+  INTERVAL_DAY_MINUTE(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
+      false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
+  INTERVAL_DAY_SECOND(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
+      false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
+  INTERVAL_HOUR(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
+      false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
+  INTERVAL_HOUR_MINUTE(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
+      false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
+  INTERVAL_HOUR_SECOND(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
+      false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
+  INTERVAL_MINUTE(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
+      false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
+  INTERVAL_MINUTE_SECOND(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
+      false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
+  INTERVAL_SECOND(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
       false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
   CHAR(PrecScale.NO_NO | PrecScale.YES_NO, false, Types.CHAR,
       SqlTypeFamily.CHARACTER),
@@ -114,7 +143,11 @@ public enum SqlTypeName {
       ImmutableList.of(
           BOOLEAN, INTEGER, VARCHAR, DATE, TIME, TIMESTAMP, NULL, DECIMAL,
           ANY, CHAR, BINARY, VARBINARY, TINYINT, SMALLINT, BIGINT, REAL,
-          DOUBLE, SYMBOL, INTERVAL_YEAR_MONTH, INTERVAL_DAY_TIME,
+          DOUBLE, SYMBOL, INTERVAL_YEAR, INTERVAL_YEAR_MONTH, INTERVAL_MONTH,
+          INTERVAL_DAY, INTERVAL_DAY_HOUR, INTERVAL_DAY_MINUTE,
+          INTERVAL_DAY_SECOND, INTERVAL_HOUR, INTERVAL_HOUR_MINUTE,
+          INTERVAL_HOUR_SECOND, INTERVAL_MINUTE, INTERVAL_MINUTE_SECOND,
+          INTERVAL_SECOND,
           FLOAT, MULTISET, DISTINCT, STRUCTURED, ROW, CURSOR, COLUMN_LIST);
 
   public static final List<SqlTypeName> BOOLEAN_TYPES =
@@ -147,8 +180,26 @@ public enum SqlTypeName {
   public static final List<SqlTypeName> DATETIME_TYPES =
       ImmutableList.of(DATE, TIME, TIMESTAMP);
 
-  public static final List<SqlTypeName> INTERVAL_TYPES =
-      ImmutableList.of(INTERVAL_DAY_TIME, INTERVAL_YEAR_MONTH);
+  public static final Set<SqlTypeName> YEAR_INTERVAL_TYPES =
+      Sets.immutableEnumSet(SqlTypeName.INTERVAL_YEAR,
+          SqlTypeName.INTERVAL_YEAR_MONTH,
+          SqlTypeName.INTERVAL_MONTH);
+
+  public static final Set<SqlTypeName> DAY_INTERVAL_TYPES =
+      Sets.immutableEnumSet(SqlTypeName.INTERVAL_DAY,
+          SqlTypeName.INTERVAL_DAY_HOUR,
+          SqlTypeName.INTERVAL_DAY_MINUTE,
+          SqlTypeName.INTERVAL_DAY_SECOND,
+          SqlTypeName.INTERVAL_HOUR,
+          SqlTypeName.INTERVAL_HOUR_MINUTE,
+          SqlTypeName.INTERVAL_HOUR_SECOND,
+          SqlTypeName.INTERVAL_MINUTE,
+          SqlTypeName.INTERVAL_MINUTE_SECOND,
+          SqlTypeName.INTERVAL_SECOND);
+
+  public static final Set<SqlTypeName> INTERVAL_TYPES =
+      Sets.immutableEnumSet(
+          Iterables.concat(YEAR_INTERVAL_TYPES, DAY_INTERVAL_TYPES));
 
   private static final Map<Integer, SqlTypeName> JDBC_TYPE_TO_NAME =
       ImmutableMap.<Integer, SqlTypeName>builder()
@@ -307,8 +358,19 @@ public enum SqlTypeName {
     switch (this) {
     case DECIMAL:
       return 0;
-    case INTERVAL_DAY_TIME:
+    case INTERVAL_YEAR:
     case INTERVAL_YEAR_MONTH:
+    case INTERVAL_MONTH:
+    case INTERVAL_DAY:
+    case INTERVAL_DAY_HOUR:
+    case INTERVAL_DAY_MINUTE:
+    case INTERVAL_DAY_SECOND:
+    case INTERVAL_HOUR:
+    case INTERVAL_HOUR_MINUTE:
+    case INTERVAL_HOUR_SECOND:
+    case INTERVAL_MINUTE:
+    case INTERVAL_MINUTE_SECOND:
+    case INTERVAL_SECOND:
       return DEFAULT_INTERVAL_FRACTIONAL_SECOND_PRECISION;
     default:
       return -1;
@@ -680,8 +742,19 @@ public enum SqlTypeName {
     case TIME:
     case TIMESTAMP:
       return 1;
-    case INTERVAL_DAY_TIME:
+    case INTERVAL_YEAR:
     case INTERVAL_YEAR_MONTH:
+    case INTERVAL_MONTH:
+    case INTERVAL_DAY:
+    case INTERVAL_DAY_HOUR:
+    case INTERVAL_DAY_MINUTE:
+    case INTERVAL_DAY_SECOND:
+    case INTERVAL_HOUR:
+    case INTERVAL_HOUR_MINUTE:
+    case INTERVAL_HOUR_SECOND:
+    case INTERVAL_MINUTE:
+    case INTERVAL_MINUTE_SECOND:
+    case INTERVAL_SECOND:
       return MIN_INTERVAL_START_PRECISION;
     default:
       return -1;
@@ -698,8 +771,19 @@ public enum SqlTypeName {
   public int getMinScale() {
     switch (this) {
     // TODO: Minimum numeric scale for decimal
-    case INTERVAL_DAY_TIME:
+    case INTERVAL_YEAR:
     case INTERVAL_YEAR_MONTH:
+    case INTERVAL_MONTH:
+    case INTERVAL_DAY:
+    case INTERVAL_DAY_HOUR:
+    case INTERVAL_DAY_MINUTE:
+    case INTERVAL_DAY_SECOND:
+    case INTERVAL_HOUR:
+    case INTERVAL_HOUR_MINUTE:
+    case INTERVAL_HOUR_SECOND:
+    case INTERVAL_MINUTE:
+    case INTERVAL_MINUTE_SECOND:
+    case INTERVAL_SECOND:
       return MIN_INTERVAL_FRACTIONAL_SECOND_PRECISION;
     default:
       return -1;

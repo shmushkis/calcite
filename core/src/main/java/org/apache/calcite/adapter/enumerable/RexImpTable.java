@@ -1962,7 +1962,16 @@ public class RexImpTable {
       switch (operand0.getType().getSqlTypeName()) {
       case DATE:
         switch (typeName1) {
-        case INTERVAL_DAY_TIME:
+        case INTERVAL_DAY:
+        case INTERVAL_DAY_HOUR:
+        case INTERVAL_DAY_MINUTE:
+        case INTERVAL_DAY_SECOND:
+        case INTERVAL_HOUR:
+        case INTERVAL_HOUR_MINUTE:
+        case INTERVAL_HOUR_SECOND:
+        case INTERVAL_MINUTE:
+        case INTERVAL_MINUTE_SECOND:
+        case INTERVAL_SECOND:
           trop1 =
               Expressions.convert_(
                   Expressions.divide(trop1,
@@ -1976,14 +1985,25 @@ public class RexImpTable {
       }
       final SqlIntervalQualifier interval = call.getType().getIntervalQualifier();
       switch (typeName1) {
+      case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:
+      case INTERVAL_MONTH:
         switch (call.getKind()) {
         case MINUS:
           trop1 = Expressions.negate(trop1);
         }
         return Expressions.call(BuiltInMethod.ADD_MONTHS.method, trop0, trop1);
 
-      case INTERVAL_DAY_TIME:
+      case INTERVAL_DAY:
+      case INTERVAL_DAY_HOUR:
+      case INTERVAL_DAY_MINUTE:
+      case INTERVAL_DAY_SECOND:
+      case INTERVAL_HOUR:
+      case INTERVAL_HOUR_MINUTE:
+      case INTERVAL_HOUR_SECOND:
+      case INTERVAL_MINUTE:
+      case INTERVAL_MINUTE_SECOND:
+      case INTERVAL_SECOND:
         switch (call.getKind()) {
         case MINUS:
           return Expressions.subtract(trop0, trop1);

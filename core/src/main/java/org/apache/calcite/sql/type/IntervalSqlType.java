@@ -46,11 +46,7 @@ public class IntervalSqlType extends AbstractSqlType {
   public IntervalSqlType(RelDataTypeSystem typeSystem,
       SqlIntervalQualifier intervalQualifier,
       boolean isNullable) {
-    super(intervalQualifier.isYearMonth()
-            ? SqlTypeName.INTERVAL_YEAR_MONTH
-            : SqlTypeName.INTERVAL_DAY_TIME,
-        isNullable,
-        null);
+    super(intervalQualifier.typeName(), isNullable, null);
     this.typeSystem = Preconditions.checkNotNull(typeSystem);
     this.intervalQualifier = Preconditions.checkNotNull(intervalQualifier);
     computeDigest();

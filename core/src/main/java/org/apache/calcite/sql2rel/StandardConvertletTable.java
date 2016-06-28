@@ -620,8 +620,19 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
     case MONTH:
     case DAY:
       switch (sqlTypeName) {
+      case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:
-      case INTERVAL_DAY_TIME:
+      case INTERVAL_MONTH:
+      case INTERVAL_DAY:
+      case INTERVAL_DAY_HOUR:
+      case INTERVAL_DAY_MINUTE:
+      case INTERVAL_DAY_SECOND:
+      case INTERVAL_HOUR:
+      case INTERVAL_HOUR_MINUTE:
+      case INTERVAL_HOUR_SECOND:
+      case INTERVAL_MINUTE:
+      case INTERVAL_MINUTE_SECOND:
+      case INTERVAL_SECOND:
         break;
       case TIMESTAMP:
         res = divide(rexBuilder, res, TimeUnit.DAY.multiplier);
@@ -671,8 +682,19 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
       case TIMESTAMP:
         // convert to seconds
         return divide(rexBuilder, res, TimeUnit.SECOND.multiplier);
-      case INTERVAL_DAY_TIME:
+      case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:
+      case INTERVAL_MONTH:
+      case INTERVAL_DAY:
+      case INTERVAL_DAY_HOUR:
+      case INTERVAL_DAY_MINUTE:
+      case INTERVAL_DAY_SECOND:
+      case INTERVAL_HOUR:
+      case INTERVAL_HOUR_MINUTE:
+      case INTERVAL_HOUR_SECOND:
+      case INTERVAL_MINUTE:
+      case INTERVAL_MINUTE_SECOND:
+      case INTERVAL_SECOND:
         // no convertlet conversion, pass it as extract
         return convertFunction(cx, (SqlFunction) call.getOperator(), call);
       }
@@ -681,8 +703,19 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
     case DOY:
     case WEEK:
       switch (sqlTypeName) {
-      case INTERVAL_DAY_TIME: // fall through
+      case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:
+      case INTERVAL_MONTH:
+      case INTERVAL_DAY:
+      case INTERVAL_DAY_HOUR:
+      case INTERVAL_DAY_MINUTE:
+      case INTERVAL_DAY_SECOND:
+      case INTERVAL_HOUR:
+      case INTERVAL_HOUR_MINUTE:
+      case INTERVAL_HOUR_SECOND:
+      case INTERVAL_MINUTE:
+      case INTERVAL_MINUTE_SECOND:
+      case INTERVAL_SECOND:
         // TODO: is this check better to do in validation phase?
         // Currently there is parameter on TimeUnit to identify these type of units.
         throw new IllegalArgumentException("Extract " + unit + " from "
@@ -1032,8 +1065,19 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
       if (operands.size() == 2) {
         final SqlTypeName sqlTypeName = operands.get(0).getType().getSqlTypeName();
         switch (sqlTypeName) {
-        case INTERVAL_DAY_TIME:
+        case INTERVAL_YEAR:
         case INTERVAL_YEAR_MONTH:
+        case INTERVAL_MONTH:
+        case INTERVAL_DAY:
+        case INTERVAL_DAY_HOUR:
+        case INTERVAL_DAY_MINUTE:
+        case INTERVAL_DAY_SECOND:
+        case INTERVAL_HOUR:
+        case INTERVAL_HOUR_MINUTE:
+        case INTERVAL_HOUR_SECOND:
+        case INTERVAL_MINUTE:
+        case INTERVAL_MINUTE_SECOND:
+        case INTERVAL_SECOND:
           operands = ImmutableList.of(operands.get(1), operands.get(0));
         }
       }

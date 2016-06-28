@@ -128,9 +128,35 @@ public class SqlIntervalQualifier extends SqlNode {
   //~ Methods ----------------------------------------------------------------
 
   public SqlTypeName typeName() {
-    return isYearMonth()
-        ? SqlTypeName.INTERVAL_YEAR_MONTH
-        : SqlTypeName.INTERVAL_DAY_TIME;
+    switch (timeUnitRange) {
+    default:
+    case YEAR:
+      return SqlTypeName.INTERVAL_YEAR;
+    case YEAR_TO_MONTH:
+      return SqlTypeName.INTERVAL_YEAR_MONTH;
+    case MONTH:
+      return SqlTypeName.INTERVAL_MONTH;
+    case DAY:
+      return SqlTypeName.INTERVAL_DAY;
+    case DAY_TO_HOUR:
+      return SqlTypeName.INTERVAL_DAY_HOUR;
+    case DAY_TO_MINUTE:
+      return SqlTypeName.INTERVAL_DAY_MINUTE;
+    case DAY_TO_SECOND:
+      return SqlTypeName.INTERVAL_DAY_SECOND;
+    case HOUR:
+      return SqlTypeName.INTERVAL_HOUR;
+    case HOUR_TO_MINUTE:
+      return SqlTypeName.INTERVAL_HOUR_MINUTE;
+    case HOUR_TO_SECOND:
+      return SqlTypeName.INTERVAL_HOUR_SECOND;
+    case MINUTE:
+      return SqlTypeName.INTERVAL_MINUTE;
+    case MINUTE_TO_SECOND:
+      return SqlTypeName.INTERVAL_MINUTE_SECOND;
+    case SECOND:
+      return SqlTypeName.INTERVAL_SECOND;
+    }
   }
 
   public void validate(
