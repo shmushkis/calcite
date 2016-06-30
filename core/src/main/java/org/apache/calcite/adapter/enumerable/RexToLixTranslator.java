@@ -439,8 +439,7 @@ public class RexToLixTranslator {
     case INTERVAL_SECOND:
       switch (sourceType.getSqlTypeName().getFamily()) {
       case NUMERIC:
-        final SqlIntervalQualifier interval = targetType.getIntervalQualifier();
-        final BigDecimal multiplier = interval.getUnit().multiplier;
+        final BigDecimal multiplier = targetType.getSqlTypeName().getEndUnit().multiplier;
         final BigDecimal divider = BigDecimal.ONE;
         convert = RexImpTable.multiplyDivide(convert, multiplier, divider);
       }

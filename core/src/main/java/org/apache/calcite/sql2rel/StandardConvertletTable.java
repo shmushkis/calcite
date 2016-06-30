@@ -1513,17 +1513,29 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
       //    => (t2 - t1) UNIT
       final RexBuilder rexBuilder = cx.getRexBuilder();
       final SqlLiteral unitLiteral = call.operand(0);
-      final TimeUnit unit = unitLiteral.symbolValue(TimeUnit.class);
+      TimeUnit unit = unitLiteral.symbolValue(TimeUnit.class);
+      BigDecimal multiplier = BigDecimal.ONE;
+      BigDecimal divider = BigDecimal.ONE;
+      switch (unit) {
+      case MICROSECOND:
+        multiplier = BigDecimal.valueOf(1000000);
+        unit = TimeUnit.SECOND;
+        break;
+      case MILLISECOND:
+        multiplier = BigDecimal.valueOf(1000);
+        unit = TimeUnit.SECOND;
+      }
       final RelDataType intType =
           cx.getTypeFactory().createSqlType(SqlTypeName.INTEGER);
       final SqlIntervalQualifier qualifier =
           new SqlIntervalQualifier(unit, null, SqlParserPos.ZERO);
       final RelDataType intervalType =
           cx.getTypeFactory().createSqlIntervalType(qualifier);
-      return rexBuilder.makeCast(intType,
+      RexNode e = rexBuilder.makeCast(intType,
           rexBuilder.makeCall(intervalType, SqlStdOperatorTable.MINUS_DATE,
               ImmutableList.of(cx.convertExpression(call.operand(2)),
                   cx.convertExpression(call.operand(1)))));
+      return rexBuilder.multiplyDivide(e, multiplier, divider);
     }
   }
 }

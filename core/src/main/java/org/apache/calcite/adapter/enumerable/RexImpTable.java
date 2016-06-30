@@ -45,7 +45,6 @@ import org.apache.calcite.schema.ImplementableFunction;
 import org.apache.calcite.schema.impl.AggregateFunctionImpl;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlBinaryOperator;
-import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
@@ -1983,7 +1982,6 @@ public class RexImpTable {
         trop1 = Expressions.convert_(trop1, int.class);
         break;
       }
-      final SqlIntervalQualifier interval = call.getType().getIntervalQualifier();
       switch (typeName1) {
       case INTERVAL_YEAR:
       case INTERVAL_YEAR_MONTH:
@@ -2014,17 +2012,19 @@ public class RexImpTable {
       default:
         switch (call.getKind()) {
         case MINUS:
-          Class targetType = interval.isYearMonth() ? int.class : long.class;
-          if (interval.isYearMonth()) {
+          switch (call.getType().getSqlTypeName()) {
+          case INTERVAL_YEAR:
+          case INTERVAL_YEAR_MONTH:
+          case INTERVAL_MONTH:
             return Expressions.call(BuiltInMethod.SUBTRACT_MONTHS.method,
                 trop0, trop1);
           }
           TimeUnit fromUnit =
               typeName1 == SqlTypeName.DATE ? TimeUnit.DAY : TimeUnit.MILLISECOND;
-          TimeUnit toUnit = interval.isYearMonth() ? TimeUnit.MONTH : TimeUnit.MILLISECOND;
+          TimeUnit toUnit = TimeUnit.MILLISECOND;
           return multiplyDivide(
               Expressions.convert_(Expressions.subtract(trop0, trop1),
-                  targetType),
+                  (Class) long.class),
               fromUnit.multiplier, toUnit.multiplier);
         default:
           return Expressions.add(trop0, trop1);

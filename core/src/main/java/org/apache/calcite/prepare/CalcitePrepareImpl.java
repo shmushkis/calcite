@@ -917,6 +917,20 @@ public class CalcitePrepareImpl implements CalcitePrepare {
     case MAP:
     case ROW:
       return type.toString(); // e.g. "INTEGER ARRAY"
+    case INTERVAL_YEAR_MONTH:
+      return "INTERVAL_YEAR_TO_MONTH";
+    case INTERVAL_DAY_HOUR:
+      return "INTERVAL_DAY_TO_HOUR";
+    case INTERVAL_DAY_MINUTE:
+      return "INTERVAL_DAY_TO_MINUTE";
+    case INTERVAL_DAY_SECOND:
+      return "INTERVAL_DAY_TO_SECOND";
+    case INTERVAL_HOUR_MINUTE:
+      return "INTERVAL_HOUR_TO_MINUTE";
+    case INTERVAL_HOUR_SECOND:
+      return "INTERVAL_HOUR_TO_SECOND";
+    case INTERVAL_MINUTE_SECOND:
+      return "INTERVAL_MINUTE_TO_SECOND";
     default:
       return sqlTypeName.getName(); // e.g. "DECIMAL", "INTERVAL_YEAR_MONTH"
     }

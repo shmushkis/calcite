@@ -17,6 +17,7 @@
 package org.apache.calcite.sql.type;
 
 import org.apache.calcite.avatica.util.DateTimeUtils;
+import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.Util;
@@ -62,16 +63,12 @@ public enum SqlTypeName {
       SqlTypeFamily.TIME),
   TIMESTAMP(PrecScale.NO_NO | PrecScale.YES_NO, false, Types.TIMESTAMP,
       SqlTypeFamily.TIMESTAMP),
-  INTERVAL_YEAR_MONTH_(PrecScale.NO_NO, false, Types.OTHER,
-      SqlTypeFamily.INTERVAL_YEAR_MONTH),
   INTERVAL_YEAR(PrecScale.NO_NO, false, Types.OTHER,
       SqlTypeFamily.INTERVAL_YEAR_MONTH),
   INTERVAL_YEAR_MONTH(PrecScale.NO_NO, false, Types.OTHER,
       SqlTypeFamily.INTERVAL_YEAR_MONTH),
   INTERVAL_MONTH(PrecScale.NO_NO, false, Types.OTHER,
       SqlTypeFamily.INTERVAL_YEAR_MONTH),
-  INTERVAL_DAY_TIME_(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
-      false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
   INTERVAL_DAY(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
       false, Types.OTHER, SqlTypeFamily.INTERVAL_DAY_TIME),
   INTERVAL_DAY_HOUR(PrecScale.NO_NO | PrecScale.YES_NO | PrecScale.YES_YES,
@@ -257,7 +254,7 @@ public enum SqlTypeName {
   private final int jdbcOrdinal;
   private final SqlTypeFamily family;
 
-  private SqlTypeName(int signatures, boolean special, int jdbcType,
+  SqlTypeName(int signatures, boolean special, int jdbcType,
       SqlTypeFamily family) {
     this.signatures = signatures;
     this.special = special;
@@ -787,6 +784,73 @@ public enum SqlTypeName {
       return MIN_INTERVAL_FRACTIONAL_SECOND_PRECISION;
     default:
       return -1;
+    }
+  }
+
+  /** Returns {@code HOUR} for {@code HOUR TO SECOND} and
+   * {@code HOUR}, {@code SECOND} for {@code SECOND}. */
+  public TimeUnit getStartUnit() {
+    switch (this) {
+    case INTERVAL_YEAR:
+    case INTERVAL_YEAR_MONTH:
+      return TimeUnit.YEAR;
+    case INTERVAL_MONTH:
+      return TimeUnit.MONTH;
+    case INTERVAL_DAY:
+    case INTERVAL_DAY_HOUR:
+    case INTERVAL_DAY_MINUTE:
+    case INTERVAL_DAY_SECOND:
+      return TimeUnit.DAY;
+    case INTERVAL_HOUR:
+    case INTERVAL_HOUR_MINUTE:
+    case INTERVAL_HOUR_SECOND:
+      return TimeUnit.HOUR;
+    case INTERVAL_MINUTE:
+    case INTERVAL_MINUTE_SECOND:
+      return TimeUnit.MINUTE;
+    case INTERVAL_SECOND:
+      return TimeUnit.SECOND;
+    default:
+      throw new AssertionError(this);
+    }
+  }
+
+  /** Returns {@code SECOND} for both {@code HOUR TO SECOND} and
+   * {@code SECOND}. */
+  public TimeUnit getEndUnit() {
+    switch (this) {
+    case INTERVAL_YEAR:
+      return TimeUnit.YEAR;
+    case INTERVAL_YEAR_MONTH:
+    case INTERVAL_MONTH:
+      return TimeUnit.MONTH;
+    case INTERVAL_DAY:
+      return TimeUnit.DAY;
+    case INTERVAL_DAY_HOUR:
+    case INTERVAL_HOUR:
+      return TimeUnit.HOUR;
+    case INTERVAL_DAY_MINUTE:
+    case INTERVAL_HOUR_MINUTE:
+    case INTERVAL_MINUTE:
+      return TimeUnit.MINUTE;
+    case INTERVAL_DAY_SECOND:
+    case INTERVAL_HOUR_SECOND:
+    case INTERVAL_MINUTE_SECOND:
+    case INTERVAL_SECOND:
+      return TimeUnit.SECOND;
+    default:
+      throw new AssertionError(this);
+    }
+  }
+
+  public boolean isYearMonth() {
+    switch (this) {
+    case INTERVAL_YEAR:
+    case INTERVAL_YEAR_MONTH:
+    case INTERVAL_MONTH:
+      return true;
+    default:
+      return false;
     }
   }
 
