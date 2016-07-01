@@ -20,7 +20,6 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.CancelFlag;
 import org.apache.calcite.util.Pair;
 
 import org.apache.commons.lang3.time.FastDateFormat;
@@ -40,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.GZIPInputStream;
 
 
@@ -50,7 +50,7 @@ import java.util.zip.GZIPInputStream;
 class CsvEnumerator<E> implements Enumerator<E> {
   private final CSVReader reader;
   private final String[] filterValues;
-  private final CancelFlag cancelFlag;
+  private final AtomicBoolean cancelFlag;
   private final RowConverter<E> rowConverter;
   private E current;
 
@@ -66,19 +66,19 @@ class CsvEnumerator<E> implements Enumerator<E> {
         FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss", gmt);
   }
 
-  public CsvEnumerator(File file, CancelFlag cancelFlag,
+  public CsvEnumerator(File file, AtomicBoolean cancelFlag,
       List<CsvFieldType> fieldTypes) {
     this(file, cancelFlag, fieldTypes, identityList(fieldTypes.size()));
   }
 
-  public CsvEnumerator(File file, CancelFlag cancelFlag,
+  public CsvEnumerator(File file, AtomicBoolean cancelFlag,
       List<CsvFieldType> fieldTypes, int[] fields) {
     //noinspection unchecked
     this(file, cancelFlag, false, null,
         (RowConverter<E>) converter(fieldTypes, fields));
   }
 
-  public CsvEnumerator(File file, CancelFlag cancelFlag, boolean stream,
+  public CsvEnumerator(File file, AtomicBoolean cancelFlag, boolean stream,
       String[] filterValues, RowConverter<E> rowConverter) {
     this.cancelFlag = cancelFlag;
     this.rowConverter = rowConverter;
@@ -192,7 +192,7 @@ class CsvEnumerator<E> implements Enumerator<E> {
     try {
     outer:
       for (;;) {
-        if (cancelFlag.isCancelRequested()) {
+        if (cancelFlag.get()) {
           return false;
         }
         final String[] strings = reader.readNext();

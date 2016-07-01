@@ -29,7 +29,6 @@ import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.runtime.ArrayEnumeratorCursor;
 import org.apache.calcite.runtime.ObjectEnumeratorCursor;
-import org.apache.calcite.util.CancelFlag;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -39,6 +38,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.calcite.util.Static.RESOURCE;
 
@@ -47,7 +47,7 @@ import static org.apache.calcite.util.Static.RESOURCE;
  * for the Calcite engine.
  */
 public class CalciteResultSet extends AvaticaResultSet {
-  private final CancelFlag cancelFlag;
+  private final AtomicBoolean cancelFlag;
 
   CalciteResultSet(AvaticaStatement statement,
       CalcitePrepare.CalciteSignature calciteSignature,
@@ -79,12 +79,12 @@ public class CalciteResultSet extends AvaticaResultSet {
   }
 
   @Override protected void cancel() {
-    cancelFlag.requestCancel();
+    cancelFlag.compareAndSet(false, true);
   }
 
   @Override public boolean next() throws SQLException {
     final boolean next = super.next();
-    if (cancelFlag.isCancelRequested()) {
+    if (cancelFlag.get()) {
       throw new SQLException(RESOURCE.statementCanceled().str());
     }
     return next;

@@ -58,7 +58,6 @@ import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlValidatorWithHints;
 import org.apache.calcite.tools.RelRunner;
 import org.apache.calcite.util.BuiltInMethod;
-import org.apache.calcite.util.CancelFlag;
 import org.apache.calcite.util.Holder;
 
 import com.google.common.base.Preconditions;
@@ -77,6 +76,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Implementation of JDBC connection
@@ -279,7 +279,7 @@ abstract class CalciteConnectionImpl
       map.put("?" + o.i, o.e.toLocal());
     }
     map.putAll(signature.internalParameters);
-    final CancelFlag cancelFlag;
+    final AtomicBoolean cancelFlag;
     try {
       cancelFlag = getCancelFlag(handle);
     } catch (NoSuchStatementException e) {
@@ -292,7 +292,7 @@ abstract class CalciteConnectionImpl
 
   /** Returns the flag that is used to request or check cancel for a particular
    * statement. */
-  CancelFlag getCancelFlag(Meta.StatementHandle handle)
+  AtomicBoolean getCancelFlag(Meta.StatementHandle handle)
       throws NoSuchStatementException {
     final CalciteServerStatement serverStatement = server.getStatement(handle);
     return ((CalciteServerStatementImpl) serverStatement).cancelFlag;
@@ -507,7 +507,7 @@ abstract class CalciteConnectionImpl
     private final CalciteConnectionImpl connection;
     private Iterator<Object> iterator;
     private Meta.Signature signature;
-    private final CancelFlag cancelFlag = new CancelFlag();
+    private final AtomicBoolean cancelFlag = new AtomicBoolean();
 
     CalciteServerStatementImpl(CalciteConnectionImpl connection) {
       this.connection = Preconditions.checkNotNull(connection);
