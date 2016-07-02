@@ -546,7 +546,7 @@ public class SqlValidatorUtil {
   public static void analyzeGroupItem(SqlValidatorScope scope,
       List<SqlNode> groupExprs, Map<Integer, Integer> groupExprProjection,
       ImmutableList.Builder<ImmutableList<ImmutableBitSet>> topBuilder,
-      SqlNode groupExpr) {
+      List<SqlNode> extraExprs, SqlNode groupExpr) {
     final ImmutableList.Builder<ImmutableBitSet> builder;
     switch (groupExpr.getKind()) {
     case CUBE:
@@ -564,12 +564,18 @@ public class SqlValidatorUtil {
         topBuilder.add(cube(bitSets));
         return;
       }
+      /*
+    case HOP:
+      final int i = registerGroupFunction(groupExpr, extraExprs);
+      topBuilder.add(ImmutableList.of(ImmutableBitSet.of(i)));
+      return;
+      */
     case OTHER:
       if (groupExpr instanceof SqlNodeList) {
         SqlNodeList list = (SqlNodeList) groupExpr;
         for (SqlNode node : list) {
           analyzeGroupItem(scope, groupExprs, groupExprProjection, topBuilder,
-              node);
+              extraExprs, node);
         }
         return;
       }
@@ -581,6 +587,17 @@ public class SqlValidatorUtil {
           groupExpr);
       topBuilder.add(builder.build());
     }
+  }
+
+  private static int registerGroupFunction(SqlNode groupExpr,
+      List<SqlNode> extraExprs) {
+    for (Ord<SqlNode> e : Ord.zip(extraExprs)) {
+      if (e.e.equalsDeep(groupExpr, Litmus.IGNORE)) {
+        return e.i;
+      }
+    }
+    extraExprs.add(groupExpr);
+    return extraExprs.size() - 1;
   }
 
   /** Analyzes a GROUPING SETS item in a GROUP BY clause. */

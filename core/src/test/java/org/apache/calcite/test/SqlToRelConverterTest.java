@@ -1292,11 +1292,31 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql).ok();
   }
 
+  /** A query on the "HISTORIC_ORDERS" table, which has the same row type as
+   * the "ORDERS" stream. */
+  @Test public void testStreamHistory() {
+    final String sql =
+        "select productId from historic_orders where productId = 10";
+    sql(sql).ok();
+  }
+
   @Test public void testStreamGroupBy() {
     final String sql = "select stream\n"
         + " floor(rowtime to second) as rowtime, count(*) as c\n"
         + "from orders\n"
         + "group by floor(rowtime to second)";
+    sql(sql).ok();
+  }
+
+  @Test public void testHopTable() {
+    final String sql = "select productId,\n"
+        + "  hop_start(rowtime, interval '2' hour, interval '3' hour)\n"
+        + "    as rowtime,\n"
+        + "  count(*) as c\n"
+        + "from historic_orders\n"
+        + "where productId < 10\n"
+        + "group by hop(rowtime, interval '2' hour, interval '3' hour),\n"
+        + "  productId";
     sql(sql).ok();
   }
 

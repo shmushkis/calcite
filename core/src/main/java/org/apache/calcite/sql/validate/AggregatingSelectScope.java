@@ -99,13 +99,10 @@ public class AggregatingSelectScope
     final ImmutableList.Builder<ImmutableList<ImmutableBitSet>> builder =
         ImmutableList.builder();
     if (select.getGroup() != null) {
-      // We deep-copy the group-list in case subsequent validation
-      // modifies it and makes it no longer equivalent. While copying,
-      // we fully qualify all identifiers.
       final SqlNodeList groupList = select.getGroup();
       for (SqlNode groupExpr : groupList) {
         SqlValidatorUtil.analyzeGroupItem(this, temporaryGroupExprList,
-            groupExprProjection, builder, groupExpr);
+            groupExprProjection, builder, new ArrayList<SqlNode>(), groupExpr);
       }
     }
 
