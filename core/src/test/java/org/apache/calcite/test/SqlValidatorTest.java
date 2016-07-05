@@ -7300,6 +7300,15 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         "RecordType(INTEGER NOT NULL x[y] z ) NOT NULL");
   }
 
+  @Test public void testCaseInsensitive2() {
+    final SqlTester tester1 = tester
+        .withCaseSensitive(false)
+        .withUnquotedCasing(Casing.UNCHANGED);
+    tester1.checkQuery("select deptno, count(*) from EMP AS emp group by eMp.deptno");
+    // ok already
+    tester1.checkQuery("select deptno, count(*) from EMP group by DEPTNO");
+  }
+
   /** Tests using case-insensitive matching of identifiers. */
   @Test public void testCaseInsensitive() {
     final SqlTester tester1 = tester
