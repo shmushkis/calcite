@@ -326,7 +326,7 @@ public class RelBuilder {
    * @param fieldOrdinal Field ordinal
    */
   public RexInputRef field(int fieldOrdinal) {
-    return field(1, 0, fieldOrdinal);
+    return (RexInputRef) field(1, 0, fieldOrdinal, false);
   }
 
   /** Creates a reference to a field of a given input relational expression
@@ -337,17 +337,32 @@ public class RelBuilder {
    * @param fieldOrdinal Field ordinal within input
    */
   public RexInputRef field(int inputCount, int inputOrdinal, int fieldOrdinal) {
-    final RelNode input = peek(inputCount, inputOrdinal);
+    return (RexInputRef) field(inputCount, inputOrdinal, fieldOrdinal, false);
+  }
+
+  /** As {@link #field(int, int, int)}, but if {@code alias} is true, the method
+   * may apply an alias to make sure that the field has the same name as in the
+   * input frame. If no alias is applied the expression is definitely a
+   * {@link RexInputRef}. */
+  private RexNode field(int inputCount, int inputOrdinal, int fieldOrdinal,
+      boolean alias) {
+    final Frame frame = Iterables.get(stack, inputCount - 1 - inputOrdinal);
+    final RelNode input = frame.rel;
     final RelDataType rowType = input.getRowType();
     if (fieldOrdinal < 0 || fieldOrdinal > rowType.getFieldCount()) {
       throw new IllegalArgumentException("field ordinal [" + fieldOrdinal
           + "] out of range; input fields are: " + rowType.getFieldNames());
     }
-    final RelDataType fieldType =
-        rowType.getFieldList().get(fieldOrdinal).getType();
+    final RelDataTypeField field = rowType.getFieldList().get(fieldOrdinal);
     final int offset = inputOffset(inputCount, inputOrdinal);
-    return cluster.getRexBuilder()
-        .makeInputRef(fieldType, offset + fieldOrdinal);
+    final RexInputRef ref = cluster.getRexBuilder()
+        .makeInputRef(field.getType(), offset + fieldOrdinal);
+    final RelDataTypeField aliasField = frame.field(fieldOrdinal);
+    if (!alias || field.getName().equals(aliasField.getName())) {
+      return ref;
+    } else {
+      return alias(ref, aliasField.getName());
+    }
   }
 
   /** Creates a reference to a field of the current record which originated
@@ -418,7 +433,7 @@ public class RelBuilder {
   public ImmutableList<RexNode> fields(List<? extends Number> ordinals) {
     final ImmutableList.Builder<RexNode> nodes = ImmutableList.builder();
     for (Number ordinal : ordinals) {
-      RexNode node = field(ordinal.intValue());
+      RexNode node = field(1, 0, ordinal.intValue(), true);
       nodes.add(node);
     }
     return nodes.build();
@@ -1565,6 +1580,17 @@ public class RelBuilder {
         }
       }
       return null;
+    }
+
+    RelDataTypeField field(int i) {
+      for (Pair<String, RelDataType> pair : right) {
+        int j = i;
+        i -= pair.right.getFieldCount();
+        if (i < 0) {
+          return pair.right.getFieldList().get(j);
+        }
+      }
+      throw new IndexOutOfBoundsException();
     }
   }
 }
