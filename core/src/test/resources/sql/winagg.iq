@@ -336,4 +336,11 @@ group by deptno, ename;
 
 !ok
 
+# [DRILL-4805] COUNT(*) over window and group by partitioning column results in
+# validation error
+select count(*) over (partition by deptno order by deptno)
+from emp
+group by deptno;
+!ok
+
 # End winagg.iq
