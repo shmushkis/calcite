@@ -41,6 +41,8 @@ public interface SqlRexContext {
    */
   RexNode convertExpression(SqlNode expr);
 
+  RexNode convertExpression(SqlNode expr, boolean cache);
+
   /**
    * If the operator call occurs in an aggregate query, returns the number of
    * columns in the GROUP BY clause. For example, for "SELECT count(*) FROM emp

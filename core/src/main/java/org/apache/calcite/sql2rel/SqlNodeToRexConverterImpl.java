@@ -26,6 +26,7 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIntervalLiteral;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlLiteral;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlTimeLiteral;
 import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -56,6 +57,9 @@ public class SqlNodeToRexConverterImpl implements SqlNodeToRexConverter {
   public RexNode convertCall(SqlRexContext cx, SqlCall call) {
     final SqlRexConvertlet convertlet = convertletTable.get(call);
     if (convertlet != null) {
+      for (SqlNode operand : call.getOperandList()) {
+        cx.convertExpression(operand, true);
+      }
       return convertlet.convertCall(cx, call);
     }
 

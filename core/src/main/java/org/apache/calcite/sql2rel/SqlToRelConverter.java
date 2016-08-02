@@ -181,6 +181,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -3643,6 +3644,7 @@ public class SqlToRelConverter {
     private List<RelNode> inputs;
     private final Map<CorrelationId, RexFieldAccess> mapCorrelateToRex =
         new HashMap<>();
+    private final Map<SqlNode, RexNode> map = new IdentityHashMap<>();
 
     final List<RelNode> cursors = new ArrayList<>();
 
@@ -4027,7 +4029,20 @@ public class SqlToRelConverter {
       }
     }
 
-    public RexNode convertExpression(SqlNode expr) {
+    public final RexNode convertExpression(SqlNode expr) {
+      return convertExpression(expr, true);
+    }
+
+    public RexNode convertExpression(SqlNode expr, boolean cache) {
+      if (cache) {
+        RexNode rex = map.get(expr);
+        if (rex == null) {
+          rex = convertExpression(expr, false);
+          map.put(expr, rex);
+        }
+        return rex;
+      }
+
       // If we're in aggregation mode and this is an expression in the
       // GROUP BY clause, return a reference to the field.
       if (agg != null) {
