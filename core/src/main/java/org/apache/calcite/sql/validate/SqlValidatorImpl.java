@@ -2535,7 +2535,8 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
   }
 
   protected boolean isNestedAggregateWindow(SqlCall windowFunction) {
-    AggFinder nestedAggFinder = new AggFinder(opTab, false, false, aggFinder);
+    AggFinder nestedAggFinder =
+        new AggFinder(opTab, false, false, false, aggFinder);
     return nestedAggFinder.findAgg(windowFunction) != null;
   }
 

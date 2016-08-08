@@ -564,12 +564,12 @@ public class SqlValidatorUtil {
         topBuilder.add(cube(bitSets));
         return;
       }
-      /*
+/*
     case HOP:
       final int i = registerGroupFunction(groupExpr, extraExprs);
       topBuilder.add(ImmutableList.of(ImmutableBitSet.of(i)));
       return;
-      */
+*/
     case OTHER:
       if (groupExpr instanceof SqlNodeList) {
         SqlNodeList list = (SqlNodeList) groupExpr;
