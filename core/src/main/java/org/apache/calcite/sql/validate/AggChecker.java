@@ -44,6 +44,7 @@ class AggChecker extends SqlBasicVisitor<Void> {
   //~ Instance fields --------------------------------------------------------
 
   private final Deque<SqlValidatorScope> scopes = new ArrayDeque<>();
+  private final List<SqlNode> extraExprs;
   private final List<SqlNode> groupExprs;
   private boolean distinct;
   private SqlValidatorImpl validator;
@@ -60,12 +61,13 @@ class AggChecker extends SqlBasicVisitor<Void> {
    * @param distinct   Whether aggregation checking is because of a SELECT
    *                   DISTINCT clause
    */
-  AggChecker(
-      SqlValidatorImpl validator,
+  AggChecker(SqlValidatorImpl validator,
       AggregatingScope scope,
+      List<SqlNode> extraExprs,
       List<SqlNode> groupExprs,
       boolean distinct) {
     this.validator = validator;
+    this.extraExprs = extraExprs;
     this.groupExprs = groupExprs;
     this.distinct = distinct;
     this.scopes.push(scope);
@@ -76,6 +78,11 @@ class AggChecker extends SqlBasicVisitor<Void> {
   boolean isGroupExpr(SqlNode expr) {
     for (SqlNode groupExpr : groupExprs) {
       if (groupExpr.equalsDeep(expr, Litmus.IGNORE)) {
+        return true;
+      }
+    }
+    for (SqlNode extraExpr : extraExprs) {
+      if (extraExpr.equalsDeep(expr, Litmus.IGNORE)) {
         return true;
       }
     }
