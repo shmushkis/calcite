@@ -1425,9 +1425,7 @@ public class SqlFunctions {
     return null;
   }
 
-  /**
-   * arrayItem method with allowing array to be nullable.
-   */
+  /** As {@link #arrayItem} method, but allows array to be nullable. */
   public static Object arrayItemOptional(List list, int item) {
     if (list == null) {
       return null;
@@ -1435,9 +1433,7 @@ public class SqlFunctions {
     return arrayItem(list, item);
   }
 
-  /**
-   * mapItem method with allowing map to be nullable.
-   */
+  /** As {@link #mapItem} method, but allows map to be nullable. */
   public static Object mapItemOptional(Map map, Object item) {
     if (map == null) {
       return null;
@@ -1445,9 +1441,7 @@ public class SqlFunctions {
     return mapItem(map, item);
   }
 
-  /**
-   * item method with allowing object to be nullable.
-   */
+  /** As {@link #item} method, but allows object to be nullable. */
   public static Object itemOptional(Object object, Object index) {
     if (object == null) {
       return null;

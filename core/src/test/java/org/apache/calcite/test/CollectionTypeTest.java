@@ -39,14 +39,14 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 /**
@@ -56,123 +56,115 @@ import static org.junit.Assert.fail;
  */
 public class CollectionTypeTest {
   @Test public void testAccessNestedMap() throws Exception {
-    Connection connection = setupConnectionAwaringNestedTable();
+    Connection connection = setupConnectionWithNestedTable();
 
     final Statement statement = connection.createStatement();
-    ResultSet resultSet = statement.executeQuery(
-        "select \"ID\", \"MAPFIELD\"['c'] AS \"MAPFIELD_C\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
+    final String sql = "select \"ID\", \"MAPFIELD\"['c'] AS \"MAPFIELD_C\","
+        + " \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
         + "from \"s\".\"nested\" "
-        + "where \"NESTEDMAPFIELD\"['a']['b'] = 2 AND \"ARRAYFIELD\"[2] = 200");
-
-    List<String> resultStrings = new ArrayList<>();
-    CalciteAssert.toStringList(resultSet, resultStrings);
-
-    assertEquals(1, resultStrings.size());
+        + "where \"NESTEDMAPFIELD\"['a']['b'] = 2 AND \"ARRAYFIELD\"[2] = 200";
+    final ResultSet resultSet = statement.executeQuery(sql);
+    final List<String> resultStrings = CalciteAssert.toList(resultSet);
+    assertThat(resultStrings.size(), is(1));
 
     // JDBC doesn't support Map / Nested Map so just relying on string representation
     String expectedRow = "ID=2; MAPFIELD_C=4; NESTEDMAPFIELD={a={b=2, c=4}}; "
         + "ARRAYFIELD=[100, 200, 300]";
-    assertEquals(expectedRow, resultStrings.get(0));
+    assertThat(resultStrings.get(0), is(expectedRow));
   }
 
   @Test public void testAccessNonExistKeyFromMap() throws Exception {
-    Connection connection = setupConnectionAwaringNestedTable();
+    Connection connection = setupConnectionWithNestedTable();
 
     final Statement statement = connection.createStatement();
 
     // this shouldn't throw any Exceptions on runtime, just don't return any rows.
-    ResultSet resultSet = statement.executeQuery(
-        "select \"ID\", \"MAPFIELD\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
+    final String sql = "select \"ID\","
+        + " \"MAPFIELD\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
         + "from \"s\".\"nested\" "
-        + "where \"MAPFIELD\"['a'] = 2"
-    );
-
-    List<String> resultStrings = new ArrayList<>();
-    CalciteAssert.toStringList(resultSet, resultStrings);
-
-    assertEquals(0, resultStrings.size());
+        + "where \"MAPFIELD\"['a'] = 2";
+    final ResultSet resultSet = statement.executeQuery(sql);
+    final List<String> resultStrings = CalciteAssert.toList(resultSet);
+    assertThat(resultStrings.size(), is(0));
   }
 
   @Test public void testAccessNonExistKeyFromNestedMap() throws Exception {
-    Connection connection = setupConnectionAwaringNestedTable();
+    Connection connection = setupConnectionWithNestedTable();
 
     final Statement statement = connection.createStatement();
 
     // this shouldn't throw any Exceptions on runtime, just don't return any rows.
-    ResultSet resultSet = statement.executeQuery(
-        "select \"ID\", \"MAPFIELD\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
+    final String sql = "select \"ID\", \"MAPFIELD\","
+        + " \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
         + "from \"s\".\"nested\" "
-        + "where \"NESTEDMAPFIELD\"['b']['c'] = 4"
-    );
-
-    List<String> resultStrings = new ArrayList<>();
-    CalciteAssert.toStringList(resultSet, resultStrings);
-
-    assertEquals(0, resultStrings.size());
+        + "where \"NESTEDMAPFIELD\"['b']['c'] = 4";
+    final ResultSet resultSet = statement.executeQuery(sql);
+    final List<String> resultStrings = CalciteAssert.toList(resultSet);
+    assertThat(resultStrings.size(), is(0));
   }
 
   @Test
   public void testInvalidAccessUseStringForIndexOnArray() throws Exception {
-    Connection connection = setupConnectionAwaringNestedTable();
+    Connection connection = setupConnectionWithNestedTable();
 
     final Statement statement = connection.createStatement();
 
     try {
-      statement.executeQuery("select \"ID\", \"MAPFIELD\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
+      final String sql = "select \"ID\","
+          + " \"MAPFIELD\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
           + "from \"s\".\"nested\" "
-          + "where \"ARRAYFIELD\"['a'] = 200");
+          + "where \"ARRAYFIELD\"['a'] = 200";
+      statement.executeQuery(sql);
 
       fail("This query shouldn't be evaluated properly");
     } catch (SQLException e) {
       Throwable e2 = e.getCause();
-      assertTrue(e2 instanceof CalciteContextException);
+      assertThat(e2, is(instanceOf(CalciteContextException.class)));
     }
   }
 
   @Test
   public void testNestedArrayOutOfBoundAccess() throws Exception {
-    Connection connection = setupConnectionAwaringNestedTable();
+    Connection connection = setupConnectionWithNestedTable();
 
     final Statement statement = connection.createStatement();
 
-    ResultSet resultSet = statement.executeQuery(
-        "select \"ID\", \"MAPFIELD\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
+    final String sql = "select \"ID\","
+        + " \"MAPFIELD\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
         + "from \"s\".\"nested\" "
-        + "where \"ARRAYFIELD\"[10] = 200");
-
-    List<String> resultStrings = new ArrayList<>();
-    CalciteAssert.toStringList(resultSet, resultStrings);
+        + "where \"ARRAYFIELD\"[10] = 200";
+    final ResultSet resultSet = statement.executeQuery(sql);
+    final List<String> resultStrings = CalciteAssert.toList(resultSet);
 
     // this is against SQL standard definition...
     // SQL standard states that data exception should be occurred
     // when accessing array with out of bound index.
     // but PostgreSQL breaks it, and this is more convenient since it guarantees runtime safety.
-    assertEquals(0, resultStrings.size());
+    assertThat(resultStrings.size(), is(0));
   }
 
-  @Test public void testAccessNestedMapWithANYType() throws Exception {
-    Connection connection = setupConnectionAwaringNestedANYTypeTable();
+  @Test public void testAccessNestedMapWithAnyType() throws Exception {
+    Connection connection = setupConnectionWithNestedAnyTypeTable();
 
     final Statement statement = connection.createStatement();
 
-    ResultSet resultSet = statement.executeQuery(
-        "select \"ID\", \"MAPFIELD\"['c'] AS \"MAPFIELD_C\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
+    final String sql = "select \"ID\", \"MAPFIELD\"['c'] AS \"MAPFIELD_C\","
+        + " \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
         + "from \"s\".\"nested\" "
-        + "where CAST(\"NESTEDMAPFIELD\"['a']['b'] AS INTEGER) = 2 AND CAST(\"ARRAYFIELD\"[2] AS INTEGER) = 200");
-
-    List<String> resultStrings = new ArrayList<>();
-    CalciteAssert.toStringList(resultSet, resultStrings);
-
-    assertEquals(1, resultStrings.size());
+        + "where CAST(\"NESTEDMAPFIELD\"['a']['b'] AS INTEGER) = 2"
+        + " AND CAST(\"ARRAYFIELD\"[2] AS INTEGER) = 200";
+    final ResultSet resultSet = statement.executeQuery(sql);
+    final List<String> resultStrings = CalciteAssert.toList(resultSet);
+    assertThat(resultStrings.size(), is(1));
 
     // JDBC doesn't support Map / Nested Map so just relying on string representation
     String expectedRow = "ID=2; MAPFIELD_C=4; NESTEDMAPFIELD={a={b=2, c=4}}; "
         + "ARRAYFIELD=[100, 200, 300]";
-    assertEquals(expectedRow, resultStrings.get(0));
+    assertThat(resultStrings.get(0), is(expectedRow));
   }
 
-  @Test public void testAccessNestedMapWithANYTypeWithoutCAST() throws Exception {
-    Connection connection = setupConnectionAwaringNestedANYTypeTable();
+  @Test public void testAccessNestedMapWithAnyTypeWithoutCast() throws Exception {
+    Connection connection = setupConnectionWithNestedAnyTypeTable();
 
     final Statement statement = connection.createStatement();
 
@@ -180,97 +172,93 @@ public class CollectionTypeTest {
     // compare with literal. if it doesn't, Exception is thrown at Runtime.
     // This is only occurred with primitive type because of providing overloaded methods
     try {
-      statement.executeQuery(
-          "select \"ID\", \"MAPFIELD\"['c'] AS \"MAPFIELD_C\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
-              + "from \"s\".\"nested\" "
-              + "where \"NESTEDMAPFIELD\"['a']['b'] = 2 AND \"ARRAYFIELD\"[2] = 200");
+      final String sql = "select \"ID\", \"MAPFIELD\"['c'] AS \"MAPFIELD_C\","
+          + " \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
+          + "from \"s\".\"nested\" "
+          + "where \"NESTEDMAPFIELD\"['a']['b'] = 2 AND \"ARRAYFIELD\"[2] = 200";
+      statement.executeQuery(sql);
 
       fail("Without CAST, comparing result of ITEM() and primitive type should throw Exception "
           + "in Runtime");
     } catch (SQLException e) {
       Throwable e2 = e.getCause();
-      assertTrue(e2 instanceof RuntimeException);
+      assertThat(e2, is(instanceOf(RuntimeException.class)));
       Throwable e3 = e2.getCause();
-      assertTrue(e3 instanceof NoSuchMethodException);
+      assertThat(e3, is(instanceOf(NoSuchMethodException.class)));
     }
   }
 
-  @Test public void testAccessNonExistKeyFromMapWithANYType() throws Exception {
-    Connection connection = setupConnectionAwaringNestedTable();
+  @Test public void testAccessNonExistKeyFromMapWithAnyType() throws Exception {
+    Connection connection = setupConnectionWithNestedTable();
 
     final Statement statement = connection.createStatement();
 
     // this shouldn't throw any Exceptions on runtime, just don't return any rows.
-    ResultSet resultSet = statement.executeQuery(
-        "select \"ID\", \"MAPFIELD\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
+    final String sql = "select \"ID\", \"MAPFIELD\", "
+        + "\"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
         + "from \"s\".\"nested\" "
-        + "where CAST(\"MAPFIELD\"['a'] AS INTEGER) = 2"
-    );
-
-    List<String> resultStrings = new ArrayList<>();
-    CalciteAssert.toStringList(resultSet, resultStrings);
-
-    assertEquals(0, resultStrings.size());
+        + "where CAST(\"MAPFIELD\"['a'] AS INTEGER) = 2";
+    final ResultSet resultSet = statement.executeQuery(sql);
+    final List<String> resultStrings = CalciteAssert.toList(resultSet);
+    assertThat(resultStrings.size(), is(0));
   }
 
-  @Test public void testAccessNonExistKeyFromNestedMapWithANYType() throws Exception {
-    Connection connection = setupConnectionAwaringNestedTable();
+  @Test public void testAccessNonExistKeyFromNestedMapWithAnyType() throws Exception {
+    Connection connection = setupConnectionWithNestedTable();
 
     final Statement statement = connection.createStatement();
 
     // this shouldn't throw any Exceptions on runtime, just don't return any rows.
-    ResultSet resultSet = statement.executeQuery(
-        "select \"ID\", \"MAPFIELD\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
-         + "from \"s\".\"nested\" "
-         + "where CAST(\"NESTEDMAPFIELD\"['b']['c'] AS INTEGER) = 4"
-    );
-
-    List<String> resultStrings = new ArrayList<>();
-    CalciteAssert.toStringList(resultSet, resultStrings);
-
-    assertEquals(0, resultStrings.size());
+    final String sql = "select \"ID\", \"MAPFIELD\","
+        + " \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
+        + "from \"s\".\"nested\" "
+        + "where CAST(\"NESTEDMAPFIELD\"['b']['c'] AS INTEGER) = 4";
+    final ResultSet resultSet = statement.executeQuery(sql);
+    final List<String> resultStrings = CalciteAssert.toList(resultSet);
+    assertThat(resultStrings.size(), is(0));
   }
 
   @Test
-  public void testInvalidAccessUseStringForIndexOnArrayWithANYType() throws Exception {
-    Connection connection = setupConnectionAwaringNestedTable();
+  public void testInvalidAccessUseStringForIndexOnArrayWithAnyType() throws Exception {
+    Connection connection = setupConnectionWithNestedTable();
 
     final Statement statement = connection.createStatement();
 
     try {
-      statement.executeQuery("select \"ID\", \"MAPFIELD\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
+      final String sql = "select \"ID\", \"MAPFIELD\","
+          + " \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
           + "from \"s\".\"nested\" "
-          + "where CAST(\"ARRAYFIELD\"['a'] AS INTEGER) = 200");
+          + "where CAST(\"ARRAYFIELD\"['a'] AS INTEGER) = 200";
+      statement.executeQuery(sql);
 
       fail("This query shouldn't be evaluated properly");
     } catch (SQLException e) {
       Throwable e2 = e.getCause();
-      assertTrue(e2 instanceof CalciteContextException);
+      assertThat(e2, is(instanceOf(CalciteContextException.class)));
     }
   }
 
   @Test
-  public void testNestedArrayOutOfBoundAccessWithANYType() throws Exception {
-    Connection connection = setupConnectionAwaringNestedTable();
+  public void testNestedArrayOutOfBoundAccessWithAnyType() throws Exception {
+    Connection connection = setupConnectionWithNestedTable();
 
     final Statement statement = connection.createStatement();
 
-    ResultSet resultSet = statement.executeQuery(
-        "select \"ID\", \"MAPFIELD\", \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
+    final String sql = "select \"ID\", \"MAPFIELD\","
+        + " \"NESTEDMAPFIELD\", \"ARRAYFIELD\" "
         + "from \"s\".\"nested\" "
-        + "where CAST(\"ARRAYFIELD\"[10] AS INTEGER) = 200");
-
-    List<String> resultStrings = new ArrayList<>();
-    CalciteAssert.toStringList(resultSet, resultStrings);
+        + "where CAST(\"ARRAYFIELD\"[10] AS INTEGER) = 200";
+    final ResultSet resultSet = statement.executeQuery(sql);
+    final List<String> resultStrings = CalciteAssert.toList(resultSet);
 
     // this is against SQL standard definition...
     // SQL standard states that data exception should be occurred
     // when accessing array with out of bound index.
     // but PostgreSQL breaks it, and this is more convenient since it guarantees runtime safety.
-    assertEquals(0, resultStrings.size());
+    assertThat(resultStrings.size(), is(0));
   }
 
-  private Connection setupConnectionAwaringNestedTable() throws SQLException {
+  private Connection setupConnectionWithNestedTable() throws SQLException {
     Connection connection =
         DriverManager.getConnection("jdbc:calcite:");
     CalciteConnection calciteConnection =
@@ -281,14 +269,14 @@ public class CollectionTypeTest {
     return connection;
   }
 
-  private Connection setupConnectionAwaringNestedANYTypeTable() throws SQLException {
+  private Connection setupConnectionWithNestedAnyTypeTable() throws SQLException {
     Connection connection =
         DriverManager.getConnection("jdbc:calcite:");
     CalciteConnection calciteConnection =
         connection.unwrap(CalciteConnection.class);
     SchemaPlus rootSchema = calciteConnection.getRootSchema();
     SchemaPlus schema = rootSchema.add("s", new AbstractSchema());
-    schema.add("nested", new NestedCollectionWithANYTypeTable());
+    schema.add("nested", new NestedCollectionWithAnyTypeTable());
     return connection;
   }
 
@@ -385,7 +373,7 @@ public class CollectionTypeTest {
 
   /** Table that returns columns which include complicated collection type via the ScannableTable
    * interface. */
-  public static class NestedCollectionWithANYTypeTable implements ScannableTable {
+  public static class NestedCollectionWithAnyTypeTable implements ScannableTable {
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
       return typeFactory.builder()
           .add("ID", SqlTypeName.INTEGER)

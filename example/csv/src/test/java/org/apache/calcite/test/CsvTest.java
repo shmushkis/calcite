@@ -258,9 +258,9 @@ public class CsvTest {
     checkSql("bug", "select _MAP['id'] as id,\n"
             + " _MAP['title'] as title,\n"
             + " CHAR_LENGTH(CAST(_MAP['title'] AS VARCHAR(30))) as len\n"
-            + " from \"archers\"\n"
-            + " where _MAP['id'] = '19990101'",
-        "ID=19990101; TITLE=Tractor trouble.; LEN=16");
+            + " from \"archers\"\n",
+        "ID=19990101; TITLE=Tractor trouble.; LEN=16",
+        "ID=19990103; TITLE=Charlie's surprise.; LEN=19");
   }
 
   private void checkSql(String model, String sql) throws SQLException {

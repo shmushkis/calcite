@@ -1560,8 +1560,7 @@ public class RexImpTable {
         RexToLixTranslator translator,
         RexCall call,
         List<Expression> translatedOperands) {
-
-      Expression expression;
+      final Expression expression;
       if (Modifier.isStatic(method.getModifiers())) {
         expression = Expressions.call(method, translatedOperands);
       } else {
@@ -1837,9 +1836,13 @@ public class RexImpTable {
       final MethodImplementor implementor =
           getImplementor(
               call.getOperands().get(0).getType().getSqlTypeName());
-      return implementNullSemantics0(
-          translator, call, nullAs, NullPolicy.ANY, false,
-          implementor);
+      // Since we follow PostgreSQL's semantics that an out-of-bound reference
+      // returns NULL, x[y] can return null even if x and y are both NOT NULL.
+      // (In SQL standard semantics, an out-of-bound reference to an array
+      // throws an exception.)
+      final NullPolicy nullPolicy = NullPolicy.ANY;
+      return implementNullSemantics0(translator, call, nullAs, nullPolicy,
+          false, implementor);
     }
 
     private MethodImplementor getImplementor(SqlTypeName sqlTypeName) {
