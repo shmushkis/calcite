@@ -49,7 +49,9 @@ import static org.apache.calcite.util.Static.RESOURCE;
 public class CalciteResultSet extends AvaticaResultSet {
   private final AtomicBoolean cancelFlag;
 
-  CalciteResultSet(AvaticaStatement statement,
+  /** Creates a CalciteResultSet. */
+  @SuppressWarnings("WeakerAccess")
+  protected CalciteResultSet(AvaticaStatement statement,
       CalcitePrepare.CalciteSignature calciteSignature,
       ResultSetMetaData resultSetMetaData, TimeZone timeZone,
       Meta.Frame firstFrame) {
