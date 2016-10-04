@@ -34,8 +34,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import com.google.common.collect.TreeRangeSet;
 
-import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
 import org.slf4j.Logger;
 
@@ -96,7 +96,7 @@ public class DruidDateTimeUtils {
         if (range.hasUpperBound() && range.upperBoundType() == BoundType.CLOSED) {
           end++;
         }
-        return new Interval(start, end, DateTimeZone.UTC);
+        return new Interval(start, end, ISOChronology.getInstanceUTC());
       }
     });
     if (LOGGER.isInfoEnabled()) {

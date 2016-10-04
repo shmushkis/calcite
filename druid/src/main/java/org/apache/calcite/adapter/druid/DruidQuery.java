@@ -60,12 +60,16 @@ import org.apache.calcite.util.Util;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -84,7 +88,7 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
 
   final RelOptTable table;
   final DruidTable druidTable;
-  final List<Interval> intervals;
+  final ImmutableList<Interval> intervals;
   final ImmutableList<RelNode> rels;
 
   private static final Pattern VALID_SIG = Pattern.compile("sf?p?a?l?");
@@ -142,6 +146,11 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
     final String signature = signature();
     if (!isValidSignature(signature)) {
       return litmus.fail("invalid signature [{}]", signature);
+    }
+    for (Interval interval : intervals) {
+      if (interval.getChronology() != ISOChronology.getInstanceUTC()) {
+        return litmus.fail("interval must be UTC", interval);
+      }
     }
     if (rels.isEmpty()) {
       return litmus.fail("must have at least one rel");
@@ -310,6 +319,15 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
       }
     }
     return pw;
+  }
+
+  private static List<Interval> wrap(List<Interval> intervals) {
+    return Lists.transform(intervals,
+        new Function<Interval, Interval>() {
+          public Interval apply(Interval input) {
+            return input.withChronology(ISOChronology.getInstanceUTC());
+          }
+        });
   }
 
   @Override public RelOptCost computeSelfCost(RelOptPlanner planner,
