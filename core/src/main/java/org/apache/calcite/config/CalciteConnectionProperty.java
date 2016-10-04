@@ -17,7 +17,11 @@
 package org.apache.calcite.config;
 
 import org.apache.calcite.avatica.ConnectionProperty;
+import org.apache.calcite.avatica.util.Casing;
+import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.model.JsonSchema;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.schema.SchemaFactory;
 import org.apache.calcite.sql.validate.SqlConformance;
 
 import java.util.HashMap;
@@ -62,15 +66,15 @@ public enum CalciteConnectionProperty implements ConnectionProperty {
 
   /** How identifiers are quoted.
    *  If not specified, value from {@link #LEX} is used. */
-  QUOTING("quoting", Type.ENUM, null, false),
+  QUOTING("quoting", Type.ENUM, null, false, Quoting.class),
 
   /** How identifiers are stored if they are quoted.
    *  If not specified, value from {@link #LEX} is used. */
-  QUOTED_CASING("quotedCasing", Type.ENUM, null, false),
+  QUOTED_CASING("quotedCasing", Type.ENUM, null, false, Casing.class),
 
   /** How identifiers are stored if they are not quoted.
    *  If not specified, value from {@link #LEX} is used. */
-  UNQUOTED_CASING("unquotedCasing", Type.ENUM, null, false),
+  UNQUOTED_CASING("unquotedCasing", Type.ENUM, null, false, Casing.class),
 
   /** Whether identifiers are matched case-sensitively.
    *  If not specified, value from {@link #LEX} is used. */
@@ -85,7 +89,8 @@ public enum CalciteConnectionProperty implements ConnectionProperty {
    * {@link org.apache.calcite.schema.SchemaFactory}.
    *
    * <p>Ignored if {@link #MODEL} is specified. */
-  SCHEMA_FACTORY("schemaFactory", Type.PLUGIN, null, false),
+  SCHEMA_FACTORY("schemaFactory", Type.PLUGIN, null, false,
+      SchemaFactory.class),
 
   /** Schema type.
    *
@@ -111,7 +116,7 @@ public enum CalciteConnectionProperty implements ConnectionProperty {
   /** Type system. The name of a class that implements
    * {@link org.apache.calcite.rel.type.RelDataTypeSystem} and has a public
    * default constructor or an {@code INSTANCE} constant. */
-  TYPE_SYSTEM("typeSystem", Type.PLUGIN, null, false),
+  TYPE_SYSTEM("typeSystem", Type.PLUGIN, null, false, RelDataTypeSystem.class),
 
   /** SQL conformance level. */
   CONFORMANCE("conformance", Type.ENUM, SqlConformance.DEFAULT, false);
@@ -120,6 +125,7 @@ public enum CalciteConnectionProperty implements ConnectionProperty {
   private final Type type;
   private final Object defaultValue;
   private final boolean required;
+  private final Class valueClass;
 
   private static final Map<String, CalciteConnectionProperty> NAME_TO_PROPS;
 
@@ -137,11 +143,19 @@ public enum CalciteConnectionProperty implements ConnectionProperty {
 
   CalciteConnectionProperty(String camelName, Type type, Object defaultValue,
       boolean required) {
+    this(camelName, type, defaultValue, required, null);
+  }
+
+  CalciteConnectionProperty(String camelName, Type type, Object defaultValue,
+      boolean required, Class valueClass) {
     this.camelName = camelName;
     this.type = type;
+    this.valueClass = type.deduceValueClass(defaultValue, valueClass);
     this.defaultValue = defaultValue;
     this.required = required;
-    assert defaultValue == null || type.valid(defaultValue);
+    if (!type.valid(defaultValue, this.valueClass)) {
+      throw new AssertionError();
+    }
   }
 
   public String camelName() {
@@ -158,6 +172,10 @@ public enum CalciteConnectionProperty implements ConnectionProperty {
 
   public boolean required() {
     return required;
+  }
+
+  public Class valueClass() {
+    return valueClass;
   }
 
   public PropEnv wrap(Properties properties) {

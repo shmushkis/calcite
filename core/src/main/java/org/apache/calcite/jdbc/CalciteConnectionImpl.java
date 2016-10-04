@@ -291,7 +291,7 @@ abstract class CalciteConnectionImpl
 
   /** Returns the flag that is used to request or check cancel for a particular
    * statement. */
-  AtomicBoolean getCancelFlag(Meta.StatementHandle handle)
+  public AtomicBoolean getCancelFlag(Meta.StatementHandle handle)
       throws NoSuchStatementException {
     final CalciteServerStatement serverStatement = server.getStatement(handle);
     return ((CalciteServerStatementImpl) serverStatement).cancelFlag;
