@@ -69,7 +69,7 @@ public class QuidemTest {
 
   /** Run a test from the command line. */
   public static void main(String[] args) throws Exception {
-    final String path = "sql/lateral.iq";
+    final String path = "sql/empty-string.iq";
     new QuidemTest(path).test();
   }
 
@@ -228,11 +228,8 @@ public class QuidemTest {
   }
 
   /** Quidem connection factory for Calcite's built-in test schemas. */
-  private static class QuidemConnectionFactory implements Quidem.NewConnectionFactory {
-    public Connection connect(String name) throws Exception {
-      return connect(name, false);
-    }
-
+  private static class QuidemConnectionFactory
+      implements Quidem.ConnectionFactory {
     public Connection connect(String name, boolean reference)
         throws Exception {
       if (reference) {

@@ -1,0 +1,521 @@
+# empty-string.iq - Null semantics for empty strings
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to you under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+!use scott
+emptyStringIsNull null
+!show emptyStringIsNull
+!set outputformat csv
+
+# Invalid in regular mode, unknown in Oracle mode
+values null = '';
+Cannot apply '=' to arguments of type '<NULL> = <CHAR(0)>'.
+!error
+!push emptyStringIsNull true
+null
+!ok
+!pop emptyStringIsNull
+
+# Less than: Invalid in regular mode, unknown in Oracle mode
+values null < '';
+Cannot apply '<' to arguments of type '<NULL> < <CHAR(0)>'.
+!error
+!push emptyStringIsNull true
+null
+!ok
+!pop emptyStringIsNull
+
+# Less than: Invalid in regular mode, unknown in Oracle mode
+values not null < '';
+Cannot apply '<' to arguments of type '<NULL> < <CHAR(0)>'.
+!error
+!push emptyStringIsNull true
+null
+!ok
+!pop emptyStringIsNull
+
+# Unknown in either mode
+values cast(null as char(5)) = '';
+EXPR$0
+null
+!ok
+!push emptyStringIsNull true
+EXPR$0
+null
+!ok
+!pop emptyStringIsNull
+
+# False in regular mode, unknown in Oracle mode
+values 'x' = '';
+EXPR$0
+false
+!ok
+!push emptyStringIsNull true
+EXPR$0
+null
+!ok
+!pop emptyStringIsNull
+
+# Comparing integer to empty string invalid in regular mode; yields unknown in Oracle mode
+values 1 = '';
+Cannot apply '=' to arguments of type '<INTEGER> = <CHAR(0)>'.
+!error
+!push emptyStringIsNull true
+EXPR$0
+null
+!ok
+!pop emptyStringIsNull
+
+# Adding integer to empty string invalid in regular mode; yields unknown in Oracle mode
+values 1 + '';
+Cannot apply '+' to arguments of type '<INTEGER> + <CHAR(0)>'. Supported form(s): '<NUMERIC> + <NUMERIC>'
+!error
+!push emptyStringIsNull true
+EXPR$0
+null
+!ok
+!pop emptyStringIsNull
+
+# Empty string is null in Oracle mode
+values '' is null;
+EXPR$0
+false
+!ok
+!push emptyStringIsNull true
+EXPR$0
+true
+!ok
+!pop emptyStringIsNull
+
+# Empty string is not null in regular mode
+values '' is not null;
+EXPR$0
+true
+!ok
+!push emptyStringIsNull true
+EXPR$0
+false
+!ok
+!pop emptyStringIsNull
+
+# Empty string is null in Oracle mode, even if not a literal
+values substring('abc' from 1 for 0) is null;
+EXPR$0
+false
+!ok
+!push emptyStringIsNull true
+EXPR$0
+true
+!ok
+!pop emptyStringIsNull
+
+# String concat treats null as empty string
+values 'xyz' || '';
+EXPR$0
+xyz
+!ok
+!push emptyStringIsNull true
+EXPR$0
+xyz
+!ok
+!pop emptyStringIsNull
+
+# Concatenate a string containing one quote (in both modes)
+values 'xyz' || '''';
+EXPR$0
+xyz'
+!ok
+!push emptyStringIsNull true
+EXPR$0
+xyz'
+!ok
+!pop emptyStringIsNull
+
+# String concat treats null expression as empty string (in both modes)
+values 'xyz' || substring('abc' from 1 for 0);
+EXPR$0
+xyz
+!ok
+!push emptyStringIsNull true
+EXPR$0
+xyz
+!ok
+!pop emptyStringIsNull
+
+# Substring applied to the empty string
+values substring(substring('xyz' from 2 for 0) from 1 for 3);
+EXPR$0
+xyz
+!ok
+EXPR$0 VARCHAR(3) NOT NULL
+!type
+!push emptyStringIsNull true
+EXPR$0
+xyz
+!ok
+EXPR$0 VARCHAR(3)
+!type
+!pop emptyStringIsNull
+
+# Length of empty string; returns 0 in regular mode, null in Oracle mode
+values char_length(substring('xyz' from 2 for 0));
+EXPR$0
+0
+!ok
+EXPR$0 INTEGER NOT NULL
+!type
+!push emptyStringIsNull true
+EXPR$0
+null
+!ok
+EXPR$0 INTEGER
+!type
+!pop emptyStringIsNull
+
+# As above, using CHARACTER_LENGTH not CHAR_LENGTH
+values character_length(substring('xyz' from 2 for 0));
+EXPR$0
+0
+!ok
+EXPR$0 INTEGER(10) NOT NULL
+!type
+!push emptyStringIsNull true
+EXPR$0
+null
+!ok
+EXPR$0 INTEGER(10)
+!type
+!pop emptyStringIsNull
+
+# UPPER, LOWER, INITCAP functions
+values (upper(substring('xyz' from 2 for 0)), lower(substring('xyz' from 2 for 0)), initcap(substring('xyz' from 2 for 0)));
+EXPR$0, EXPR$1, EXPR$2
+, ,
+!ok
+!push emptyStringIsNull true
+EXPR$0, EXPR$1, EXPR$2
+null, null, null
+!ok
+!pop emptyStringIsNull
+
+# POSITION function
+# In Oracle, equivalent of POSITION(x IN y) is INSTR(y, x).
+values position('' in 'abc');
+EXPR$0
+1
+!ok
+!push emptyStringIsNull true
+EXPR$0
+null
+!ok
+!pop emptyStringIsNull
+
+# POSITION, seeking in null/empty string
+values position('abc' in '');
+EXPR$0
+0
+!ok
+!push emptyStringIsNull true
+EXPR$0
+null
+!ok
+!pop emptyStringIsNull
+
+# TRIM function
+values trim('a' from 'aardvark plaza');
+EXPR$0
+rdvark plaz
+!ok
+!push emptyStringIsNull true
+EXPR$0
+rdvark plaz
+!ok
+!pop emptyStringIsNull
+
+# TRIM function applied to null/empty string
+values trim('a' from '');
+EXPR$0
+
+!ok
+!push emptyStringIsNull true
+EXPR$0
+null
+!ok
+!pop emptyStringIsNull
+
+# TRIM function applied to null/empty string
+values trim('' from 'aardvark plaza');
+EXPR$0
+aardvark plaza
+!ok
+!push emptyStringIsNull true
+EXPR$0
+null
+!ok
+!pop emptyStringIsNull
+
+# COALESCE
+!push outputformat mysql
+values coalesce('', 'x');
++--------+
+| EXPR$0 |
++--------+
+|        |
++--------+
+(1 row)
+
+!ok
+!push emptyStringIsNull true
++--------+
+| EXPR$0 |
++--------+
+| x      |
++--------+
+(1 row)
+
+!ok
+!pop emptyStringIsNull
+!pop outputformat
+
+# COALESCE, empty/null string as second argument
+!push outputformat mysql
+values coalesce('y', '');
++--------+
+| EXPR$0 |
++--------+
+| y      |
++--------+
+(1 row)
+
+!ok
+!push emptyStringIsNull true
++--------+
+| EXPR$0 |
++--------+
+| y      |
++--------+
+(1 row)
+
+!ok
+!pop emptyStringIsNull
+!pop outputformat
+
+# CAST
+values cast('' as integer);
+java.lang.NumberFormatException: For input string: ""
+!error
+!push emptyStringIsNull true
+EXPR$0
+null
+!ok
+!pop emptyStringIsNull
+
+# Sorting (implicit ASC, implicit nulls last)
+# In Oracle mode, empty strings become nulls and are sorted last.
+!push outputformat mysql
+select ename, substring(ename from 5) as s from "scott".emp order by s, ename;
++--------+----+
+| ENAME  | S  |
++--------+----+
+| FORD   |    |
+| KING   |    |
+| WARD   |    |
+| BLAKE  | E  |
+| MILLER | ER |
+| TURNER | ER |
+| SMITH  | H  |
+| MARTIN | IN |
+| CLARK  | K  |
+| ALLEN  | N  |
+| ADAMS  | S  |
+| JAMES  | S  |
+| JONES  | S  |
+| SCOTT  | T  |
++--------+----+
+(14 rows)
+
+!ok
+!push emptyStringIsNull true
++--------+----+
+| ENAME  | S  |
++--------+----+
+| BLAKE  | E  |
+| MILLER | ER |
+| TURNER | ER |
+| SMITH  | H  |
+| MARTIN | IN |
+| CLARK  | K  |
+| ALLEN  | N  |
+| ADAMS  | S  |
+| JAMES  | S  |
+| JONES  | S  |
+| SCOTT  | T  |
+| FORD   |    |
+| KING   |    |
+| WARD   |    |
++--------+----+
+(14 rows)
+
+!ok
+!pop emptyStringIsNull
+
+# Sorting (DESC, implicitly nulls first)
+!push outputformat mysql
+select ename, substring(ename from 5) as s from "scott".emp order by s desc, ename;
++--------+----+
+| ENAME  | S  |
++--------+----+
+| SCOTT  | T  |
+| ADAMS  | S  |
+| JAMES  | S  |
+| JONES  | S  |
+| ALLEN  | N  |
+| CLARK  | K  |
+| MARTIN | IN |
+| SMITH  | H  |
+| MILLER | ER |
+| TURNER | ER |
+| BLAKE  | E  |
+| FORD   |    |
+| KING   |    |
+| WARD   |    |
++--------+----+
+(14 rows)
+
+!ok
+!push emptyStringIsNull true
++--------+----+
+| ENAME  | S  |
++--------+----+
+| FORD   |    |
+| KING   |    |
+| WARD   |    |
+| SCOTT  | T  |
+| ADAMS  | S  |
+| JAMES  | S  |
+| JONES  | S  |
+| ALLEN  | N  |
+| CLARK  | K  |
+| MARTIN | IN |
+| SMITH  | H  |
+| MILLER | ER |
+| TURNER | ER |
+| BLAKE  | E  |
++--------+----+
+(14 rows)
+
+!ok
+!pop emptyStringIsNull
+
+# Sorting (DESC, nulls first)
+!push outputformat mysql
+select ename, substring(ename from 5) as s from "scott".emp order by s desc nulls first, ename;
++--------+----+
+| ENAME  | S  |
++--------+----+
+| SCOTT  | T  |
+| ADAMS  | S  |
+| JAMES  | S  |
+| JONES  | S  |
+| ALLEN  | N  |
+| CLARK  | K  |
+| MARTIN | IN |
+| SMITH  | H  |
+| MILLER | ER |
+| TURNER | ER |
+| BLAKE  | E  |
+| FORD   |    |
+| KING   |    |
+| WARD   |    |
++--------+----+
+(14 rows)
+
+!ok
+!push emptyStringIsNull true
++--------+----+
+| ENAME  | S  |
++--------+----+
+| FORD   |    |
+| KING   |    |
+| WARD   |    |
+| SCOTT  | T  |
+| ADAMS  | S  |
+| JAMES  | S  |
+| JONES  | S  |
+| ALLEN  | N  |
+| CLARK  | K  |
+| MARTIN | IN |
+| SMITH  | H  |
+| MILLER | ER |
+| TURNER | ER |
+| BLAKE  | E  |
++--------+----+
+(14 rows)
+
+!ok
+!pop emptyStringIsNull
+
+# Sorting (DESC, nulls last)
+!push outputformat mysql
+select ename, substring(ename from 5) as s from "scott".emp order by s desc nulls last, ename;
++--------+----+
+| ENAME  | S  |
++--------+----+
+| SCOTT  | T  |
+| ADAMS  | S  |
+| JAMES  | S  |
+| JONES  | S  |
+| ALLEN  | N  |
+| CLARK  | K  |
+| MARTIN | IN |
+| SMITH  | H  |
+| MILLER | ER |
+| TURNER | ER |
+| BLAKE  | E  |
+| FORD   |    |
+| KING   |    |
+| WARD   |    |
++--------+----+
+(14 rows)
+
+!ok
+!push emptyStringIsNull true
++--------+----+
+| ENAME  | S  |
++--------+----+
+| SCOTT  | T  |
+| ADAMS  | S  |
+| JAMES  | S  |
+| JONES  | S  |
+| ALLEN  | N  |
+| CLARK  | K  |
+| MARTIN | IN |
+| SMITH  | H  |
+| MILLER | ER |
+| TURNER | ER |
+| BLAKE  | E  |
+| FORD   |    |
+| KING   |    |
+| WARD   |    |
++--------+----+
+(14 rows)
+
+!ok
+!pop emptyStringIsNull
+
+!pop outputformat
+
+# End empty-string.iq
