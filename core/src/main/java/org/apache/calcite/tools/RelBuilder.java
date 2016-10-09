@@ -825,12 +825,14 @@ public class RelBuilder {
       Iterable<String> fieldNames,
       boolean force) {
     final List<String> names = new ArrayList<>();
-    final List<RexNode> exprList = Lists.newArrayList(nodes);
+    final List<RexNode> exprList = new ArrayList<>();
+    for (RexNode node : nodes) {
+      exprList.add(RexUtil.simplifyPreservingType(getRexBuilder(), node));
+    }
     final Iterator<String> nameIterator = fieldNames.iterator();
     for (RexNode node : nodes) {
       final String name = nameIterator.hasNext() ? nameIterator.next() : null;
-      final String name2 = inferAlias(exprList, node);
-      names.add(Util.first(name, name2));
+      names.add(name != null ? name : inferAlias(exprList, node));
     }
     final RelDataType inputRowType = peek().getRowType();
     if (!force && RexUtil.isIdentity(exprList, inputRowType)) {

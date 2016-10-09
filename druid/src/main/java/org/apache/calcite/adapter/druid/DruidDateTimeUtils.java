@@ -41,7 +41,6 @@ import org.slf4j.Logger;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -67,7 +66,7 @@ public class DruidDateTimeUtils {
    * reference a single column: the timestamp column.
    */
   public static List<Interval> createInterval(RelDataType type, RexNode e) {
-    final List<Range> ranges = extractRanges(type, e, false);
+    final List<Range<Comparable>> ranges = extractRanges(type, e, false);
     if (ranges == null) {
       // We did not succeed, bail out
       return null;
@@ -107,8 +106,8 @@ public class DruidDateTimeUtils {
     return intervals;
   }
 
-  protected static List<Range> extractRanges(RelDataType type, RexNode node,
-      boolean withNot) {
+  protected static List<Range<Comparable>> extractRanges(RelDataType type,
+      RexNode node, boolean withNot) {
     switch (node.getKind()) {
     case EQUALS:
     case LESS_THAN:
@@ -124,9 +123,9 @@ public class DruidDateTimeUtils {
 
     case OR: {
       RexCall call = (RexCall) node;
-      List<Range> intervals = Lists.newArrayList();
+      List<Range<Comparable>> intervals = Lists.newArrayList();
       for (RexNode child : call.getOperands()) {
-        List<Range> extracted = extractRanges(type, child, withNot);
+        List<Range<Comparable>> extracted = extractRanges(type, child, withNot);
         if (extracted != null) {
           intervals.addAll(extracted);
         }
@@ -136,9 +135,9 @@ public class DruidDateTimeUtils {
 
     case AND: {
       RexCall call = (RexCall) node;
-      List<Range> ranges = new ArrayList<>();
+      List<Range<Comparable>> ranges = new ArrayList<>();
       for (RexNode child : call.getOperands()) {
-        List<Range> extractedRanges = extractRanges(type, child, false);
+        List<Range<Comparable>> extractedRanges = extractRanges(type, child, false);
         if (extractedRanges == null || extractedRanges.isEmpty()) {
           // We could not extract, we bail out
           return null;
@@ -147,7 +146,7 @@ public class DruidDateTimeUtils {
           ranges.addAll(extractedRanges);
           continue;
         }
-        List<Range> overlapped = Lists.newArrayList();
+        List<Range<Comparable>> overlapped = Lists.newArrayList();
         for (Range current : ranges) {
           for (Range interval : extractedRanges) {
             if (current.isConnected(interval)) {
@@ -165,8 +164,8 @@ public class DruidDateTimeUtils {
     }
   }
 
-  protected static List<Range> leafToRanges(RelDataType type, RexCall call,
-      boolean withNot) {
+  protected static List<Range<Comparable>> leafToRanges(RelDataType type,
+      RexCall call, boolean withNot) {
     switch (call.getKind()) {
     case EQUALS:
     case LESS_THAN:
@@ -177,38 +176,40 @@ public class DruidDateTimeUtils {
       RexLiteral literal = null;
       if (call.getOperands().get(0) instanceof RexInputRef
           && call.getOperands().get(1) instanceof RexLiteral) {
-        literal = extractLiteral(call.getOperands().get(1));
+        literal = (RexLiteral) call.getOperands().get(1);
       } else if (call.getOperands().get(0) instanceof RexInputRef
-          && call.getOperands().get(1).getKind() == SqlKind.CAST) {
+          && call.getOperands().get(1).getKind() == SqlKind.CAST
+          && false) {
         literal = extractLiteral(call.getOperands().get(1));
       } else if (call.getOperands().get(1) instanceof RexInputRef
           && call.getOperands().get(0) instanceof RexLiteral) {
-        literal = extractLiteral(call.getOperands().get(0));
+        literal = (RexLiteral) call.getOperands().get(0);
       } else if (call.getOperands().get(1) instanceof RexInputRef
-          && call.getOperands().get(0).getKind() == SqlKind.CAST) {
+          && call.getOperands().get(0).getKind() == SqlKind.CAST
+          && false) {
         literal = extractLiteral(call.getOperands().get(0));
       }
       if (literal == null) {
         return null;
       }
-      Comparable value = literalToType(literal, type);
+      Comparable value = literal.getValue(); // literalToType(literal, type);
       if (value == null) {
         return null;
       }
       switch (call.getKind()) {
       case LESS_THAN:
-        return Arrays.<Range>asList(withNot ? Range.atLeast(value) : Range.lessThan(value));
+        return ImmutableList.of(withNot ? Range.atLeast(value) : Range.lessThan(value));
       case LESS_THAN_OR_EQUAL:
-        return Arrays.<Range>asList(withNot ? Range.greaterThan(value) : Range.atMost(value));
+        return ImmutableList.of(withNot ? Range.greaterThan(value) : Range.atMost(value));
       case GREATER_THAN:
-        return Arrays.<Range>asList(withNot ? Range.atMost(value) : Range.greaterThan(value));
+        return ImmutableList.of(withNot ? Range.atMost(value) : Range.greaterThan(value));
       case GREATER_THAN_OR_EQUAL:
-        return Arrays.<Range>asList(withNot ? Range.lessThan(value) : Range.atLeast(value));
+        return ImmutableList.of(withNot ? Range.lessThan(value) : Range.atLeast(value));
       default:
         if (!withNot) {
-          return Arrays.<Range>asList(Range.closed(value, value));
+          return ImmutableList.of(Range.closed(value, value));
         }
-        return Arrays.<Range>asList(Range.lessThan(value), Range.greaterThan(value));
+        return ImmutableList.of(Range.lessThan(value), Range.greaterThan(value));
       }
     }
     case BETWEEN:
@@ -228,15 +229,15 @@ public class DruidDateTimeUtils {
       }
       boolean inverted = value1.compareTo(value2) > 0;
       if (!withNot) {
-        return Arrays.<Range>asList(
+        return ImmutableList.of(
             inverted ? Range.closed(value2, value1) : Range.closed(value1, value2));
       }
-      return Arrays.<Range>asList(Range.lessThan(inverted ? value2 : value1),
+      return ImmutableList.of(Range.lessThan(inverted ? value2 : value1),
           Range.greaterThan(inverted ? value1 : value2));
     }
     case IN:
     {
-      List<Range> ranges = Lists.newArrayList();
+      ImmutableList.Builder<Range<Comparable>> ranges = ImmutableList.builder();
       for (int i = 1; i < call.getOperands().size(); i++) {
         RexLiteral literal = extractLiteral(call.getOperands().get(i));
         if (literal == null) {
@@ -247,13 +248,13 @@ public class DruidDateTimeUtils {
           return null;
         }
         if (withNot) {
-          ranges.addAll(
-              Arrays.<Range>asList(Range.lessThan(element), Range.greaterThan(element)));
+          ranges.add(Range.lessThan(element));
+          ranges.add(Range.greaterThan(element));
         } else {
           ranges.add(Range.closed(element, element));
         }
       }
-      return ranges;
+      return ranges.build();
     }
     default:
       return null;

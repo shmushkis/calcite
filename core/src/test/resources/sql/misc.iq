@@ -1310,4 +1310,147 @@ select (case when (true) then 1 end) from (values(1));
 EXPR$0 INTEGER(10)
 !type
 
+# Cast an character literal to a timestamp; note: the plan does not contain CAST
+values cast('1969-07-21 12:34:56' as timestamp);
++---------------------+
+| EXPR$0              |
++---------------------+
+| 1969-07-21 12:34:56 |
++---------------------+
+(1 row)
+
+!ok
+EnumerableCalc(expr#0=[{inputs}], expr#1=['1969-07-21 12:34:56'], expr#2=[CAST($t1):TIMESTAMP(0) NOT NULL], EXPR$0=[$t2])
+  EnumerableValues(tuples=[[{ 0 }]])
+!plan
+
+# Cast a character literal to a date; note: the plan does not contain CAST
+values cast('1969-07-21' as date);
++------------+
+| EXPR$0     |
++------------+
+| 1969-07-21 |
++------------+
+(1 row)
+
+!ok
+EnumerableCalc(expr#0=[{inputs}], expr#1=['1969-07-21 12:34:56'], expr#2=[CAST($t1):TIMESTAMP(0) NOT NULL], EXPR$0=[$t2])
+  EnumerableValues(tuples=[[{ 0 }]])
+!plan
+
+# Cast a character literal to an integer; note: the plan does not contain CAST
+values cast('196907' as integer);
++--------+
+| EXPR$0 |
++--------+
+| 196907 |
++--------+
+(1 row)
+
+!ok
+EnumerableCalc(expr#0=[{inputs}], expr#1=['1969-07-21 12:34:56'], expr#2=[CAST($t1):TIMESTAMP(0) NOT NULL], EXPR$0=[$t2])
+  EnumerableValues(tuples=[[{ 0 }]])
+!plan
+
+# Cast an integer literal to a bigint; note: the plan does not contain CAST
+values cast(123 as bigint);
++--------+
+| EXPR$0 |
++--------+
+|    123 |
++--------+
+(1 row)
+
+!ok
+EnumerableCalc(expr#0=[{inputs}], expr#1=[123], EXPR$0=[$t1])
+  EnumerableValues(tuples=[[{ 0 }]])
+!plan
+
+# Cast an integer literal to a decimal; note: the plan does not contain CAST
+values cast('123.45' as decimal(4, 2));
++--------+
+| EXPR$0 |
++--------+
+| 123.45 |
++--------+
+(1 row)
+
+!ok
+EnumerableCalc(expr#0=[{inputs}], expr#1=[123], EXPR$0=[$t1])
+  EnumerableValues(tuples=[[{ 0 }]])
+!plan
+
+# Cast a character literal to a decimal; note: the plan does not contain CAST
+values cast('123.45' as decimal(4, 2));
++--------+
+| EXPR$0 |
++--------+
+| 123.45 |
++--------+
+(1 row)
+
+!ok
+EnumerableCalc(expr#0=[{inputs}], expr#1=[123], EXPR$0=[$t1])
+  EnumerableValues(tuples=[[{ 0 }]])
+!plan
+
+# Cast a character literal to a double; note: the plan does not contain CAST
+values cast('-123.45' as double);
++---------+
+| EXPR$0  |
++---------+
+| -123.45 |
++---------+
+(1 row)
+
+!ok
+EnumerableCalc(expr#0=[{inputs}], expr#1=['-123.45'], expr#2=[CAST($t1):DOUBLE NOT NULL], EXPR$0=[$t2])
+  EnumerableValues(tuples=[[{ 0 }]])
+!plan
+
+values cast('false' as boolean);
++--------+
+| EXPR$0 |
++--------+
+| false  |
++--------+
+(1 row)
+
+!ok
+EnumerableCalc(expr#0=[{inputs}], expr#1=['-123.45'], expr#2=[CAST($t1):DOUBLE NOT NULL], EXPR$0=[$t2])
+  EnumerableValues(tuples=[[{ 0 }]])
+!plan
+
+values cast('TRUE' as boolean);
++--------+
+| EXPR$0 |
++--------+
+| true   |
++--------+
+(1 row)
+
+!ok
+EnumerableCalc(expr#0=[{inputs}], expr#1=['-123.45'], expr#2=[CAST($t1):DOUBLE NOT NULL], EXPR$0=[$t2])
+  EnumerableValues(tuples=[[{ 0 }]])
+!plan
+
+values cast('TR' || 'UE' as boolean);
++--------+
+| EXPR$0 |
++--------+
+| true   |
++--------+
+(1 row)
+
+!ok
+EnumerableCalc(expr#0=[{inputs}], expr#1=['TR'], expr#2=['UE'], expr#3=[||($t1, $t2)], expr#4=[CAST($t3):BOOLEAN NOT NULL], EXPR$0=[$t4])
+  EnumerableValues(tuples=[[{ 0 }]])
+!plan
+
+!if (false) {
+values cast('null' as boolean);
+!ok
+!plan
+!}
+
 # End misc.iq
