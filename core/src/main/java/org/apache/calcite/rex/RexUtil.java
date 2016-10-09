@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.rex;
 
+import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.function.Predicate1;
 import org.apache.calcite.plan.RelOptUtil;
@@ -38,12 +39,14 @@ import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.ControlFlowException;
 import org.apache.calcite.util.Litmus;
+import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.mapping.Mappings;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -52,10 +55,15 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
+import java.math.BigDecimal;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -63,6 +71,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Utility methods concerning row-expressions.
@@ -103,6 +112,16 @@ public class RexUtil {
           return input.getFamily();
         }
       };
+
+  private static final Pattern TIMESTAMP_PATTERN =
+      Pattern.compile("[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]?"
+          + " [0-9][0-9]?:[0-9][0-9]?:[0-9][0-9]?");
+
+  private static final Pattern TIME_PATTERN =
+      Pattern.compile("[0-9][0-9]?:[0-9][0-9]?:[0-9][0-9]?");
+
+  private static final Pattern DATE_PATTERN =
+      Pattern.compile("[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]?");
 
   private RexUtil() {
   }
@@ -1386,6 +1405,24 @@ public class RexUtil {
     return e1 == e2 || e1.toString().equals(e2.toString());
   }
 
+  /** Simplifies a boolean expression, always preserving its type and its
+   * nullability.
+   *
+   * <p>This is useful if you are simplifying expressions in a
+   * {@link Project}. */
+  public static RexNode simplifyPreservingType(RexBuilder rexBuilder,
+      RexNode e) {
+    final RexNode e2 = simplify(rexBuilder, e, true);
+    if (e2.getType() == e.getType()) {
+      return e2;
+    }
+    final RexNode e3 = rexBuilder.makeCast(e.getType(), e2, true);
+    if (e3.equals(e)) {
+      return e;
+    }
+    return e3;
+  }
+
   /**
    * Simplifies a boolean expression.
    *
@@ -1412,7 +1449,9 @@ public class RexUtil {
       return simplifyNot(rexBuilder, (RexCall) e);
     case CASE:
       return simplifyCase(rexBuilder, (RexCall) e, unknownAsFalse);
-    case IS_NULL:
+    case CAST:
+      return simplifyCast(rexBuilder, (RexCall) e);
+    case IS_NULL: // TODO: call simplifyIs instead?
       return ((RexCall) e).getOperands().get(0).getType().isNullable()
           ? e : rexBuilder.makeLiteral(false);
     case IS_NOT_NULL:
@@ -1424,9 +1463,25 @@ public class RexUtil {
     case IS_NOT_FALSE:
       assert e instanceof RexCall;
       return simplifyIs(rexBuilder, (RexCall) e);
+    case EQUALS:
+    case GREATER_THAN:
+    case GREATER_THAN_OR_EQUAL:
+    case LESS_THAN:
+    case LESS_THAN_OR_EQUAL:
+    case NOT_EQUALS:
+      return simplifyCall(rexBuilder, (RexCall) e);
     default:
       return e;
     }
+  }
+
+  private static RexNode simplifyCall(RexBuilder rexBuilder, RexCall e) {
+    final List<RexNode> operands = new ArrayList<>(e.operands);
+    simplifyList(rexBuilder, operands);
+    if (operands.equals(e.operands)) {
+      return e;
+    }
+    return rexBuilder.makeCall(e.op, operands);
   }
 
   /**
@@ -2074,6 +2129,57 @@ public class RexUtil {
         && (call.operands.size() - i) % 2 == 1;
   }
 
+  private static RexNode simplifyCast(RexBuilder rexBuilder, RexCall e) {
+    final RexNode operand = e.getOperands().get(0);
+    switch (operand.getKind()) {
+    case LITERAL:
+      final RexLiteral literal = (RexLiteral) operand;
+      final Comparable value = literal.getValue();
+      final SqlTypeName typeName = literal.getTypeName();
+      if (rexBuilder.canRemoveCastFromLiteral(e.getType(), value, typeName)) {
+        // The logic in makeCast is the same as above, so we are sure to be
+        // able to remove the cast.
+        return rexBuilder.makeCast(e.getType(), operand);
+      }
+      Object v2 = convert(e, value, typeName);
+      if (v2 != null) {
+        return rexBuilder.makeLiteral(v2, e.getType(), false);
+      }
+      // fall through
+    default:
+      return e;
+    }
+  }
+
+  /** Converts a value to a given type, or returns null if the conversion is
+   * not possible. */
+  private static Object convert(RexCall e, Comparable value, SqlTypeName typeName) {
+    switch (typeName) {
+    case CHAR:
+      final String s = ((NlsString) value).getValue();
+      switch (e.getType().getSqlTypeName()) {
+      case TIMESTAMP:
+        if (TIMESTAMP_PATTERN.matcher(s).matches()) {
+          return DateTimeParser.THREAD_INSTANCE.get().timestamp(s);
+        }
+        break;
+      case TIME:
+        if (TIME_PATTERN.matcher(s).matches()) {
+          return DateTimeParser.THREAD_INSTANCE.get().time(s);
+        }
+        break;
+      case DATE:
+        if (DATE_PATTERN.matcher(s).matches()) {
+          return DateTimeParser.THREAD_INSTANCE.get().date(s);
+        }
+        break;
+      case DECIMAL:
+        return new BigDecimal(s);
+      }
+    }
+    return null;
+  }
+
   /** Returns a function that applies NOT to its argument. */
   public static Function<RexNode, RexNode> notFn(final RexBuilder rexBuilder) {
     return new Function<RexNode, RexNode>() {
@@ -2671,6 +2777,61 @@ public class RexUtil {
         return simplifiedNode;
       }
       return rexBuilder.makeCast(call.getType(), simplifiedNode, true);
+    }
+  }
+
+  /** Thread-local workspace for parsing date-time values. */
+  private static class DateTimeParser {
+    private final SimpleDateFormat timestampFormat;
+    private final SimpleDateFormat dateFormat;
+    private final SimpleDateFormat timeFormat;
+    private final Calendar c;
+
+    static final ThreadLocal<DateTimeParser> THREAD_INSTANCE =
+        new ThreadLocal<DateTimeParser>() {
+          @Override protected DateTimeParser initialValue() {
+            return new DateTimeParser();
+          }
+        };
+
+    DateTimeParser() {
+      c = Calendar.getInstance(DateTimeUtils.GMT_ZONE);
+      timestampFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+      timestampFormat.setCalendar(c);
+      dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+      dateFormat.setCalendar(c);
+      timeFormat = new SimpleDateFormat("HH:mm:ss");
+      timeFormat.setCalendar(c);
+    }
+
+    Calendar timestamp(String s) {
+      try {
+        final Date d = timestampFormat.parse(s);
+        c.setTimeInMillis(d.getTime());
+        return (Calendar) c.clone();
+      } catch (ParseException e1) {
+        throw Throwables.propagate(e1);
+      }
+    }
+
+    Calendar date(String s) {
+      try {
+        final Date d = dateFormat.parse(s);
+        c.setTimeInMillis(d.getTime());
+        return (Calendar) c.clone();
+      } catch (ParseException e1) {
+        throw Throwables.propagate(e1);
+      }
+    }
+
+    Calendar time(String s) {
+      try {
+        final Date d = timeFormat.parse(s);
+        c.setTimeInMillis(d.getTime());
+        return (Calendar) c.clone();
+      } catch (ParseException e1) {
+        throw Throwables.propagate(e1);
+      }
     }
   }
 }
