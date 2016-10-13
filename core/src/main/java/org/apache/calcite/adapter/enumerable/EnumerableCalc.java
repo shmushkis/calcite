@@ -22,6 +22,7 @@ import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.BlockStatement;
 import org.apache.calcite.linq4j.tree.Blocks;
+import org.apache.calcite.linq4j.tree.DeterministicCodeOptimizer;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.linq4j.tree.MemberDeclaration;
@@ -111,7 +112,16 @@ public class EnumerableCalc extends Calc implements EnumerableRel {
     return new EnumerableCalc(getCluster(), traitSet, child, program);
   }
 
-  public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
+  public final Result implement(EnumerableRelImplementor implementor, Prefer pref) {
+    try {
+      BlockBuilder.parentOptimizer.set(null);
+      return implement_(implementor, pref);
+    } finally {
+      BlockBuilder.parentOptimizer.set(null);
+    }
+  }
+
+  private Result implement_(EnumerableRelImplementor implementor, Prefer pref) {
     final JavaTypeFactory typeFactory = implementor.getTypeFactory();
     final BlockBuilder builder = new BlockBuilder();
     final EnumerableRel child = (EnumerableRel) getInput();

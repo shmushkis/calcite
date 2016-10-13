@@ -25,6 +25,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -38,28 +39,7 @@ import java.util.regex.Pattern;
  * created for optimizing a new expression tree.
  */
 public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
-  /**
-   * The map contains known to be effectively-final expression.
-   * The map uses identity equality.
-   * Typically the key is {@code ParameterExpression}, however there might be
-   * non-factored to final field expression that is known to be constant.
-   * For instance, cast expression will not be factored to a field,
-   * but we still need to track its constant status.
-   */
-  protected final Map<Expression, Boolean> constants = new IdentityHashMap<>();
-
-  /**
-   * The map that de-duplicates expressions, so the same expressions may reuse
-   * the same final static fields.
-   */
-  protected final Map<Expression, ParameterExpression> dedup = new HashMap<>();
-
-  /**
-   * The map of all the added final static fields. Allows to identify if the
-   * name is occupied or not.
-   */
-  protected final Map<String, ParameterExpression> fieldsByName =
-      new HashMap<>();
+  final State state;
 
   // Pre-compiled patterns for generation names for the final static fields
   private static final Pattern NON_ASCII = Pattern.compile("[^0-9a-zA-Z$]+");
@@ -79,8 +59,9 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
    *
    * @param parent parent optimizer
    */
-  public DeterministicCodeOptimizer(ClassDeclarationFinder parent) {
+  public DeterministicCodeOptimizer(ClassDeclarationFinder parent, State state) {
     super(parent);
+    this.state = state;
   }
 
   /**
@@ -131,7 +112,7 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
     Expression result = super.visit(unaryExpression, expression);
 
     if (isConstant(expression)) {
-      constants.put(result, true);
+      state.constants.put(result, true);
       if (result.getNodeType() != ExpressionType.Convert) {
         return createField(result);
       }
@@ -144,7 +125,7 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
     Expression result = super.visit(typeBinaryExpression, expression);
 
     if (isConstant(expression)) {
-      constants.put(result, true);
+      state.constants.put(result, true);
     }
     return result;
   }
@@ -180,7 +161,7 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
 
     if (isConstant(expression)
         && Modifier.isFinal(memberExpression.field.getModifiers())) {
-      constants.put(result, true);
+      state.constants.put(result, true);
     }
     return result;
   }
@@ -209,9 +190,9 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
         if (Modifier.isStatic(field.modifier)
             && Modifier.isFinal(field.modifier)
             && field.initializer != null) {
-          constants.put(field.parameter, true);
-          fieldsByName.put(field.parameter.name, field.parameter);
-          dedup.put(field.initializer, field.parameter);
+          state.constants.put(field.parameter, true);
+          state.fieldsByName.put(field.parameter.name, field.parameter);
+          state.dedup.put(field.initializer, field.parameter);
         }
       }
     }
@@ -224,8 +205,8 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
    * @return parameter of the already existing declaration, or null
    */
   protected ParameterExpression findDeclaredExpression(Expression expression) {
-    if (!dedup.isEmpty()) {
-      ParameterExpression pe = dedup.get(expression);
+    if (!state.dedup.isEmpty()) {
+      ParameterExpression pe = state.dedup.get(expression);
       if (pe != null) {
         return pe;
       }
@@ -250,10 +231,10 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
     pe = Expressions.parameter(expression.getType(), name);
     FieldDeclaration decl =
         Expressions.fieldDecl(Modifier.FINAL | Modifier.STATIC, pe, expression);
-    dedup.put(expression, pe);
+    state.dedup.put(expression, pe);
     addedDeclarations.add(decl);
-    constants.put(pe, true);
-    fieldsByName.put(name, pe);
+    state.constants.put(pe, true);
+    state.fieldsByName.put(name, pe);
     return pe;
   }
 
@@ -296,7 +277,7 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
   @Override protected boolean isConstant(Expression expression) {
     return expression == null
         || expression instanceof ConstantExpression
-        || !constants.isEmpty() && constants.containsKey(expression)
+        || !state.constants.isEmpty() && state.constants.containsKey(expression)
         || parent != null && parent.isConstant(expression);
   }
 
@@ -347,7 +328,7 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
    * @return true if the name is used by one of static final fields
    */
   @Override protected boolean hasField(String name) {
-    return !fieldsByName.isEmpty() && fieldsByName.containsKey(name)
+    return !state.fieldsByName.isEmpty() && state.fieldsByName.containsKey(name)
         || parent != null && parent.hasField(name);
   }
 
@@ -357,7 +338,40 @@ public class DeterministicCodeOptimizer extends ClassDeclarationFinder {
    * @return new Visitor that is used to optimize class declarations
    */
   protected DeterministicCodeOptimizer goDeeper() {
-    return new DeterministicCodeOptimizer(this);
+    return new DeterministicCodeOptimizer(this, state);
+  }
+
+  /** State, can be shared among optimizers. */
+  protected static class State {
+    /**
+     * The map contains known to be effectively-final expression.
+     * The map uses identity equality.
+     * Typically the key is {@code ParameterExpression}, however there might be
+     * non-factored to final field expression that is known to be constant.
+     * For instance, cast expression will not be factored to a field,
+     * but we still need to track its constant status.
+     */
+    protected final Map<Expression, Boolean> constants = new IdentityHashMap<>();
+
+    /**
+     * The map that de-duplicates expressions, so the same expressions may reuse
+     * the same final static fields.
+     */
+    protected final Map<Expression, ParameterExpression> dedup = new HashMap<>();
+
+    /**
+     * The map of all the added final static fields. Allows to identify if the
+     * name is occupied or not.
+     */
+    protected final Map<String, ParameterExpression> fieldsByName =
+        new HashMap<>();
+
+    /**
+     * The list of new final static fields to be added to the current class.
+     */
+    protected final List<MemberDeclaration> addedDeclarations =
+        new ArrayList<MemberDeclaration>();
+
   }
 }
 

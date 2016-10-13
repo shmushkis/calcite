@@ -69,7 +69,7 @@ public class QuidemTest {
 
   /** Run a test from the command line. */
   public static void main(String[] args) throws Exception {
-    final String path = "sql/lateral.iq";
+    final String path = "sql/dummy.iq";
     new QuidemTest(path).test();
   }
 

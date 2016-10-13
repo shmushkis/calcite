@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.linq4j.tree;
 
+import org.apache.calcite.linq4j.function.Function1;
+
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -43,7 +45,24 @@ public class BlockBuilder {
   private final boolean optimizing;
   private final BlockBuilder parent;
 
+  public static final ThreadLocal<DeterministicCodeOptimizer> parentOptimizer =
+      new ThreadLocal<>();
+
   private static final Visitor OPTIMIZE_VISITOR = new OptimizeVisitor();
+
+  private static final Function1<ClassDeclarationFinder,
+      ClassDeclarationFinder> CHILD_FACTORY =
+      new Function1<ClassDeclarationFinder, ClassDeclarationFinder>() {
+        public ClassDeclarationFinder apply(ClassDeclarationFinder a0) {
+          DeterministicCodeOptimizer p = parentOptimizer.get();
+          if (p != null) {
+            return p;
+          }
+          p = new DeterministicCodeOptimizer(a0);
+          parentOptimizer.set(p);
+          return p;
+        }
+      };
 
   /**
    * Creates a non-optimizing BlockBuilder.
@@ -446,7 +465,7 @@ public class BlockBuilder {
    * @return visitor that is used to finalize the optimization
    */
   protected Visitor createFinishingOptimizeVisitor() {
-    return ClassDeclarationFinder.create();
+      return ClassDeclarationFinder.create(CHILD_FACTORY);
   }
 
   /**

@@ -1338,6 +1338,17 @@ EnumerableCalc(expr#0=[{inputs}], expr#1=['1969-07-21 12:34:56'], expr#2=[CAST($
   EnumerableValues(tuples=[[{ 0 }]])
 !plan
 
+# Slightly different format
+values cast('1989-7-4' as date);
++----------+
+| EXPR$0   |
++----------+
+| 1989-7-4 |
++----------+
+(1 row)
+
+!ok
+
 # Cast a character literal to an integer; note: the plan does not contain CAST
 values cast('196907' as integer);
 +--------+
@@ -1452,5 +1463,23 @@ values cast('null' as boolean);
 !ok
 !plan
 !}
+
+values cast('' as date);
+!error
+
+values cast('' as timestamp);
+!error
+
+values cast('' as integer);
+!error
+
+values cast('' as boolean);
+!error
+
+values cast('' as double);
+!error
+
+values cast('15.6' as integer);
+!ok
 
 # End misc.iq

@@ -16,8 +16,10 @@
 # limitations under the License.
 #
 !use post
-values 1;
+values cast('' as date);
 EXPR$0
 1
 !ok
+!plan
+
 # End dummy.iq
