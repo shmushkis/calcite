@@ -665,9 +665,6 @@ public abstract class SqlOperatorBaseTest {
             true);
       }
 
-      if (!enable) {
-        return;
-      }
       // Convert from string to type
       checkCastToScalarOkay(
           "'" + MAX_NUMERIC_STRINGS[i] + "'",

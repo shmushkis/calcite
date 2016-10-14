@@ -1416,7 +1416,7 @@ values cast('-123.45' as double);
 (1 row)
 
 !ok
-EnumerableCalc(expr#0=[{inputs}], expr#1=['-123.45'], expr#2=[CAST($t1):DOUBLE NOT NULL], EXPR$0=[$t2])
+EnumerableCalc(expr#0=[{inputs}], expr#1=[-1.2345E2], EXPR$0=[$t1])
   EnumerableValues(tuples=[[{ 0 }]])
 !plan
 
@@ -1488,6 +1488,35 @@ values cast('15.6' as integer);
 #  ERROR:  invalid input syntax for integer: " - 5 "
 values cast(' - 5 ' as double);
 !error
+
+# Out of TINYINT range (max 127)
+values cast('200' as tinyint);
+!error
+
+# Out of SMALLINT range (max 32767)
+values cast('50000' as smallint);
+!error
+
+# Out of INTEGER range (max 2.1e9)
+values cast('4567891234' as integer);
+!error
+
+# Out of BIGINT range (max 9.2e18)
+values cast('12345678901234567890' as bigint);
+!error
+
+# Out of REAL range
+values cast('12.34e56' as real);
+!error
+
+# Out of FLOAT range
+values cast('12.34e5678' as float);
+!error
+
+# Out of DOUBLE range
+values cast('12.34e5678' as double);
+!error
+
 !}
 
 # Postgres succeeds

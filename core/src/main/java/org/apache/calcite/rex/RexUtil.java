@@ -1451,12 +1451,8 @@ public class RexUtil {
       return simplifyCase(rexBuilder, (RexCall) e, unknownAsFalse);
     case CAST:
       return simplifyCast(rexBuilder, (RexCall) e);
-    case IS_NULL: // TODO: call simplifyIs instead?
-      return ((RexCall) e).getOperands().get(0).getType().isNullable()
-          ? e : rexBuilder.makeLiteral(false);
+    case IS_NULL:
     case IS_NOT_NULL:
-      return ((RexCall) e).getOperands().get(0).getType().isNullable()
-          ? e : rexBuilder.makeLiteral(true);
     case IS_TRUE:
     case IS_NOT_TRUE:
     case IS_FALSE:
@@ -2136,14 +2132,19 @@ public class RexUtil {
       final RexLiteral literal = (RexLiteral) operand;
       final Comparable value = literal.getValue();
       final SqlTypeName typeName = literal.getTypeName();
+
+      // First, try to remove the cast without changing the value.
+      // makeCast and canRemoveCastFromLiteral have the same logic, so we are
+      // sure to be able to remove the cast.
       if (rexBuilder.canRemoveCastFromLiteral(e.getType(), value, typeName)) {
-        // The logic in makeCast is the same as above, so we are sure to be
-        // able to remove the cast.
         return rexBuilder.makeCast(e.getType(), operand);
       }
-      Object v2 = convert(e, value, typeName);
-      if (v2 != null) {
-        return rexBuilder.makeLiteral(v2, e.getType(), false);
+
+      // Next, try to convert the value to a different type,
+      // e.g. CAST('123' as integer)
+      final Object value2 = convert(e, value, typeName);
+      if (value2 != null) {
+        return rexBuilder.makeLiteral(value2, e.getType(), false);
       }
       // fall through
     default:
@@ -2173,6 +2174,54 @@ public class RexUtil {
           return DateTimeParser.THREAD_INSTANCE.get().date(s);
         }
         break;
+      case BOOLEAN:
+        switch (s.toUpperCase()) {
+        case "TRUE":
+          return true;
+        case "FALSE":
+          return false;
+        default:
+          return null;
+        }
+      case TINYINT:
+        try {
+          return new BigDecimal(Byte.parseByte(s));
+        } catch (NumberFormatException nfe) {
+          return null;
+        }
+      case SMALLINT:
+        try {
+          return new BigDecimal(Short.parseShort(s));
+        } catch (NumberFormatException nfe) {
+          return null;
+        }
+      case INTEGER:
+        try {
+          return new BigDecimal(Integer.parseInt(s));
+        } catch (NumberFormatException nfe) {
+          return null;
+        }
+      case BIGINT:
+        try {
+          return new BigDecimal(Long.parseLong(s));
+        } catch (NumberFormatException nfe) {
+          return null;
+        }
+      case REAL:
+        try {
+          Util.discard(Float.parseFloat(s));
+          return new BigDecimal(s);
+        } catch (NumberFormatException nfe) {
+          return null;
+        }
+      case FLOAT:
+      case DOUBLE:
+        try {
+          Util.discard(Double.parseDouble(s));
+          return new BigDecimal(s);
+        } catch (NumberFormatException nfe) {
+          return null;
+        }
       case DECIMAL:
         return new BigDecimal(s);
       }
