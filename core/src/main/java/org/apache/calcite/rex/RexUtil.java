@@ -1412,7 +1412,7 @@ public class RexUtil {
    * {@link Project}. */
   public static RexNode simplifyPreservingType(RexBuilder rexBuilder,
       RexNode e) {
-    final RexNode e2 = simplify(rexBuilder, e, true);
+    final RexNode e2 = simplify(rexBuilder, e, false);
     if (e2.getType() == e.getType()) {
       return e2;
     }
