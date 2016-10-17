@@ -76,4 +76,14 @@ select * from "metadata".tables;
 
 !ok
 
+# Sequences are non-deterministic
+select *
+from (
+  select *
+  from (values 1, 2) as t (c)
+  where next value for "my_seq" > 10)
+where next value for "my_seq" < 10;
+!ok
+!plan
+
 # End sequence.iq

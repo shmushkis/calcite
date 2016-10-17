@@ -69,8 +69,9 @@ public class QuidemTest {
 
   /** Run a test from the command line. */
   public static void main(String[] args) throws Exception {
-    final String path = "sql/lateral.iq";
-    new QuidemTest(path).test();
+    for (String arg : args) {
+      new QuidemTest(arg).test();
+    }
   }
 
   private Method findMethod(String path) {
