@@ -19,6 +19,7 @@ package org.apache.calcite.rex;
 import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.function.Predicate1;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
@@ -30,6 +31,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeFamily;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
@@ -122,6 +124,11 @@ public class RexUtil {
 
   private static final Pattern DATE_PATTERN =
       Pattern.compile("[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]?");
+
+  /** Executor for a bit of constant reduction. Ideally we'd use the user's
+   * preferred executor, but that isn't available. */
+  private static final RelOptPlanner.Executor EXECUTOR =
+      new RexExecutorImpl(Schemas.createDataContext(null));
 
   private RexUtil() {
   }
@@ -2142,6 +2149,16 @@ public class RexUtil {
 
       // Next, try to convert the value to a different type,
       // e.g. CAST('123' as integer)
+      final List<RexNode> reducedValues = new ArrayList<>();
+      EXECUTOR.reduce(rexBuilder, ImmutableList.<RexNode>of(e), reducedValues);
+      assert reducedValues.size() == 1;
+      if (reducedValues.size() == 1) {
+        return reducedValues.get(0);
+      }
+
+      if (true) {
+        return e;
+      }
       final Object value2 = convert(e, value, typeName);
       if (value2 != null) {
         return rexBuilder.makeLiteral(value2, e.getType(), false);
