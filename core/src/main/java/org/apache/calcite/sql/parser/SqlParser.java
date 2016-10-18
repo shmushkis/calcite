@@ -22,6 +22,8 @@ import org.apache.calcite.config.Lex;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.impl.SqlParserImpl;
+import org.apache.calcite.sql.validate.SqlConformance;
+import org.apache.calcite.sql.validate.SqlConformanceEnum;
 
 import com.google.common.base.Preconditions;
 
@@ -32,7 +34,9 @@ import java.io.StringReader;
  */
 public class SqlParser {
   public static final int DEFAULT_IDENTIFIER_MAX_LENGTH = 128;
-  public static final boolean DEFAULT_ALLOW_BANG_EQUAL = false;
+  @Deprecated // to be removed before 2.0
+  public static final boolean DEFAULT_ALLOW_BANG_EQUAL =
+      SqlConformanceEnum.DEFAULT.isBangEqualAllowed();
 
   //~ Instance fields --------------------------------------------------------
   private final SqlAbstractParserImpl parser;
@@ -196,6 +200,7 @@ public class SqlParser {
     Casing unquotedCasing();
     Quoting quoting();
     boolean caseSensitive();
+    SqlConformance conformance();
     boolean allowBangEqual();
     SqlParserImplFactory parserFactory();
   }
@@ -207,7 +212,9 @@ public class SqlParser {
     private Quoting quoting = Lex.ORACLE.quoting;
     private int identifierMaxLength = DEFAULT_IDENTIFIER_MAX_LENGTH;
     private boolean caseSensitive = Lex.ORACLE.caseSensitive;
-    private boolean allowBangEqual = DEFAULT_ALLOW_BANG_EQUAL;
+    private SqlConformance conformance = SqlConformanceEnum.DEFAULT;
+    private boolean allowBangEqual =
+        SqlConformanceEnum.DEFAULT.isBangEqualAllowed();
     private SqlParserImplFactory parserFactory = SqlParserImpl.FACTORY;
 
     private ConfigBuilder() {}
@@ -218,6 +225,7 @@ public class SqlParser {
       this.unquotedCasing = config.unquotedCasing();
       this.quoting = config.quoting();
       this.identifierMaxLength = config.identifierMaxLength();
+      this.conformance = config.conformance();
       this.allowBangEqual = config.allowBangEqual();
       this.parserFactory = config.parserFactory();
       return this;
@@ -248,8 +256,15 @@ public class SqlParser {
       return this;
     }
 
+    @Deprecated // to be removed before 2.0
     public ConfigBuilder setAllowBangEqual(boolean allowBangEqual) {
       this.allowBangEqual = allowBangEqual;
+      return this;
+    }
+
+    public ConfigBuilder setConformance(SqlConformance conformance) {
+      this.conformance = conformance;
+      this.allowBangEqual = conformance.isBangEqualAllowed();
       return this;
     }
 
@@ -270,7 +285,7 @@ public class SqlParser {
      * {@link Config}. */
     public Config build() {
       return new ConfigImpl(identifierMaxLength, quotedCasing, unquotedCasing,
-          quoting, caseSensitive, allowBangEqual, parserFactory);
+          quoting, caseSensitive, conformance, allowBangEqual, parserFactory);
     }
   }
 
@@ -280,6 +295,7 @@ public class SqlParser {
   private static class ConfigImpl implements Config {
     private final int identifierMaxLength;
     private final boolean caseSensitive;
+    private final SqlConformance conformance;
     private final boolean allowBangEqual;
     private final Casing quotedCasing;
     private final Casing unquotedCasing;
@@ -288,9 +304,11 @@ public class SqlParser {
 
     private ConfigImpl(int identifierMaxLength, Casing quotedCasing,
         Casing unquotedCasing, Quoting quoting, boolean caseSensitive,
+        SqlConformance conformance,
         boolean allowBangEqual, SqlParserImplFactory parserFactory) {
       this.identifierMaxLength = identifierMaxLength;
       this.caseSensitive = caseSensitive;
+      this.conformance = conformance;
       this.allowBangEqual = allowBangEqual;
       this.quotedCasing = Preconditions.checkNotNull(quotedCasing);
       this.unquotedCasing = Preconditions.checkNotNull(unquotedCasing);
@@ -316,6 +334,10 @@ public class SqlParser {
 
     public boolean caseSensitive() {
       return caseSensitive;
+    }
+
+    public SqlConformance conformance() {
+      return conformance;
     }
 
     public boolean allowBangEqual() {
