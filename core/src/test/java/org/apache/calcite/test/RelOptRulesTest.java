@@ -1453,6 +1453,20 @@ public class RelOptRulesTest extends RelOptTestBase {
             + "where cast(e.job as varchar(1)) = 'Manager'");
   }
 
+  /** Tests that a cast from a TIME to a TIMESTAMP is not reduced. It is not
+   * constant because the result depends upon the current date. */
+  @Test public void testReduceCastTimeUnchanged() throws Exception {
+    HepProgram program = new HepProgramBuilder()
+        .addRuleInstance(ReduceExpressionsRule.PROJECT_INSTANCE)
+        .addRuleInstance(ReduceExpressionsRule.FILTER_INSTANCE)
+        .addRuleInstance(ReduceExpressionsRule.JOIN_INSTANCE)
+        .build();
+
+    sql("select cast(time '12:34:56' as timestamp) from emp as e")
+        .with(program)
+        .checkUnchanged();
+  }
+
   @Test public void testReduceCastAndConsts() throws Exception {
     HepProgram program = new HepProgramBuilder()
         .addRuleInstance(ReduceExpressionsRule.FILTER_INSTANCE)

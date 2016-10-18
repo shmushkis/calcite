@@ -39,6 +39,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeAssignmentRules;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.TestUtil;
 import org.apache.calcite.util.Util;
 
@@ -1150,11 +1151,25 @@ public class RexProgramTest {
             toType.getSqlTypeName(), fromType.getSqlTypeName(), false)) {
           for (RexLiteral literal : map.get(fromType.getSqlTypeName())) {
             final RexNode cast = rexBuilder.makeCast(toType, literal);
-            final RexNode simplify = RexUtil.simplify(rexBuilder, cast);
-            System.out.println(cast
-                + (cast.equals(simplify)
-                ? " does not simplify"
-                : " -> " + simplify));
+            if (cast instanceof RexLiteral) {
+              assertThat(cast.getType(), is(toType));
+              continue; // makeCast already simplified
+            }
+            final RexNode simplified = RexUtil.simplify(rexBuilder, cast);
+            boolean expectedSimplify =
+                literal.getTypeName() != toType.getSqlTypeName()
+                || (literal.getTypeName() == SqlTypeName.CHAR
+                    && ((NlsString) literal.getValue()).getValue().length()
+                        > toType.getPrecision())
+                || (literal.getTypeName() == SqlTypeName.BINARY
+                    && ((ByteString) literal.getValue()).length()
+                        > toType.getPrecision());
+            boolean couldSimplify = !cast.equals(simplified);
+            final String reason = (expectedSimplify
+                ? "expected to simplify, but could not: "
+                : "simplified, but did not expect to: ")
+                + cast + " --> " + simplified;
+            assertThat(reason, couldSimplify, is(expectedSimplify));
           }
         }
       }

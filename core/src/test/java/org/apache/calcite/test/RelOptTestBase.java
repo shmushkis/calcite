@@ -233,12 +233,21 @@ abstract class RelOptTestBase extends SqlToRelTestBase {
     }
 
     public void check() {
+      check(false);
+    }
+
+    public void checkUnchanged() {
+      check(true);
+    }
+
+    private void check(boolean unchanged) {
       final List<Hook.Closeable> closeables = new ArrayList<>();
       try {
         for (Map.Entry<Hook, Function> entry : hooks.entrySet()) {
           closeables.add(entry.getKey().addThread(entry.getValue()));
         }
-        checkPlanning(tester.withExpand(expand), null, hepPlanner, sql);
+        checkPlanning(tester.withExpand(expand), null, hepPlanner, sql,
+            unchanged);
       } finally {
         for (Hook.Closeable closeable : closeables) {
           closeable.close();

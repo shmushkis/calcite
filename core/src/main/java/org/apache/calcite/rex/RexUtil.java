@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.rex;
 
-import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.function.Predicate1;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -41,14 +40,13 @@ import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.ControlFlowException;
 import org.apache.calcite.util.Litmus;
-import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.mapping.Mappings;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -57,15 +55,10 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
-import java.math.BigDecimal;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -73,7 +66,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
  * Utility methods concerning row-expressions.
@@ -114,16 +106,6 @@ public class RexUtil {
           return input.getFamily();
         }
       };
-
-  private static final Pattern TIMESTAMP_PATTERN =
-      Pattern.compile("[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]?"
-          + " [0-9][0-9]?:[0-9][0-9]?:[0-9][0-9]?");
-
-  private static final Pattern TIME_PATTERN =
-      Pattern.compile("[0-9][0-9]?:[0-9][0-9]?:[0-9][0-9]?");
-
-  private static final Pattern DATE_PATTERN =
-      Pattern.compile("[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]?");
 
   /** Executor for a bit of constant reduction. Ideally we'd use the user's
    * preferred executor, but that isn't available. */
@@ -2149,101 +2131,20 @@ public class RexUtil {
 
       // Next, try to convert the value to a different type,
       // e.g. CAST('123' as integer)
+      switch (literal.getTypeName()) {
+      case TIME:
+        switch (e.getType().getSqlTypeName()) {
+        case TIMESTAMP:
+          return e;
+        }
+      }
       final List<RexNode> reducedValues = new ArrayList<>();
       EXECUTOR.reduce(rexBuilder, ImmutableList.<RexNode>of(e), reducedValues);
-      assert reducedValues.size() == 1;
-      if (reducedValues.size() == 1) {
-        return reducedValues.get(0);
-      }
-
-      if (true) {
-        return e;
-      }
-      final Object value2 = convert(e, value, typeName);
-      if (value2 != null) {
-        return rexBuilder.makeLiteral(value2, e.getType(), false);
-      }
-      // fall through
+      return Preconditions.checkNotNull(
+          Iterables.getOnlyElement(reducedValues));
     default:
       return e;
     }
-  }
-
-  /** Converts a value to a given type, or returns null if the conversion is
-   * not possible. */
-  private static Object convert(RexCall e, Comparable value, SqlTypeName typeName) {
-    switch (typeName) {
-    case CHAR:
-      final String s = ((NlsString) value).getValue();
-      switch (e.getType().getSqlTypeName()) {
-      case TIMESTAMP:
-        if (TIMESTAMP_PATTERN.matcher(s).matches()) {
-          return DateTimeParser.THREAD_INSTANCE.get().timestamp(s);
-        }
-        break;
-      case TIME:
-        if (TIME_PATTERN.matcher(s).matches()) {
-          return DateTimeParser.THREAD_INSTANCE.get().time(s);
-        }
-        break;
-      case DATE:
-        if (DATE_PATTERN.matcher(s).matches()) {
-          return DateTimeParser.THREAD_INSTANCE.get().date(s);
-        }
-        break;
-      case BOOLEAN:
-        switch (s.toUpperCase()) {
-        case "TRUE":
-          return true;
-        case "FALSE":
-          return false;
-        default:
-          return null;
-        }
-      case TINYINT:
-        try {
-          return new BigDecimal(Byte.parseByte(s));
-        } catch (NumberFormatException nfe) {
-          return null;
-        }
-      case SMALLINT:
-        try {
-          return new BigDecimal(Short.parseShort(s));
-        } catch (NumberFormatException nfe) {
-          return null;
-        }
-      case INTEGER:
-        try {
-          return new BigDecimal(Integer.parseInt(s));
-        } catch (NumberFormatException nfe) {
-          return null;
-        }
-      case BIGINT:
-        try {
-          return new BigDecimal(Long.parseLong(s));
-        } catch (NumberFormatException nfe) {
-          return null;
-        }
-      case REAL:
-        try {
-          Util.discard(Float.parseFloat(s));
-          return new BigDecimal(s);
-        } catch (NumberFormatException nfe) {
-          return null;
-        }
-      case FLOAT:
-      case DOUBLE:
-        try {
-          Util.discard(Double.parseDouble(s));
-          return new BigDecimal(s);
-        } catch (NumberFormatException nfe) {
-          return null;
-        }
-      case DECIMAL:
-        return new BigDecimal(s);
-      }
-    }
-    return null;
   }
 
   /** Returns a function that applies NOT to its argument. */
@@ -2843,61 +2744,6 @@ public class RexUtil {
         return simplifiedNode;
       }
       return rexBuilder.makeCast(call.getType(), simplifiedNode, true);
-    }
-  }
-
-  /** Thread-local workspace for parsing date-time values. */
-  private static class DateTimeParser {
-    private final SimpleDateFormat timestampFormat;
-    private final SimpleDateFormat dateFormat;
-    private final SimpleDateFormat timeFormat;
-    private final Calendar c;
-
-    static final ThreadLocal<DateTimeParser> THREAD_INSTANCE =
-        new ThreadLocal<DateTimeParser>() {
-          @Override protected DateTimeParser initialValue() {
-            return new DateTimeParser();
-          }
-        };
-
-    DateTimeParser() {
-      c = Calendar.getInstance(DateTimeUtils.GMT_ZONE);
-      timestampFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-      timestampFormat.setCalendar(c);
-      dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-      dateFormat.setCalendar(c);
-      timeFormat = new SimpleDateFormat("HH:mm:ss");
-      timeFormat.setCalendar(c);
-    }
-
-    Calendar timestamp(String s) {
-      try {
-        final Date d = timestampFormat.parse(s);
-        c.setTimeInMillis(d.getTime());
-        return (Calendar) c.clone();
-      } catch (ParseException e1) {
-        throw Throwables.propagate(e1);
-      }
-    }
-
-    Calendar date(String s) {
-      try {
-        final Date d = dateFormat.parse(s);
-        c.setTimeInMillis(d.getTime());
-        return (Calendar) c.clone();
-      } catch (ParseException e1) {
-        throw Throwables.propagate(e1);
-      }
-    }
-
-    Calendar time(String s) {
-      try {
-        final Date d = timeFormat.parse(s);
-        c.setTimeInMillis(d.getTime());
-        return (Calendar) c.clone();
-      } catch (ParseException e1) {
-        throw Throwables.propagate(e1);
-      }
     }
   }
 }

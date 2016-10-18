@@ -45,8 +45,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.lang.reflect.Method;
-import java.math.BigDecimal;
-import java.math.MathContext;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -75,9 +73,6 @@ public class QuidemTest {
    *
    * <blockquote><code>java QuidemTest sql/dummy.iq</code></blockquote> */
   public static void main(String[] args) throws Exception {
-    double d = 123.45;
-    BigDecimal bd = new BigDecimal(d, MathContext.DECIMAL64);
-    System.out.println(bd);
     for (String arg : args) {
       new QuidemTest(arg).test();
     }
