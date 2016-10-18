@@ -21,6 +21,7 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.interpreter.Interpreter;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -265,6 +266,22 @@ public class InterpreterTest {
 
     final Interpreter interpreter = new Interpreter(dataContext, convert);
     assertRows(interpreter, "[0]", "[10]", "[20]", "[30]");
+  }
+
+  /** Tests a GROUP BY query on the Foodmart data set, using the Interpreter. */
+  @Test public void testCloneGroupBy() {
+    final String sql = "select \"the_year\", count(*) as c,\n"
+        + " sum(\"day_of_month\") as m\n"
+        + "from \"foodmart2\".\"time_by_day\"\n"
+        + "group by \"the_year\"\n"
+        + "order by 1, 2";
+    CalciteAssert.that()
+        .with(CalciteAssert.Config.FOODMART_CLONE)
+        .query(sql)
+        .withProperty(Hook.ENABLE_BINDABLE, true)
+        .returnsUnordered("the_year=1997; C=365; M=5738",
+            "the_year=1998; C=365; M=5738")
+        .explainContains("xx");
   }
 }
 
