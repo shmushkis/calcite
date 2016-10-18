@@ -55,7 +55,7 @@ public class InterpreterTest {
   private class MyDataContext implements DataContext {
     private final Planner planner;
 
-    public MyDataContext(Planner planner) {
+    MyDataContext(Planner planner) {
       this.planner = planner;
     }
 
@@ -270,18 +270,25 @@ public class InterpreterTest {
 
   /** Tests a GROUP BY query on the Foodmart data set, using the Interpreter. */
   @Test public void testCloneGroupBy() {
-    final String sql = "select \"the_year\", count(*) as c,\n"
-        + " sum(\"day_of_month\") as m\n"
+    final String sql = "select \"the_year\" as y, count(*) as c,\n"
+        + " count(\"day_of_month\") as cd,\n"
+        + " sum(\"day_of_month\") as sd,\n"
+        + " min(\"day_of_month\") as nd,\n"
+        + " max(\"day_of_month\") as xd\n"
         + "from \"foodmart2\".\"time_by_day\"\n"
         + "group by \"the_year\"\n"
         + "order by 1, 2";
+    final String explain = ""
+        + "BindableSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[ASC])\n"
+        + "  BindableAggregate(group=[{4}], C=[COUNT()], M=[SUM($5)])\n"
+        + "    BindableTableScan(table=[[foodmart2, time_by_day]])";
     CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
         .query(sql)
         .withProperty(Hook.ENABLE_BINDABLE, true)
-        .returnsUnordered("the_year=1997; C=365; M=5738",
-            "the_year=1998; C=365; M=5738")
-        .explainContains("xx");
+        .returnsUnordered("Y=1997; C=365; M=5738",
+            "Y=1998; C=365; M=5738")
+        .explainContains(explain);
   }
 }
 

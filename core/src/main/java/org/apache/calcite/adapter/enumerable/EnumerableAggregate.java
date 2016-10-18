@@ -230,16 +230,15 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
       aggStateTypes.addAll(state);
 
       final List<Expression> decls = new ArrayList<>(state.size());
-      for (int i = 0; i < state.size(); i++) {
+      for (Ord<Type> type : Ord.zip(state)) {
         String aggName = "a" + agg.aggIdx;
         if (CalcitePrepareImpl.DEBUG) {
           aggName = Util.toJavaId(agg.call.getAggregation().getName(), 0)
               .substring("ID$0$".length()) + aggName;
         }
-        Type type = state.get(i);
         ParameterExpression pe =
-            Expressions.parameter(type,
-                initBlock.newName(aggName + "s" + i));
+            Expressions.parameter(type.e,
+                initBlock.newName(aggName + "s" + type.i));
         initBlock.add(Expressions.declare(0, pe, null));
         decls.add(pe);
       }

@@ -18,7 +18,9 @@ package org.apache.calcite.interpreter;
 
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.enumerable.AggAddContext;
+import org.apache.calcite.adapter.enumerable.AggContext;
 import org.apache.calcite.adapter.enumerable.AggImpState;
+import org.apache.calcite.adapter.enumerable.EnumUtils;
 import org.apache.calcite.adapter.enumerable.JavaRowFormat;
 import org.apache.calcite.adapter.enumerable.PhysType;
 import org.apache.calcite.adapter.enumerable.PhysTypeImpl;
@@ -26,16 +28,19 @@ import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
 import org.apache.calcite.adapter.enumerable.impl.AggAddContextImpl;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.interpreter.Row.RowBuilder;
+import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.linq4j.tree.ParameterExpression;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.impl.AggregateFunctionImpl;
+import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
@@ -47,6 +52,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -139,18 +145,43 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
     } else {
       final JavaTypeFactory typeFactory =
           (JavaTypeFactory) rel.getCluster().getTypeFactory();
+      final RelDataType inputRowType = rel.getInput().getRowType();
+
       int stateOffset = 0;
       final AggImpState agg = new AggImpState(0, call, false);
-      int stateSize = agg.state.size();
+      agg.context =
+          new AggContext() {
+            public SqlAggFunction aggregation() {
+              return agg.call.getAggregation();
+            }
+
+            public RelDataType returnRelType() {
+              return agg.call.type;
+            }
+
+            public Type returnType() {
+              return EnumUtils.javaClass(typeFactory, returnRelType());
+            }
+
+            public List<? extends RelDataType> parameterRelTypes() {
+              return EnumUtils.fieldRowTypes(inputRowType, null,
+                  agg.call.getArgList());
+            }
+
+            public List<? extends Type> parameterTypes() {
+              return EnumUtils.fieldTypes(typeFactory,
+                  parameterRelTypes());
+            }
+          };
+      List<Type> state = agg.implementor.getStateType(agg.context);
 
       final BlockBuilder builder2 = new BlockBuilder();
       final PhysType inputPhysType =
-          PhysTypeImpl.of(typeFactory, rel.getInput().getRowType(),
-              JavaRowFormat.ARRAY);
+          PhysTypeImpl.of(typeFactory, inputRowType, JavaRowFormat.ARRAY);
       final RelDataTypeFactory.FieldInfoBuilder builder = typeFactory.builder();
-      for (Expression expression : agg.state) {
+      for (Ord<Type> type : Ord.zip(state)) {
         builder.add("a",
-            typeFactory.createJavaType((Class) expression.getType()));
+            typeFactory.createJavaType((Class) type.e));
       }
       final PhysType accPhysType =
           PhysTypeImpl.of(typeFactory, builder.build(), JavaRowFormat.ARRAY);
@@ -159,9 +190,9 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
       final ParameterExpression acc_ =
           Expressions.parameter(accPhysType.getJavaRowType(), "acc");
 
-      List<Expression> accumulator = new ArrayList<>(stateSize);
-      for (int j = 0; j < stateSize; j++) {
-        accumulator.add(accPhysType.fieldReference(acc_, j + stateOffset));
+      final List<Expression> accumulator = new ArrayList<>();
+      for (Ord<Type> type : Ord.zip(state)) {
+        accumulator.add(accPhysType.fieldReference(acc_, type.i + stateOffset));
       }
       agg.state = accumulator;
 
@@ -201,7 +232,7 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
       Scalar addScalar =
           JaninoRexCompiler.baz(context_, outputValues_, builder2.toBlock());
       return new ScalarAccumulatorDef(null, addScalar, null,
-          rel.getInput().getRowType().getFieldCount(), stateSize, dataContext);
+          inputRowType.getFieldCount(), state.size(), dataContext);
     }
   }
 
