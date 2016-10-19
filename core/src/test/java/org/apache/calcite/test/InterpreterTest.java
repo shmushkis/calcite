@@ -280,14 +280,15 @@ public class InterpreterTest {
         + "order by 1, 2";
     final String explain = ""
         + "BindableSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[ASC])\n"
-        + "  BindableAggregate(group=[{4}], C=[COUNT()], M=[SUM($5)])\n"
+        + "  BindableAggregate(group=[{4}], C=[COUNT()], CD=[COUNT($5)], "
+        + "SD=[SUM($5)], ND=[MIN($5)], XD=[MAX($5)])\n"
         + "    BindableTableScan(table=[[foodmart2, time_by_day]])";
     CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
         .query(sql)
         .withProperty(Hook.ENABLE_BINDABLE, true)
-        .returnsUnordered("Y=1997; C=365; M=5738",
-            "Y=1998; C=365; M=5738")
+        .returnsOrdered("Y=1997; C=365; CD=365; SD=5738; ND=31; XD=1",
+            "Y=1998; C=365; CD=365; SD=5738; ND=31; XD=1")
         .explainContains(explain);
   }
 }

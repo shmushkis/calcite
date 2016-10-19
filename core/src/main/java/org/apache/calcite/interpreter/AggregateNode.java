@@ -41,13 +41,13 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.impl.AggregateFunctionImpl;
 import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -69,7 +69,7 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
   private final ImmutableList<AccumulatorFactory> accumulatorFactories;
   private final DataContext dataContext;
 
-  public AggregateNode(Interpreter interpreter, Aggregate rel) {
+  AggregateNode(Interpreter interpreter, Aggregate rel) {
     super(interpreter, rel);
     this.dataContext = interpreter.getDataContext();
 
@@ -118,13 +118,26 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
         }
       };
     }
-    if (call.getAggregation() == SqlStdOperatorTable.COUNT) {
+    switch (call.getAggregation().getKind()) {
+    case COUNT:
       return new AccumulatorFactory() {
         public Accumulator get() {
           return new CountAccumulator(call);
         }
       };
-    } else if (call.getAggregation() == SqlStdOperatorTable.SUM) {
+    case MIN:
+      return new AccumulatorFactory() {
+        public Accumulator get() {
+          return new MinAccumulator(call);
+        }
+      };
+    case MAX:
+      return new AccumulatorFactory() {
+        public Accumulator get() {
+          return new MaxAccumulator(call);
+        }
+      };
+    case SUM:
       final Class<?> clazz;
       switch (call.type.getSqlTypeName()) {
       case DOUBLE:
@@ -142,7 +155,7 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
       }
       return new UdaAccumulatorFactory(
           AggregateFunctionImpl.create(clazz), call);
-    } else {
+    default:
       final JavaTypeFactory typeFactory =
           (JavaTypeFactory) rel.getCluster().getTypeFactory();
       final RelDataType inputRowType = rel.getInput().getRowType();
@@ -261,6 +274,56 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
     public Object end() {
       return cnt;
+    }
+  }
+
+  /** Accumulator for calls to the MAX function. */
+  private static class MaxAccumulator implements Accumulator {
+    private final int arg;
+    long count = 0;
+    Comparable best;
+
+    MaxAccumulator(AggregateCall call) {
+      this.arg = Iterables.getOnlyElement(call.getArgList());
+    }
+
+    public void send(Row row) {
+      @SuppressWarnings("unchecked") final Comparable<Object> v =
+          (Comparable) row.getObject(arg);
+      if (v != null) {
+        if (count++ == 0 || v.compareTo(best) < 0) {
+          best = v;
+        }
+      }
+    }
+
+    public Comparable end() {
+      return best;
+    }
+  }
+
+  /** Accumulator for calls to the MIN function. */
+  private static class MinAccumulator implements Accumulator {
+    private final int arg;
+    long count = 0;
+    Comparable best;
+
+    MinAccumulator(AggregateCall call) {
+      this.arg = Iterables.getOnlyElement(call.getArgList());
+    }
+
+    public void send(Row row) {
+      @SuppressWarnings("unchecked") final Comparable<Object> v =
+          (Comparable) row.getObject(arg);
+      if (v != null) {
+        if (count++ == 0 || v.compareTo(best) > 0) {
+          best = v;
+        }
+      }
+    }
+
+    public Comparable end() {
+      return best;
     }
   }
 
