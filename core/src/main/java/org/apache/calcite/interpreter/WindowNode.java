@@ -56,6 +56,8 @@ public class WindowNode extends AbstractSingleNode<Window> {
     sink.end();
   }
 
+  /** Action that may be applied before or after seeing a row, to maintain
+   * internal state. */
   interface Action {
     void apply(Context context);
   }

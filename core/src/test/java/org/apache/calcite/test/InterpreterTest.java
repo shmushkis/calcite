@@ -33,6 +33,7 @@ import com.google.common.collect.Lists;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -293,6 +294,7 @@ public class InterpreterTest {
   }
 
   /** Tests an OVER query. */
+  @Ignore
   @Test public void testOver() {
     final String sql = "select \"the_year\" as y,\n"
         + "  sum(\"day_of_month\") over (\n"
