@@ -18,21 +18,46 @@ package org.apache.calcite.interpreter;
 
 import org.apache.calcite.rel.core.Window;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Interpreter node that implements a
  * {@link org.apache.calcite.rel.core.Window}.
  */
 public class WindowNode extends AbstractSingleNode<Window> {
+  private final Scalar scalar;
+  private final Context context;
+  private final int projectCount;
+  private final List<Action> beforeActions = new ArrayList<>();
+  private final List<Action> afterActions = new ArrayList<>();
+
   WindowNode(Interpreter interpreter, Window rel) {
     super(interpreter, rel);
+    projectCount = rel.getRowType().getFieldCount();
+    this.context = interpreter.createContext();
+    this.scalar = null;
   }
 
   public void run() throws InterruptedException {
     Row row;
     while ((row = source.receive()) != null) {
-      sink.send(row);
+      context.values = row.getValues();
+      for (Action action : beforeActions) {
+        action.apply(context);
+      }
+      Object[] values = new Object[projectCount];
+      scalar.execute(context, values);
+      sink.send(new Row(values));
+      for (Action action : beforeActions) {
+        action.apply(context);
+      }
     }
     sink.end();
+  }
+
+  interface Action {
+    void apply(Context context);
   }
 }
 

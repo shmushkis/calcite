@@ -269,7 +269,7 @@ public class InterpreterTest {
   }
 
   /** Tests a GROUP BY query on the Foodmart data set, using the Interpreter. */
-  @Test public void testCloneGroupBy() {
+  @Test public void testGroupBy() {
     final String sql = "select \"the_year\" as y, count(*) as c,\n"
         + " count(\"day_of_month\") as cd,\n"
         + " sum(\"day_of_month\") as sd,\n"
@@ -278,6 +278,29 @@ public class InterpreterTest {
         + "from \"foodmart2\".\"time_by_day\"\n"
         + "group by \"the_year\"\n"
         + "order by 1, 2";
+    final String explain = ""
+        + "BindableSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[ASC])\n"
+        + "  BindableAggregate(group=[{4}], C=[COUNT()], CD=[COUNT($5)], "
+        + "SD=[SUM($5)], ND=[MIN($5)], XD=[MAX($5)])\n"
+        + "    BindableTableScan(table=[[foodmart2, time_by_day]])";
+    CalciteAssert.that()
+        .with(CalciteAssert.Config.FOODMART_CLONE)
+        .query(sql)
+        .withProperty(Hook.ENABLE_BINDABLE, true)
+        .returnsOrdered("Y=1997; C=365; CD=365; SD=5738; ND=31; XD=1",
+            "Y=1998; C=365; CD=365; SD=5738; ND=31; XD=1")
+        .explainContains(explain);
+  }
+
+  /** Tests an OVER query. */
+  @Test public void testOver() {
+    final String sql = "select \"the_year\" as y,\n"
+        + "  sum(\"day_of_month\") over (\n"
+        + "    partition by \"the_year\"\n"
+        + "    order by \"the_date\"\n"
+        + "   rows 3 preceding) as c3\n"
+        + "from \"foodmart2\".\"time_by_day\"\n"
+        + "where \"month_of_year\" = 2";
     final String explain = ""
         + "BindableSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[ASC])\n"
         + "  BindableAggregate(group=[{4}], C=[COUNT()], CD=[COUNT($5)], "
