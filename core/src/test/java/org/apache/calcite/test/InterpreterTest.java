@@ -33,7 +33,6 @@ import com.google.common.collect.Lists;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -294,7 +293,6 @@ public class InterpreterTest {
   }
 
   /** Tests an OVER query. */
-  @Ignore
   @Test public void testOver() {
     final String sql = "select \"the_year\" as y,\n"
         + "  sum(\"day_of_month\") over (\n"
@@ -302,18 +300,28 @@ public class InterpreterTest {
         + "    order by \"the_date\"\n"
         + "   rows 3 preceding) as c3\n"
         + "from \"foodmart2\".\"time_by_day\"\n"
-        + "where \"month_of_year\" = 2";
+        + "where \"month_of_year\" = 2 and \"day_of_month\" between 1 and 5";
     final String explain = ""
-        + "BindableSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[ASC])\n"
-        + "  BindableAggregate(group=[{4}], C=[COUNT()], CD=[COUNT($5)], "
-        + "SD=[SUM($5)], ND=[MIN($5)], XD=[MAX($5)])\n"
-        + "    BindableTableScan(table=[[foodmart2, time_by_day]])";
+        + "BindableProject(Y=[$1], C3=[CASE(>($3, 0), CAST($4):SMALLINT, null)])\n"
+        + "  BindableWindow(window#0=[window(partition {1} order by [0]"
+        + " rows between $3 PRECEDING and CURRENT ROW aggs [COUNT($2), $SUM0($2)])])\n"
+        + "    BindableProject(the_date=[$1], the_year=[$4], day_of_month=[$5])\n"
+        + "      BindableFilter(condition=[AND(=(CAST($7):INTEGER, 2), >=($5, 1), <=($5, 5))])\n"
+        + "        BindableTableScan(table=[[foodmart2, time_by_day]])\n";
     CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
         .query(sql)
         .withProperty(Hook.ENABLE_BINDABLE, true)
-        .returnsOrdered("Y=1997; C=365; CD=365; SD=5738; ND=31; XD=1",
-            "Y=1998; C=365; CD=365; SD=5738; ND=31; XD=1")
+        .returnsOrdered("Y=1997; C3=1",
+            "Y=1997; C3=3",
+            "Y=1997; C3=6",
+            "Y=1997; C3=9",
+            "Y=1997; C3=12",
+            "Y=1998; C3=1",
+            "Y=1998; C3=3",
+            "Y=1998; C3=6",
+            "Y=1998; C3=9",
+            "Y=1998; C3=12")
         .explainContains(explain);
   }
 }
