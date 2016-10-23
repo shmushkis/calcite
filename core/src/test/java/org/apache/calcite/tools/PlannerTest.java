@@ -48,6 +48,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectToWindowRule;
+import org.apache.calcite.rel.rules.SortRemoveEquivalenceRule;
 import org.apache.calcite.rel.rules.SortRemoveRule;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -416,11 +417,28 @@ public class PlannerTest {
         + "select empid, deptno "
         + "from emps "
         + "order by emps.deptno) "
+                    + "where deptno = 5 "
         + "order by deptno",
         "EnumerableProject(EXPR$0=[+($0, $1)], deptno=[$1])\n"
         + "  EnumerableSort(sort0=[$1], dir0=[ASC])\n"
         + "    EnumerableProject(empid=[$0], deptno=[$1])\n"
         + "      EnumerableTableScan(table=[[hr, emps]])\n");
+  }
+
+  /** Unit test that parses, validates, converts and
+   * plans for query using two duplicate order by.
+   * The duplicate order by should be removed by SortRemoveRule*/
+  @Test public void testRedundantSortPlanWithExpr() throws Exception {
+    runRedundantSortCheck("select empid+deptno from ( "
+                    + "select empid, deptno "
+                    + "from emps "
+                    + "order by emps.deptno) "
+                    + "where deptno = 1 "
+                    + "order by deptno",
+            "EnumerableProject(EXPR$0=[+($0, $1)], deptno=[$1])\n"
+                    + "  EnumerableSort(sort0=[$1], dir0=[ASC])\n"
+                    + "    EnumerableProject(empid=[$0], deptno=[$1])\n"
+                    + "      EnumerableTableScan(table=[[hr, emps]])\n");
   }
 
   /** Tests that outer order by is not removed since window function
@@ -467,6 +485,34 @@ public class PlannerTest {
     RelNode convert = planner.rel(validate).rel;
     RelTraitSet traitSet = planner.getEmptyTraitSet()
         .replace(EnumerableConvention.INSTANCE);
+    if (traitSet.getTrait(RelCollationTraitDef.INSTANCE) == null) {
+      // SortRemoveRule can only work if collation trait is enabled.
+      return;
+    }
+    RelNode transform = planner.transform(0, traitSet, convert);
+    assertThat(toString(transform), equalTo(plan));
+  }
+
+  // If proper "SqlParseException, ValidationException, RelConversionException"
+  // is used, then checkstyle fails with
+  // "Redundant throws: 'ValidationException' listed more then one time"
+  // "Redundant throws: 'RelConversionException' listed more then one time"
+  private void runRedundantSortCheck(String sql, String plan) throws Exception {
+    RuleSet ruleSet =
+            RuleSets.ofList(
+                    SortRemoveEquivalenceRule.INSTANCE,
+                    EnumerableRules.ENUMERABLE_PROJECT_RULE,
+                    EnumerableRules.ENUMERABLE_WINDOW_RULE,
+                    EnumerableRules.ENUMERABLE_SORT_RULE,
+                    ProjectToWindowRule.PROJECT);
+    Planner planner = getPlanner(null,
+            SqlParser.configBuilder().setLex(Lex.JAVA).build(),
+            Programs.of(ruleSet));
+    SqlNode parse = planner.parse(sql);
+    SqlNode validate = planner.validate(parse);
+    RelNode convert = planner.rel(validate).rel;
+    RelTraitSet traitSet = planner.getEmptyTraitSet()
+            .replace(EnumerableConvention.INSTANCE);
     if (traitSet.getTrait(RelCollationTraitDef.INSTANCE) == null) {
       // SortRemoveRule can only work if collation trait is enabled.
       return;
