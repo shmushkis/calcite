@@ -17,6 +17,7 @@
 #
 !use post
 !set outputformat mysql
+!push bindable true
 
 # Multiple window functions sharing a single window
 select count(*) over(partition by gender order by ename) as count1,
