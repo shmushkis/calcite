@@ -1665,22 +1665,22 @@ public class RexImpTable {
       //   ignore_null
       //     return x == null ? y : y == null ? x : x OP y
       if (backupMethodName != null) {
-        RelDataType leftType = call.getOperands().get(0).getType();
-        RelDataType rightType = call.getOperands().get(1).getType();
-
-        if (leftType.getSqlTypeName().equals(SqlTypeName.ANY)
-            || rightType.getSqlTypeName().equals(SqlTypeName.ANY)) {
-          // one or both of parameter(s) is(are) ANY type
+        // If one or both operands have ANY type, use the late-binding backup
+        // method.
+        if (anyAnyOperands(call)) {
           return callBackupMethodAnyType(translator, call, expressions);
         }
 
-        Type type0 = expressions.get(0).getType();
-        Type type1 = expressions.get(1).getType();
+        final Type type0 = expressions.get(0).getType();
+        final Type type1 = expressions.get(1).getType();
         final SqlBinaryOperator op = (SqlBinaryOperator) call.getOperator();
         final Primitive primitive = Primitive.ofBoxOr(type0);
-        if (primitive == null || type1 == BigDecimal.class
-            || COMPARISON_OPERATORS.contains(op) && !COMP_OP_TYPES.contains(primitive)) {
-          return Expressions.call(SqlFunctions.class, backupMethodName, expressions);
+        if (primitive == null
+            || type1 == BigDecimal.class
+            || COMPARISON_OPERATORS.contains(op)
+            && !COMP_OP_TYPES.contains(primitive)) {
+          return Expressions.call(SqlFunctions.class, backupMethodName,
+              expressions);
         }
       }
 
@@ -1691,27 +1691,34 @@ public class RexImpTable {
               expressions.get(1)));
     }
 
-    private Expression callBackupMethodAnyType(RexToLixTranslator translator, RexCall call,
-        List<Expression> expressions) {
-      String backupMethodNameForAnyType = backupMethodName + METHOD_POSTFIX_FOR_ANY_TYPE;
-      Type type0 = expressions.get(0).getType();
-      Type type1 = expressions.get(1).getType();
+    /** Returns whether any of a call's operands have ANY type. */
+    private boolean anyAnyOperands(RexCall call) {
+      for (RexNode operand : call.operands) {
+        if (operand.getType().getSqlTypeName() == SqlTypeName.ANY) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    private Expression callBackupMethodAnyType(RexToLixTranslator translator,
+        RexCall call, List<Expression> expressions) {
+      final String backupMethodNameForAnyType =
+          backupMethodName + METHOD_POSTFIX_FOR_ANY_TYPE;
 
       // one or both of parameter(s) is(are) ANY type
-      final Primitive primitive0 = Primitive.of(type0);
-      final Primitive primitive1 = Primitive.of(type1);
-      Expression expression0 = expressions.get(0);
-      Expression expression1 = expressions.get(1);
-
-      if (primitive0 != null) {
-        expression0 = Expressions.box(expression0, primitive0);
-      }
-      if (primitive1 != null) {
-        expression1 = Expressions.box(expression1, primitive1);
-      }
-
+      final Expression expression0 = maybeBox(expressions.get(0));
+      final Expression expression1 = maybeBox(expressions.get(1));
       return Expressions.call(SqlFunctions.class, backupMethodNameForAnyType,
           expression0, expression1);
+    }
+
+    private Expression maybeBox(Expression expression) {
+      final Primitive primitive = Primitive.of(expression.getType());
+      if (primitive != null) {
+        expression = Expressions.box(expression, primitive);
+      }
+      return expression;
     }
   }
 
