@@ -21,6 +21,7 @@ import org.apache.calcite.linq4j.AbstractEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
+import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.TransformedEnumerator;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
@@ -44,12 +45,11 @@ import org.apache.calcite.util.ReflectiveVisitDispatcher;
 import org.apache.calcite.util.ReflectiveVisitor;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
 
 import java.math.BigDecimal;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -63,10 +63,9 @@ import java.util.NoSuchElementException;
  */
 public class Interpreter extends AbstractEnumerable<Object[]>
     implements AutoCloseable {
-  final Map<RelNode, NodeInfo> nodes = Maps.newLinkedHashMap();
+  private final Map<RelNode, NodeInfo> nodes = new LinkedHashMap<>();
   private final DataContext dataContext;
   private final RelNode rootRel;
-  private final Map<RelNode, RelInfo> relInputs = new HashMap<>();
   protected final ScalarCompiler scalarCompiler;
 
   /** Creates an Interpreter. */
@@ -75,8 +74,23 @@ public class Interpreter extends AbstractEnumerable<Object[]>
     this.scalarCompiler =
         new JaninoRexCompiler(rootRel.getCluster().getRexBuilder());
     final RelNode rel = optimize(rootRel);
+    visit(null, 0, rootRel);
     final Compiler compiler = new Nodes.CoreCompiler(this);
     this.rootRel = compiler.visitRoot(rel);
+  }
+
+  private void visit(RelNode parent, int ordinal, RelNode r) {
+    NodeInfo nodeInfo = nodes.get(r);
+    if (nodeInfo == null) {
+      nodeInfo = new NodeInfo(r);
+      nodes.put(r, nodeInfo);
+    }
+    if (parent != null) {
+      nodeInfo.outputs.add(Pair.of(parent, ordinal));
+    }
+    for (Ord<RelNode> input : Ord.zip(r.getInputs())) {
+      visit(r, input.i, input.e);
+    }
   }
 
   private RelNode optimize(RelNode rootRel) {
@@ -264,14 +278,15 @@ public class Interpreter extends AbstractEnumerable<Object[]>
       return new ListSource(((ListSink) nodeInfo.sink).list);
     }
     if (sink instanceof MultiListSink) {
-      return new ListSource(((MultiListSink) nodeInfo.sink).lists.get(nodeInfo.consumerCount++));
+      int i = nodeInfo.outputs.indexOf(Pair.of(rel, ordinal));
+      return new ListSource(((MultiListSink) nodeInfo.sink).lists.get(i));
     }
     throw new IllegalStateException(
       "Got a sink " + sink + " to which there is no match source type!");
   }
 
   private RelNode getInput(RelNode rel, int ordinal) {
-    final RelInfo info = relInputs.get(rel);
+    final NodeInfo info = nodes.get(rel);
     if (info != null) {
       return info.inputs.get(ordinal);
     }
@@ -293,13 +308,10 @@ public class Interpreter extends AbstractEnumerable<Object[]>
    * @return Sink
    */
   public Sink sink(RelNode rel) {
-    NodeInfo nodeInfo = nodes.get(rel);
-    if (nodeInfo == null) {
-      final ArrayDeque<Row> queue = new ArrayDeque<>(1);
-      final Sink sink = new ListSink(queue);
-      nodeInfo = new NodeInfo(rel, sink, null);
-      nodes.put(rel, nodeInfo);
-    }
+    final NodeInfo nodeInfo = nodes.get(rel);
+    final ArrayDeque<Row> queue = new ArrayDeque<>(1);
+    nodeInfo.sink = new ListSink(queue);
+    assert nodeInfo.rowEnumerable == null;
     return nodeInfo.sink;
   }
 
@@ -314,7 +326,9 @@ public class Interpreter extends AbstractEnumerable<Object[]>
    * @param rowEnumerable Contents of relational expression
    */
   public void enumerable(RelNode rel, Enumerable<Row> rowEnumerable) {
-    NodeInfo nodeInfo = new NodeInfo(rel, null, rowEnumerable);
+    final NodeInfo nodeInfo = nodes.get(rel);
+    nodeInfo.rowEnumerable = rowEnumerable;
+    assert nodeInfo.sink == null;
     nodes.put(rel, nodeInfo);
   }
 
@@ -329,16 +343,15 @@ public class Interpreter extends AbstractEnumerable<Object[]>
   /** Information about a node registered in the data flow graph. */
   private static class NodeInfo {
     final RelNode rel;
-    final Sink sink;
-    final Enumerable<Row> rowEnumerable;
+    final List<RelNode> inputs;
+    final List<Pair<RelNode, Integer>> outputs = new ArrayList<>();
+    Sink sink;
+    Enumerable<Row> rowEnumerable;
     Node node;
-    int consumerCount;
 
-    public NodeInfo(RelNode rel, Sink sink, Enumerable<Row> rowEnumerable) {
+    public NodeInfo(RelNode rel) {
       this.rel = rel;
-      this.sink = sink;
-      this.rowEnumerable = rowEnumerable;
-      assert (sink != null) != (rowEnumerable != null) : "one or the other";
+      this.inputs = new ArrayList<>(rel.getInputs());
     }
   }
 
@@ -492,20 +505,15 @@ public class Interpreter extends AbstractEnumerable<Object[]>
         }
         p = rel;
         if (parent != null) {
-          RelInfo info = interpreter.relInputs.get(parent);
-          if (info == null) {
-            info = new RelInfo(parent.getInputs());
-            interpreter.relInputs.put(parent, info);
-          }
+          NodeInfo info = interpreter.nodes.get(parent);
           info.inputs.set(ordinal, p);
-          info.outputs.add(Pair.of(parent, ordinal));
         } else {
           rootRel = p;
         }
       }
 
       // rewrite children first (from left to right)
-      final RelInfo info = interpreter.relInputs.get(p);
+      final NodeInfo info = interpreter.nodes.get(p);
       if (info != null) {
         for (int i = 0; i < info.inputs.size(); i++) {
           RelNode input = info.inputs.get(i);
