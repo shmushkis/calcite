@@ -38,16 +38,18 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.ReflectUtil;
 import org.apache.calcite.util.ReflectiveVisitDispatcher;
 import org.apache.calcite.util.ReflectiveVisitor;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import java.math.BigDecimal;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -64,7 +66,7 @@ public class Interpreter extends AbstractEnumerable<Object[]>
   final Map<RelNode, NodeInfo> nodes = Maps.newLinkedHashMap();
   private final DataContext dataContext;
   private final RelNode rootRel;
-  private final Map<RelNode, List<RelNode>> relInputs = Maps.newHashMap();
+  private final Map<RelNode, RelInfo> relInputs = new HashMap<>();
   protected final ScalarCompiler scalarCompiler;
 
   /** Creates an Interpreter. */
@@ -259,16 +261,19 @@ public class Interpreter extends AbstractEnumerable<Object[]>
     }
     Sink sink = nodeInfo.sink;
     if (sink instanceof ListSink) {
-      return new ListSource((ListSink) nodeInfo.sink);
+      return new ListSource(((ListSink) nodeInfo.sink).list);
+    }
+    if (sink instanceof MultiListSink) {
+      return new ListSource(((MultiListSink) nodeInfo.sink).lists.get(nodeInfo.consumerCount++));
     }
     throw new IllegalStateException(
       "Got a sink " + sink + " to which there is no match source type!");
   }
 
   private RelNode getInput(RelNode rel, int ordinal) {
-    final List<RelNode> inputs = relInputs.get(rel);
-    if (inputs != null) {
-      return inputs.get(ordinal);
+    final RelInfo info = relInputs.get(rel);
+    if (info != null) {
+      return info.inputs.get(ordinal);
     }
     return rel.getInput(ordinal);
   }
@@ -280,15 +285,22 @@ public class Interpreter extends AbstractEnumerable<Object[]>
    * But a constructor could instead call
    * {@link #enumerable(RelNode, Enumerable)}.
    *
+   * <p>If a particular relational expression is used more than once in a plan,
+   * this method will be called more than once, and each time it will return
+   * the same Sink object.
+   *
    * @param rel Relational expression
    * @return Sink
    */
   public Sink sink(RelNode rel) {
-    final ArrayDeque<Row> queue = new ArrayDeque<>(1);
-    final Sink sink = new ListSink(queue);
-    NodeInfo nodeInfo = new NodeInfo(rel, sink, null);
-    nodes.put(rel, nodeInfo);
-    return sink;
+    NodeInfo nodeInfo = nodes.get(rel);
+    if (nodeInfo == null) {
+      final ArrayDeque<Row> queue = new ArrayDeque<>(1);
+      final Sink sink = new ListSink(queue);
+      nodeInfo = new NodeInfo(rel, sink, null);
+      nodes.put(rel, nodeInfo);
+    }
+    return nodeInfo.sink;
   }
 
   /** Tells the interpreter that a given relational expression wishes to
@@ -320,6 +332,7 @@ public class Interpreter extends AbstractEnumerable<Object[]>
     final Sink sink;
     final Enumerable<Row> rowEnumerable;
     Node node;
+    int consumerCount;
 
     public NodeInfo(RelNode rel, Sink sink, Enumerable<Row> rowEnumerable) {
       this.rel = rel;
@@ -380,12 +393,40 @@ public class Interpreter extends AbstractEnumerable<Object[]>
     }
   }
 
+  /** Implementation of {@link Sink} using multiple
+   * {@link java.util.ArrayDeque}s. */
+  private static class MultiListSink implements Sink {
+    final List<ArrayDeque<Row>> lists = new ArrayList<>();
+
+    private MultiListSink() {
+    }
+
+    public void send(Row row) throws InterruptedException {
+      for (ArrayDeque<Row> list : lists) {
+        list.add(row);
+      }
+    }
+
+    public void end() throws InterruptedException {
+    }
+
+    @Override public void setSourceEnumerable(Enumerable<Row> enumerable)
+        throws InterruptedException {
+      // just copy over the source into the local list
+      final Enumerator<Row> enumerator = enumerable.enumerator();
+      while (enumerator.moveNext()) {
+        this.send(enumerator.current());
+      }
+      enumerator.close();
+    }
+  }
+
   /** Implementation of {@link Source} using a {@link java.util.ArrayDeque}. */
   private static class ListSource implements Source {
     private final ArrayDeque<Row> list;
 
-    public ListSource(ListSink sink) {
-      this.list = sink.list;
+    public ListSource(ArrayDeque<Row> list) {
+      this.list = list;
     }
 
     public Row receive() {
@@ -451,22 +492,23 @@ public class Interpreter extends AbstractEnumerable<Object[]>
         }
         p = rel;
         if (parent != null) {
-          List<RelNode> inputs = interpreter.relInputs.get(parent);
-          if (inputs == null) {
-            inputs = Lists.newArrayList(parent.getInputs());
-            interpreter.relInputs.put(parent, inputs);
+          RelInfo info = interpreter.relInputs.get(parent);
+          if (info == null) {
+            info = new RelInfo(parent.getInputs());
+            interpreter.relInputs.put(parent, info);
           }
-          inputs.set(ordinal, p);
+          info.inputs.set(ordinal, p);
+          info.outputs.add(Pair.of(parent, ordinal));
         } else {
           rootRel = p;
         }
       }
 
       // rewrite children first (from left to right)
-      final List<RelNode> inputs = interpreter.relInputs.get(p);
-      if (inputs != null) {
-        for (int i = 0; i < inputs.size(); i++) {
-          RelNode input = inputs.get(i);
+      final RelInfo info = interpreter.relInputs.get(p);
+      if (info != null) {
+        for (int i = 0; i < info.inputs.size(); i++) {
+          RelNode input = info.inputs.get(i);
           visit(input, i, p);
         }
       } else {
@@ -505,6 +547,16 @@ public class Interpreter extends AbstractEnumerable<Object[]>
    * values. */
   interface ScalarCompiler {
     Scalar compile(List<RexNode> nodes, RelDataType inputRowType);
+  }
+
+  /** Information about a {@link RelNode}'s inputs and outputs. */
+  private static class RelInfo {
+    private final List<RelNode> inputs;
+    private final List<Pair<RelNode, Integer>> outputs = new ArrayList<>();
+
+    RelInfo(List<RelNode> inputs) {
+      this.inputs = new ArrayList<>(inputs);
+    }
   }
 }
 
