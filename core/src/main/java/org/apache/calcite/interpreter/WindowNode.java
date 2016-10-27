@@ -184,11 +184,11 @@ public class WindowNode extends AbstractSingleNode<Window> {
           return c;
         }
       case SUM0:
-        int sum = 0;
+        long sum = 0;
         for (Object[] row : deque) {
-          Short v = (Short) row[operand];
+          Number v = (Number) row[operand];
           if (v != null) {
-            sum += v;
+            sum += v.longValue();
           }
         }
         return sum;

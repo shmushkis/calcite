@@ -74,12 +74,15 @@ public class Interpreter extends AbstractEnumerable<Object[]>
     this.scalarCompiler =
         new JaninoRexCompiler(rootRel.getCluster().getRexBuilder());
     final RelNode rel = optimize(rootRel);
-    visit(null, 0, rootRel);
+    register(null, 0, rel);
     final Compiler compiler = new Nodes.CoreCompiler(this);
     this.rootRel = compiler.visitRoot(rel);
   }
 
-  private void visit(RelNode parent, int ordinal, RelNode r) {
+  private void register(RelNode parent, int ordinal, RelNode r) {
+    for (Ord<RelNode> input : Ord.zip(r.getInputs())) {
+      register(r, input.i, input.e);
+    }
     NodeInfo nodeInfo = nodes.get(r);
     if (nodeInfo == null) {
       nodeInfo = new NodeInfo(r);
@@ -87,9 +90,6 @@ public class Interpreter extends AbstractEnumerable<Object[]>
     }
     if (parent != null) {
       nodeInfo.outputs.add(Pair.of(parent, ordinal));
-    }
-    for (Ord<RelNode> input : Ord.zip(r.getInputs())) {
-      visit(r, input.i, input.e);
     }
   }
 
@@ -273,16 +273,15 @@ public class Interpreter extends AbstractEnumerable<Object[]>
     if (nodeInfo.rowEnumerable != null) {
       return new EnumeratorSource(nodeInfo.rowEnumerable.enumerator());
     }
-    Sink sink = nodeInfo.sink;
-    if (sink instanceof ListSink) {
+    if (nodeInfo.sink instanceof ListSink) {
       return new ListSource(((ListSink) nodeInfo.sink).list);
     }
-    if (sink instanceof MultiListSink) {
+    if (nodeInfo.sink instanceof MultiListSink) {
       int i = nodeInfo.outputs.indexOf(Pair.of(rel, ordinal));
       return new ListSource(((MultiListSink) nodeInfo.sink).lists.get(i));
     }
-    throw new IllegalStateException(
-      "Got a sink " + sink + " to which there is no match source type!");
+    throw new IllegalStateException("Got a sink " + nodeInfo.sink
+        + " to which there is no matching source type!");
   }
 
   private RelNode getInput(RelNode rel, int ordinal) {
@@ -309,9 +308,16 @@ public class Interpreter extends AbstractEnumerable<Object[]>
    */
   public Sink sink(RelNode rel) {
     final NodeInfo nodeInfo = nodes.get(rel);
-    final ArrayDeque<Row> queue = new ArrayDeque<>(1);
-    nodeInfo.sink = new ListSink(queue);
     assert nodeInfo.rowEnumerable == null;
+    if (nodeInfo.outputs.size() <= 1) {
+      nodeInfo.sink = new ListSink(new ArrayDeque<Row>(1));
+    } else {
+      final MultiListSink multiListSink = new MultiListSink();
+      nodeInfo.sink = multiListSink;
+      for (Pair<RelNode, Integer> output : nodeInfo.outputs) {
+        multiListSink.lists.add(new ArrayDeque<Row>());
+      }
+    }
     return nodeInfo.sink;
   }
 
@@ -490,6 +496,8 @@ public class Interpreter extends AbstractEnumerable<Object[]>
     }
 
     @Override public void visit(RelNode p, int ordinal, RelNode parent) {
+      NodeInfo info = interpreter.nodes.get(p);
+      assert info != null;
       for (;;) {
         rel = null;
         boolean found = dispatcher.invokeVisitor(this, p, REWRITE_METHOD_NAME);
@@ -503,43 +511,39 @@ public class Interpreter extends AbstractEnumerable<Object[]>
         if (CalcitePrepareImpl.DEBUG) {
           System.out.println("Interpreter: rewrite " + p + " to " + rel);
         }
+        info = new NodeInfo(rel);
+        interpreter.nodes.put(rel, info);
         p = rel;
         if (parent != null) {
-          NodeInfo info = interpreter.nodes.get(parent);
-          info.inputs.set(ordinal, p);
+          final NodeInfo info2 = interpreter.nodes.get(parent);
+          info2.inputs.set(ordinal, p);
         } else {
           rootRel = p;
         }
       }
 
       // rewrite children first (from left to right)
-      final NodeInfo info = interpreter.nodes.get(p);
-      if (info != null) {
-        for (int i = 0; i < info.inputs.size(); i++) {
-          RelNode input = info.inputs.get(i);
-          visit(input, i, p);
-        }
-      } else {
-        p.childrenAccept(this);
+      for (Ord<RelNode> input : Ord.zip(info.inputs)) {
+        visit(input.e, input.i, p);
       }
 
-      node = null;
-      boolean found = dispatcher.invokeVisitor(this, p, VISIT_METHOD_NAME);
-      if (!found) {
-        if (p instanceof InterpretableRel) {
-          InterpretableRel interpretableRel = (InterpretableRel) p;
-          node = interpretableRel.implement(
-              new InterpretableRel.InterpreterImplementor(interpreter, null,
-                  null));
-        } else {
-          // Probably need to add a visit(XxxRel) method to CoreCompiler.
-          throw new AssertionError("interpreter: no implementation for "
-              + p.getClass());
+      if (info.node == null) {
+        node = null;
+        boolean found = dispatcher.invokeVisitor(this, p, VISIT_METHOD_NAME);
+        if (!found) {
+          if (p instanceof InterpretableRel) {
+            InterpretableRel interpretableRel = (InterpretableRel) p;
+            node = interpretableRel.implement(
+                new InterpretableRel.InterpreterImplementor(interpreter, null,
+                    null));
+          } else {
+            // Probably need to add a visit(XxxRel) method to CoreCompiler.
+            throw new AssertionError("interpreter: no implementation for "
+                + p.getClass());
+          }
         }
+        info.node = node;
       }
-      final NodeInfo nodeInfo = interpreter.nodes.get(p);
-      assert nodeInfo != null;
-      nodeInfo.node = node;
     }
 
     /** Fallback rewrite method.
@@ -557,15 +561,6 @@ public class Interpreter extends AbstractEnumerable<Object[]>
     Scalar compile(List<RexNode> nodes, RelDataType inputRowType);
   }
 
-  /** Information about a {@link RelNode}'s inputs and outputs. */
-  private static class RelInfo {
-    private final List<RelNode> inputs;
-    private final List<Pair<RelNode, Integer>> outputs = new ArrayList<>();
-
-    RelInfo(List<RelNode> inputs) {
-      this.inputs = new ArrayList<>(inputs);
-    }
-  }
 }
 
 // End Interpreter.java

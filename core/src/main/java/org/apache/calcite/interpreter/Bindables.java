@@ -670,15 +670,16 @@ public class Bindables {
     }
 
     public RelNode convert(RelNode rel) {
-      final LogicalWindow winAgg = (LogicalWindow) rel;
+      final LogicalWindow window = (LogicalWindow) rel;
       final RelTraitSet traitSet =
-          winAgg.getTraitSet().replace(BindableConvention.INSTANCE);
-      final RelNode input = winAgg.getInput();
+          window.getTraitSet().replace(BindableConvention.INSTANCE);
+      final RelNode input = window.getInput();
       final RelNode convertedInput =
           convert(input,
-              input.getTraitSet().replace(BindableConvention.INSTANCE));
+              input.getTraitSet().replace(BindableConvention.INSTANCE)
+                  .replace(window.groups.get(0).orderKeys));
       return new BindableWindow(rel.getCluster(), traitSet, convertedInput,
-          winAgg.getConstants(), winAgg.getRowType(), winAgg.groups);
+          window.getConstants(), window.getRowType(), window.groups);
     }
   }
 }
