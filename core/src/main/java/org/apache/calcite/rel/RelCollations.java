@@ -59,7 +59,8 @@ public class RelCollations {
     return new RelCollationImpl(ImmutableList.copyOf(fieldCollations));
   }
 
-  public static RelCollation of(List<RelFieldCollation> fieldCollations) {
+  public static RelCollation
+  of(Iterable<? extends RelFieldCollation> fieldCollations) {
     return new RelCollationImpl(ImmutableList.copyOf(fieldCollations));
   }
 

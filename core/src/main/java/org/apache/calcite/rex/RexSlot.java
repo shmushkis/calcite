@@ -18,7 +18,11 @@ package org.apache.calcite.rex;
 
 import org.apache.calcite.rel.type.RelDataType;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
+
 import java.util.AbstractList;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -50,6 +54,17 @@ public abstract class RexSlot extends RexVariable {
 
   public int getIndex() {
     return index;
+  }
+
+  /** Returns the indexes of a list of slots.
+   * Throws if they are not all slots. */
+  public static List<Integer> indexes(List<RexNode> exprs) {
+    return Lists.transform(exprs,
+        new Function<RexNode, Integer>() {
+          public Integer apply(RexNode expr) {
+            return ((RexSlot) expr).getIndex();
+          }
+        });
   }
 
   /**

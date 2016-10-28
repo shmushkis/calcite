@@ -22,8 +22,6 @@ import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollations;
-import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.SingleRel;
@@ -33,7 +31,6 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexChecker;
 import org.apache.calcite.rex.RexFieldCollation;
 import org.apache.calcite.rex.RexLiteral;
-import org.apache.calcite.rex.RexLocalRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.rex.RexWindowBound;
@@ -131,35 +128,15 @@ public abstract class Window extends SingleRel {
     return pw;
   }
 
+  @SuppressWarnings("unused")
+  @Deprecated // to be removed before 2.0
   public static ImmutableIntList getProjectOrdinals(final List<RexNode> exprs) {
-    return ImmutableIntList.copyOf(
-        new AbstractList<Integer>() {
-          public Integer get(int index) {
-            return ((RexSlot) exprs.get(index)).getIndex();
-          }
-
-          public int size() {
-            return exprs.size();
-          }
-        });
+    return ImmutableIntList.copyOf(RexSlot.indexes(exprs));
   }
 
-  public static RelCollation getCollation(
-      final List<RexFieldCollation> collations) {
-    return RelCollations.of(
-        new AbstractList<RelFieldCollation>() {
-          public RelFieldCollation get(int index) {
-            final RexFieldCollation collation = collations.get(index);
-            return new RelFieldCollation(
-                ((RexLocalRef) collation.left).getIndex(),
-                collation.getDirection(),
-                collation.getNullDirection());
-          }
-
-          public int size() {
-            return collations.size();
-          }
-        });
+  @Deprecated // to be removed before 2.0
+  public static RelCollation getCollation(List<RexFieldCollation> collations) {
+    return RexFieldCollation.collect(collations);
   }
 
   /**
@@ -315,7 +292,7 @@ public abstract class Window extends SingleRel {
         public AggregateCall get(int index) {
           final RexWinAggCall aggCall = aggCalls.get(index);
           return AggregateCall.create((SqlAggFunction) aggCall.getOperator(),
-              false, getProjectOrdinals(aggCall.getOperands()), -1,
+              false, RexSlot.indexes(aggCall.getOperands()), -1,
               aggCall.getType(), fieldNames.get(aggCall.ordinal));
         }
       };

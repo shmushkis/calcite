@@ -16,11 +16,15 @@
  */
 package org.apache.calcite.rex;
 
+import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.Pair;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 import java.util.Set;
 
@@ -30,6 +34,22 @@ import java.util.Set;
 public class RexFieldCollation extends Pair<RexNode, ImmutableSet<SqlKind>> {
   public RexFieldCollation(RexNode left, Set<SqlKind> right) {
     super(left, ImmutableSet.copyOf(right));
+  }
+
+  /** Converts a list of {@code RexFieldCollation}s to a
+   * {@link org.apache.calcite.rel.RelCollation}. */
+  public static RelCollation collect(
+      final Iterable<? extends RexFieldCollation> collations) {
+    return RelCollations.of(
+        Iterables.transform(collations,
+            new Function<RexFieldCollation, RelFieldCollation>() {
+              public RelFieldCollation apply(RexFieldCollation collation) {
+                return new RelFieldCollation(
+                    ((RexLocalRef) collation.left).getIndex(),
+                    collation.getDirection(),
+                    collation.getNullDirection());
+              }
+            }));
   }
 
   @Override public String toString() {

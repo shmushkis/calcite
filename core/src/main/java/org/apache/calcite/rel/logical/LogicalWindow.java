@@ -32,6 +32,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexOver;
 import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.rex.RexWindow;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.tools.RelBuilder;
@@ -42,7 +43,6 @@ import org.apache.calcite.util.Pair;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
 import java.util.AbstractList;
@@ -311,8 +311,7 @@ public final class LogicalWindow extends Window {
     private final RexWindowBound lowerBound;
     private final RexWindowBound upperBound;
 
-    public WindowKey(
-        ImmutableBitSet groupSet,
+    WindowKey(ImmutableBitSet groupSet,
         RelCollation orderKeys,
         boolean isRows,
         RexWindowBound lowerBound,
@@ -345,8 +344,7 @@ public final class LogicalWindow extends Window {
     final RexWindow aggWindow = over.getWindow();
 
     // Look up or create a window.
-    RelCollation orderKeys = getCollation(
-      Lists.newArrayList(
+    RelCollation orderKeys = RexFieldCollation.collect(
         Iterables.filter(aggWindow.orderKeys,
           new Predicate<RexFieldCollation>() {
             public boolean apply(RexFieldCollation rexFieldCollation) {
@@ -354,9 +352,9 @@ public final class LogicalWindow extends Window {
               // then we can ignore such ORDER BY key.
               return rexFieldCollation.left instanceof RexLocalRef;
             }
-          })));
+          }));
     ImmutableBitSet groupSet =
-        ImmutableBitSet.of(getProjectOrdinals(aggWindow.partitionKeys));
+        ImmutableBitSet.of(RexSlot.indexes(aggWindow.partitionKeys));
     final int groupLength = groupSet.length();
     if (inputFieldCount < groupLength) {
       // If PARTITION BY references constant, we can ignore such partition key.
