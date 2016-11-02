@@ -19,6 +19,7 @@ package org.apache.calcite.rex;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -316,7 +317,8 @@ class NullSafeVisitor {
   public RexNode castNotNull(RexNode e) {
     if (e instanceof RexCall) {
       final RexCall call = (RexCall) e;
-      if (RexUtil.isCoStrict(call.getOperator())) {
+      if (RexUtil.isCoStrict(call.getOperator())
+          && call.getKind() != SqlKind.CAST) {
         final List<RexNode> newOperands = new ArrayList<>();
         try (Mark ignore = mark()) {
           for (RexNode operand : values(call.getOperands())) {

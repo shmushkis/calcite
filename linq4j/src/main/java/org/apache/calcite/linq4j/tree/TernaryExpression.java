@@ -33,6 +33,9 @@ public class TernaryExpression extends Expression {
     assert expression0 != null : "expression0 should not be null";
     assert expression1 != null : "expression1 should not be null";
     assert expression2 != null : "expression2 should not be null";
+    assert expression0.type == boolean.class;
+    assert expression1.type == type;
+    assert expression2.type == type;
     this.expression0 = expression0;
     this.expression1 = expression1;
     this.expression2 = expression2;

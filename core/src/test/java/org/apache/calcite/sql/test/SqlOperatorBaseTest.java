@@ -338,6 +338,11 @@ public abstract class SqlOperatorBaseTest {
   }
 
 
+  @Test public void testBetween0() {
+    tester.checkBoolean("2 between symmetric 3 and 2", Boolean.TRUE);
+  }
+
+
   @Test public void testBetween() {
     tester.setFor(
         SqlStdOperatorTable.BETWEEN,

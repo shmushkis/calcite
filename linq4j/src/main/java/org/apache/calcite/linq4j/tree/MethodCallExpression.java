@@ -40,9 +40,11 @@ public class MethodCallExpression extends Expression {
     super(ExpressionType.Call, returnType);
     assert expressions != null : "expressions should not be null";
     assert method != null : "method should not be null";
-    assert (targetExpression == null) == Modifier.isStatic(
-        method.getModifiers());
+    assert (targetExpression == null) == Modifier.isStatic(method.getModifiers());
     assert Types.toClass(returnType) == method.getReturnType();
+    assert targetExpression == null
+        || method.getDeclaringClass().isAssignableFrom(
+            Types.toClass(targetExpression.type));
     this.method = method;
     this.targetExpression = targetExpression;
     this.expressions = expressions;
