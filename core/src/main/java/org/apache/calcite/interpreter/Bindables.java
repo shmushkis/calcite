@@ -29,6 +29,9 @@ import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.volcano.AbstractConverter;
+import org.apache.calcite.plan.volcano.RelSubset;
+import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.rel.InvalidRelException;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
@@ -674,11 +677,21 @@ public class Bindables {
       final RelTraitSet traitSet =
           window.getTraitSet().replace(BindableConvention.INSTANCE);
       final RelNode input = window.getInput();
-      final RelNode convertedInput =
-          convert(input,
-              input.getTraitSet().replace(BindableConvention.INSTANCE)
-                  .replace(window.groups.get(0).orderKeys));
-      return new BindableWindow(rel.getCluster(), traitSet, convertedInput,
+      final RelCollation collation = window.groups.get(0).orderKeys;
+      final RelNode bindableInput = convert(input, BindableConvention.INSTANCE);
+      final RelNode sortedInput = convert(bindableInput, collation);
+      if (sortedInput instanceof RelSubset
+          && bindableInput != sortedInput) {
+        final RelSubset subset = (RelSubset) bindableInput;
+        final RelOptCluster cluster = subset.getCluster();
+        final VolcanoPlanner volcanoPlanner =
+            (VolcanoPlanner) cluster.getPlanner();
+        volcanoPlanner.register(
+            new AbstractConverter(cluster, subset, collation.getTraitDef(),
+                sortedInput.getTraitSet()),
+            input);
+      }
+      return new BindableWindow(rel.getCluster(), traitSet, sortedInput,
           window.getConstants(), window.getRowType(), window.groups);
     }
   }

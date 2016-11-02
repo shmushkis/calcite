@@ -29,6 +29,7 @@ import org.apache.calcite.util.graph.Graphs;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.WeakHashMap;
 
@@ -96,6 +97,10 @@ public class ConventionTraitDef extends RelTraitDef<Convention> {
 
       conversionData.mapArcToConverterRule.put(
           Pair.of(inConvention, outConvention), converterRule);
+    } else {
+      // TODO:
+      ConversionData conversionData = getConversionData(planner);
+      conversionData.nonGuaranteedConverters.add(converterRule);
     }
   }
 
@@ -226,6 +231,11 @@ public class ConventionTraitDef extends RelTraitDef<Convention> {
         HashMultimap.create();
 
     private Graphs.FrozenGraph<Convention, DefaultEdge> pathMap;
+
+    /** A list of all converter rule instances whose
+     * {@link org.apache.calcite.rel.convert.ConverterRule#isGuaranteed()}
+     * method returns false. */
+    final List<ConverterRule> nonGuaranteedConverters = new ArrayList<>();
 
     public List<List<Convention>> getPaths(
         Convention fromConvention,
