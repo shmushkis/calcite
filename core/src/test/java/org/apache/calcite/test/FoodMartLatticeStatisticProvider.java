@@ -23,6 +23,7 @@ import org.apache.calcite.materialize.Lattices;
 
 import com.google.common.collect.ImmutableMap;
 
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -80,12 +81,12 @@ public class FoodMartLatticeStatisticProvider
   }
 
   /** Returns an estimate of the number of distinct values in a column. */
-  public int cardinality(Lattice lattice, Lattice.Column column) {
-    final Integer integer = CARDINALITY_MAP.get(column.alias);
+  public int cardinality(Lattice lattice, Collection<Lattice.Column> columns) {
+    final Integer integer = CARDINALITY_MAP.get(columns.alias);
     if (integer != null && integer > 0) {
       return integer;
     }
-    return column.alias.length();
+    return columns.alias.length();
   }
 }
 

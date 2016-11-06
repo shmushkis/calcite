@@ -20,8 +20,11 @@ import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.util.ImmutableBitSet;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+
+import java.util.Collection;
 
 /**
  * Implementation of {@link LatticeStatisticProvider} that gets statistics by
@@ -34,8 +37,14 @@ class SqlLatticeStatisticProvider implements LatticeStatisticProvider {
   /** Creates an SqlLatticeStatisticProvider. */
   private SqlLatticeStatisticProvider() {}
 
-  @Override public int cardinality(Lattice lattice, Lattice.Column column) {
-    final String sql = lattice.countSql(ImmutableBitSet.of(column.ordinal));
+  @Override public int cardinality(Lattice lattice, Collection<Lattice.Column> columns) {
+    final ImmutableBitSet bitSet = ImmutableBitSet.of(
+        Iterables.transform(columns, new Function<Lattice.Column, Integer>() {
+          public Integer apply(Lattice.Column column) {
+            return column.ordinal;
+          }
+        }));
+    final String sql = lattice.countSql(bitSet);
     final Table table =
         new MaterializationService.DefaultTableFactory()
             .createTable(lattice.rootSchema, sql, ImmutableList.<String>of());

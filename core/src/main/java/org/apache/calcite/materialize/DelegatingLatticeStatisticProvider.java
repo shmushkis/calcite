@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.materialize;
 
+import java.util.Collection;
+
 /**
  * Implementation of {@link LatticeStatisticProvider} that delegates
  * to an underlying provider.
@@ -33,8 +35,8 @@ public class DelegatingLatticeStatisticProvider
     this.provider = provider;
   }
 
-  public int cardinality(Lattice lattice, Lattice.Column column) {
-    return provider.cardinality(lattice, column);
+  public int cardinality(Lattice lattice, Collection<Lattice.Column> columns) {
+    return provider.cardinality(lattice, columns);
   }
 }
 
