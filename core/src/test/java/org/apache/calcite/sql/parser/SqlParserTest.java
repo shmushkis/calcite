@@ -762,6 +762,7 @@ public class SqlParserTest {
         "((`A` = (`X` NOT SIMILAR TO `Y`)) = `B`)");
     checkExp("a = x not in (y, z) = b",
         "((`A` = (`X` NOT IN (`Y`, `Z`))) = `B`)");
+    checkExpFails("a = x not in ^x^ and y", "(?s)Encountered \\\"x\\\" at .*");
 
     // LIKE has higher precedence than IS NULL
     checkExp("a like b is null", "((`A` LIKE `B`) IS NULL)");

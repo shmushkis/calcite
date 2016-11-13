@@ -2593,7 +2593,7 @@ List<Object> Expression2(ExprContext exprContext) :
     SqlNodeList nodeList;
     SqlNode e;
     SqlOperator op;
-    SqlParserPos pos = getPos();
+    SqlParserPos pos;
 }
 {
     Expression2b(exprContext, list)
@@ -2608,22 +2608,20 @@ List<Object> Expression2(ExprContext exprContext) :
                     checkNonQueryExpression(exprContext);
                 }
                 (
-                    <NOT> <IN>
-                    {
+                    <NOT> { pos = getPos(); }
+                    <IN> {
+                        pos = pos.plus(getPos());
                         op = SqlStdOperatorTable.NOT_IN;
-                        pos = getPos();
                     }
                 |
-                    <IN>
-                    {
-                        op = SqlStdOperatorTable.IN;
+                    <IN> {
                         pos = getPos();
+                        op = SqlStdOperatorTable.IN;
                     }
                 )
                 nodeList = ParenthesizedQueryOrCommaList(ExprContext.ACCEPT_NONCURSOR)
                 {
                     list.add(new SqlParserUtil.ToTreeListItem(op, pos));
-                    pos = pos.plus(getPos());
                     // special case for stuff like IN (s1 UNION s2)
                     if (nodeList.size() == 1) {
                         SqlNode item = nodeList.get(0);
@@ -2732,7 +2730,7 @@ List<Object> Expression2(ExprContext exprContext) :
         {
             return list;
         }
-        |
+    |
         {
             return list;
         }
