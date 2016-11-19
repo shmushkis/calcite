@@ -75,7 +75,7 @@ public class RelCollationTraitDef extends RelTraitDef<RelCollation> {
     final Sort sort = LogicalSort.create(rel, toCollation, null, null);
     RelNode newRel = planner.register(sort, rel);
     final RelTraitSet newTraitSet = rel.getTraitSet().replace(toCollation);
-    if (!newRel.getTraitSet().equals(newTraitSet) && false) {
+    if (!newRel.getTraitSet().equals(newTraitSet)) {
       newRel = planner.changeTraits(newRel, newTraitSet);
     }
     return newRel;

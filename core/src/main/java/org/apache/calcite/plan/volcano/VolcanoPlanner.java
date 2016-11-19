@@ -78,6 +78,7 @@ import org.apache.calcite.util.graph.Graphs;
 import org.apache.calcite.util.graph.TopologicalOrderIterator;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -1203,12 +1204,12 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
       }
 
       assert traitDef == toTrait.getTraitDef();
-//            if (fromTrait.subsumes(toTrait)) {
       if (fromTrait.equals(toTrait)) {
         // No need to convert; it's already correct.
         continue;
       }
 
+      //noinspection unchecked
       rel =
           traitDef.convert(
               this,
@@ -1216,11 +1217,11 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
               toTrait,
               allowInfiniteCostConverters);
       if (rel != null) {
-        assert rel.getTraitSet().getTrait(traitDef).satisfies(toTrait);
-        rel =
-            completeConversion(
-                rel, allowInfiniteCostConverters, toTraits,
-                Expressions.list(traitDef));
+        final RelTrait trait =
+            Preconditions.checkNotNull(rel.getTraitSet().getTrait(traitDef));
+        assert trait.satisfies(toTrait);
+        rel = completeConversion(rel, allowInfiniteCostConverters, toTraits,
+            Expressions.list(traitDef));
         if (rel != null) {
           register(rel, converted);
         }
@@ -1260,7 +1261,7 @@ public class VolcanoPlanner extends AbstractRelOptPlanner {
       boolean allowInfiniteCostConverters,
       RelTraitSet toTraits,
       Expressions.FluentList<RelTraitDef> usedTraits) {
-    if (true) {
+    if (false) {
       return rel;
     }
     for (RelTrait trait : rel.getTraitSet()) {

@@ -55,6 +55,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -83,7 +84,7 @@ public class EnumerableRelImplementor extends JavaRelImplementor {
   public EnumerableRelImplementor(RexBuilder rexBuilder,
       Map<String, Object> internalParameters) {
     super(rexBuilder);
-    this.map = internalParameters;
+    this.map = new HashMap<>(internalParameters);
   }
 
   public EnumerableRel.Result visitChild(
