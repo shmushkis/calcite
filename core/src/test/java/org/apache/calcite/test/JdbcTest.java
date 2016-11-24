@@ -1189,6 +1189,27 @@ public class JdbcTest {
         .returns("EXPR$0=1\n");
   }
 
+  @Test public void testSimple2() {
+    CalciteAssert.that()
+        .with(CalciteAssert.Config.FOODMART_CLONE)
+        .with(Lex.MYSQL)
+        .query("SELECT count(*) FROM (\n"
+            + "                SELECT count(v1.`region_id`) `Count Region`, "
+            + "v6.`fullname` `Customer (Name)`\n"
+            + "                FROM `foodmart`.`region` v1\n"
+            + "                JOIN `foodmart`.`store` v3 ON v1.`region_id` ="
+            + " v3.`region_id`\n"
+            + "                JOIN `foodmart`.`customer` v6 ON "
+            + "v1.`region_id` = v6.`customer_region_id`\n"
+            + "                JOIN `foodmart`.`sales_fact_1998` v15 ON "
+            + "v3.`store_id` = v15.`store_id` AND v6.`customer_id` = "
+            + "v15.`customer_id`\n"
+            + "                WHERE v3.`store_name` LIKE '%Grocery%'\n"
+            + "                GROUP BY v6.`customer_region_id`,"
+            + "v6.`fullname`)  a \n")
+        .returns("EXPR$0=1\n");
+  }
+
   /** Tests accessing columns by name. */
   @Test public void testGetByName() throws Exception {
     // JDBC 3.0 specification: "Column names supplied to getter methods are case
