@@ -1728,8 +1728,8 @@ SqlNode FromClause() :
                 null);
         }
         |
-        <CROSS> <APPLY> { pos = getPos(); }
-        e2 = TableFunctionRef() {
+        <CROSS> { pos = getPos(); } <APPLY>
+        e2 = TableRef2(true) {
             if (!this.conformance.isApplyAllowed()) {
                 throw new ParseException(RESOURCE.applyNotAllowed().str());
             }
@@ -1742,8 +1742,8 @@ SqlNode FromClause() :
                 null);
         }
         |
-        <OUTER> <APPLY> { pos = getPos(); }
-        e2 = TableFunctionRef() {
+        <OUTER> { pos = getPos(); } <APPLY>
+        e2 = TableRef2(true) {
             if (!this.conformance.isApplyAllowed()) {
                 throw new ParseException(RESOURCE.applyNotAllowed().str());
             }
@@ -1761,46 +1761,6 @@ SqlNode FromClause() :
     }
 }
 
-/**
- * Parsers a table function call to table reference in a FROM clause
- */
-SqlNode TableFunctionRef() :
-{
-    SqlNode tableRef;
-    String alias;
-    SqlParserPos pos;
-    SqlNodeList columnAliasList = null;
-}
-{
-	{ pos = getPos(); }
-	tableRef = TableFunctionCall(pos)
-    {
-        tableRef = SqlStdOperatorTable.LATERAL.createCall(
-            getPos(), tableRef);
-    }
-    [
-        [ <AS> ] alias = Identifier()
-        [ columnAliasList = ParenthesizedSimpleIdentifierList() ]
-        {
-            pos = getPos();
-            if (columnAliasList == null) {
-                tableRef = SqlStdOperatorTable.AS.createCall(
-                    pos, tableRef, new SqlIdentifier(alias, pos));
-            } else {
-                List<SqlNode> idList = new ArrayList<SqlNode>();
-                idList.add(tableRef);
-                idList.add(new SqlIdentifier(alias, pos));
-                idList.addAll(columnAliasList.getList());
-                tableRef = SqlStdOperatorTable.AS.createCall(pos, idList);
-            }
-        }
-    ]
-    {
-        return tableRef;
-    }
-
-}
-
 // TODO jvs 15-Nov-2003: SQL standard allows column aliases on table
 // references, e.g. DEPTS AS D1(DEPTNO1,DNAME1); I guess this is syntactic
 // sugar to make it easier for query writers to conform to the column name
@@ -1808,9 +1768,21 @@ SqlNode TableFunctionRef() :
 // seems pretty useless for non-trivial tables, since you have to supply names
 // for ALL columns at once.
 /**
- * Parses a table reference in a FROM clause.
+ * Parses a table reference in a FROM clause, not lateral unless LATERAL
+ * is explicitly specified.
  */
 SqlNode TableRef() :
+{
+    final SqlNode e;
+}
+{
+    e = TableRef2(false) { return e; }
+}
+
+/**
+ * Parses a table reference in a FROM clause.
+ */
+SqlNode TableRef2(boolean lateral) :
 {
     SqlNode tableRef;
     SqlNode over;
@@ -1819,7 +1791,6 @@ SqlNode TableRef() :
     SqlParserPos pos;
     SqlNodeList args;
     SqlNode sample;
-    boolean lateral = false;
     boolean isBernoulli;
     SqlNumericLiteral samplePercentage;
     boolean isRepeatable = false;
@@ -5607,6 +5578,7 @@ String CommonNonReservedKeyWord() :
         | <ADMIN>
         | <AFTER>
         | <ALWAYS>
+        | <APPLY>
         | <ASC>
         | <ASSERTION>
         | <ASSIGNMENT>
@@ -5881,7 +5853,6 @@ String CommonNonReservedKeyWord() :
         | <WRITE>
         | <XML>
         | <ZONE>
-        | <APPLY>
       <#list parser.nonReservedKeywords as keyword>
         | <${keyword}>
       </#list>

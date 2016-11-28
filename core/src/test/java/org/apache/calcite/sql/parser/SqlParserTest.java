@@ -2055,34 +2055,74 @@ public class SqlParserTest {
         "(?s).*Encountered \"[)]\" at line 1, column 31.*");
   }
 
-  /** Tests CROSS APPLY and OUTER APPLY, which is equivalent to CROSS JOIN and LEFT JOIN but
+  /** Tests CROSS APPLY, which is equivalent to CROSS JOIN and LEFT JOIN but
    * only supported in some conformance levels (e.g. SQL Server). */
   @Test public void testApply() {
     final String pattern =
-            "APPLY operator is not allowed under the current SQL conformance level";
-    final String sql = "select * from dept cross apply ramp(deptno) as t(a)";
+        "APPLY operator is not allowed under the current SQL conformance level";
+    final String sql = "select * from dept\n"
+        + "cross apply table(ramp(deptno)) as t(a)";
     sql(sql).fails(pattern);
 
     conformance = SqlConformanceEnum.SQL_SERVER_2008;
     final String expected = "SELECT *\n"
-            + "FROM `DEPT`\n"
-            + "CROSS JOIN LATERAL TABLE(`RAMP`(`DEPTNO`)) AS `T` (`A`)";
+        + "FROM `DEPT`\n"
+        + "CROSS JOIN LATERAL TABLE(`RAMP`(`DEPTNO`)) AS `T` (`A`)";
     sql(sql).ok(expected);
+  }
 
-    final String sql2 =
-            "select * from dept outer apply ramp(deptno)";
-    final String expected2 = "SELECT *\n"
-            + "FROM `DEPT`\n"
-            + "LEFT JOIN LATERAL TABLE(`RAMP`(`DEPTNO`)) ON TRUE";
-    sql(sql2).ok(expected2);
+  /** Tests OUTER APPLY. */
+  @Test public void testOuterApply() {
+    conformance = SqlConformanceEnum.SQL_SERVER_2008;
+    final String sql = "select * from dept outer apply table(ramp(deptno))";
+    final String expected = "SELECT *\n"
+        + "FROM `DEPT`\n"
+        + "LEFT JOIN LATERAL TABLE(`RAMP`(`DEPTNO`)) ON TRUE";
+    sql(sql).ok(expected);
+  }
 
-    final String sql3 =
-            "select * from dept cross apply ramp(deptno) as t(a) outer apply ramp2(a)";
-    final String expected3 = "SELECT *\n"
-            + "FROM `DEPT`\n"
-            + "CROSS JOIN LATERAL TABLE(`RAMP`(`DEPTNO`)) AS `T` (`A`)\n"
-            + "LEFT JOIN LATERAL TABLE(`RAMP2`(`A`)) ON TRUE";
-    sql(sql3).ok(expected3);
+  @Test public void testOuterApplySubQuery() {
+    conformance = SqlConformanceEnum.SQL_SERVER_2008;
+    final String sql = "select * from dept\n"
+        + "outer apply (select * from emp where emp.deptno = dept.deptno)";
+    final String expected = "SELECT *\n"
+        + "FROM `DEPT`\n"
+        + "LEFT JOIN LATERAL((SELECT *\n"
+        + "FROM `EMP`\n"
+        + "WHERE (`EMP`.`DEPTNO` = `DEPT`.`DEPTNO`))) ON TRUE";
+    sql(sql).ok(expected);
+  }
+
+  @Test public void testOuterApplyValues() {
+    conformance = SqlConformanceEnum.SQL_SERVER_2008;
+    final String sql = "select * from dept\n"
+        + "outer apply (select * from emp where emp.deptno = dept.deptno)";
+    final String expected = "SELECT *\n"
+        + "FROM `DEPT`\n"
+        + "LEFT JOIN LATERAL((SELECT *\n"
+        + "FROM `EMP`\n"
+        + "WHERE (`EMP`.`DEPTNO` = `DEPT`.`DEPTNO`))) ON TRUE";
+    sql(sql).ok(expected);
+  }
+
+  /** Even in SQL Server conformance mode, we do not yet support
+   * 'function(args)' as an abbreviation for 'table(function(args)'. */
+  @Test public void testOuterApplyFunctionFails() {
+    conformance = SqlConformanceEnum.SQL_SERVER_2008;
+    final String sql = "select * from dept outer apply ramp(deptno^)^)";
+    sql(sql).fails("(?s).*Encountered \"\\)\" at .*");
+  }
+
+  @Test public void testCrossOuterApply() {
+    conformance = SqlConformanceEnum.SQL_SERVER_2008;
+    final String sql = "select * from dept\n"
+        + "cross apply table(ramp(deptno)) as t(a)\n"
+        + "outer apply table(ramp2(a))";
+    final String expected = "SELECT *\n"
+        + "FROM `DEPT`\n"
+        + "CROSS JOIN LATERAL TABLE(`RAMP`(`DEPTNO`)) AS `T` (`A`)\n"
+        + "LEFT JOIN LATERAL TABLE(`RAMP2`(`A`)) ON TRUE";
+    sql(sql).ok(expected);
   }
 
   @Test public void testTableSample() {
