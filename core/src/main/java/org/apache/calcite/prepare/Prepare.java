@@ -215,11 +215,14 @@ public abstract class Prepare {
 
     init(runtimeContextClass);
 
+    final boolean lateDecorrelate = Hook.ENABLE_LATE_DECORRELATE.get(false);
+    final boolean expand = THREAD_EXPAND.get();
     final SqlToRelConverter.ConfigBuilder builder =
         SqlToRelConverter.configBuilder()
             .withTrimUnusedFields(true)
-            .withExpand(THREAD_EXPAND.get())
-            .withExplain(sqlQuery.getKind() == SqlKind.EXPLAIN);
+            .withExpand(expand || !lateDecorrelate)
+            .withExplain(sqlQuery.getKind() == SqlKind.EXPLAIN)
+        .withDecorrelationEnabled(!lateDecorrelate);
     final SqlToRelConverter sqlToRelConverter =
         getSqlToRelConverter(validator, catalogReader, builder.build());
 
