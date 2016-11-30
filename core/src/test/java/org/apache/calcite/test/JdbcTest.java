@@ -4914,6 +4914,22 @@ public class JdbcTest {
             "name=Theodore; DEPTNAME=Sales      ");
   }
 
+  @Test public void testCorreScalarSubQInSelect()
+      throws ClassNotFoundException, SQLException {
+    String query = "select e.department_id, sum(e.employee_id),\n"
+        + "       ( select sum(e2.employee_id)\n"
+        + "         from  employee e2\n"
+        + "         where e.department_id = e2.department_id\n"
+        + "       )\n"
+        + " from employee e\n"
+        + " group by e.department_id\n";
+    CalciteAssert.that()
+        .with(CalciteAssert.Config.FOODMART_CLONE)
+        .with(Lex.JAVA)
+        .query(query)
+        .returnsCount(0);
+  }
+
   /** Tests the TABLES table in the information schema. */
   @Test public void testMetaTables() {
     CalciteAssert.that()
