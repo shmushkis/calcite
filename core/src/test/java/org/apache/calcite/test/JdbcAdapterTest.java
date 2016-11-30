@@ -516,7 +516,8 @@ public class JdbcAdapterTest {
     final String expected;
     switch (CalciteAssert.DB) {
     case MYSQL:
-      expected = "Subquery returns more than 1 row";
+      expected = "Sub"
+          + "query returns more than 1 row";
       break;
     default:
       expected = "more than one value in agg SINGLE_VALUE";
@@ -558,7 +559,7 @@ public class JdbcAdapterTest {
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-666">[CALCITE-666]
    * Anti-semi-joins against JDBC adapter give wrong results</a>. */
-  @Test public void testScalarSubquery() {
+  @Test public void testScalarSubQuery() {
     CalciteAssert.model(JdbcTest.SCOTT_MODEL)
         .query("SELECT COUNT(empno) AS cEmpNo FROM \"SCOTT\".\"EMP\" "
             + "WHERE DEPTNO <> (SELECT * FROM (VALUES 1))")

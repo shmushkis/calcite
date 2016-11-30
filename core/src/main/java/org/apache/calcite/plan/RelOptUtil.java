@@ -441,7 +441,7 @@ public abstract class RelOptUtil {
       assert extraExpr == rexBuilder.makeLiteral(true);
 
       // this should only be called for the exists case
-      // first stick an Agg on top of the subquery
+      // first stick an Agg on top of the sub-query
       // agg does not like no agg functions so just pretend it is
       // doing a min(TRUE)
 
@@ -473,7 +473,7 @@ public abstract class RelOptUtil {
    *
    * @param seekRel    A query rel, for example the resulting rel from 'select *
    *                   from emp' or 'values (1,2,3)' or '('Foo', 34)'.
-   * @param subqueryType Sub-query type
+   * @param subQueryType Sub-query type
    * @param logic  Whether to use 2- or 3-valued boolean logic
    * @param notIn Whether the operator is NOT IN
    *
@@ -484,10 +484,10 @@ public abstract class RelOptUtil {
    */
   public static Exists createExistsPlan(
       RelNode seekRel,
-      SubqueryType subqueryType,
+      SubQueryType subQueryType,
       Logic logic,
       boolean notIn) {
-    switch (subqueryType) {
+    switch (subQueryType) {
     case SCALAR:
       return new Exists(seekRel, false, true);
     }
@@ -515,7 +515,7 @@ public abstract class RelOptUtil {
 
     // for IN/NOT IN, it needs to output the fields
     final List<RexNode> exprs = new ArrayList<>();
-    if (subqueryType == SubqueryType.IN) {
+    if (subQueryType == SubQueryType.IN) {
       for (int i = 0; i < keyCount; i++) {
         exprs.add(rexBuilder.makeInputRef(ret, i));
       }
@@ -3602,7 +3602,7 @@ public abstract class RelOptUtil {
   }
 
   /** What kind of sub-query. */
-  public enum SubqueryType {
+  public enum SubQueryType {
     EXISTS,
     IN,
     SCALAR

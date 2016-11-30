@@ -1981,7 +1981,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       if (newRight != right) {
         join.setRight(newRight);
       }
-      registerSubqueries(joinScope, join.getCondition());
+      registerSubQueries(joinScope, join.getCondition());
       final JoinNamespace joinNamespace = new JoinNamespace(this, join);
       registerNamespace(null, null, joinNamespace, forceNullable);
       return join;
@@ -2211,7 +2211,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
       // Start by registering the WHERE clause
       whereScopes.put(select, selectScope);
-      registerOperandSubqueries(
+      registerOperandSubQueries(
           selectScope,
           select,
           SqlSelect.WHERE_OPERAND);
@@ -2246,12 +2246,12 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       } else {
         selectScopes.put(select, selectScope);
       }
-      registerSubqueries(selectScope, select.getGroup());
-      registerOperandSubqueries(
+      registerSubQueries(selectScope, select.getGroup());
+      registerOperandSubQueries(
           aggScope,
           select,
           SqlSelect.HAVING_OPERAND);
-      registerSubqueries(aggScope, select.getSelectList());
+      registerSubQueries(aggScope, select.getSelectList());
       final SqlNodeList orderList = select.getOrderList();
       if (orderList != null) {
         // If the query is 'SELECT DISTINCT', restrict the columns
@@ -2263,7 +2263,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
         OrderByScope orderScope =
             new OrderByScope(aggScope, orderList, select);
         orderScopes.put(select, orderScope);
-        registerSubqueries(orderScope, orderList);
+        registerSubQueries(orderScope, orderList);
 
         if (!isAggregate(select)) {
           // Since this is not an aggregating query,
@@ -2332,9 +2332,9 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
         assert operands.get(i).getKind() == SqlKind.ROW;
 
         // FIXME jvs 9-Feb-2005:  Correlation should
-        // be illegal in these subqueries.  Same goes for
+        // be illegal in these sub-queries.  Same goes for
         // any non-lateral SELECT in the FROM list.
-        registerOperandSubqueries(parentScope, call, i);
+        registerOperandSubQueries(parentScope, call, i);
       }
       break;
 
@@ -2448,7 +2448,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
           alias,
           unnestNs,
           forceNullable);
-      registerOperandSubqueries(parentScope, call, 0);
+      registerOperandSubQueries(parentScope, call, 0);
       scopes.put(node, parentScope);
       break;
 
@@ -2465,7 +2465,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
           alias,
           procNs,
           forceNullable);
-      registerSubqueries(parentScope, call);
+      registerSubQueries(parentScope, call);
       break;
 
     case MULTISET_QUERY_CONSTRUCTOR:
@@ -2483,7 +2483,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
           forceNullable);
       operands = call.getOperandList();
       for (int i = 0; i < operands.size(); i++) {
-        registerOperandSubqueries(parentScope, call, i);
+        registerOperandSubQueries(parentScope, call, i);
       }
       break;
 
@@ -2613,7 +2613,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
   }
 
-  private void registerSubqueries(
+  private void registerSubQueries(
       SqlValidatorScope parentScope,
       SqlNode node) {
     if (node == null) {
@@ -2627,7 +2627,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       validateNodeFeature(node);
       SqlCall call = (SqlCall) node;
       for (int i = 0; i < call.operandCount(); i++) {
-        registerOperandSubqueries(parentScope, call, i);
+        registerOperandSubQueries(parentScope, call, i);
       }
     } else if (node instanceof SqlNodeList) {
       SqlNodeList list = (SqlNodeList) node;
@@ -2640,7 +2640,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
                   listNode);
           list.set(i, listNode);
         }
-        registerSubqueries(parentScope, listNode);
+        registerSubQueries(parentScope, listNode);
       }
     } else {
       // atomic node -- can be ignored
@@ -2648,15 +2648,15 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
   }
 
   /**
-   * Registers any subqueries inside a given call operand, and converts the
-   * operand to a scalar subquery if the operator requires it.
+   * Registers any sub-queries inside a given call operand, and converts the
+   * operand to a scalar sub-query if the operator requires it.
    *
    * @param parentScope    Parent scope
    * @param call           Call
    * @param operandOrdinal Ordinal of operand within call
    * @see SqlOperator#argumentMustBeScalar(int)
    */
-  private void registerOperandSubqueries(
+  private void registerOperandSubQueries(
       SqlValidatorScope parentScope,
       SqlCall call,
       int operandOrdinal) {
@@ -2672,7 +2672,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
               operand);
       call.setOperand(operandOrdinal, operand);
     }
-    registerSubqueries(parentScope, operand);
+    registerSubQueries(parentScope, operand);
   }
 
   public void validateIdentifier(SqlIdentifier id, SqlValidatorScope scope) {
@@ -2822,7 +2822,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
   /**
    * Validates the FROM clause of a query, or (recursively) a child node of
-   * the FROM clause: AS, OVER, JOIN, VALUES, or subquery.
+   * the FROM clause: AS, OVER, JOIN, VALUES, or sub-query.
    *
    * @param node          Node in FROM clause, typically a table or derived
    *                      table
@@ -3609,7 +3609,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
     getRawSelectScope(select).setExpandedSelectList(expandedSelectItems);
 
-    // TODO: when SELECT appears as a value subquery, should be using
+    // TODO: when SELECT appears as a value sub-query, should be using
     // something other than unknownType for targetRowType
     inferUnknownTypes(targetRowType, selectScope, newSelectList);
 
@@ -3646,7 +3646,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
   /**
    * Processes SubQuery found in Select list. Checks that is actually Scalar
-   * subquery and makes proper entries in each of the 3 lists used to create
+   * sub-query and makes proper entries in each of the 3 lists used to create
    * the final rowType entry.
    *
    * @param parentSelect        base SqlSelect item
@@ -3661,10 +3661,10 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       List<SqlNode> expandedSelectItems,
       Set<String> aliasList,
       List<Map.Entry<String, RelDataType>> fieldList) {
-    // A scalar subquery only has one output column.
+    // A scalar sub-query only has one output column.
     if (1 != selectItem.getSelectList().size()) {
       throw newValidationError(selectItem,
-          RESOURCE.onlyScalarSubqueryAllowed());
+          RESOURCE.onlyScalarSubQueryAllowed());
     }
 
     // No expansion in this routine just append to list.
@@ -3683,7 +3683,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
     // we do not want to pass on the RelRecordType returned
     // by the sub query.  Just the type of the single expression
-    // in the subquery select list.
+    // in the sub-query select list.
     assert type instanceof RelRecordType;
     RelRecordType rec = (RelRecordType) type;
 
