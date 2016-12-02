@@ -199,6 +199,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
         new RelDecorrelator(cluster, corelMap,
             cluster.getPlanner().getContext());
 
+    System.out.println(RelOptUtil.toString(rootRel));
     RelNode newRootRel = decorrelator.removeCorrelationViaRule(rootRel);
 
     if (SQL2REL_LOGGER.isDebugEnabled()) {
@@ -208,6 +209,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     }
 
     if (!decorrelator.cm.mapCorVarToCorRel.isEmpty()) {
+      System.out.println(RelOptUtil.toString(newRootRel));
       newRootRel = decorrelator.decorrelate(newRootRel);
     }
 
