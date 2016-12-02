@@ -2714,7 +2714,7 @@ public class RelOptRulesTest extends RelOptTestBase {
         + "where empno NOT IN (\n"
         + "  select deptno from dept\n"
         + "  where emp.job = dept.name)";
-    checkSubQuery(sql).withLateDecorrelation(false).check();
+    checkSubQuery(sql).withLateDecorrelation(true).check();
   }
 
   @Test public void testExpandProjectIn() throws Exception {
