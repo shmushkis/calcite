@@ -15,9 +15,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-!use post
-values 1;
-EXPR$0
-1
+!use scott
+select count(*) as c
+from "scott".emp as e
+where sal + 100 not in (
+  select comm
+  from "scott".emp
+  where job = e.job);
+     EMPNO ENAME      JOB              MGR HIREDATE         SAL       COMM     DEPTNO
+---------- ---------- --------- ---------- --------- ---------- ---------- ----------
+      7499 ALLEN      SALESMAN        7698 20-FEB-81       1600        300         30
+      7521 WARD       SALESMAN        7698 22-FEB-81       1250        500         30
+      7654 MARTIN     SALESMAN        7698 28-SEP-81       1250       1400         30
+      7844 TURNER     SALESMAN        7698 08-SEP-81       1500          0         30
 !ok
 # End dummy.iq

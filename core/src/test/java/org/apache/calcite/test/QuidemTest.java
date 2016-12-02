@@ -240,7 +240,7 @@ public class QuidemTest {
    * which you may use as scratch space during development. */
   // Do not add disable this test; just remember not to commit changes to dummy.iq
   public void testSqlDummy() throws Exception {
-    try (final TryThreadLocal.Memo ignored = Prepare.THREAD_EXPAND.push(true)) {
+    try (final TryThreadLocal.Memo ignored = Prepare.THREAD_EXPAND.push(false)) {
       checkRun(path);
     }
   }
