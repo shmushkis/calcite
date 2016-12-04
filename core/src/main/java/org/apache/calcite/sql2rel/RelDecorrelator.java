@@ -695,7 +695,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
    * @return RelNode the root of the resultant RelNode tree
    */
   private RelNode createValueGenerator(
-      Iterable<Correlation> correlations,
+      Collection<Correlation> correlations,
       int valueGenFieldOffset,
       SortedMap<Correlation, Integer> mapCorVarToOutputPos) {
     final Map<RelNode, List<Integer>> mapNewInputToOutputPos =
@@ -811,7 +811,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
   }
 
   private void decorrelateInputWithValueGenerator(RelNode rel) {
-    // currently only handles one input input
+    // currently only handles one input
     assert rel.getInputs().size() == 1;
     RelNode oldInput = rel.getInput(0);
     final Frame frame = map.get(oldInput);
@@ -2381,13 +2381,13 @@ public class RelDecorrelator implements ReflectiveVisitor {
    *
    * <p>There are three maps:<ol>
    *
-   * <li>mapRefRelToCorVars map a rel node to the correlated variables it
-   * references;
+   * <li>{@link #mapRefRelToCorVar} maps a rel node to the correlated variables
+   * it references;
    *
-   * <li>mapCorVarToCorRel maps a correlated variable to the correlatorRel
-   * providing it;
+   * <li>{@link #mapCorVarToCorRel} maps a correlated variable to the
+   * {@link Correlation} providing it;
    *
-   * <li>mapFieldAccessToCorVar maps a rex field access to
+   * <li>{@link #mapFieldAccessToCorVar} maps a rex field access to
    * the cor var it represents. Because typeFlattener does not clone or
    * modify a correlated field access this map does not need to be
    * updated.

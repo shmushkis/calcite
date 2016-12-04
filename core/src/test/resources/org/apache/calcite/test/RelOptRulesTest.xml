@@ -6311,4 +6311,39 @@ LogicalProject(SAL=[$5])
 ]]>
         </Resource>
     </TestCase>
+    <TestCase name="testWhereInCorrelated2">
+        <Resource name="sql">
+            <![CDATA[select sal from emp
+where empno IN (
+  select deptno from dept
+  where emp.job = dept.name)]]>
+        </Resource>
+        <Resource name="planBefore">
+            <![CDATA[
+LogicalProject(SAL=[$5])
+  LogicalFilter(condition=[IN($0, {
+LogicalProject(DEPTNO=[$0])
+  LogicalFilter(condition=[=($cor0.JOB, $1)])
+    LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+})], variablesSet=[[$cor0]])
+    LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+]]>
+        </Resource>
+        <Resource name="planAfter">
+            <![CDATA[
+LogicalProject(SAL=[$5])z
+  LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8])
+    LogicalJoin(condition=[AND(=($2, $10), =($0, $9))], joinType=[inner])
+      LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+      LogicalAggregate(group=[{0, 1}])
+        LogicalProject(DEPTNO=[$0], JOB=[$1])
+          LogicalProject(DEPTNO=[$0], JOB=[$2])
+            LogicalJoin(condition=[=($2, $1)], joinType=[inner])
+              LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+              LogicalAggregate(group=[{0}])
+                LogicalProject(JOB=[$2])
+                  LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+]]>
+        </Resource>
+    </TestCase>
 </Root>

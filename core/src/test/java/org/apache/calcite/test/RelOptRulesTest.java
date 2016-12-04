@@ -2717,6 +2717,18 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).withLateDecorrelation(true).check();
   }
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-1494">[CALCITE-1494]
+   * Inefficient plan for IN correlated sub-queries</a>. */
+  @Ignore("[CALCITE-1494] is not fixed yet")
+  @Test public void testWhereInCorrelated2() {
+    final String sql = "select sal from emp\n"
+        + "where empno IN (\n"
+        + "  select deptno from dept\n"
+        + "  where emp.job = dept.name)";
+    checkSubQuery(sql).withLateDecorrelation(true).check();
+  }
+
   @Test public void testExpandProjectIn() throws Exception {
     final String sql = "select empno,\n"
         + "  deptno in (select deptno from sales.emp where empno < 20) as d\n"
