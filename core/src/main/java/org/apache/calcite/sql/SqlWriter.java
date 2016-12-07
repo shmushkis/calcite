@@ -191,11 +191,10 @@ public interface SqlWriter {
     /**
      * VALUES clause.
      *
-     * <p>Example:</p>
-     * <ul>
-     * <li><code>VALUES (1, 'a'),
-     *   (2, 'b')</code></li>
-     * </ul>
+     * <p>Example:
+     *
+     * <blockquote><pre>VALUES (1, 'a'),
+     *   (2, 'b')</pre></blockquote>
      */
     VALUES,
 
