@@ -42,7 +42,7 @@ public final class LogicalTableModify extends TableModify {
   public LogicalTableModify(RelOptCluster cluster, RelTraitSet traitSet,
       RelOptTable table, Prepare.CatalogReader schema, RelNode input,
       Operation operation, List<String> updateColumnList,
-       List<RexNode> sourceExpressionList, boolean flattened) {
+      List<RexNode> sourceExpressionList, boolean flattened) {
     super(cluster, traitSet, table, schema, input, operation, updateColumnList,
         sourceExpressionList, flattened);
   }

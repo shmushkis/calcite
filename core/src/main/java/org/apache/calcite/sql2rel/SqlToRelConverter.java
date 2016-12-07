@@ -3147,7 +3147,7 @@ public class SqlToRelConverter {
     Blackboard bb = createBlackboard(scope, null, false);
 
     Builder<RexNode> rexNodeSourceExpressionListBuilder = ImmutableList.builder();
-    for (SqlNode n: call.getSourceExpressionList()) {
+    for (SqlNode n : call.getSourceExpressionList()) {
       RexNode rn = bb.convertExpression(n);
       rexNodeSourceExpressionListBuilder.add(rn);
     }

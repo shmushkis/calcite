@@ -1362,11 +1362,11 @@ public class CalciteAssert {
           });
       try {
         assertQuery(createConnection(), sql, limit, materializationsEnabled,
-                hooks, null, checkUpdate, null);
+            hooks, null, checkUpdate, null);
         assertNotNull(plan);
       } catch (Exception e) {
-        throw new RuntimeException(
-                "exception while executing [" + sql + "]", e);
+        throw new RuntimeException("exception while executing [" + sql + "]",
+            e);
       }
     }
 

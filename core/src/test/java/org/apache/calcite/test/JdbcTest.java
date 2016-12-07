@@ -267,7 +267,7 @@ public class JdbcTest {
                 assertThat(resultSet.next(), is(true));
                 assertThat(Util.toLinux(resultSet.getString(1)),
                     is(
-                        "EnumerableTableModify(table=[[adhoc, MUTABLE_EMPLOYEES]], operation=[INSERT], updateColumnList=[[]], sourceExpressionList=[[]], flattened=[false])\n"
+                        "EnumerableTableModify(table=[[adhoc, MUTABLE_EMPLOYEES]], operation=[INSERT], flattened=[false])\n"
                         + "  EnumerableCalc(expr#0..2=[{inputs}], expr#3=[CAST($t1):JavaType(int) NOT NULL], expr#4=[10], expr#5=[CAST($t0):JavaType(class java.lang.String)], expr#6=[CAST($t2):JavaType(float) NOT NULL], expr#7=[null], empid=[$t3], deptno=[$t4], name=[$t5], salary=[$t6], commission=[$t7])\n"
                         + "    EnumerableValues(tuples=[[{ 'Fred', 56, 123.4 }]])\n"));
 
@@ -357,7 +357,7 @@ public class JdbcTest {
           true)
           .query("insert into \"adhoc\".v values ('n',1,2)")
           .explainContains(""
-              + "EnumerableTableModify(table=[[adhoc, MUTABLE_EMPLOYEES]], operation=[INSERT], updateColumnList=[[]], sourceExpressionList=[[]], flattened=[false])\n"
+              + "EnumerableTableModify(table=[[adhoc, MUTABLE_EMPLOYEES]], operation=[INSERT], flattened=[false])\n"
               + "  EnumerableCalc(expr#0..2=[{inputs}], expr#3=[CAST($t1):JavaType(int) NOT NULL], expr#4=[10], expr#5=[CAST($t0):JavaType(class java.lang.String)], expr#6=[CAST($t2):JavaType(float) NOT NULL], expr#7=[null], expr#8=[20], expr#9=[<($t4, $t8)], expr#10=[1000], expr#11=[>($t7, $t10)], expr#12=[OR($t9, $t11)], empid=[$t3], deptno=[$t4], name=[$t5], salary=[$t6], commission=[$t7], $condition=[$t12])\n"
               + "    EnumerableValues(tuples=[[{ 'n', 1, 2 }]])");
 

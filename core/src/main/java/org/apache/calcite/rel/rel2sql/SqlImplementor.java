@@ -52,7 +52,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlSetOperator;
-import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -469,8 +468,8 @@ public abstract class SqlImplementor {
     assert node instanceof SqlJoin
         || node instanceof SqlIdentifier
         || node instanceof SqlCall
-        && (((SqlCall) node).getOperator() instanceof SqlSetOperator
-        || ((SqlCall) node).getOperator() == SqlStdOperatorTable.AS)
+            && (((SqlCall) node).getOperator() instanceof SqlSetOperator
+                || ((SqlCall) node).getOperator() == SqlStdOperatorTable.AS)
         : node;
     return new SqlSelect(POS, SqlNodeList.EMPTY, null, node, null, null, null,
         SqlNodeList.EMPTY, null, null, null);
@@ -992,17 +991,35 @@ public abstract class SqlImplementor {
     }
 
     /** Converts a non-query node into a SELECT node. Set operators (UNION,
-     * INTERSECT, EXCEPT) remain as is. */
-    public SqlNode asQuery() {
-      if (node instanceof SqlCall
-          && ((SqlCall) node).getOperator() instanceof SqlSetOperator) {
+     * INTERSECT, EXCEPT) and DML operators (INSERT, UPDATE, DELETE, MERGE)
+     * remain as is. */
+    public SqlNode asStatement() {
+      switch (node.getKind()) {
+      case UNION:
+      case INTERSECT:
+      case EXCEPT:
+      case INSERT:
+      case UPDATE:
+      case DELETE:
+      case MERGE:
         return node;
+      default:
+        return asSelect();
       }
-      if (node instanceof SqlCall
-          && ((SqlCall) node).getOperator() instanceof SqlSpecialOperator) {
+    }
+
+    /** Converts a non-query node into a SELECT node. Set operators (UNION,
+     * INTERSECT, EXCEPT) and VALUES remain as is. */
+    public SqlNode asQueryOrValues() {
+      switch (node.getKind()) {
+      case UNION:
+      case INTERSECT:
+      case EXCEPT:
+      case VALUES:
         return node;
+      default:
+        return asSelect();
       }
-      return asSelect();
     }
 
     /** Returns a context that always qualifies identifiers. Useful if the

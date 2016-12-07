@@ -183,20 +183,16 @@ class JdbcTable extends AbstractQueryableTable
   }
 
   @Override public TableModify toModificationRel(RelOptCluster cluster,
-      RelOptTable table,
-      CatalogReader catalogReader,
-      RelNode child,
-      Operation operation,
-      List<String> updateColumnList,
-      List<RexNode> sourceExpressionList,
-      boolean flattened) {
-
+      RelOptTable table, CatalogReader catalogReader, RelNode input,
+      Operation operation, List<String> updateColumnList,
+      List<RexNode> sourceExpressionList, boolean flattened) {
     jdbcSchema.convention.register(cluster.getPlanner());
 
     return new LogicalTableModify(cluster, cluster.traitSetOf(Convention.NONE),
-        table, catalogReader, child, operation, updateColumnList,
+        table, catalogReader, input, operation, updateColumnList,
         sourceExpressionList, flattened);
   }
+
   /** Enumerable that returns the contents of a {@link JdbcTable} by connecting
    * to the JDBC data source. */
   private class JdbcTableQueryable<T> extends AbstractTableQueryable<T> {

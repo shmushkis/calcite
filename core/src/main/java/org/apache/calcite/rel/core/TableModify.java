@@ -28,13 +28,13 @@ import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.SingleRel;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 
 import com.google.common.base.Preconditions;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -80,43 +80,46 @@ public abstract class TableModify extends SingleRel {
   //~ Constructors -----------------------------------------------------------
 
   /**
-   * The Update operator has format like this:
-   * UPDATE table SET iden1=exp1, ident2=exp2  WHERE condition
+   * Creates a {@code TableModify}.
    *
+   * <p>The UPDATE operation has format like this:
+   * <blockquote>
+   *   <pre>UPDATE table SET iden1 = exp1, ident2 = exp2  WHERE condition</pre>
+   * </blockquote>
    *
-   * @param cluster Planner context
-   * @param traits Relation traits
-   * @param table target table to update
+   * @param cluster    Cluster this relational expression belongs to
+   * @param traitSet   Traits of this relational expression
+   * @param table      Target table to modify
    * @param catalogReader accessor to the table metadata.
-   * @param child Sub-query or filter condition
-   * @param operation modify operation (INSERT, UPDATE, DELETE)
-   * @param updateColumnList list of column identifiers to be updated
-   *           (e.g. ident1, ident2) applicable only for UPDATE operator.
-   * @param sourceExpressionList list of value expression to be set
-   *           (e.g. exp1, exp2) applicable only for UPDATE operator.
-   * @param flattened if set flatens the input row type
+   * @param input      Sub-query or filter condition
+   * @param operation  Modify operation (INSERT, UPDATE, DELETE)
+   * @param updateColumnList List of column identifiers to be updated
+   *           (e.g. ident1, ident2); null if not UPDATE
+   * @param sourceExpressionList List of value expressions to be set
+   *           (e.g. exp1, exp2); null if not UPDATE
+   * @param flattened Whether set flattens the input row type
    */
   protected TableModify(
       RelOptCluster cluster,
-      RelTraitSet traits,
+      RelTraitSet traitSet,
       RelOptTable table,
       Prepare.CatalogReader catalogReader,
-      RelNode child,
+      RelNode input,
       Operation operation,
       List<String> updateColumnList,
       List<RexNode> sourceExpressionList,
       boolean flattened) {
-    super(cluster, traits, child);
+    super(cluster, traitSet, input);
     this.table = table;
     this.catalogReader = catalogReader;
     this.operation = operation;
     this.updateColumnList = updateColumnList;
     this.sourceExpressionList = sourceExpressionList;
-    if (operation.equals(Operation.UPDATE)) {
+    if (operation == Operation.UPDATE) {
       Preconditions.checkNotNull(updateColumnList);
       Preconditions.checkNotNull(sourceExpressionList);
-      Preconditions.checkArgument(
-              sourceExpressionList.size() == updateColumnList.size());
+      Preconditions.checkArgument(sourceExpressionList.size()
+          == updateColumnList.size());
     } else {
       Preconditions.checkArgument(updateColumnList == null);
       Preconditions.checkArgument(sourceExpressionList == null);
@@ -169,44 +172,43 @@ public abstract class TableModify extends SingleRel {
     return operation == Operation.MERGE;
   }
 
-  // implement RelNode
-  public RelDataType deriveRowType() {
+  @Override public RelDataType deriveRowType() {
     return RelOptUtil.createDmlRowType(
         SqlKind.INSERT, getCluster().getTypeFactory());
   }
 
-  // override RelNode
-  public RelDataType getExpectedInputRowType(int ordinalInParent) {
+  @Override public RelDataType getExpectedInputRowType(int ordinalInParent) {
     assert ordinalInParent == 0;
 
     if (inputRowType != null) {
       return inputRowType;
     }
 
-    if (isUpdate()) {
+    final RelDataTypeFactory typeFactory = getCluster().getTypeFactory();
+    final RelDataType rowType = table.getRowType();
+    switch (operation) {
+    case UPDATE:
       inputRowType =
-          getCluster().getTypeFactory().createJoinType(
-              table.getRowType(),
-              getCatalogReader().createTypeFromProjection(
-                  table.getRowType(),
+          typeFactory.createJoinType(rowType,
+              getCatalogReader().createTypeFromProjection(rowType,
                   updateColumnList));
-    } else if (isMerge()) {
+      break;
+    case MERGE:
       inputRowType =
-          getCluster().getTypeFactory().createJoinType(
-              getCluster().getTypeFactory().createJoinType(
-                  table.getRowType(),
-                  table.getRowType()),
-              getCatalogReader().createTypeFromProjection(
-                  table.getRowType(),
+          typeFactory.createJoinType(
+              typeFactory.createJoinType(rowType, rowType),
+              getCatalogReader().createTypeFromProjection(rowType,
                   updateColumnList));
-    } else {
-      inputRowType = table.getRowType();
+      break;
+    default:
+      inputRowType = rowType;
+      break;
     }
 
     if (flattened) {
       inputRowType =
           SqlTypeUtil.flattenRecordType(
-              getCluster().getTypeFactory(),
+              typeFactory,
               inputRowType,
               null);
     }
@@ -214,20 +216,13 @@ public abstract class TableModify extends SingleRel {
     return inputRowType;
   }
 
-  public RelWriter explainTerms(RelWriter pw) {
+  @Override public RelWriter explainTerms(RelWriter pw) {
     return super.explainTerms(pw)
         .item("table", table.getQualifiedName())
         .item("operation", getOperation())
-        .item(
-            "updateColumnList",
-            (updateColumnList == null)
-                ? Collections.EMPTY_LIST
-                : updateColumnList)
-        .item(
-            "sourceExpressionList",
-            (sourceExpressionList == null)
-                ? Collections.EMPTY_LIST
-                : sourceExpressionList)
+        .itemIf("updateColumnList", updateColumnList, updateColumnList != null)
+        .itemIf("sourceExpressionList", sourceExpressionList,
+            sourceExpressionList != null)
         .item("flattened", flattened);
   }
 
