@@ -29,6 +29,7 @@ import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlCastFunction;
+import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.trace.CalciteLogger;
 
@@ -175,19 +176,19 @@ public class RexImplicationChecker {
     switch (second.getKind()) {
     case IS_NOT_NULL:
       final RexNode operand = ((RexCall) second).getOperands().get(0);
-      switch (first.getKind()) {
-      case IS_NOT_NULL:
-      case IS_TRUE:
-      case IS_FALSE:
-      case LESS_THAN:
-      case LESS_THAN_OR_EQUAL:
-      case GREATER_THAN:
-      case GREATER_THAN_OR_EQUAL:
-      case EQUALS:
-      case NOT_EQUALS:
-        if (((RexCall) first).getOperands().contains(operand)) {
-          return true;
+      final Holder<Boolean> flag = Holder.of(false);
+      Strong strong = new Strong() {
+        @Override protected boolean strong(RexNode node) {
+          return !RexUtil.eq(node, operand)
+              && super.strong(node);
         }
+
+        @Override public boolean strong(RexInputRef ref) {
+          return ref.getType().isNullable();
+        }
+      };
+      if (strong.strong(first)) {
+        return true;
       }
     }
 

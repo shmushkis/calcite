@@ -41,16 +41,19 @@ import java.util.List;
  *   <li>{@code c1 = 1 OR c2 IS NULL} is strong on c1 but not c2
  * </ul>
  */
-public class Strong {
-  private final ImmutableBitSet nullColumns;
-
-  private Strong(ImmutableBitSet nullColumns) {
-    this.nullColumns = nullColumns;
+public abstract class Strong {
+  /** Returns a checker that consults a bit set to find out whether particular
+   * inputs may be null. */
+  public static Strong of(final ImmutableBitSet nullColumns) {
+    return new Strong() {
+      @Override public boolean strong(RexInputRef ref) {
+        return nullColumns.get(ref.getIndex());
+      }
+    };
   }
 
-  public static Strong of(ImmutableBitSet nullColumns) {
-    return new Strong(nullColumns);
-  }
+  /** Returns whether a given input may be null. */
+  public abstract boolean strong(RexInputRef ref);
 
   /** Returns whether the analyzed expression will return null if a given set
    * of input columns are null. */
@@ -58,7 +61,7 @@ public class Strong {
     return of(nullColumns).strong(node);
   }
 
-  private boolean strong(RexNode node) {
+  protected boolean strong(RexNode node) {
     switch (node.getKind()) {
     case LITERAL:
       return ((RexLiteral) node).getValue() == null;
@@ -75,7 +78,7 @@ public class Strong {
     case OR:
       return allStrong(((RexCall) node).getOperands());
     case INPUT_REF:
-      return nullColumns.get(((RexInputRef) node).getIndex());
+      return strong((RexInputRef) node);
     default:
       return false;
     }
