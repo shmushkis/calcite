@@ -153,10 +153,18 @@ public class QuidemTest {
       new Quidem(bufferedReader, writer, env(), new QuidemConnectionFactory())
           .withPropertyHandler(new Quidem.PropertyHandler() {
             public void onSet(String propertyName, Object value) {
-              if (propertyName.equals("bindable")) {
+              switch (propertyName) {
+              case "bindable":
                 final boolean b = value instanceof Boolean
                     && (Boolean) value;
                 closer.add(Hook.ENABLE_BINDABLE.addThread(Hook.property(b)));
+                break;
+              case "lateDecorrelate":
+                final boolean b2 = value instanceof Boolean
+                    && (Boolean) value;
+                closer.add(
+                    Hook.ENABLE_LATE_DECORRELATE.addThread(Hook.property(b2)));
+                break;
               }
             }
           })

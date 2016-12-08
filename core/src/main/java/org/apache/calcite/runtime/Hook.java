@@ -44,6 +44,13 @@ public enum Hook {
    * Default false. */
   ENABLE_BINDABLE,
 
+  /** Returns a boolean value, whether to skip decorrelation and expansion in
+   * {@link org.apache.calcite.sql2rel.SqlToRelConverter},
+   * use {@link org.apache.calcite.rel.rules.SubQueryRemoveRule},
+   * then finally decorrelate.
+   * Default false. */
+  ENABLE_LATE_DECORRELATE,
+
   /** Called with the SQL string and parse tree, in an array. */
   PARSE_TREE,
 
