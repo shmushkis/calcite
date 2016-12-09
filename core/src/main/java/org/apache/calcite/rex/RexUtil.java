@@ -1714,27 +1714,32 @@ public class RexUtil {
   private static RexNode simplifyIs(RexBuilder rexBuilder, RexCall call) {
     final SqlKind kind = call.getKind();
     final RexNode a = call.getOperands().get(0);
-    if (!a.getType().isNullable()) {
-      switch (kind) {
-      case IS_NULL:
-      case IS_NOT_NULL:
-        // x IS NULL ==> FALSE (if x is not nullable)
-        // x IS NOT NULL ==> TRUE (if x is not nullable)
+    switch (kind) {
+    case IS_NULL:
+    case IS_NOT_NULL:
+      // x IS NULL ==> FALSE (if x is not nullable)
+      // x IS NOT NULL ==> TRUE (if x is not nullable)
+      if (!a.getType().isNullable()) {
         return rexBuilder.makeLiteral(kind == SqlKind.IS_NOT_NULL);
-      case IS_TRUE:
-      case IS_NOT_FALSE:
-        // x IS TRUE ==> x (if x is not nullable)
-        // x IS NOT FALSE ==> x (if x is not nullable)
+      }
+      break;
+    case IS_TRUE:
+    case IS_NOT_FALSE:
+      // x IS TRUE ==> x (if x is not nullable)
+      // x IS NOT FALSE ==> x (if x is not nullable)
+      if (!a.getType().isNullable()) {
         return simplify(rexBuilder, a);
-      case IS_FALSE:
-      case IS_NOT_TRUE:
-        // x IS NOT TRUE ==> NOT x (if x is not nullable)
-        // x IS FALSE ==> NOT x (if x is not nullable)
+      }
+      break;
+    case IS_FALSE:
+    case IS_NOT_TRUE:
+      // x IS NOT TRUE ==> NOT x (if x is not nullable)
+      // x IS FALSE ==> NOT x (if x is not nullable)
+      if (!a.getType().isNullable()) {
         return simplify(rexBuilder,
             rexBuilder.makeCall(SqlStdOperatorTable.NOT, a));
       }
-    }
-    switch (a.getKind()) {
+      break;
     case NOT:
       // (NOT x) IS TRUE ==> x IS FALSE
       // Similarly for IS NOT TRUE, IS FALSE, etc.
@@ -1745,10 +1750,11 @@ public class RexUtil {
       return simplify(rexBuilder,
           rexBuilder.makeCall(op(kind.negate()),
               ((RexCall) a).getOperands().get(0)));
-    }
-    RexNode a2 = simplify(rexBuilder, a);
-    if (a != a2) {
-      return rexBuilder.makeCall(op(kind), ImmutableList.of(a2));
+    default:
+      RexNode a2 = simplify(rexBuilder, a);
+      if (a != a2) {
+        return rexBuilder.makeCall(op(kind), ImmutableList.of(a2));
+      }
     }
     return call;
   }

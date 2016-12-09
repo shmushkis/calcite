@@ -29,7 +29,6 @@ import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlCastFunction;
-import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.trace.CalciteLogger;
 
@@ -175,19 +174,20 @@ public class RexImplicationChecker {
     // Several things imply "IS NOT NULL"
     switch (second.getKind()) {
     case IS_NOT_NULL:
+      // Suppose we know that first is strong in second; that is,
+      // the if second is null, then first will be null.
+      // Then, first being not null implies that second is not null.
+      //
+      // For example, first is "x > y", second is "x".
+      // If we know that "x > y" is not null, we know that "x" is not null.
       final RexNode operand = ((RexCall) second).getOperands().get(0);
-      final Holder<Boolean> flag = Holder.of(false);
-      Strong strong = new Strong() {
-        @Override protected boolean strong(RexNode node) {
-          return !RexUtil.eq(node, operand)
-              && super.strong(node);
-        }
-
-        @Override public boolean strong(RexInputRef ref) {
-          return ref.getType().isNullable();
+      final Strong strong = new Strong() {
+        @Override public boolean isNull(RexNode node) {
+          return RexUtil.eq(node, operand)
+              || super.isNull(node);
         }
       };
-      if (strong.strong(first)) {
+      if (strong.isNull(first)) {
         return true;
       }
     }
