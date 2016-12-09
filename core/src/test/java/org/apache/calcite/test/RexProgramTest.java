@@ -158,6 +158,10 @@ public class RexProgramTest {
     return rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, node);
   }
 
+  private RexNode isNotNull(RexNode node) {
+    return rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, node);
+  }
+
   private RexNode not(RexNode node) {
     return rexBuilder.makeCall(SqlStdOperatorTable.NOT, node);
   }
@@ -1092,6 +1096,27 @@ public class RexProgramTest {
     RexNode result = RexUtil.simplify(rexBuilder, andCondition, false);
     assertThat(result.getType().isNullable(), is(true));
     assertThat(result.getType().getSqlTypeName(), is(SqlTypeName.BOOLEAN));
+  }
+
+  @Test public void testSimplifyIsNotNull() {
+    RelDataType intType =
+        typeFactory.createTypeWithNullability(
+            typeFactory.createSqlType(SqlTypeName.INTEGER), false);
+    RelDataType intNullableType =
+        typeFactory.createTypeWithNullability(
+            typeFactory.createSqlType(SqlTypeName.INTEGER), true);
+    final RexInputRef i0 = rexBuilder.makeInputRef(intNullableType, 0);
+    final RexInputRef i1 = rexBuilder.makeInputRef(intNullableType, 1);
+    final RexInputRef i2 = rexBuilder.makeInputRef(intType, 2);
+    final RexInputRef i3 = rexBuilder.makeInputRef(intType, 3);
+    final RexLiteral one = rexBuilder.makeExactLiteral(BigDecimal.ONE);
+    final RexNode null_ = rexBuilder.makeNullLiteral(SqlTypeName.INTEGER);
+    checkSimplify(isNotNull(lt(i0, i1)),
+        "AND(IS NOT NULL($0), IS NOT NULL($1))");
+    checkSimplify(isNotNull(lt(i0, i2)), "IS NOT NULL($0)");
+    checkSimplify(isNotNull(lt(i2, i3)), "true");
+    checkSimplify(isNotNull(lt(i0, one)), "IS NOT NULL($0)");
+    checkSimplify(isNotNull(lt(i0, null_)), "false");
   }
 
   @Test public void testSimplifyCastLiteral() {

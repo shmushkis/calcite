@@ -20,10 +20,15 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.ImmutableBitSet;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
+
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 /** Utilities for strong predicates.
  *
@@ -47,6 +52,8 @@ import java.util.List;
  * </ul>
  */
 public class Strong {
+  private static final Map<SqlKind, Policy> MAP = createPolicyMap();
+
   /** Returns a checker that consults a bit set to find out whether particular
    * inputs may be null. */
   public static Strong of(final ImmutableBitSet nullColumns) {
@@ -63,28 +70,10 @@ public class Strong {
     return of(nullColumns).isNull(node);
   }
 
-  /** Returns whether an operator always returns null if any of its arguments
-   * is null. */
-  public static boolean inAllOperands(SqlOperator op) {
-    switch (op.kind) {
-    case IS_DISTINCT_FROM:
-    case IS_NOT_DISTINCT_FROM:
-    case IS_NULL:
-    case IS_NOT_NULL:
-    case IS_TRUE:
-    case IS_NOT_TRUE:
-    case IS_FALSE:
-    case IS_NOT_FALSE:
-    case NULLIF: // not strict: NULLIF(1, NULL) yields 1
-    case COALESCE: // not strict: COALESCE(NULL, 2) yields 2
-    case AND: // not strict: FALSE OR NULL yields FALSE
-    case OR: // not strict: TRUE OR NULL yields TRUE
-    case OTHER:
-    case OTHER_FUNCTION:
-      return false;
-    default:
-      return true;
-    }
+  /** Returns how to deduce whether a particular kind of expression is null,
+   * given whether its arguments are null. */
+  public static Policy policy(SqlKind kind) {
+    return Preconditions.checkNotNull(MAP.get(kind), kind);
   }
 
   /** Returns whether an expression is definitely null.
@@ -99,6 +88,7 @@ public class Strong {
     case IS_TRUE:
     case IS_NOT_NULL:
     case AND:
+    case NOT:
     case EQUALS:
     case NOT_EQUALS:
     case LESS_THAN:
@@ -108,9 +98,21 @@ public class Strong {
     case PLUS_PREFIX:
     case MINUS_PREFIX:
     case PLUS:
+    case TIMESTAMP_ADD:
     case MINUS:
+    case TIMESTAMP_DIFF:
     case TIMES:
     case DIVIDE:
+    case CAST:
+    case REINTERPRET:
+    case TRIM:
+    case LTRIM:
+    case RTRIM:
+    case CEIL:
+    case FLOOR:
+    case EXTRACT:
+    case GREATEST:
+    case LEAST:
       return anyNull(((RexCall) node).getOperands());
     case OR:
       return allNull(((RexCall) node).getOperands());
@@ -144,6 +146,97 @@ public class Strong {
       }
     }
     return false;
+  }
+
+  private static Map<SqlKind, Policy> createPolicyMap() {
+    EnumMap<SqlKind, Policy> map = new EnumMap<>(SqlKind.class);
+
+    map.put(SqlKind.INPUT_REF, Policy.AS_IS);
+    map.put(SqlKind.LOCAL_REF, Policy.AS_IS);
+    map.put(SqlKind.DYNAMIC_PARAM, Policy.AS_IS);
+    map.put(SqlKind.OTHER_FUNCTION, Policy.AS_IS);
+
+    // The following types of expressions could potentially be custom.
+    map.put(SqlKind.CASE, Policy.AS_IS);
+    map.put(SqlKind.DECODE, Policy.AS_IS);
+    // NULLIF(1, NULL) yields 1, but NULLIF(1, 1) yields NULL
+    map.put(SqlKind.NULLIF, Policy.AS_IS);
+    // COALESCE(NULL, 2) yields 2
+    map.put(SqlKind.COALESCE, Policy.AS_IS);
+    map.put(SqlKind.NVL, Policy.AS_IS);
+    // FALSE OR NULL yields FALSE
+    map.put(SqlKind.AND, Policy.AS_IS);
+    // TRUE OR NULL yields TRUE
+    map.put(SqlKind.OR, Policy.AS_IS);
+
+    // Expression types with custom handlers.
+    map.put(SqlKind.LITERAL, Policy.CUSTOM);
+
+    map.put(SqlKind.EXISTS, Policy.NOT_NULL);
+    map.put(SqlKind.IS_DISTINCT_FROM, Policy.NOT_NULL);
+    map.put(SqlKind.IS_NOT_DISTINCT_FROM, Policy.NOT_NULL);
+    map.put(SqlKind.IS_NULL, Policy.NOT_NULL);
+    map.put(SqlKind.IS_NOT_NULL, Policy.NOT_NULL);
+    map.put(SqlKind.IS_TRUE, Policy.NOT_NULL);
+    map.put(SqlKind.IS_NOT_TRUE, Policy.NOT_NULL);
+    map.put(SqlKind.IS_FALSE, Policy.NOT_NULL);
+    map.put(SqlKind.IS_NOT_FALSE, Policy.NOT_NULL);
+    map.put(SqlKind.IS_DISTINCT_FROM, Policy.NOT_NULL);
+    map.put(SqlKind.IS_NOT_DISTINCT_FROM, Policy.NOT_NULL);
+
+    map.put(SqlKind.NOT, Policy.ANY);
+    map.put(SqlKind.EQUALS, Policy.ANY);
+    map.put(SqlKind.NOT_EQUALS, Policy.ANY);
+    map.put(SqlKind.LESS_THAN, Policy.ANY);
+    map.put(SqlKind.LESS_THAN_OR_EQUAL, Policy.ANY);
+    map.put(SqlKind.GREATER_THAN, Policy.ANY);
+    map.put(SqlKind.GREATER_THAN_OR_EQUAL, Policy.ANY);
+    map.put(SqlKind.LIKE, Policy.ANY);
+    map.put(SqlKind.SIMILAR, Policy.ANY);
+    map.put(SqlKind.PLUS_PREFIX, Policy.ANY);
+    map.put(SqlKind.MINUS_PREFIX, Policy.ANY);
+    map.put(SqlKind.PLUS, Policy.ANY);
+    map.put(SqlKind.MINUS, Policy.ANY);
+    map.put(SqlKind.TIMES, Policy.ANY);
+    map.put(SqlKind.DIVIDE, Policy.ANY);
+    map.put(SqlKind.CAST, Policy.ANY);
+    map.put(SqlKind.REINTERPRET, Policy.ANY);
+    map.put(SqlKind.TRIM, Policy.ANY);
+    map.put(SqlKind.LTRIM, Policy.ANY);
+    map.put(SqlKind.RTRIM, Policy.ANY);
+    map.put(SqlKind.CEIL, Policy.ANY);
+    map.put(SqlKind.FLOOR, Policy.ANY);
+    map.put(SqlKind.EXTRACT, Policy.ANY);
+    map.put(SqlKind.GREATEST, Policy.ANY);
+    map.put(SqlKind.LEAST, Policy.ANY);
+
+    // Assume that any other expressions cannot be simplified.
+    for (SqlKind k
+        : Iterables.concat(SqlKind.EXPRESSION, SqlKind.AGGREGATE)) {
+      if (!map.containsKey(k)) {
+        map.put(k, Policy.AS_IS);
+      }
+    }
+    return map;
+  }
+
+  /** How whether an operator's operands are null affects whether a call to
+   * that operator evaluates to null. */
+  public enum Policy {
+    /** This kind of expression is never null. No need to look at its arguments,
+     * if it has any. */
+    NOT_NULL,
+
+    /** This kind of expression has its own particular rules about whether it
+     * is null. */
+    CUSTOM,
+
+    /** This kind of expression is null if and only if at least one of its
+     * arguments is null. */
+    ANY,
+
+    /** This kind of expression may be null. There is no way to rewrite. */
+    AS_IS,
   }
 }
 

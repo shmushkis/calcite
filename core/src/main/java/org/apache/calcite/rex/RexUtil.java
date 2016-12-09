@@ -20,6 +20,7 @@ import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.function.Predicate1;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.plan.Strong;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelFieldCollation;
@@ -1712,8 +1713,9 @@ public class RexUtil {
   }
 
   private static RexNode simplifyIs(RexBuilder rexBuilder, RexCall call) {
-    final RexNode simplified = simplifyIs2(rexBuilder, call.getKind(),
-        call.getOperands().get(0));
+    final SqlKind kind = call.getKind();
+    final RexNode a = call.getOperands().get(0);
+    final RexNode simplified = simplifyIs2(rexBuilder, kind, a);
     if (simplified != null) {
       return simplified;
     }
@@ -1724,11 +1726,16 @@ public class RexUtil {
       RexNode a) {
     switch (kind) {
     case IS_NULL:
-    case IS_NOT_NULL:
       // x IS NULL ==> FALSE (if x is not nullable)
-      // x IS NOT NULL ==> TRUE (if x is not nullable)
       if (!a.getType().isNullable()) {
-        return rexBuilder.makeLiteral(kind == SqlKind.IS_NOT_NULL);
+        return rexBuilder.makeLiteral(false);
+      }
+      break;
+    case IS_NOT_NULL:
+      // x IS NOT NULL ==> TRUE (if x is not nullable)
+      RexNode simplified = simplifyIsNotNull(rexBuilder, a);
+      if (simplified != null) {
+        return simplified;
       }
       break;
     case IS_TRUE:
@@ -1748,6 +1755,8 @@ public class RexUtil {
             rexBuilder.makeCall(SqlStdOperatorTable.NOT, a));
       }
       break;
+    }
+    switch (a.getKind()) {
     case NOT:
       // (NOT x) IS TRUE ==> x IS FALSE
       // Similarly for IS NOT TRUE, IS FALSE, etc.
@@ -1764,6 +1773,39 @@ public class RexUtil {
       return rexBuilder.makeCall(op(kind), ImmutableList.of(a2));
     }
     return null; // cannot be simplified
+  }
+
+  private static RexNode simplifyIsNotNull(RexBuilder rexBuilder, RexNode a) {
+    if (!a.getType().isNullable()) {
+      return rexBuilder.makeLiteral(true);
+    }
+    switch (Strong.policy(a.getKind())) {
+    case ANY:
+      final List<RexNode> operands = new ArrayList<>();
+      for (RexNode operand : ((RexCall) a).getOperands()) {
+        final RexNode simplified = simplifyIsNotNull(rexBuilder, operand);
+        if (simplified == null) {
+          operands.add(
+              rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, operand));
+        } else if (simplified.isAlwaysFalse()) {
+          return rexBuilder.makeLiteral(false);
+        } else {
+          operands.add(simplified);
+        }
+      }
+      return composeConjunction(rexBuilder, operands, false);
+    case CUSTOM:
+      switch (a.getKind()) {
+      case LITERAL:
+        return rexBuilder.makeLiteral(((RexLiteral) a).getValue() != null);
+      default:
+        throw new AssertionError("every CUSTOM policy needs a handler, "
+            + a.getKind());
+      }
+    case AS_IS:
+    default:
+      return null;
+    }
   }
 
   private static SqlOperator op(SqlKind kind) {

@@ -5915,9 +5915,9 @@ public abstract class SqlOperatorBaseTest {
               || s.matches("MOD\\(.*, 0\\)")) {
             continue;
           }
-          boolean strict = Strong.inAllOperands(op);
+          final Strong.Policy policy = Strong.policy(op.kind);
           try {
-            if (nullCount > 0 && strict) {
+            if (nullCount > 0 && policy == Strong.Policy.ANY) {
               tester.checkNull(s);
             } else {
               final String query;
