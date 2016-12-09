@@ -1730,7 +1730,7 @@ public class RexUtil {
       if (!a.getType().isNullable()) {
         return rexBuilder.makeLiteral(kind == SqlKind.IS_NOT_NULL);
       }
-      return null; // cannot be simplified
+      break;
     case IS_TRUE:
     case IS_NOT_FALSE:
       // x IS TRUE ==> x (if x is not nullable)
@@ -1738,7 +1738,7 @@ public class RexUtil {
       if (!a.getType().isNullable()) {
         return simplify(rexBuilder, a);
       }
-      return null; // cannot be simplified
+      break;
     case IS_FALSE:
     case IS_NOT_TRUE:
       // x IS NOT TRUE ==> NOT x (if x is not nullable)
@@ -1747,7 +1747,7 @@ public class RexUtil {
         return simplify(rexBuilder,
             rexBuilder.makeCall(SqlStdOperatorTable.NOT, a));
       }
-      return null; // cannot be simplified
+      break;
     case NOT:
       // (NOT x) IS TRUE ==> x IS FALSE
       // Similarly for IS NOT TRUE, IS FALSE, etc.
@@ -1758,13 +1758,12 @@ public class RexUtil {
       return simplify(rexBuilder,
           rexBuilder.makeCall(op(kind.negate()),
               ((RexCall) a).getOperands().get(0)));
-    default:
-      RexNode a2 = simplify(rexBuilder, a);
-      if (a != a2) {
-        return rexBuilder.makeCall(op(kind), ImmutableList.of(a2));
-      }
-      return null; // cannot be simplified
     }
+    RexNode a2 = simplify(rexBuilder, a);
+    if (a != a2) {
+      return rexBuilder.makeCall(op(kind), ImmutableList.of(a2));
+    }
+    return null; // cannot be simplified
   }
 
   private static SqlOperator op(SqlKind kind) {
