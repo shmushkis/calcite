@@ -3442,7 +3442,7 @@ public abstract class RelOptUtil {
       // declared NULL are really NOT NULL.
       return true;
     }
-    final RexExecutor executor = r.getCluster().getPlanner().getExecutor();
+    final RexExecutor executor = r.getCluster().xyz.getExecutor();
     if (!(executor instanceof RexExecutorImpl)) {
       // Cannot proceed without an executor.
       return true;

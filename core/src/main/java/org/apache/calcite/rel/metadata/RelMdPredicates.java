@@ -417,7 +417,7 @@ public class RelMdPredicates
     List<RexNode> preds = new ArrayList<>(finalPreds.values());
     final RelOptCluster cluster = union.getCluster();
     final RexExecutor executor =
-        Util.first(cluster.getPlanner().getExecutor(), RexUtil.EXECUTOR);
+        Util.first(cluster.xyz.getExecutor(), RexUtil.EXECUTOR);
     final RexSimplify simplify = new RexSimplify(rB, true, executor);
     RexNode disjPred = simplify.simplifyOrs(finalResidualPreds);
     if (!disjPred.isAlwaysTrue()) {

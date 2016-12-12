@@ -18,6 +18,7 @@ package org.apache.calcite.adapter.druid;
 
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
@@ -113,42 +114,38 @@ public class DruidRules {
           SORT_PROJECT_TRANSPOSE);
 
   /** Predicate that returns whether Druid can not handle an aggregate. */
-  private static final Predicate<Aggregate> BAD_AGG =
-      new PredicateImpl<Aggregate>() {
-        public boolean test(Aggregate aggregate) {
-          final CalciteConnectionConfig config =
-                  aggregate.getCluster().getPlanner().getContext()
-                      .unwrap(CalciteConnectionConfig.class);
-          for (AggregateCall aggregateCall : aggregate.getAggCallList()) {
-            switch (aggregateCall.getAggregation().getKind()) {
-            case COUNT:
-            case SUM:
-            case SUM0:
-            case MIN:
-            case MAX:
-              final RelDataType type = aggregateCall.getType();
-              final SqlTypeName sqlTypeName = type.getSqlTypeName();
-              if (SqlTypeFamily.APPROXIMATE_NUMERIC.getTypeNames().contains(sqlTypeName)
-                      || SqlTypeFamily.INTEGER.getTypeNames().contains(sqlTypeName)) {
-                continue;
-              } else if (SqlTypeFamily.EXACT_NUMERIC.getTypeNames().contains(sqlTypeName)) {
-                // Decimal
-                assert sqlTypeName == SqlTypeName.DECIMAL;
-                if (type.getScale() == 0 || config.approximateDecimal()) {
-                  // If scale is zero or we allow approximating decimal, we can proceed
-                  continue;
-                }
-              }
-              // Cannot handle this aggregate function
-              return true;
-            default:
-              // Cannot handle this aggregate function
-              return true;
-            }
+  private static boolean isBadAgg(Aggregate aggregate, RelOptPlanner planner) {
+    final CalciteConnectionConfig config = planner.getContext()
+        .unwrap(CalciteConnectionConfig.class);
+    for (AggregateCall aggregateCall : aggregate.getAggCallList()) {
+      switch (aggregateCall.getAggregation().getKind()) {
+      case COUNT:
+      case SUM:
+      case SUM0:
+      case MIN:
+      case MAX:
+        final RelDataType type = aggregateCall.getType();
+        final SqlTypeName sqlTypeName = type.getSqlTypeName();
+        if (SqlTypeFamily.APPROXIMATE_NUMERIC.getTypeNames().contains(sqlTypeName)
+            || SqlTypeFamily.INTEGER.getTypeNames().contains(sqlTypeName)) {
+          continue;
+        } else if (SqlTypeFamily.EXACT_NUMERIC.getTypeNames().contains(sqlTypeName)) {
+          // Decimal
+          assert sqlTypeName == SqlTypeName.DECIMAL;
+          if (type.getScale() == 0 || config.approximateDecimal()) {
+            // If scale is zero or we allow approximating decimal, we can proceed
+            continue;
           }
-          return false;
         }
-      };
+        // Cannot handle this aggregate function
+        return true;
+      default:
+        // Cannot handle this aggregate function
+        return true;
+      }
+    }
+    return false;
+  }
 
   /**
    * Rule to push a {@link org.apache.calcite.rel.core.Filter} into a {@link DruidQuery}.
@@ -172,7 +169,7 @@ public class DruidRules {
       final List<RexNode> validPreds = new ArrayList<>();
       final List<RexNode> nonValidPreds = new ArrayList<>();
       final RexExecutor executor =
-          Util.first(cluster.getPlanner().getExecutor(), RexUtil.EXECUTOR);
+          Util.first(cluster.xyz.getExecutor(), RexUtil.EXECUTOR);
       final RexSimplify simplify = new RexSimplify(rexBuilder, true, executor);
       final RexNode cond = simplify.simplify(filter.getCondition());
       if (!canPush(cond)) {
@@ -392,9 +389,9 @@ public class DruidRules {
         return;
       }
       if (aggregate.indicator
-              || aggregate.getGroupSets().size() != 1
-              || BAD_AGG.apply(aggregate)
-              || !validAggregate(aggregate, query)) {
+          || aggregate.getGroupSets().size() != 1
+          || isBadAgg(aggregate, call.getPlanner())
+          || !validAggregate(aggregate, query)) {
         return;
       }
       final RelNode newAggregate = aggregate.copy(aggregate.getTraitSet(),
@@ -439,9 +436,9 @@ public class DruidRules {
         return;
       }
       if (aggregate.indicator
-              || aggregate.getGroupSets().size() != 1
-              || BAD_AGG.apply(aggregate)
-              || !validAggregate(aggregate, timestampIdx)) {
+          || aggregate.getGroupSets().size() != 1
+          || isBadAgg(aggregate, call.getPlanner())
+          || !validAggregate(aggregate, timestampIdx)) {
         return;
       }
 

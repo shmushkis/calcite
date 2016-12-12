@@ -117,10 +117,11 @@ public class RelWriterTest {
     String s =
         Frameworks.withPlanner(
             new Frameworks.PlannerAction<String>() {
-              public String apply(RelOptCluster cluster,
+              public String apply(RelOptPlanner planner,
                   RelOptSchema relOptSchema, SchemaPlus rootSchema) {
                 rootSchema.add("hr",
                     new ReflectiveSchema(new JdbcTest.HrSchema()));
+                final RelOptCluster cluster = planner.getCluster();
                 LogicalTableScan scan =
                     LogicalTableScan.create(cluster,
                         relOptSchema.getTableForMember(
@@ -161,11 +162,12 @@ public class RelWriterTest {
     String s =
         Frameworks.withPlanner(
             new Frameworks.PlannerAction<String>() {
-              public String apply(RelOptCluster cluster,
+              public String apply(RelOptPlanner planner,
                   RelOptSchema relOptSchema, SchemaPlus rootSchema) {
                 SchemaPlus schema =
                     rootSchema.add("hr",
                         new ReflectiveSchema(new JdbcTest.HrSchema()));
+                final RelOptCluster cluster = planner.getCluster();
                 final RelJsonReader reader =
                     new RelJsonReader(cluster, relOptSchema, schema);
                 RelNode node;

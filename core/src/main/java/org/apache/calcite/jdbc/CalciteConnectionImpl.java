@@ -42,9 +42,12 @@ import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.materialize.Lattice;
 import org.apache.calcite.materialize.MaterializationService;
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.Xyz;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Schemas;
@@ -449,11 +452,18 @@ abstract class CalciteConnectionImpl
   static class ContextImpl implements CalcitePrepare.Context {
     private final CalciteConnectionImpl connection;
     private final CalciteSchema rootSchema;
+    final RelOptCluster cluster;
 
     ContextImpl(CalciteConnectionImpl connection) {
       this.connection = Preconditions.checkNotNull(connection);
       long now = System.currentTimeMillis();
       this.rootSchema = connection.rootSchema.createSnapshot(now);
+      final RexBuilder rexBuilder = new RexBuilder(connection.typeFactory);
+      cluster = RelOptCluster.create(new Xyz(), rexBuilder);
+    }
+
+    public RelOptCluster getCluster() {
+      return cluster;
     }
 
     public JavaTypeFactory getTypeFactory() {

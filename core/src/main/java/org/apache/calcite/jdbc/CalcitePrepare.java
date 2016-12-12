@@ -27,6 +27,7 @@ import org.apache.calcite.linq4j.EnumerableDefaults;
 import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.linq4j.function.Function0;
 import org.apache.calcite.linq4j.tree.ClassDeclaration;
+import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.prepare.CalcitePrepareImpl;
@@ -118,6 +119,8 @@ public interface CalcitePrepare {
     SparkHandler spark();
 
     DataContext getDataContext();
+
+    RelOptCluster getCluster();
   }
 
   /** Callback to register Spark as the main engine. */

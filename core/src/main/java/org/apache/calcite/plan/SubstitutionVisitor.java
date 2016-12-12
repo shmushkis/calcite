@@ -178,7 +178,7 @@ public class SubstitutionVisitor {
       ImmutableList<UnifyRule> rules, RelBuilderFactory relBuilderFactory) {
     this.cluster = target_.getCluster();
     final RexExecutor executor =
-        Util.first(cluster.getPlanner().getExecutor(), RexUtil.EXECUTOR);
+        Util.first(cluster.xyz.getExecutor(), RexUtil.EXECUTOR);
     this.simplify = new RexSimplify(cluster.getRexBuilder(), false, executor);
     this.rules = rules;
     this.query = Holder.of(MutableRels.toMutable(query_));
@@ -1375,7 +1375,7 @@ public class SubstitutionVisitor {
     }
 
     RexExecutorImpl rexImpl =
-        (RexExecutorImpl) (rel.cluster.getPlanner().getExecutor());
+        (RexExecutorImpl) (rel.cluster.xyz.getExecutor());
     RexImplicationChecker rexImplicationChecker =
         new RexImplicationChecker(
             rel.cluster.getRexBuilder(), rexImpl, rel.rowType);
