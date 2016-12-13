@@ -36,6 +36,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql2rel.RelDecorrelator;
 import org.apache.calcite.tools.RelBuilder;
@@ -225,6 +226,10 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       switch (logic) {
       case TRUE_FALSE_UNKNOWN:
       case UNKNOWN_AS_TRUE:
+        if (e.getKind() == SqlKind.EXISTS) {
+          logic = RelOptUtil.Logic.TRUE_FALSE;
+          break; //bypass this for EXISTS
+        }
         builder.aggregate(builder.groupKey(),
             builder.count(false, "c"),
             builder.aggregateCall(SqlStdOperatorTable.COUNT, false, null, "ck",
