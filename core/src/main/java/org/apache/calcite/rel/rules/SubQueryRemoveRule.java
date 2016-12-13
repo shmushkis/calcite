@@ -226,9 +226,11 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       switch (logic) {
       case TRUE_FALSE_UNKNOWN:
       case UNKNOWN_AS_TRUE:
+        // Since EXISTS/NOT EXISTS are not affected by presence of
+        // null keys we do not need to generate count(*), count(c)
         if (e.getKind() == SqlKind.EXISTS) {
           logic = RelOptUtil.Logic.TRUE_FALSE;
-          break; //bypass this for EXISTS
+          break;
         }
         builder.aggregate(builder.groupKey(),
             builder.count(false, "c"),
