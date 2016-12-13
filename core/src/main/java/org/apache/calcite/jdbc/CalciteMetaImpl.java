@@ -37,6 +37,7 @@ import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.linq4j.function.Function1;
 import org.apache.calcite.linq4j.function.Functions;
 import org.apache.calcite.linq4j.function.Predicate1;
+import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -574,7 +575,8 @@ public class CalciteMetaImpl extends MetaImpl {
       // Not possible. We just created a statement.
       throw new AssertionError("missing statement", e);
     }
-    final Context context = statement.createPrepareContext();
+    final Context context =
+        statement.createPrepareContext(ImmutableList.<RelTraitDef>of());
     final CalcitePrepare.Query<Object> query = toQuery(context, sql);
     h.signature = calciteConnection.parseQuery(query, context, maxRowCount);
     statement.setSignature(h.signature);
@@ -598,7 +600,8 @@ public class CalciteMetaImpl extends MetaImpl {
         final CalciteConnectionImpl calciteConnection = getConnection();
         CalciteServerStatement statement =
             calciteConnection.server.getStatement(h);
-        final Context context = statement.createPrepareContext();
+        final Context context =
+            statement.createPrepareContext(ImmutableList.<RelTraitDef>of());
         final CalcitePrepare.Query<Object> query = toQuery(context, sql);
         signature = calciteConnection.parseQuery(query, context, maxRowCount);
         statement.setSignature(signature);
