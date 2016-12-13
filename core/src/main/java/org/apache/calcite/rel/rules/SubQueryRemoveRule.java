@@ -225,6 +225,23 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       switch (logic) {
       case TRUE_FALSE_UNKNOWN:
       case UNKNOWN_AS_TRUE:
+        if (!variablesSet.isEmpty()) {
+          // We have not yet figured out how to include "ct" in a query if
+          // the source relation "e.rel" is correlated. So, dodge the issue:
+          // we pretend that the join key is NOT NULL.
+          //
+          // We will get wrong results in correlated IN where the join
+          // key has nulls. E.g.
+          //
+          //   SELECT *
+          //   FROM emp
+          //   WHERE mgr NOT IN (
+          //     SELECT mgr
+          //     FROM emp AS e2
+          //     WHERE
+          logic = RelOptUtil.Logic.TRUE_FALSE;
+          break;
+        }
         builder.aggregate(builder.groupKey(),
             builder.count(false, "c"),
             builder.aggregateCall(SqlStdOperatorTable.COUNT, false, null, "ck",
