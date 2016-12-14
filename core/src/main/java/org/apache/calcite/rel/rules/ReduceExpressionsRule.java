@@ -146,7 +146,7 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
       final RelMetadataQuery mq = RelMetadataQuery.instance();
       final RelOptPredicateList predicates =
           mq.getPulledUpPredicates(filter.getInput());
-      if (reduceExpressions(filter, expList, predicates, true)) {
+      if (reduceExpressions(call, filter, expList, predicates, true)) {
         assert expList.size() == 1;
         newConditionExp = expList.get(0);
         reduced = true;
@@ -264,7 +264,7 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
           mq.getPulledUpPredicates(project.getInput());
       final List<RexNode> expList =
           Lists.newArrayList(project.getProjects());
-      if (reduceExpressions(project, expList, predicates)) {
+      if (reduceExpressions(call, project, expList, predicates)) {
         call.transformTo(
             call.builder()
                 .push(project.getInput())
@@ -300,7 +300,7 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
       final RelOptPredicateList predicates =
           leftPredicates.union(rexBuilder,
               rightPredicates.shift(rexBuilder, fieldCount));
-      if (!reduceExpressions(join, expList, predicates, true)) {
+      if (!reduceExpressions(call, join, expList, predicates, true)) {
         return;
       }
       if (join instanceof EquiJoin) {
@@ -353,7 +353,7 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
         expandedExprList.add(expr.accept(shuttle));
       }
       final RelOptPredicateList predicates = RelOptPredicateList.EMPTY;
-      if (reduceExpressions(calc, expandedExprList, predicates)) {
+      if (reduceExpressions(call, calc, expandedExprList, predicates)) {
         final RexProgramBuilder builder =
             new RexProgramBuilder(
                 calc.getInput().getRowType(),
@@ -434,19 +434,21 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
   /**
    * Reduces a list of expressions.
    *
+   * @param call    Rule call
    * @param rel     Relational expression
    * @param expList List of expressions, modified in place
    * @param predicates Constraints known to hold on input expressions
    * @return whether reduction found something to change, and succeeded
    */
-  protected static boolean reduceExpressions(RelNode rel, List<RexNode> expList,
-      RelOptPredicateList predicates) {
-    return reduceExpressions(rel, expList, predicates, false);
+  protected static boolean reduceExpressions(RelOptRuleCall call, RelNode rel,
+      List<RexNode> expList, RelOptPredicateList predicates) {
+    return reduceExpressions(call, rel, expList, predicates, false);
   }
 
   /**
    * Reduces a list of expressions.
    *
+   * @param call    Rule call
    * @param rel     Relational expression
    * @param expList List of expressions, modified in place
    * @param predicates Constraints known to hold on input expressions
@@ -454,8 +456,9 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
    *
    * @return whether reduction found something to change, and succeeded
    */
-  protected static boolean reduceExpressions(RelNode rel, List<RexNode> expList,
-      RelOptPredicateList predicates, boolean unknownAsFalse) {
+  protected static boolean reduceExpressions(RelOptRuleCall call, RelNode rel,
+      List<RexNode> expList, RelOptPredicateList predicates,
+      boolean unknownAsFalse) {
     final RelOptCluster cluster = rel.getCluster();
     final RexBuilder rexBuilder = cluster.getRexBuilder();
     final RexExecutor executor =
@@ -464,7 +467,7 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
         new RexSimplify(rexBuilder, unknownAsFalse, executor);
 
     // Simplify predicates in place
-    boolean reduced = reduceExpressionsInternal(rel, simplify, expList,
+    boolean reduced = reduceExpressionsInternal(call, rel, simplify, expList,
         predicates);
 
     final ExprSimplifier simplifier = new ExprSimplifier(simplify);
@@ -481,8 +484,8 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
     return reduced || simplified;
   }
 
-  protected static boolean reduceExpressionsInternal(RelNode rel,
-      RexSimplify simplify, List<RexNode> expList,
+  protected static boolean reduceExpressionsInternal(RelOptRuleCall call,
+      RelNode rel, RexSimplify simplify, List<RexNode> expList,
       RelOptPredicateList predicates) {
     // Replace predicates on CASE to CASE on predicates.
     new CaseShuttle().mutate(expList);
@@ -504,8 +507,8 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
     if (!removableCasts.isEmpty()) {
       final List<RexNode> reducedExprs = Lists.newArrayList();
       for (RexNode exp : removableCasts) {
-        RexCall call = (RexCall) exp;
-        reducedExprs.add(call.getOperands().get(0));
+        RexCall call2 = (RexCall) exp;
+        reducedExprs.add(call2.getOperands().get(0));
       }
       RexReplacer replacer =
           new RexReplacer(simplify, removableCasts, reducedExprs,
@@ -530,7 +533,7 @@ public abstract class ReduceExpressionsRule extends RelOptRule {
     }
 
     // Compute the values they reduce to.
-    RexExecutor executor = rel.getCluster().xyz.getExecutor();
+    final RexExecutor executor = rel.getCluster().xyz.getExecutor();
     if (executor == null) {
       // Cannot reduce expressions: caller has not set an executor in their
       // environment. Caller should execute something like the following before
