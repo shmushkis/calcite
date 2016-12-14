@@ -85,8 +85,6 @@ public class Strong {
     switch (node.getKind()) {
     case LITERAL:
       return ((RexLiteral) node).getValue() == null;
-    case IS_TRUE:
-    case IS_NOT_NULL:
     case AND:
     case NOT:
     case EQUALS:
