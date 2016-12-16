@@ -779,6 +779,22 @@ public class TpchTest {
         .returnsCount(1500000);
   }
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-1543">[CALCITE-1543]
+   * Decorrelator assertion fail</a>. */
+  @Test public void testDecorrelateScalarAggregate() {
+    final String sql = "select sum(l_extendedprice)\n"
+        + "from lineitem, part\n"
+        + "where\n"
+        + "     p_partkey = l_partkey\n"
+        + "     and l_quantity > (\n"
+        + "       select avg(l_quantity)\n"
+        + "       from lineitem\n"
+        + "       where l_partkey = p_partkey\n"
+        + "    )\n";
+    with().query(sql).runs();
+  }
+
   @Test public void testCustomer() {
     with()
         .query("select * from tpch.customer")
