@@ -54,6 +54,10 @@ import java.util.Map;
 public class Strong {
   private static final Map<SqlKind, Policy> MAP = createPolicyMap();
 
+  public Strong() {
+    super();
+  }
+
   /** Returns a checker that consults a bit set to find out whether particular
    * inputs may be null. */
   public static Strong of(final ImmutableBitSet nullColumns) {
@@ -107,7 +111,6 @@ public class Strong {
     case EQUALS:
     case NOT_EQUALS:
     case LESS_THAN:
-    case IS_NOT_NULL:
     case LESS_THAN_OR_EQUAL:
     case GREATER_THAN:
     case GREATER_THAN_OR_EQUAL:
