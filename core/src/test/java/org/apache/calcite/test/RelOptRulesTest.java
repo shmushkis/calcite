@@ -2823,6 +2823,14 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).withLateDecorrelation(true).check();
   }
 
+  @Test public void testCalcite1546() {
+    final String sql = "select * from emp\n"
+            + "where sal = 4 OR\n"
+            + "  empno NOT IN (select deptno from dept)";
+    checkSubQuery(sql).withLateDecorrelation(true).check();
+  }
+
+
   @Test public void testExpandProjectIn() throws Exception {
     final String sql = "select empno,\n"
         + "  deptno in (select deptno from sales.emp where empno < 20) as d\n"
