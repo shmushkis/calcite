@@ -26,12 +26,11 @@ import org.apache.calcite.sql.type.ReturnTypes;
 /**
  * The <code>RAND_INTEGER</code> function.
  */
-public class SqlRandInteger extends SqlFunction {
+public class SqlRandIntegerFunction extends SqlFunction {
   //~ Constructors -----------------------------------------------------------
 
-  public SqlRandInteger() {
-    super(
-        "RAND_INTEGER",
+  public SqlRandIntegerFunction() {
+    super("RAND_INTEGER",
         SqlKind.OTHER_FUNCTION,
         ReturnTypes.INTEGER,
         null,
@@ -51,4 +50,4 @@ public class SqlRandInteger extends SqlFunction {
   }
 }
 
-// End SqlRandInteger.java
+// End SqlRandIntegerFunction.java

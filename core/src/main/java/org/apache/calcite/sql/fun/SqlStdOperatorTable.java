@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.sql.fun;
 
-import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -51,7 +50,6 @@ import org.apache.calcite.sql.type.IntervalSqlType;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
-import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.ReflectiveSqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlModality;
@@ -232,7 +230,8 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   /**
    * Random Integer.
    */
-  public static final SqlRandInteger RAND_INTEGER = new SqlRandInteger();
+  public static final SqlRandIntegerFunction RAND_INTEGER =
+      new SqlRandIntegerFunction();
 
   /**
    * Internal integer arithmetic division operator, '<code>/INT</code>'. This
@@ -459,22 +458,15 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
    * Infix datetime plus operator, '<code>DATETIME + INTERVAL</code>'.
    */
   public static final SqlSpecialOperator DATETIME_PLUS =
-      new SqlSpecialOperator(
-          "DATETIME_PLUS",
-          SqlKind.PLUS,
-          40,
-          true,
-          new SqlReturnTypeInference() {
-        @Override public RelDataType inferReturnType(SqlOperatorBinding opBinding) {
+      new SqlSpecialOperator("DATETIME_PLUS", SqlKind.PLUS, 40, true, null,
+          InferTypes.FIRST_KNOWN, OperandTypes.PLUS_OPERATOR) {
+        @Override public RelDataType
+        inferReturnType(SqlOperatorBinding opBinding) {
           final RelDataTypeFactory typeFactory = opBinding.getTypeFactory();
-          final RelDataType unit = opBinding.getOperandType(1);
-          final TimeUnit addUnit;
-          if (unit instanceof IntervalSqlType) {
-            addUnit = unit.getIntervalQualifier().getStartUnit();
-          } else {
-            addUnit = null;
-          }
-          switch (addUnit) {
+          final RelDataType leftType = opBinding.getOperandType(0);
+          final IntervalSqlType unitType =
+              (IntervalSqlType) opBinding.getOperandType(1);
+          switch (unitType.getIntervalQualifier().getStartUnit()) {
           case HOUR:
           case MINUTE:
           case SECOND:
@@ -482,35 +474,44 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
           case MICROSECOND:
             return typeFactory.createTypeWithNullability(
                 typeFactory.createSqlType(SqlTypeName.TIMESTAMP),
-                opBinding.getOperandType(0).isNullable()
-                    || opBinding.getOperandType(1).isNullable());
+                leftType.isNullable() || unitType.isNullable());
           default:
-            return opBinding.getOperandType(0);
+            return leftType;
           }
         }
-      },
-          InferTypes.FIRST_KNOWN,
-          OperandTypes.PLUS_OPERATOR);
+      };
 
   /**
-   * Multiset MEMBER OF. Checks to see if a element belongs to a multiset.<br>
-   * Example:<br>
-   * <code>'green' MEMBER OF MULTISET['red','almost green','blue']</code>
-   * returns <code>false</code>.
+   * Multiset {@code MEMBER OF}, which returns whether a element belongs to a
+   * multiset.
+   *
+   * <p>For example, the following returns <code>false</code>:
+   *
+   * <blockquote>
+   * <code>'green' MEMBER OF MULTISET ['red','almost green','blue']</code>
+   * </blockquote>
    */
   public static final SqlBinaryOperator MEMBER_OF =
       new SqlMultisetMemberOfOperator();
 
   /**
    * Submultiset. Checks to see if an multiset is a sub-set of another
-   * multiset.<br>
-   * Example:<br>
-   * <code>MULTISET['green'] SUBMULTISET OF MULTISET['red','almost
-   * green','blue']</code> returns <code>false</code>.
+   * multiset.
    *
-   * <p>But <code>MULTISET['blue', 'red'] SUBMULTISET OF
-   * MULTISET['red','almost green','blue']</code> returns <code>true</code>
-   * (<b>NB</b> multisets is order independant)
+   * <p>For example, the following returns <code>false</code>:
+   *
+   * <blockquote>
+   * <code>MULTISET ['green'] SUBMULTISET OF
+   * MULTISET['red', 'almost green', 'blue']</code>
+   * </blockquote>
+   *
+   * <p>The following returns <code>true</code>, in part because multisets are
+   * order-independent:
+   *
+   * <blockquote>
+   * <code>MULTISET ['blue', 'red'] SUBMULTISET OF
+   * MULTISET ['red', 'almost green', 'blue']</code>
+   * </blockquote>
    */
   public static final SqlBinaryOperator SUBMULTISET_OF =
 
