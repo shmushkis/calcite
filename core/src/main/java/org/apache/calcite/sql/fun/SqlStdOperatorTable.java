@@ -227,11 +227,14 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
           InferTypes.FIRST_KNOWN,
           OperandTypes.DIVISION_OPERATOR);
 
-  /**
-   * Random Integer.
-   */
+  /** The {@code RAND_INTEGER([seed, ] bound) function, which yields a random
+   * integer, optionally with seed. */
   public static final SqlRandIntegerFunction RAND_INTEGER =
       new SqlRandIntegerFunction();
+
+  /** The {@code RAND([seed]) function, which yields a random double, optionally
+   * with seed. */
+  public static final SqlRandFunction RAND = new SqlRandFunction();
 
   /**
    * Internal integer arithmetic division operator, '<code>/INT</code>'. This

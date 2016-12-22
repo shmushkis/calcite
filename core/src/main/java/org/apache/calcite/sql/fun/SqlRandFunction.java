@@ -24,23 +24,23 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 
 /**
- * The <code>RAND_INTEGER</code> function. There are two overloads:
+ * The <code>RAND</code> function. There are two overloads:
  *
  * <ul>
- *   <li>RAND_INTEGER(bound) returns a random integer between 0 and bound - 1
- *   <li>RAND_INTEGER(seed, bound) returns a random integer between 0 and
- *   bound - 1, initializing the random number generator with seed on first call
+ *   <li>RAND() returns a random double between 0 and 1
+ *   <li>RAND(seed) returns a random double between 0 and 1, initializing the
+ *   random number generator with seed on first call
  * </ul>
  */
-public class SqlRandIntegerFunction extends SqlFunction {
+public class SqlRandFunction extends SqlFunction {
   //~ Constructors -----------------------------------------------------------
 
-  public SqlRandIntegerFunction() {
-    super("RAND_INTEGER",
+  public SqlRandFunction() {
+    super("RAND",
         SqlKind.OTHER_FUNCTION,
-        ReturnTypes.INTEGER,
+        ReturnTypes.DOUBLE,
         null,
-        OperandTypes.or(OperandTypes.NUMERIC, OperandTypes.NUMERIC_NUMERIC),
+        OperandTypes.or(OperandTypes.NILADIC, OperandTypes.NUMERIC),
         SqlFunctionCategory.NUMERIC);
   }
 
@@ -56,4 +56,4 @@ public class SqlRandIntegerFunction extends SqlFunction {
   }
 }
 
-// End SqlRandIntegerFunction.java
+// End SqlRandFunction.java
