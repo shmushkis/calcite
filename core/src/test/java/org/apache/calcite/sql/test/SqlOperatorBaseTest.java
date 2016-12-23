@@ -2765,6 +2765,12 @@ public abstract class SqlOperatorBaseTest {
         "DATE NOT NULL");
   }
 
+  @Test public void testDatePlusMonthInterval() {
+    tester.checkScalar("date '2008-12-31' + interval '1' year",
+        "2009-12-31",
+        "DATE NOT NULL");
+  }
+
   @Test public void testNotEqualsOperator() {
     tester.setFor(SqlStdOperatorTable.NOT_EQUALS);
     tester.checkBoolean("1<>1", Boolean.FALSE);

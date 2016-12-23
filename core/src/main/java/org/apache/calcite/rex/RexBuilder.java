@@ -1091,6 +1091,20 @@ public class RexBuilder {
   /**
    * Creates a literal representing an interval value, for example
    * {@code INTERVAL '3-7' YEAR TO MONTH}.
+   *
+   * <p>The value {@code v} is in terms of the base units of the interval type.
+   * For YEAR and MONTH, the base unit is month;
+   * so {@code INTERVAL '1' YEAR}
+   * is created using {@code makeIntervalLiteral(12, YEAR)}.
+   * For all other interval types, the base unit is second;
+   * so {@code INTERVAL '2:20' HOUR TO MINUTE}
+   * is created using {@code makeIntervalLiteral(8400, HOUR_TO_MINUTE)}
+   * because 2 hours and 20 minutes is 8,400 seconds.
+   *
+   * @param v The value, in the base units of the interval type
+   * @param intervalQualifier Interval qualifier, specifying the type,
+   *     start and end interval units, and precision
+   * @return Interval literal
    */
   public RexLiteral makeIntervalLiteral(
       BigDecimal v,
