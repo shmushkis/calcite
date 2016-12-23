@@ -166,6 +166,7 @@ abstract class RelOptTestBase extends SqlToRelTestBase {
     if (tester.isLateDecorrelate()) {
       final String planMid = NL + RelOptUtil.toString(r);
       diffRepos.assertEquals("planMid", "${planMid}", planMid);
+      System.out.println(planMid); // TODO:
       SqlToRelTestBase.assertValid(r);
       r = RelDecorrelator.decorrelateQuery(r);
     }
