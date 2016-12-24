@@ -2927,6 +2927,19 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).withLateDecorrelation(true).check();
   }
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-1045">[CALCITE-1045]
+   * Decorrelate sub-queries in Project and Join</a>, with the added
+   * complication that there are two sub-queries. */
+  @Ignore("[CALCITE-1045]")
+  @Test public void testDecorrelateTwoScalar() throws Exception {
+    final String sql = "select deptno,\n"
+        + "  (select min(1) from emp where empno > d.deptno) as i0,\n"
+        + "  (select min(0) from emp where deptno = d.deptno and ename = 'SMITH') as i1\n"
+        + "from dept as d";
+    checkSubQuery(sql).withLateDecorrelation(true).check();
+  }
+
   @Test public void testWhereInCorrelated() {
     final String sql = "select empno from emp as e\n"
         + "join dept as d using (deptno)\n"
