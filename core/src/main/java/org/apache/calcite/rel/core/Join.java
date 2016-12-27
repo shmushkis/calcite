@@ -34,14 +34,18 @@ import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.Litmus;
+import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -141,15 +145,14 @@ public abstract class Join extends BiRel {
     return joinType;
   }
 
-  // TODO: enable
-  public boolean isValid_(Litmus litmus, Context context) {
+  @Override public boolean isValid(Litmus litmus, Context context) {
     if (!super.isValid(litmus, context)) {
       return false;
     }
     if (getRowType().getFieldCount()
         != getSystemFieldList().size()
         + left.getRowType().getFieldCount()
-        + right.getRowType().getFieldCount()) {
+        + (this instanceof SemiJoin ? 0 : right.getRowType().getFieldCount())) {
       return litmus.fail("field count mismatch");
     }
     if (condition != null) {
@@ -161,14 +164,17 @@ public abstract class Join extends BiRel {
       // fields, left fields, and right fields. Very similar to the
       // output row type, except that fields have not yet been made due
       // due to outer joins.
+      final RelDataTypeFactory.FieldInfoBuilder builder =
+          getCluster().getTypeFactory().builder()
+              .addAll(getSystemFieldList())
+              .addAll(
+                  nullableIf(joinType.generatesNullsOnLeft(),
+                      getLeft().getRowType().getFieldList()))
+              .addAll(
+                  nullableIf(joinType.generatesNullsOnRight(),
+                      getRight().getRowType().getFieldList()));
       RexChecker checker =
-          new RexChecker(
-              getCluster().getTypeFactory().builder()
-                  .addAll(getSystemFieldList())
-                  .addAll(getLeft().getRowType().getFieldList())
-                  .addAll(getRight().getRowType().getFieldList())
-                  .build(),
-              context, litmus);
+          new RexChecker(builder.build(), context, litmus);
       condition.accept(checker);
       if (checker.getFailureCount() > 0) {
         return litmus.fail(checker.getFailureCount()
@@ -176,6 +182,21 @@ public abstract class Join extends BiRel {
       }
     }
     return litmus.succeed();
+  }
+
+  private List<? extends Map.Entry<String, RelDataType>>
+  nullableIf(boolean nullable, List<RelDataTypeField> fieldList) {
+    if (!nullable || true) {
+      return fieldList;
+    }
+    final RelDataTypeFactory typeFactory = getCluster().getTypeFactory();
+    return Lists.transform(fieldList,
+        new Function<RelDataTypeField, Pair<String, RelDataType>>() {
+          public Pair<String, RelDataType> apply(RelDataTypeField field) {
+            return Pair.of(field.getName(),
+                typeFactory.createTypeWithNullability(field.getType(), true));
+          }
+        });
   }
 
   @Override public RelOptCost computeSelfCost(RelOptPlanner planner,

@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.sql.validate;
 
-import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.StructKind;
@@ -24,7 +23,10 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
+import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,8 +46,7 @@ public abstract class ListScope extends DelegatingScope {
   /**
    * List of child {@link SqlValidatorNamespace} objects and their names.
    */
-  protected final List<Pair<String, SqlValidatorNamespace>> children =
-      new ArrayList<>();
+  public final List<ScopeChild> children = new ArrayList<>();
 
   //~ Constructors -----------------------------------------------------------
 
@@ -55,9 +56,10 @@ public abstract class ListScope extends DelegatingScope {
 
   //~ Methods ----------------------------------------------------------------
 
-  public void addChild(SqlValidatorNamespace ns, String alias) {
-    assert alias != null;
-    children.add(Pair.of(alias, ns));
+  @Override public void addChild(SqlValidatorNamespace ns, String alias,
+      boolean nullable) {
+    Preconditions.checkNotNull(alias);
+    children.add(new ScopeChild(children.size(), alias, ns, nullable));
   }
 
   /**
@@ -66,33 +68,42 @@ public abstract class ListScope extends DelegatingScope {
    * @return list of child namespaces
    */
   public List<SqlValidatorNamespace> getChildren() {
-    return Pair.right(children);
+    return Lists.transform(children, ScopeChild.NAMESPACE_FN);
+  }
+
+  /**
+   * Returns an immutable list of child names.
+   *
+   * @return list of child namespaces
+   */
+  public List<String> getChildNames() {
+    return Lists.transform(children, ScopeChild.NAME_FN);
   }
 
   private int findChild(List<String> names) {
-    for (Ord<Pair<String, SqlValidatorNamespace>> child : Ord.zip(children)) {
+    for (ScopeChild child : children) {
       String lastName = Util.last(names);
-      if (child.e.left != null) {
-        if (!validator.catalogReader.matches(child.e.left, lastName)) {
+      if (child.name != null) {
+        if (!validator.catalogReader.matches(child.name, lastName)) {
           // Alias does not match last segment. Don't consider the
           // fully-qualified name. E.g.
           //    SELECT sales.emp.name FROM sales.emp AS otherAlias
           continue;
         }
         if (names.size() == 1) {
-          return child.i;
+          return child.ordinal;
         }
       }
 
       // Look up the 2 tables independently, in case one is qualified with
       // catalog & schema and the other is not.
-      final SqlValidatorTable table = child.e.right.getTable();
+      final SqlValidatorTable table = child.namespace.getTable();
       if (table != null) {
         final SqlValidatorTable table2 =
             validator.catalogReader.getTable(names);
         if (table2 != null
             && table.getQualifiedName().equals(table2.getQualifiedName())) {
-          return child.i;
+          return child.ordinal;
         }
       }
     }
@@ -100,15 +111,15 @@ public abstract class ListScope extends DelegatingScope {
   }
 
   public void findAllColumnNames(List<SqlMoniker> result) {
-    for (Pair<String, SqlValidatorNamespace> pair : children) {
-      addColumnNames(pair.right, result);
+    for (ScopeChild child : children) {
+      addColumnNames(child.namespace, result);
     }
     parent.findAllColumnNames(result);
   }
 
   public void findAliases(Collection<SqlMoniker> result) {
-    for (Pair<String, SqlValidatorNamespace> pair : children) {
-      result.add(new SqlMonikerImpl(pair.left, SqlMonikerType.TABLE));
+    for (ScopeChild child : children) {
+      result.add(new SqlMonikerImpl(child.name, SqlMonikerType.TABLE));
     }
     parent.findAliases(result);
   }
@@ -131,11 +142,11 @@ public abstract class ListScope extends DelegatingScope {
   @Override public Map<String, SqlValidatorNamespace>
   findQualifyingTables(String columnName) {
     final Map<String, SqlValidatorNamespace> map = new HashMap<>();
-    for (Pair<String, SqlValidatorNamespace> child : children) {
+    for (ScopeChild child : children) {
       final ResolvedImpl resolved = new ResolvedImpl();
-      resolve(ImmutableList.of(child.left, columnName), true, resolved);
+      resolve(ImmutableList.of(child.name, columnName), true, resolved);
       if (resolved.count() > 0) {
-        map.put(child.getKey(), child.getValue());
+        map.put(child.name, child.namespace);
       }
     }
     return map;
@@ -148,21 +159,22 @@ public abstract class ListScope extends DelegatingScope {
     if (i >= 0) {
       final Step path =
           resolved.emptyPath().add(null, i, StructKind.FULLY_QUALIFIED);
-      resolved.found(children.get(i).right, this, path);
+      final ScopeChild child = children.get(i);
+      resolved.found(child.namespace, child.nullable, this, path);
       return;
     }
 
     // Recursively look deeper into the record-valued fields of the namespace,
     // if it allows skipping fields.
     if (deep) {
-      for (Ord<Pair<String, SqlValidatorNamespace>> child : Ord.zip(children)) {
+      for (ScopeChild child : children) {
         // If identifier starts with table alias, remove the alias.
         final List<String> names2 =
-            validator.catalogReader.matches(child.e.left, names.get(0))
+            validator.catalogReader.matches(child.name, names.get(0))
                 ? names.subList(1, names.size())
                 : names;
-        resolveInNamespace(child.e.right, names2, resolved.emptyPath(),
-            resolved);
+        resolveInNamespace(child.namespace, child.nullable, names2,
+            resolved.emptyPath(), resolved);
       }
       if (resolved.count() > 0) {
         return;
@@ -177,8 +189,8 @@ public abstract class ListScope extends DelegatingScope {
   public RelDataType resolveColumn(String columnName, SqlNode ctx) {
     int found = 0;
     RelDataType type = null;
-    for (Pair<String, SqlValidatorNamespace> pair : children) {
-      SqlValidatorNamespace childNs = pair.right;
+    for (ScopeChild child : children) {
+      SqlValidatorNamespace childNs = child.namespace;
       final RelDataType childRowType = childNs.getRowType();
       final RelDataTypeField field =
           validator.catalogReader.field(childRowType, columnName);
@@ -195,6 +207,38 @@ public abstract class ListScope extends DelegatingScope {
     default:
       throw validator.newValidationError(ctx,
           RESOURCE.columnAmbiguous(columnName));
+    }
+  }
+
+  /** One of the inputs of a scope. Generally, an item in a FROM
+   * clause with a namespace (the columns it provides), and optional
+   * name, and ordinal within the FROM clause. */
+  static class ScopeChild {
+    final int ordinal;
+    final String name;
+    final SqlValidatorNamespace namespace;
+    final boolean nullable;
+
+    static final Function<ScopeChild, SqlValidatorNamespace> NAMESPACE_FN =
+        new Function<ScopeChild, SqlValidatorNamespace>() {
+          public SqlValidatorNamespace apply(ScopeChild input) {
+            return input.namespace;
+          }
+        };
+
+    static final Function<ScopeChild, String> NAME_FN =
+        new Function<ScopeChild, String>() {
+          public String apply(ScopeChild input) {
+            return input.name;
+          }
+        };
+
+    ScopeChild(int ordinal, String name, SqlValidatorNamespace namespace,
+        boolean nullable) {
+      this.ordinal = ordinal;
+      this.name = name;
+      this.namespace = namespace;
+      this.nullable = nullable;
     }
   }
 }
