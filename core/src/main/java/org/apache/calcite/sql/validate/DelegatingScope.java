@@ -173,8 +173,7 @@ public abstract class DelegatingScope implements SqlValidatorScope {
     return parent.findQualifyingTableName(columnName, ctx);
   }
 
-  protected Map<String, SqlValidatorNamespace>
-  findQualifyingTables(String columnName) {
+  protected Map<String, ScopeChild> findQualifyingTables(String columnName) {
     return ImmutableMap.of();
   }
 
@@ -266,26 +265,24 @@ public abstract class DelegatingScope implements SqlValidatorScope {
       if (fromNs == null || fromNs instanceof SchemaNamespace) {
         // Look for a column not qualified by a table alias.
         columnName = identifier.names.get(0);
-        final Map<String, SqlValidatorNamespace> map =
-            findQualifyingTables(columnName);
+        final Map<String, ScopeChild> map = findQualifyingTables(columnName);
         switch (map.size()) {
         default:
           final SqlIdentifier prefix1 = identifier.skipLast(1);
           throw validator.newValidationError(prefix1,
               RESOURCE.tableNameNotFound(prefix1.toString()));
         case 1: {
-          final Map.Entry<String, SqlValidatorNamespace> entry =
+          final Map.Entry<String, ScopeChild> entry =
               map.entrySet().iterator().next();
           final String tableName = entry.getKey();
-          final SqlValidatorNamespace namespace = entry.getValue();
-          fromNs = namespace;
+          fromNs = entry.getValue().namespace;
           fromPath = resolved.emptyPath();
 
           // Adding table name is for RecordType column with StructKind.PEEK_FIELDS or
           // StructKind.PEEK_FIELDS only. Access to a field in a RecordType column of
           // other StructKind should always be qualified with table name.
           final RelDataTypeField field =
-              validator.catalogReader.field(namespace.getRowType(), columnName);
+              validator.catalogReader.field(fromNs.getRowType(), columnName);
           if (field != null) {
             switch (field.getType().getStructKind()) {
             case PEEK_FIELDS:
@@ -334,6 +331,7 @@ public abstract class DelegatingScope implements SqlValidatorScope {
         }
       }
       if (fromPath.stepCount() > 1) {
+        assert fromRowType != null;
         for (Step p : fromPath.steps()) {
           fromRowType = fromRowType.getFieldList().get(p.i).getType();
         }

@@ -270,8 +270,8 @@ public interface SqlValidatorScope {
   /** A match found when looking up a name. */
   class Resolve {
     public final SqlValidatorNamespace namespace;
-    private final boolean nullable; // TODO: remove field, derive from path
-    public final SqlValidatorScope scope;
+    private final boolean nullable;
+    public final SqlValidatorScope scope; // may be null
     public final Path path;
 
     Resolve(SqlValidatorNamespace namespace, boolean nullable,
@@ -279,9 +279,11 @@ public interface SqlValidatorScope {
       this.namespace = Preconditions.checkNotNull(namespace);
       this.nullable = nullable;
       this.scope = scope;
-      this.path = path;
+      this.path = Preconditions.checkNotNull(path);
     }
 
+    /** The row type of the found namespace, nullable if the lookup has
+     * looked into outer joins. */
     public RelDataType rowType() {
       return namespace.getValidator().getTypeFactory()
           .createTypeWithNullability(namespace.getRowType(), nullable);

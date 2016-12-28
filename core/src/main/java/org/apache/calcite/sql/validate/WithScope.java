@@ -54,7 +54,8 @@ class WithScope extends ListScope {
     return super.getTableNamespace(names);
   }
 
-  @Override public void resolve(List<String> names, boolean deep, Resolved resolved) {
+  @Override public void resolve(List<String> names, boolean deep,
+      Resolved resolved) {
     if (names.size() == 1
         && names.equals(withItem.name.names)) {
       final SqlValidatorNamespace ns = validator.getNamespace(withItem);

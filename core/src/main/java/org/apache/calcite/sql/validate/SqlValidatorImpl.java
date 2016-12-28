@@ -444,7 +444,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     final SqlParserPos startPosition = identifier.getParserPosition();
     switch (identifier.names.size()) {
     case 1:
-      for (ListScope.ScopeChild child : scope.children) {
+      for (ScopeChild child : scope.children) {
         final int before = types.size();
         if (child.namespace.getRowType().isDynamicStruct()) {
           // don't expand star if the underneath table is dynamic.
@@ -2078,7 +2078,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
         call.setOperand(0, newOperand);
       }
 
-      for (ListScope.ScopeChild child : overScope.children) {
+      for (ScopeChild child : overScope.children) {
         registerNamespace(usingScope, child.name, child.namespace,
             forceNullable);
       }
@@ -3063,7 +3063,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
     final int duplicateAliasOrdinal = Util.firstDuplicate(names);
     if (duplicateAliasOrdinal >= 0) {
-      final ListScope.ScopeChild child =
+      final ScopeChild child =
           fromScope.children.get(duplicateAliasOrdinal);
       throw newValidationError(child.namespace.getEnclosingNode(),
           RESOURCE.fromAliasDuplicate(child.name));
@@ -3143,7 +3143,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     switch (modality) {
     case STREAM:
       if (scope.children.size() == 1) {
-        for (ListScope.ScopeChild child : scope.children) {
+        for (ScopeChild child : scope.children) {
           if (!child.namespace.supportsModality(modality)) {
             if (fail) {
               throw newValidationError(child.namespace.getNode(),
@@ -3155,7 +3155,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
         }
       } else {
         int supportsModalityCount = 0;
-        for (ListScope.ScopeChild child : scope.children) {
+        for (ScopeChild child : scope.children) {
           if (child.namespace.supportsModality(modality)) {
             ++supportsModalityCount;
           }
@@ -3173,7 +3173,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       }
       break;
     default:
-      for (ListScope.ScopeChild child : scope.children) {
+      for (ScopeChild child : scope.children) {
         if (!child.namespace.supportsModality(modality)) {
           if (fail) {
             throw newValidationError(child.namespace.getNode(),

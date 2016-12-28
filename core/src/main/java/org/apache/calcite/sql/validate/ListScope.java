@@ -23,7 +23,6 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -76,7 +75,7 @@ public abstract class ListScope extends DelegatingScope {
    *
    * @return list of child namespaces
    */
-  public List<String> getChildNames() {
+  List<String> getChildNames() {
     return Lists.transform(children, ScopeChild.NAME_FN);
   }
 
@@ -126,27 +125,28 @@ public abstract class ListScope extends DelegatingScope {
 
   @Override public Pair<String, SqlValidatorNamespace>
   findQualifyingTableName(final String columnName, SqlNode ctx) {
-    final Map<String, SqlValidatorNamespace> map =
-        findQualifyingTables(columnName);
+    final Map<String, ScopeChild> map = findQualifyingTables(columnName);
     switch (map.size()) {
     case 0:
       return parent.findQualifyingTableName(columnName, ctx);
     case 1:
-      return Pair.of(map.entrySet().iterator().next());
+      final Map.Entry<String, ScopeChild> entry =
+          map.entrySet().iterator().next();
+      return Pair.of(entry.getKey(), entry.getValue().namespace);
     default:
       throw validator.newValidationError(ctx,
           RESOURCE.columnAmbiguous(columnName));
     }
   }
 
-  @Override public Map<String, SqlValidatorNamespace>
+  @Override public Map<String, ScopeChild>
   findQualifyingTables(String columnName) {
-    final Map<String, SqlValidatorNamespace> map = new HashMap<>();
+    final Map<String, ScopeChild> map = new HashMap<>();
     for (ScopeChild child : children) {
       final ResolvedImpl resolved = new ResolvedImpl();
       resolve(ImmutableList.of(child.name, columnName), true, resolved);
       if (resolved.count() > 0) {
-        map.put(child.name, child.namespace);
+        map.put(child.name, child);
       }
     }
     return map;
@@ -210,37 +210,6 @@ public abstract class ListScope extends DelegatingScope {
     }
   }
 
-  /** One of the inputs of a scope. Generally, an item in a FROM
-   * clause with a namespace (the columns it provides), and optional
-   * name, and ordinal within the FROM clause. */
-  static class ScopeChild {
-    final int ordinal;
-    final String name;
-    final SqlValidatorNamespace namespace;
-    final boolean nullable;
-
-    static final Function<ScopeChild, SqlValidatorNamespace> NAMESPACE_FN =
-        new Function<ScopeChild, SqlValidatorNamespace>() {
-          public SqlValidatorNamespace apply(ScopeChild input) {
-            return input.namespace;
-          }
-        };
-
-    static final Function<ScopeChild, String> NAME_FN =
-        new Function<ScopeChild, String>() {
-          public String apply(ScopeChild input) {
-            return input.name;
-          }
-        };
-
-    ScopeChild(int ordinal, String name, SqlValidatorNamespace namespace,
-        boolean nullable) {
-      this.ordinal = ordinal;
-      this.name = name;
-      this.namespace = namespace;
-      this.nullable = nullable;
-    }
-  }
 }
 
 // End ListScope.java
