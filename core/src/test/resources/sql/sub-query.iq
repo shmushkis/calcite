@@ -544,4 +544,37 @@ from "scott".dept as d;
 !ok
 !}
 
+# [CALCITE-1494] Inefficient plan for correlated sub-queries
+# Plan must have only one scan each of emp and dept.
+select sal
+from "scott".emp
+where empno IN (
+  select deptno
+  from "scott".dept
+  where emp.job = dept.dname);
++-----+
+| SAL |
++-----+
++-----+
+(0 rows)
+
+!ok
+!plan
+
+# As above, but for EXISTS
+select *
+from "scott".dept as d
+where exists (
+  select 0 from "scott".emp
+  where deptno = d.deptno
+  and ename = 'SMITH');
++--------+----------+--------+
+| DEPTNO | DNAME    | LOC    |
++--------+----------+--------+
+|     20 | RESEARCH | DALLAS |
++--------+----------+--------+
+(1 row)
+
+!ok
+
 # End sub-query.iq
