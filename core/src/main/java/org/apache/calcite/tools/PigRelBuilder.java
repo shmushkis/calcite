@@ -172,7 +172,7 @@ public class PigRelBuilder extends RelBuilder {
     }
   }
 
-  /** Retain alias for naming of aggregates. */
+  /** As super-class method, but also retains alias for naming of aggregates. */
   @Override public RelBuilder as(final String alias) {
     lastAlias = alias;
     return super.as(alias);
