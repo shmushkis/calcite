@@ -35,6 +35,7 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.CorrelationId;
+import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
@@ -116,6 +117,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import javax.annotation.Nonnull;
 
 /**
  * RelDecorrelator replaces all correlated expressions (corExp) in a relational
@@ -808,7 +810,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
   }
 
   private void decorrelateInputWithValueGenerator(RelNode rel) {
-    // currently only handles one input input
+    // currently only handles one input
     assert rel.getInputs().size() == 1;
     RelNode oldInput = rel.getInput(0);
     final Frame frame = map.get(oldInput);
@@ -817,6 +819,25 @@ public class RelDecorrelator implements ReflectiveVisitor {
         new TreeMap<>(frame.corVarOutputPos);
 
     final Collection<Correlation> corVarList = cm.mapRefRelToCorVar.get(rel);
+
+    // Try to populate correlation variables using local fields.
+    // This means that we do not need a value generator.
+    if (rel instanceof Filter) {
+      for (Correlation correlation : corVarList) {
+        if (!mapCorVarToOutputPos.containsKey(correlation)) {
+          try {
+            foo(correlation, ((Filter) rel).getCondition());
+          } catch (Util.FoundOne e) {
+            mapCorVarToOutputPos.put(correlation, (Integer) e.getNode());
+          }
+        }
+      }
+      if (mapCorVarToOutputPos.size() == corVarList.size()) {
+        register(oldInput, oldInput, frame.oldToNewOutputPos,
+            mapCorVarToOutputPos);
+        return;
+      }
+    }
 
     int leftInputOutputCount = frame.r.getRowType().getFieldCount();
 
@@ -836,6 +857,40 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // input fields from newLeftInput(i.e. the original input to the old
     // LogicalFilter) are in the output and in the same position.
     register(oldInput, join, frame.oldToNewOutputPos, mapCorVarToOutputPos);
+  }
+
+  private void foo(Correlation correlation, RexNode e) {
+    switch (e.getKind()) {
+    case EQUALS:
+      final RexCall call = (RexCall) e;
+      final List<RexNode> operands = call.getOperands();
+      if (references(operands.get(0), correlation)
+          && operands.get(1) instanceof RexInputRef) {
+        throw new Util.FoundOne(((RexInputRef) operands.get(1)).getIndex());
+      }
+      if (references(operands.get(1), correlation)
+          && operands.get(0) instanceof RexInputRef) {
+        throw new Util.FoundOne(((RexInputRef) operands.get(0)).getIndex());
+      }
+      break;
+    case AND:
+      for (RexNode operand : ((RexCall) e).getOperands()) {
+        foo(correlation, operand);
+      }
+    }
+  }
+
+  private boolean references(RexNode e, Correlation correlation) {
+    if (e instanceof RexFieldAccess) {
+      final RexFieldAccess f = (RexFieldAccess) e;
+      if (f.getField().getIndex() == correlation.field
+          && f.getReferenceExpr() instanceof RexCorrelVariable) {
+        if (((RexCorrelVariable) f.getReferenceExpr()).id == correlation.corr) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
@@ -2356,7 +2411,11 @@ public class RelDecorrelator implements ReflectiveVisitor {
       this.uniqueKey = uniqueKey;
     }
 
-    public int compareTo(Correlation o) {
+    @Override public String toString() {
+      return corr.getName() + '.' + field;
+    }
+
+    public int compareTo(@Nonnull Correlation o) {
       int c = corr.compareTo(o.corr);
       if (c != 0) {
         return c;
@@ -2562,7 +2621,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
   static class Frame {
     final RelNode r;
     final ImmutableSortedMap<Correlation, Integer> corVarOutputPos;
-    final ImmutableMap<Integer, Integer> oldToNewOutputPos;
+    final ImmutableSortedMap<Integer, Integer> oldToNewOutputPos;
 
     Frame(RelNode r, SortedMap<Correlation, Integer> corVarOutputPos,
         Map<Integer, Integer> oldToNewOutputPos) {

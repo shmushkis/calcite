@@ -3024,12 +3024,23 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).withLateDecorrelation(true).check();
   }
 
-  @Test public void testWhereInCorrelated() {
+  @Test public void testWhereInJoinCorrelated() {
     final String sql = "select empno from emp as e\n"
         + "join dept as d using (deptno)\n"
         + "where e.sal in (\n"
         + "  select e2.sal from emp as e2 where e2.deptno > e.deptno)";
     checkSubQuery(sql).check();
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-1494">[CALCITE-1494]
+   * Inefficient plan for correlated sub-queries</a>. In "planAfter", there
+   * must be only one scan each of emp and dept. We don't need a separate
+   * value-generator for emp.job. */
+  @Test public void testWhereInCorrelated() {
+    final String sql = "select sal from emp where empno IN (\n"
+        + "  select deptno from dept where emp.job = dept.name)";
+    checkSubQuery(sql).withLateDecorrelation(true).check();
   }
 
   @Test public void testExpandWhereComparisonCorrelated() throws Exception {
