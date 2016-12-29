@@ -1613,6 +1613,17 @@ public class RexUtil {
       assert e instanceof RexCall;
       return simplifyIs(rexBuilder, (RexCall) e);
     case EQUALS:
+      final List<RexNode> operands = ((RexCall) e).getOperands();
+      if (RexUtil.eq(operands.get(0), operands.get(1))
+          && (unknownAsFalse
+          || (!operands.get(0).getType().isNullable()
+              && !operands.get(1).getType().isNullable()))) {
+        // Special case: "x = x" simplifies to "x is not null"
+        return simplify(rexBuilder,
+            rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL,
+                operands.get(0)));
+      }
+      // fall through
     case GREATER_THAN:
     case GREATER_THAN_OR_EQUAL:
     case LESS_THAN:
