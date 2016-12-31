@@ -559,6 +559,12 @@ where empno IN (
 (0 rows)
 
 !ok
+EnumerableCalc(expr#0..2=[{inputs}], SAL=[$t2])
+  EnumerableSemiJoin(condition=[AND(=($1, $4), =($0, $3))], joinType=[inner])
+    EnumerableCalc(expr#0..7=[{inputs}], EMPNO=[$t0], JOB=[$t2], SAL=[$t5])
+      EnumerableTableScan(table=[[scott, EMP]])
+    EnumerableCalc(expr#0..2=[{inputs}], expr#3=[CAST($t1):VARCHAR(14) CHARACTER SET "ISO-8859-1" COLLATE "ISO-8859-1$en_US$primary"], expr#4=[=($t3, $t1)], proj#0..2=[{exprs}], $condition=[$t4])
+      EnumerableTableScan(table=[[scott, DEPT]])
 !plan
 
 # As above, but for EXISTS
@@ -576,5 +582,10 @@ where exists (
 (1 row)
 
 !ok
+EnumerableSemiJoin(condition=[=($0, $10)], joinType=[inner])
+  EnumerableTableScan(table=[[scott, DEPT]])
+  EnumerableCalc(expr#0..7=[{inputs}], expr#8=[=($t7, $t7)], expr#9=['SMITH'], expr#10=[=($t1, $t9)], expr#11=[AND($t8, $t10)], proj#0..7=[{exprs}], $condition=[$t11])
+    EnumerableTableScan(table=[[scott, EMP]])
+!plan
 
 # End sub-query.iq

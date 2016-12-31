@@ -849,6 +849,8 @@ public class RexProgramTest {
     final RelDataType booleanType =
         typeFactory.createSqlType(SqlTypeName.BOOLEAN);
     final RelDataType intType = typeFactory.createSqlType(SqlTypeName.INTEGER);
+    final RelDataType intNullableType =
+        typeFactory.createTypeWithNullability(intType, true);
     final RelDataType rowType = typeFactory.builder()
         .add("a", booleanType)
         .add("b", booleanType)
@@ -858,6 +860,7 @@ public class RexProgramTest {
         .add("f", booleanType)
         .add("g", booleanType)
         .add("h", intType)
+        .add("i", intNullableType)
         .build();
 
     final RexDynamicParam range = rexBuilder.makeDynamicParam(rowType, 0);
@@ -866,6 +869,8 @@ public class RexProgramTest {
     final RexNode cRef = rexBuilder.makeFieldAccess(range, 2);
     final RexNode dRef = rexBuilder.makeFieldAccess(range, 3);
     final RexNode eRef = rexBuilder.makeFieldAccess(range, 4);
+    final RexNode hRef = rexBuilder.makeFieldAccess(range, 7);
+    final RexNode iRef = rexBuilder.makeFieldAccess(range, 8);
     final RexLiteral literal1 = rexBuilder.makeExactLiteral(BigDecimal.ONE);
 
     // and: remove duplicates
@@ -984,6 +989,12 @@ public class RexProgramTest {
         or(lt(aRef, literal1),
             and(trueLiteral, or(falseLiteral, falseLiteral))),
         "<(?0.a, 1)");
+
+    // "x = x" simplifies to "x is not null"
+    checkSimplify(eq(literal1, literal1), "true");
+    checkSimplify(eq(hRef, hRef), "true");
+    checkSimplify2(eq(iRef, iRef), "=(?0.i, ?0.i)", "IS NOT NULL(?0.i)");
+    checkSimplify(eq(iRef, hRef), "=(?0.i, ?0.h)");
   }
 
   @Test public void testSimplifyFilter() {

@@ -795,9 +795,6 @@ public class RelDecorrelator implements ReflectiveVisitor {
               + mapNewInputToNewOffset.get(newInput)
               + valueGenFieldOffset;
 
-      if (mapCorVarToOutputPos.containsKey(corVar)) {
-        assert mapCorVarToOutputPos.get(corVar) == newOutputPos;
-      }
       mapCorVarToOutputPos.put(corVar, newOutputPos);
     }
 
@@ -824,14 +821,17 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // This means that we do not need a value generator.
     if (rel instanceof Filter) {
       for (Correlation correlation : corVarList) {
-        if (!mapCorVarToOutputPos.containsKey(correlation)) {
-          try {
-            foo(correlation, ((Filter) rel).getCondition());
-          } catch (Util.FoundOne e) {
-            mapCorVarToOutputPos.put(correlation, (Integer) e.getNode());
-          }
+        if (mapCorVarToOutputPos.containsKey(correlation)) {
+          continue;
+        }
+        try {
+          findCorrelationEquivalent(correlation, ((Filter) rel).getCondition());
+        } catch (Util.FoundOne e) {
+          mapCorVarToOutputPos.put(correlation, (Integer) e.getNode());
         }
       }
+      // If all correlation variables are now satisfied, skip creating a value
+      // generator.
       if (mapCorVarToOutputPos.size() == corVarList.size()) {
         register(oldInput, oldInput, frame.oldToNewOutputPos,
             mapCorVarToOutputPos);
@@ -859,7 +859,10 @@ public class RelDecorrelator implements ReflectiveVisitor {
     register(oldInput, join, frame.oldToNewOutputPos, mapCorVarToOutputPos);
   }
 
-  private void foo(Correlation correlation, RexNode e) {
+  /** Finds a {@link RexInputRef} that is equivalent to a {@link Correlation},
+   * and if found, throws a {@link Util.FoundOne}. */
+  private void findCorrelationEquivalent(Correlation correlation, RexNode e)
+      throws Util.FoundOne {
     switch (e.getKind()) {
     case EQUALS:
       final RexCall call = (RexCall) e;
@@ -875,13 +878,20 @@ public class RelDecorrelator implements ReflectiveVisitor {
       break;
     case AND:
       for (RexNode operand : ((RexCall) e).getOperands()) {
-        foo(correlation, operand);
+        findCorrelationEquivalent(correlation, operand);
       }
     }
   }
 
   private boolean references(RexNode e, Correlation correlation) {
-    if (e instanceof RexFieldAccess) {
+    switch (e.getKind()) {
+    case CAST:
+      final RexNode operand = ((RexCall) e).getOperands().get(0);
+      if (isWidening(e.getType(), operand.getType())) {
+        return references(operand, correlation);
+      }
+      return false;
+    case FIELD_ACCESS:
       final RexFieldAccess f = (RexFieldAccess) e;
       if (f.getField().getIndex() == correlation.field
           && f.getReferenceExpr() instanceof RexCorrelVariable) {
@@ -889,8 +899,22 @@ public class RelDecorrelator implements ReflectiveVisitor {
           return true;
         }
       }
+      // fall through
+    default:
+      return false;
     }
-    return false;
+  }
+
+  /** Returns whether one type is just a widening of another.
+   *
+   * <p>For example:<ul>
+   * <li>{@code VARCHAR(10)} is a widening of {@code VARCHAR(5)}.
+   * <li>{@code VARCHAR(10)} is a widening of {@code VARCHAR(10) NOT NULL}.
+   * </ul>
+   */
+  private boolean isWidening(RelDataType type, RelDataType type1) {
+    return type.getSqlTypeName() == type1.getSqlTypeName()
+        && type.getPrecision() >= type1.getPrecision();
   }
 
   /**
@@ -934,16 +958,14 @@ public class RelDecorrelator implements ReflectiveVisitor {
 
     // Replace the filter expression to reference output of the join
     // Map filter to the new filter over join
-    final RelFactories.FilterFactory factory =
-        RelFactories.DEFAULT_FILTER_FACTORY;
-    RelNode newFilter =
-        factory.createFilter(frame.r, decorrelateExpr(rel.getCondition()));
+    relBuilder.push(frame.r)
+        .filter(decorrelateExpr(rel.getCondition()));
 
     // Filter does not change the input ordering.
     // Filter rel does not permute the input.
     // All corvars produced by filter will have the same output positions in the
     // input rel.
-    return register(rel, newFilter, frame.oldToNewOutputPos,
+    return register(rel, relBuilder.build(), frame.oldToNewOutputPos,
         frame.corVarOutputPos);
   }
 
@@ -1406,9 +1428,9 @@ public class RelDecorrelator implements ReflectiveVisitor {
             Integer newInputPos = frame.corVarOutputPos.get(corVar);
             if (newInputPos != null) {
               // This input rel does produce the cor var referenced.
-              // Assume fieldAccess has the correct type info.
               return new RexInputRef(newInputPos + newInputOutputOffset,
-                  fieldAccess.getType());
+                  frame.r.getRowType().getFieldList().get(newInputPos)
+                      .getType());
             }
           }
 
@@ -1423,7 +1445,12 @@ public class RelDecorrelator implements ReflectiveVisitor {
     }
 
     @Override public RexNode visitInputRef(RexInputRef inputRef) {
-      return getNewForOldInputRef(inputRef);
+      final RexInputRef ref = getNewForOldInputRef(inputRef);
+      if (ref.getIndex() == inputRef.getIndex()
+          && ref.getType() == inputRef.getType()) {
+        return inputRef; // re-use old object, to prevent needless expr cloning
+      }
+      return ref; // TODO: rexBuilder.makeCast(inputRef.getType(), ref, false);
     }
   }
 
