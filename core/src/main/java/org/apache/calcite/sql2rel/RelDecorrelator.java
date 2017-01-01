@@ -820,6 +820,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // Try to populate correlation variables using local fields.
     // This means that we do not need a value generator.
     if (rel instanceof Filter) {
+      SortedMap<Correlation, Integer> map = new TreeMap<>();
       for (Correlation correlation : corVarList) {
         if (mapCorVarToOutputPos.containsKey(correlation)) {
           continue;
@@ -827,14 +828,14 @@ public class RelDecorrelator implements ReflectiveVisitor {
         try {
           findCorrelationEquivalent(correlation, ((Filter) rel).getCondition());
         } catch (Util.FoundOne e) {
-          mapCorVarToOutputPos.put(correlation, (Integer) e.getNode());
+          map.put(correlation, (Integer) e.getNode());
         }
       }
       // If all correlation variables are now satisfied, skip creating a value
       // generator.
-      if (mapCorVarToOutputPos.size() == corVarList.size()) {
-        register(oldInput, oldInput, frame.oldToNewOutputPos,
-            mapCorVarToOutputPos);
+      if (map.size() == corVarList.size()) {
+        map.putAll(frame.corVarOutputPos);
+        register(oldInput, oldInput, frame.oldToNewOutputPos, map);
         return;
       }
     }
@@ -1386,8 +1387,6 @@ public class RelDecorrelator implements ReflectiveVisitor {
   Frame register(RelNode rel, RelNode newRel,
       Map<Integer, Integer> oldToNewOutputPos,
       SortedMap<Correlation, Integer> corVarToOutputPos) {
-    assert allLessThan(oldToNewOutputPos.keySet(),
-        newRel.getRowType().getFieldCount(), Litmus.THROW);
     final Frame frame = new Frame(newRel, corVarToOutputPos, oldToNewOutputPos);
     map.put(rel, frame);
     return frame;
@@ -1450,7 +1449,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
           && ref.getType() == inputRef.getType()) {
         return inputRef; // re-use old object, to prevent needless expr cloning
       }
-      return ref; // TODO: rexBuilder.makeCast(inputRef.getType(), ref, false);
+      return ref;
     }
   }
 
@@ -2442,6 +2441,18 @@ public class RelDecorrelator implements ReflectiveVisitor {
       return corr.getName() + '.' + field;
     }
 
+    @Override public int hashCode() {
+      return Objects.hash(uniqueKey, corr, field);
+    }
+
+    @Override public boolean equals(Object o) {
+      return this == o
+          || o instanceof Correlation
+          && uniqueKey == ((Correlation) o).uniqueKey
+          && corr == ((Correlation) o).corr
+          && field == ((Correlation) o).field;
+    }
+
     public int compareTo(@Nonnull Correlation o) {
       int c = corr.compareTo(o.corr);
       if (c != 0) {
@@ -2655,6 +2666,10 @@ public class RelDecorrelator implements ReflectiveVisitor {
       this.r = Preconditions.checkNotNull(r);
       this.corVarOutputPos = ImmutableSortedMap.copyOf(corVarOutputPos);
       this.oldToNewOutputPos = ImmutableSortedMap.copyOf(oldToNewOutputPos);
+      assert allLessThan(corVarOutputPos.values(),
+          r.getRowType().getFieldCount(), Litmus.THROW);
+      assert allLessThan(oldToNewOutputPos.keySet(),
+          r.getRowType().getFieldCount(), Litmus.THROW);
     }
   }
 }
