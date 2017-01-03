@@ -142,6 +142,7 @@ import org.apache.calcite.sql.validate.ListScope;
 import org.apache.calcite.sql.validate.ParameterScope;
 import org.apache.calcite.sql.validate.SelectScope;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
+import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.calcite.sql.validate.SqlQualified;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableFunction;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
@@ -2202,10 +2203,12 @@ public class SqlToRelConverter {
       String originalRelName = lookup.getOriginalRelName();
       String originalFieldName = fieldAccess.getField().getName();
 
-      SqlValidatorScope.ResolvedImpl resolved =
+      final SqlNameMatcher nameMatcher =
+          lookup.bb.scope.getValidator().getCatalogReader().nameMatcher();
+      final SqlValidatorScope.ResolvedImpl resolved =
           new SqlValidatorScope.ResolvedImpl();
-      lookup.bb.scope.resolve(ImmutableList.of(originalRelName), false,
-          resolved);
+      lookup.bb.scope.resolve(ImmutableList.of(originalRelName),
+          nameMatcher, false, resolved);
       assert resolved.count() == 1;
       final SqlValidatorScope.Resolve resolve = resolved.only();
       final SqlValidatorNamespace foundNs = resolve.namespace;
@@ -2308,10 +2311,12 @@ public class SqlToRelConverter {
       DeferredLookup lookup = mapCorrelToDeferred.get(correlName);
       String originalRelName = lookup.getOriginalRelName();
 
+      final SqlNameMatcher nameMatcher =
+          lookup.bb.scope.getValidator().getCatalogReader().nameMatcher();
       final SqlValidatorScope.ResolvedImpl resolved =
           new SqlValidatorScope.ResolvedImpl();
-      lookup.bb.scope.resolve(ImmutableList.of(originalRelName), false,
-          resolved);
+      lookup.bb.scope.resolve(ImmutableList.of(originalRelName), nameMatcher,
+          false, resolved);
 
       SqlValidatorScope ancestorScope = resolved.only().scope;
 
@@ -3902,9 +3907,11 @@ public class SqlToRelConverter {
         }
         return Pair.of(node, null);
       }
+      final SqlNameMatcher nameMatcher =
+          scope.getValidator().getCatalogReader().nameMatcher();
       final SqlValidatorScope.ResolvedImpl resolved =
           new SqlValidatorScope.ResolvedImpl();
-      scope.resolve(qualified.prefix(), false, resolved);
+      scope.resolve(qualified.prefix(), nameMatcher, false, resolved);
       if (!(resolved.count() == 1)) {
         return null;
       }

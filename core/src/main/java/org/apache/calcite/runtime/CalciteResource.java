@@ -158,11 +158,23 @@ public interface CalciteResource {
   @BaseMessage("Table ''{0}'' not found")
   ExInst<SqlValidatorException> tableNameNotFound(String a0);
 
+  @BaseMessage("Table ''{0}'' not found; did you mean ''{1}''?")
+  ExInst<SqlValidatorException> tableNameNotFoundDidYouMean(String a0,
+      String a1);
+
+  /** Same message as {@link #tableNameNotFound(String)} but a different kind
+   * of exception, so it can be used in {@code RelBuilder}. */
+  @BaseMessage("Table ''{0}'' not found")
+  ExInst<CalciteException> tableNotFound(String tableName);
+
   @BaseMessage("Table ''{0}'' is not a sequence")
   ExInst<SqlValidatorException> notASequence(String a0);
 
   @BaseMessage("Column ''{0}'' not found in any table")
   ExInst<SqlValidatorException> columnNotFound(String a0);
+
+  @BaseMessage("Column ''{0}'' not found in any table; did you mean ''{1}}''")
+  ExInst<SqlValidatorException> columnNotFoundDidYouMean(String a0, String a1);
 
   @BaseMessage("Column ''{0}'' not found in table ''{1}''")
   ExInst<SqlValidatorException> columnNotFoundInTable(String a0, String a1);
@@ -609,9 +621,6 @@ public interface CalciteResource {
 
   @BaseMessage("View is not modifiable. No value is supplied for NOT NULL column ''{0}'' of base table ''{1}''")
   ExInst<SqlValidatorException> noValueSuppliedForViewColumn(String columnName, String tableName);
-
-  @BaseMessage("Table ''{0}'' not found")
-  ExInst<CalciteException> tableNotFound(String tableName);
 
   @BaseMessage("Not a record type. The ''*'' operator requires a record")
   ExInst<SqlValidatorException> starRequiresRecordType();

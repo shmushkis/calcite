@@ -27,8 +27,11 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.util.Pair;
 
+import com.google.common.collect.ImmutableMap;
+
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.calcite.util.Static.RESOURCE;
 
@@ -64,11 +67,14 @@ class EmptyScope implements SqlValidatorScope {
     throw new UnsupportedOperationException();
   }
 
-  public void resolve(List<String> names, boolean deep, Resolved resolved) {
+  public void resolve(List<String> names, SqlNameMatcher nameMatcher,
+      boolean deep, Resolved resolved) {
   }
 
-  public SqlValidatorNamespace getTableNamespace(List<String> names) {
-    SqlValidatorTable table = validator.catalogReader.getTable(names);
+  public SqlValidatorNamespace getTableNamespace(List<String> names,
+      SqlNameMatcher nameMatcher) {
+    final SqlValidatorTable table =
+        validator.catalogReader.getTable(names, nameMatcher);
     return table != null
         ? new TableNamespace(validator, table)
         : null;
@@ -103,6 +109,11 @@ class EmptyScope implements SqlValidatorScope {
   findQualifyingTableName(String columnName, SqlNode ctx) {
     throw validator.newValidationError(ctx,
         RESOURCE.columnNotFound(columnName));
+  }
+
+  public Map<String, ScopeChild> findQualifyingTableNames(String columnName,
+      SqlNode ctx, SqlNameMatcher nameMatcher) {
+    return ImmutableMap.of();
   }
 
   public void addChild(SqlValidatorNamespace ns, String alias,

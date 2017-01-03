@@ -478,9 +478,11 @@ public class SqlValidatorUtil {
       SqlValidatorScope scope,
       List<String> names) {
     assert names.size() > 0;
+    final SqlNameMatcher nameMatcher =
+        scope.getValidator().getCatalogReader().nameMatcher();
     final SqlValidatorScope.ResolvedImpl resolved =
         new SqlValidatorScope.ResolvedImpl();
-    scope.resolve(ImmutableList.of(names.get(0)), false, resolved);
+    scope.resolve(ImmutableList.of(names.get(0)), nameMatcher, false, resolved);
     assert resolved.count() == 1;
     SqlValidatorNamespace namespace = resolved.only().namespace;
     for (String name : Util.skip(names)) {
@@ -689,9 +691,12 @@ public class SqlValidatorUtil {
       String originalRelName = expr.names.get(0);
       String originalFieldName = expr.names.get(1);
 
+      final SqlNameMatcher nameMatcher =
+          scope.getValidator().getCatalogReader().nameMatcher();
       final SqlValidatorScope.ResolvedImpl resolved =
           new SqlValidatorScope.ResolvedImpl();
-      scope.resolve(ImmutableList.of(originalRelName), false, resolved);
+      scope.resolve(ImmutableList.of(originalRelName), nameMatcher, false,
+          resolved);
 
       assert resolved.count() == 1;
       final SqlValidatorScope.Resolve resolve = resolved.only();

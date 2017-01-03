@@ -47,14 +47,16 @@ class WithScope extends ListScope {
     return withItem;
   }
 
-  @Override public SqlValidatorNamespace getTableNamespace(List<String> names) {
+  @Override public SqlValidatorNamespace getTableNamespace(List<String> names,
+      SqlNameMatcher nameMatcher) {
     if (names.size() == 1 && names.get(0).equals(withItem.name.getSimple())) {
       return validator.getNamespace(withItem);
     }
-    return super.getTableNamespace(names);
+    return super.getTableNamespace(names, nameMatcher);
   }
 
-  @Override public void resolve(List<String> names, boolean deep,
+  @Override public void resolve(List<String> names, SqlNameMatcher nameMatcher,
+      boolean deep,
       Resolved resolved) {
     if (names.size() == 1
         && names.equals(withItem.name.names)) {
@@ -64,7 +66,7 @@ class WithScope extends ListScope {
       resolved.found(ns, false, null, path);
       return;
     }
-    super.resolve(names, deep, resolved);
+    super.resolve(names, nameMatcher, deep, resolved);
   }
 }
 

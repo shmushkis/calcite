@@ -83,8 +83,9 @@ public abstract class DelegatingScope implements SqlValidatorScope {
     throw new UnsupportedOperationException();
   }
 
-  public void resolve(List<String> names, boolean deep, Resolved resolved) {
-    parent.resolve(names, deep, resolved);
+  public void resolve(List<String> names, SqlNameMatcher nameMatcher,
+      boolean deep, Resolved resolved) {
+    parent.resolve(names, nameMatcher, deep, resolved);
   }
 
   /** If a record type allows implicit references to fields, recursively looks
@@ -173,7 +174,13 @@ public abstract class DelegatingScope implements SqlValidatorScope {
     return parent.findQualifyingTableName(columnName, ctx);
   }
 
-  protected Map<String, ScopeChild> findQualifyingTables(String columnName) {
+  @Override public Map<String, ScopeChild> findQualifyingTableNames(
+      String columnName, SqlNode ctx, SqlNameMatcher nameMatcher) {
+    return parent.findQualifyingTableNames(columnName, ctx, nameMatcher);
+  }
+
+  protected Map<String, ScopeChild> findQualifyingTables(String columnName,
+      SqlNameMatcher nameMatcher) {
     return ImmutableMap.of();
   }
 
@@ -185,8 +192,9 @@ public abstract class DelegatingScope implements SqlValidatorScope {
     return parent.nullifyType(node, type);
   }
 
-  public SqlValidatorNamespace getTableNamespace(List<String> names) {
-    return parent.getTableNamespace(names);
+  public SqlValidatorNamespace getTableNamespace(List<String> names,
+      SqlNameMatcher nameMatcher) {
+    return parent.getTableNamespace(names, nameMatcher);
   }
 
   public SqlValidatorScope getOperandScope(SqlCall call) {
@@ -213,14 +221,36 @@ public abstract class DelegatingScope implements SqlValidatorScope {
     }
 
     final SqlIdentifier previous = identifier;
+    final SqlNameMatcher nameMatcher = validator.catalogReader.nameMatcher();
     String columnName;
+    final String tableName;
+    final SqlValidatorNamespace namespace;
     switch (identifier.names.size()) {
     case 1: {
       columnName = identifier.names.get(0);
-      final Pair<String, SqlValidatorNamespace> pair =
-          findQualifyingTableName(columnName, identifier);
-      final String tableName = pair.left;
-      final SqlValidatorNamespace namespace = pair.right;
+      final Map<String, ScopeChild> map =
+          findQualifyingTableNames(columnName, identifier, nameMatcher);
+      switch (map.size()) {
+      case 0:
+        if (nameMatcher.isCaseSensitive()) {
+          final SqlNameMatcher nameMatcher2 = SqlNameMatchers.foo();
+          final Map<String, ScopeChild> map2 =
+              findQualifyingTableNames(columnName, identifier, nameMatcher2);
+          if (!map2.isEmpty()) {
+            throw validator.newValidationError(identifier,
+                RESOURCE.columnNotFoundDidYouMean(columnName, "Xxx"));
+          }
+        }
+        throw validator.newValidationError(identifier,
+            RESOURCE.columnNotFound(columnName));
+      case 1:
+        tableName = map.keySet().iterator().next();
+        namespace = map.get(tableName).namespace;
+        break;
+      default:
+        throw validator.newValidationError(identifier,
+            RESOURCE.columnAmbiguous(columnName));
+      }
 
       final ResolvedImpl resolved = new ResolvedImpl();
       resolveInNamespace(namespace, false, identifier.names,
@@ -253,7 +283,10 @@ public abstract class DelegatingScope implements SqlValidatorScope {
       for (; i > 0; i--) {
         final SqlIdentifier prefix = identifier.getComponent(0, i);
         resolved.clear();
-        resolve(prefix.names, false, resolved);
+        resolve(prefix.names,
+            validator.catalogReader.nameMatcher(),
+            false, resolved
+        );
         if (resolved.count() == 1) {
           final Resolve resolve = resolved.only();
           fromNs = resolve.namespace;
@@ -265,7 +298,8 @@ public abstract class DelegatingScope implements SqlValidatorScope {
       if (fromNs == null || fromNs instanceof SchemaNamespace) {
         // Look for a column not qualified by a table alias.
         columnName = identifier.names.get(0);
-        final Map<String, ScopeChild> map = findQualifyingTables(columnName);
+        final Map<String, ScopeChild> map = findQualifyingTables(columnName,
+            nameMatcher);
         switch (map.size()) {
         default:
           final SqlIdentifier prefix1 = identifier.skipLast(1);
@@ -274,7 +308,7 @@ public abstract class DelegatingScope implements SqlValidatorScope {
         case 1: {
           final Map.Entry<String, ScopeChild> entry =
               map.entrySet().iterator().next();
-          final String tableName = entry.getKey();
+          final String tableName2 = map.keySet().iterator().next();
           fromNs = entry.getValue().namespace;
           fromPath = resolved.emptyPath();
 
@@ -288,7 +322,10 @@ public abstract class DelegatingScope implements SqlValidatorScope {
             case PEEK_FIELDS:
             case PEEK_FIELDS_DEFAULT:
               columnName = field.getName(); // use resolved field name
-              resolve(ImmutableList.of(tableName), false, resolved);
+              resolve(ImmutableList.of(tableName2),
+                  validator.catalogReader.nameMatcher(),
+                  false, resolved
+              );
               if (resolved.count() == 1) {
                 final Resolve resolve = resolved.only();
                 fromNs = resolve.namespace;
@@ -296,7 +333,7 @@ public abstract class DelegatingScope implements SqlValidatorScope {
                 fromRowType = resolve.rowType();
                 identifier = identifier
                     .setName(0, columnName)
-                    .add(0, tableName, SqlParserPos.ZERO);
+                    .add(0, tableName2, SqlParserPos.ZERO);
                 ++i;
                 ++size;
               }

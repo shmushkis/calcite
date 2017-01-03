@@ -504,7 +504,10 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       final SqlIdentifier prefixId = identifier.skipLast(1);
       final SqlValidatorScope.ResolvedImpl resolved =
           new SqlValidatorScope.ResolvedImpl();
-      scope.resolve(prefixId.names, true, resolved);
+      scope.resolve(prefixId.names,
+          scope.validator.catalogReader.nameMatcher(),
+          true, resolved
+      );
       if (resolved.count() == 0) {
         // e.g. "select s.t.* from e"
         // or "select r.* from e"
@@ -737,7 +740,8 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
         if (ns == null) {
           final SqlValidatorScope.ResolvedImpl resolved =
               new SqlValidatorScope.ResolvedImpl();
-          scope.resolve(ImmutableList.of(name), false, resolved);
+          final SqlNameMatcher nameMatcher = catalogReader.nameMatcher();
+          scope.resolve(ImmutableList.of(name), nameMatcher, false, resolved);
           if (resolved.count() == 1) {
             ns = resolved.only().namespace;
           }
@@ -973,7 +977,8 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       if (id.isSimple()) {
         final SqlValidatorScope.ResolvedImpl resolved =
             new SqlValidatorScope.ResolvedImpl();
-        parentScope.resolve(id.names, false, resolved);
+        final SqlNameMatcher nameMatcher = catalogReader.nameMatcher();
+        parentScope.resolve(id.names, nameMatcher, false, resolved);
         if (resolved.count() == 1) {
           return resolved.only().namespace;
         }
@@ -3325,7 +3330,8 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
   public void validateSequenceValue(SqlValidatorScope scope, SqlIdentifier id) {
     // Resolve identifier as a table.
-    final SqlValidatorNamespace ns = scope.getTableNamespace(id.names);
+    final SqlValidatorNamespace ns = scope.getTableNamespace(id.names,
+        catalogReader.nameMatcher());
     if (ns == null) {
       throw newValidationError(id, RESOURCE.tableNameNotFound(id.toString()));
     }
@@ -4480,9 +4486,10 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
         // we could do a better job if they were looked up via
         // resolveColumn.
 
+        final SqlNameMatcher nameMatcher = catalogReader.nameMatcher();
         final SqlValidatorScope.ResolvedImpl resolved =
             new SqlValidatorScope.ResolvedImpl();
-        scope.resolve(id.names.subList(0, i), false, resolved);
+        scope.resolve(id.names.subList(0, i), nameMatcher, false, resolved);
         if (resolved.count() == 1) {
           // There's a namespace with the name we seek.
           final SqlValidatorScope.Resolve resolve = resolved.only();

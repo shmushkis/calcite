@@ -7643,6 +7643,67 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
     tester1.checkQuery("select deptno, count(*) from EMP group by DEPTNO");
   }
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-1549">[CALCITE-1549]
+   * Improve error message when table or column not found</a>. */
+  @Test public void testTableNotFoundDidYouMean() {
+    // No table in default schema
+    tester.checkQueryFails("select * from ^unknownTable^",
+        "Table 'UNKNOWNTABLE' not found");
+    // Similar table exists in default schema
+    tester.checkQueryFails("select * from ^\"Emp\"^",
+        "Table 'Emp' not found; did you mean 'EMP'\\?");
+
+    // Schema correct, but no table in specified schema
+    tester.checkQueryFails("select * from ^sales.unknownTable^",
+        "Table 'SALES\\.UNKNOWNTABLE' not found");
+    // Similar table exists in specified schema
+    tester.checkQueryFails("select * from ^sales.\"Emp\"^",
+        "Table 'SALES\\.Emp' not found; did you mean 'SALES\\.EMP'\\?");
+
+    // No schema found
+    tester.checkQueryFails("select * from ^unknownSchema.unknownTable^",
+        "Table 'UNKNOWNSCHEMA.UNKNOWNTABLE' not found");
+    // Similar schema found
+    tester.checkQueryFails("select * from ^\"sales\".emp^",
+        "Table 'sales\\.EMP' not found; did you mean 'SALES\\.EMP'\\?");
+    tester.checkQueryFails("select * from ^\"saLes\".\"eMp\"^",
+        "Table 'saLes\\.eMp' not found; did you mean 'SALES\\.EMP'\\?");
+
+    // Column not found
+    tester.checkQueryFails("select ^\"unknownColumn\"^ from emp",
+        "Column 'unknownColumn' not found in any table");
+  }
+
+  @Test public void testColumnNotFoundDidYouMean() {
+    // Similar column in table, unqualified table name
+    tester.checkQueryFails("select ^\"empNo\"^ from emp",
+        "Column 'empNo' not found in any table. Did you mean \"EMPNO\"?");
+    // Similar column in table, table name qualified with schema
+    tester.checkQueryFails("select \"empNo\" from sales.emp",
+        "Column 'empNo' not found. Did you mean \"EMPNO\"?");
+    // Similar column in table, table name qualified with catalog and schema
+    tester.checkQueryFails("select \"empNo\" from catalog.schema.emp",
+        "Column 'empNo' not found. Did you mean \"EMPNO\"?");
+    // Similar column in table, multiple tables
+    tester.checkQueryFails("select \"name\" from emp, dept",
+        "Column 'name' not found. Did you mean \"NAME\"?");
+    // Similar column in table, multiple tables
+    tester.checkQueryFails("select \"name\" from emp,\n"
+            + " (select name as \"nAme\" from dept)",
+        "Column 'name' not found. Did you mean \"NAME\"?");
+    tester.checkQueryFails("select \"name\" from emp,\n"
+            + " (select * from dept) as t(\"nAmE\")",
+        "Column 'name' not found. Did you mean \"NAME\" or \"nAmE\"?");
+
+    // Alias not found
+    tester.checkQueryFails("select myAs.\"name\" from sales.emp as \"myAs\"",
+        "Table alias 'X' not found. Did you mean 'myAs'?");
+    // Alias not found, fully-qualified
+    tester.checkQueryFails("select sales.\"emp\".\"name\" from sales.emp",
+        "Table alias 'X' not found. Did you mean 'myAlias'?");
+  }
+
   /** Tests matching of built-in operator names. */
   @Test public void testUnquotedBuiltInFunctionNames() {
     final SqlTester mysql = tester

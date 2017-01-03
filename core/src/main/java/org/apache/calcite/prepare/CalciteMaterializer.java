@@ -95,7 +95,8 @@ class CalciteMaterializer extends CalcitePrepareImpl.CalcitePreparingStmt {
     useStar(schema, materialization);
 
     RelOptTable table =
-        this.catalogReader.getTable(materialization.materializedTable.path());
+        this.catalogReader.getTable(materialization.materializedTable.path(),
+            catalogReader.nameMatcher());
     materialization.tableRel = sqlToRelConverter2.toRel(table);
   }
 

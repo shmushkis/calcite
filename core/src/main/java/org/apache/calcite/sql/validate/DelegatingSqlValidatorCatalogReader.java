@@ -40,8 +40,9 @@ public abstract class DelegatingSqlValidatorCatalogReader
     this.catalogReader = catalogReader;
   }
 
-  public SqlValidatorTable getTable(List<String> names) {
-    return catalogReader.getTable(names);
+  public SqlValidatorTable getTable(List<String> names,
+      SqlNameMatcher nameMatcher) {
+    return catalogReader.getTable(names, nameMatcher);
   }
 
   public RelDataType getNamedType(SqlIdentifier typeName) {

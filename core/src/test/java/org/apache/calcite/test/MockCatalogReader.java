@@ -71,6 +71,8 @@ import org.apache.calcite.sql.validate.SqlMoniker;
 import org.apache.calcite.sql.validate.SqlMonikerImpl;
 import org.apache.calcite.sql.validate.SqlMonikerType;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
+import org.apache.calcite.sql.validate.SqlNameMatcher;
+import org.apache.calcite.sql.validate.SqlNameMatchers;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -110,6 +112,10 @@ public class MockCatalogReader implements Prepare.CatalogReader {
 
   protected static final String DEFAULT_CATALOG = "CATALOG";
   protected static final String DEFAULT_SCHEMA = "SALES";
+  protected static final List<String> PREFIX_2 =
+      ImmutableList.of(DEFAULT_CATALOG, DEFAULT_SCHEMA);
+  protected static final List<String> PREFIX_1 =
+      ImmutableList.of(DEFAULT_CATALOG);
 
   public static final Ordering<Iterable<String>>
   CASE_INSENSITIVE_LIST_COMPARATOR =
@@ -147,6 +153,10 @@ public class MockCatalogReader implements Prepare.CatalogReader {
 
   @Override public boolean isCaseSensitive() {
     return caseSensitive;
+  }
+
+  public SqlNameMatcher nameMatcher() {
+    return SqlNameMatchers.withCaseSensitive(caseSensitive);
   }
 
   /**
@@ -463,7 +473,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
   }
 
   public Prepare.PreparingTable getTableForMember(List<String> names) {
-    return getTable(names);
+    return getTable(names, nameMatcher());
   }
 
   public RelDataTypeFactory getTypeFactory() {
@@ -482,19 +492,18 @@ public class MockCatalogReader implements Prepare.CatalogReader {
     schemas.put(schema.name, schema);
   }
 
-  public Prepare.PreparingTable getTable(final List<String> names) {
+  public Prepare.PreparingTable getTable(final List<String> names,
+      SqlNameMatcher nameMatcher) {
     switch (names.size()) {
     case 1:
       // assume table in SALES schema (the original default)
       // if it's not supplied, because SqlValidatorTest is effectively
       // using SALES as its default schema.
-      return tables.get(
-          ImmutableList.of(DEFAULT_CATALOG, DEFAULT_SCHEMA, names.get(0)));
+      return nameMatcher.get(tables, PREFIX_2, names);
     case 2:
-      return tables.get(
-          ImmutableList.of(DEFAULT_CATALOG, names.get(0), names.get(1)));
+      return nameMatcher.get(tables, PREFIX_1, names);
     case 3:
-      return tables.get(names);
+      return nameMatcher.get(tables, ImmutableList.<String>of(), names);
     default:
       return null;
     }

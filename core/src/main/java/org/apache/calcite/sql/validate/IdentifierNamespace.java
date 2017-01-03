@@ -101,8 +101,19 @@ public class IdentifierNamespace extends AbstractNamespace {
   }
 
   public RelDataType validateImpl(RelDataType targetRowType) {
-    resolvedNamespace = parentScope.getTableNamespace(id.names);
+    final SqlNameMatcher nameMatcher = validator.catalogReader.nameMatcher();
+    resolvedNamespace = parentScope.getTableNamespace(id.names, nameMatcher);
     if (resolvedNamespace == null) {
+      if (nameMatcher.isCaseSensitive()) {
+        final SqlNameMatcher nameMatcher1 = SqlNameMatchers.foo();
+        SqlValidatorNamespace ns2 = parentScope.getTableNamespace(id.names,
+            nameMatcher1);
+        if (ns2 != null) {
+          throw validator.newValidationError(id,
+              RESOURCE.tableNameNotFoundDidYouMean(id.toString(),
+                  nameMatcher1.bestString()));
+        }
+      }
       throw validator.newValidationError(id,
           RESOURCE.tableNameNotFound(id.toString()));
     }
@@ -117,7 +128,7 @@ public class IdentifierNamespace extends AbstractNamespace {
           // identifier, as best we can. We assume that qualification
           // adds names to the front, e.g. FOO.BAR becomes BAZ.FOO.BAR.
           List<SqlParserPos> poses =
-              new ArrayList<SqlParserPos>(
+              new ArrayList<>(
                   Collections.nCopies(
                       qualifiedNames.size(), id.getParserPosition()));
           int offset = qualifiedNames.size() - id.names.size();

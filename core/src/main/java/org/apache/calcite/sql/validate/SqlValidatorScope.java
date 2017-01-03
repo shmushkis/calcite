@@ -32,6 +32,7 @@ import com.google.common.collect.Iterables;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Name-resolution scope. Represents any position in a parse tree than an
@@ -60,27 +61,38 @@ public interface SqlValidatorScope {
    * Looks up a node with a given name. Returns null if none is found.
    *
    * @param names       Name of node to find, maybe partially or fully qualified
+   * @param nameMatcher Name matcher
    * @param deep        Whether to look more than one level deep
    * @param resolved    Callback wherein to write the match(es) we find
    */
-  void resolve(List<String> names, boolean deep, Resolved resolved);
+  void resolve(List<String> names, SqlNameMatcher nameMatcher, boolean deep,
+      Resolved resolved);
+
+  /** @deprecated Use
+   * {@link #findQualifyingTableNames(String, SqlNode, SqlNameMatcher)} */
+  @Deprecated // to be removed before 2.0
+  Pair<String, SqlValidatorNamespace> findQualifyingTableName(String columnName,
+      SqlNode ctx);
 
   /**
-   * Finds the table alias which is implicitly qualifying an unqualified
-   * column name. Throws an error if there is not exactly one table.
+   * Finds all table aliases which are implicitly qualifying an unqualified
+   * column name.
    *
    * <p>This method is only implemented in scopes (such as
    * {@link org.apache.calcite.sql.validate.SelectScope}) which can be the
    * context for name-resolution. In scopes such as
    * {@link org.apache.calcite.sql.validate.IdentifierNamespace}, it throws
-   * {@link UnsupportedOperationException}.</p>
+   * {@link UnsupportedOperationException}.
    *
    * @param columnName Column name
    * @param ctx        Validation context, to appear in any error thrown
-   * @return Table alias and namespace
+   * @param nameMatcher Name matcher
+   *
+   * @return Map of applicable table alias and namespaces, never null, empty
+   * if no aliases found
    */
-  Pair<String, SqlValidatorNamespace> findQualifyingTableName(String columnName,
-      SqlNode ctx);
+  Map<String, ScopeChild> findQualifyingTableNames(String columnName,
+      SqlNode ctx, SqlNameMatcher nameMatcher);
 
   /**
    * Collects the {@link SqlMoniker}s of all possible columns in this scope.
@@ -168,10 +180,15 @@ public interface SqlValidatorScope {
    * {@link TableNamespace} that wraps it. If the "table" is defined in a
    * {@code WITH} clause it may be a query, not a table after all.
    *
+   * <p>The name matcher is not null, and one typically uses
+   * {@link SqlValidatorCatalogReader#nameMatcher()}.
+   *
    * @param names Name of table, may be qualified or fully-qualified
+   * @param nameMatcher Name matcher
    * @return Namespace of table
    */
-  SqlValidatorNamespace getTableNamespace(List<String> names);
+  SqlValidatorNamespace getTableNamespace(List<String> names,
+      SqlNameMatcher nameMatcher);
 
   /** Converts the type of an expression to nullable, if the context
    * warrants it. */

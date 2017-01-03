@@ -37,10 +37,14 @@ public interface SqlValidatorCatalogReader {
   /**
    * Finds a table with the given name, possibly qualified.
    *
-   * @param names Qualified name of table
+   * <p>The name matcher is not null, and one typically uses
+   * {@link #nameMatcher()}.
+   *
+   * @param names Name of table, may be qualified or fully-qualified
+   * @param nameMatcher Name matcher
    * @return named table, or null if not found
    */
-  SqlValidatorTable getTable(List<String> names);
+  SqlValidatorTable getTable(List<String> names, SqlNameMatcher nameMatcher);
 
   /**
    * Finds a user-defined type with the given name, possibly qualified.
@@ -80,12 +84,23 @@ public interface SqlValidatorCatalogReader {
    */
   RelDataTypeField field(RelDataType rowType, String alias);
 
+  /** @deprecated Use
+   * {@link #nameMatcher()}.{@link SqlNameMatcher#matches(String, String)} */
+  @Deprecated // to be removed before 2.0
   boolean matches(String string, String name);
 
   RelDataType createTypeFromProjection(RelDataType type,
       List<String> columnNameList);
 
+  /** @deprecated Use
+   * {@link #nameMatcher()}.{@link SqlNameMatcher#isCaseSensitive()} */
+  @Deprecated // to be removed before 2.0
   boolean isCaseSensitive();
+
+  /** Returns an implementation of
+   * {@link org.apache.calcite.sql.validate.SqlNameMatcher}
+   * that matches the case-sensitivity policy. */
+  SqlNameMatcher nameMatcher();
 }
 
 // End SqlValidatorCatalogReader.java

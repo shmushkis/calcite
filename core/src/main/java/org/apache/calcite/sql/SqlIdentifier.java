@@ -141,11 +141,16 @@ public class SqlIdentifier extends SqlNode {
     return SqlKind.IDENTIFIER;
   }
 
-  public SqlNode clone(SqlParserPos pos) {
+  @Override public SqlNode clone(SqlParserPos pos) {
     return new SqlIdentifier(names, collation, pos, componentPositions);
   }
 
-  public String toString() {
+  @Override public String toString() {
+    return getString(names);
+  }
+
+  /** Converts a list of strings to a qualified identifier. */
+  public static String getString(List<String> names) {
     return Util.sepList(Lists.transform(names, EMPTY_TO_STAR), ".");
   }
 

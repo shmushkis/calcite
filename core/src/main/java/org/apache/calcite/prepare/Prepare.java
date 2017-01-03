@@ -46,6 +46,7 @@ import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
@@ -388,7 +389,7 @@ public abstract class Prepare {
      * different schema path. */
     CatalogReader withSchemaPath(List<String> schemaPath);
 
-    PreparingTable getTable(List<String> names);
+    PreparingTable getTable(List<String> names, SqlNameMatcher nameMatcher);
 
     ThreadLocal<CatalogReader> THREAD_LOCAL = new ThreadLocal<>();
   }

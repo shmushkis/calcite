@@ -45,6 +45,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlMoniker;
 import org.apache.calcite.sql.validate.SqlMonikerImpl;
 import org.apache.calcite.sql.validate.SqlMonikerType;
+import org.apache.calcite.sql.validate.SqlNameMatcher;
+import org.apache.calcite.sql.validate.SqlNameMatchers;
 import org.apache.calcite.sql.validate.SqlUserDefinedAggFunction;
 import org.apache.calcite.sql.validate.SqlUserDefinedFunction;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableFunction;
@@ -94,7 +96,8 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
         typeFactory);
   }
 
-  public RelOptTableImpl getTable(final List<String> names) {
+  public RelOptTableImpl getTable(final List<String> names,
+      SqlNameMatcher nameMatcher) {
     // First look in the default schema, if any.
     if (defaultSchema != null) {
       RelOptTableImpl table = getTableFrom(names, defaultSchema);
@@ -198,7 +201,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   }
 
   public RelOptTableImpl getTableForMember(List<String> names) {
-    return getTable(names);
+    return getTable(names, nameMatcher());
   }
 
   public RelDataTypeField field(RelDataType rowType, String alias) {
@@ -345,7 +348,9 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
     return caseSensitive;
   }
 
-
+  public SqlNameMatcher nameMatcher() {
+    return SqlNameMatchers.withCaseSensitive(caseSensitive);
+  }
 }
 
 // End CalciteCatalogReader.java
