@@ -90,6 +90,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
@@ -2505,13 +2506,13 @@ public class RelDecorrelator implements ReflectiveVisitor {
    *
    * <p>There are three maps:<ol>
    *
-   * <li>mapRefRelToCorVars map a rel node to the correlated variables it
-   * references;
+   * <li>{@link #mapRefRelToCorRef} maps a {@link RelNode} to the correlated
+   * variables it references;
    *
-   * <li>mapCorToCorRel maps a correlated variable to the correlatorRel
-   * providing it;
+   * <li>{@link #mapCorToCorRel} maps a correlated variable to the
+   * {@link Correlate} providing it;
    *
-   * <li>mapFieldAccessToCorRef maps a rex field access to
+   * <li>{@link #mapFieldAccessToCorRef} maps a rex field access to
    * the cor var it represents. Because typeFlattener does not clone or
    * modify a correlated field access this map does not need to be
    * updated.
