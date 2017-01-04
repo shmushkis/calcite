@@ -105,13 +105,13 @@ public class IdentifierNamespace extends AbstractNamespace {
     resolvedNamespace = parentScope.getTableNamespace(id.names, nameMatcher);
     if (resolvedNamespace == null) {
       if (nameMatcher.isCaseSensitive()) {
-        final SqlNameMatcher nameMatcher1 = SqlNameMatchers.liberal();
+        final SqlNameMatcher liberalMatcher = SqlNameMatchers.liberal();
         SqlValidatorNamespace ns2 = parentScope.getTableNamespace(id.names,
-            nameMatcher1);
+            liberalMatcher);
         if (ns2 != null) {
           throw validator.newValidationError(id,
               RESOURCE.tableNameNotFoundDidYouMean(id.toString(),
-                  nameMatcher1.bestString()));
+                  liberalMatcher.bestString()));
         }
       }
       throw validator.newValidationError(id,

@@ -238,14 +238,15 @@ public abstract class DelegatingScope implements SqlValidatorScope {
       switch (map.size()) {
       case 0:
         if (nameMatcher.isCaseSensitive()) {
-          final SqlNameMatcher nameMatcher2 = SqlNameMatchers.liberal();
+          final SqlNameMatcher liberalMatcher = SqlNameMatchers.liberal();
           final Map<String, ScopeChild> map2 =
-              findQualifyingTableNames(columnName, identifier, nameMatcher2);
+              findQualifyingTableNames(columnName, identifier, liberalMatcher);
           if (!map2.isEmpty()) {
             final List<String> list = new ArrayList<>();
             for (ScopeChild entry : map2.values()) {
               final RelDataTypeField field =
-                  nameMatcher2.field(entry.namespace.getRowType(), columnName);
+                  liberalMatcher.field(entry.namespace.getRowType(),
+                      columnName);
               list.add(field.getName());
             }
             Collections.sort(list);
@@ -306,9 +307,9 @@ public abstract class DelegatingScope implements SqlValidatorScope {
         }
         // Look for a table alias that is the wrong case.
         if (nameMatcher.isCaseSensitive()) {
-          final SqlNameMatcher nameMatcher2 = SqlNameMatchers.liberal();
+          final SqlNameMatcher liberalMatcher = SqlNameMatchers.liberal();
           resolved.clear();
-          resolve(prefix.names, nameMatcher2, false, resolved);
+          resolve(prefix.names, liberalMatcher, false, resolved);
           if (resolved.count() == 1) {
             final Step lastStep = Util.last(resolved.only().path.steps());
             throw validator.newValidationError(prefix,
@@ -403,9 +404,9 @@ public abstract class DelegatingScope implements SqlValidatorScope {
       case 0:
         // Maybe the last component was correct, just wrong case
         if (nameMatcher.isCaseSensitive()) {
-          SqlNameMatcher nameMatcher2 = SqlNameMatchers.liberal();
+          SqlNameMatcher liberalMatcher = SqlNameMatchers.liberal();
           resolved.clear();
-          resolveInNamespace(fromNs, false, suffix.names, nameMatcher2,
+          resolveInNamespace(fromNs, false, suffix.names, liberalMatcher,
               resolved.emptyPath(), resolved);
           if (resolved.count() > 0) {
             int k = size - 1;
