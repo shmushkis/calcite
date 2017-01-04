@@ -79,7 +79,8 @@ public abstract class ListScope extends DelegatingScope {
     return Lists.transform(children, ScopeChild.NAME_FN);
   }
 
-  private int findChild(List<String> names, SqlNameMatcher nameMatcher) {
+  private ScopeChild findChild(List<String> names,
+      SqlNameMatcher nameMatcher) {
     for (ScopeChild child : children) {
       String lastName = Util.last(names);
       if (child.name != null) {
@@ -90,7 +91,7 @@ public abstract class ListScope extends DelegatingScope {
           continue;
         }
         if (names.size() == 1) {
-          return child.ordinal;
+          return child;
         }
       }
 
@@ -102,11 +103,11 @@ public abstract class ListScope extends DelegatingScope {
             validator.catalogReader.getTable(names, nameMatcher);
         if (table2 != null
             && table.getQualifiedName().equals(table2.getQualifiedName())) {
-          return child.ordinal;
+          return child;
         }
       }
     }
-    return -1;
+    return null;
   }
 
   public void findAllColumnNames(List<SqlMoniker> result) {
@@ -130,6 +131,7 @@ public abstract class ListScope extends DelegatingScope {
         findQualifyingTables(columnName, nameMatcher);
     switch (map.size()) {
     case 0:
+      //noinspection deprecation
       return parent.findQualifyingTableName(columnName, ctx);
     case 1:
       final Map.Entry<String, ScopeChild> entry =
@@ -171,12 +173,12 @@ public abstract class ListScope extends DelegatingScope {
   @Override public void resolve(List<String> names, SqlNameMatcher nameMatcher,
       boolean deep, Resolved resolved) {
     // First resolve by looking through the child namespaces.
-    final int i = findChild(names, nameMatcher);
-    if (i >= 0) {
+    final ScopeChild child0 = findChild(names, nameMatcher);
+    if (child0 != null) {
       final Step path =
-          resolved.emptyPath().add(null, i, StructKind.FULLY_QUALIFIED);
-      final ScopeChild child = children.get(i);
-      resolved.found(child.namespace, child.nullable, this, path);
+          resolved.emptyPath().add(child0.namespace.getRowType(),
+              child0.ordinal, child0.name, StructKind.FULLY_QUALIFIED);
+      resolved.found(child0.namespace, child0.nullable, this, path);
       return;
     }
 
@@ -190,7 +192,7 @@ public abstract class ListScope extends DelegatingScope {
                 ? names.subList(1, names.size())
                 : names;
         resolveInNamespace(child.namespace, child.nullable, names2,
-            resolved.emptyPath(), resolved);
+            nameMatcher, resolved.emptyPath(), resolved);
       }
       if (resolved.count() > 0) {
         return;
@@ -203,13 +205,14 @@ public abstract class ListScope extends DelegatingScope {
   }
 
   public RelDataType resolveColumn(String columnName, SqlNode ctx) {
+    final SqlNameMatcher nameMatcher = validator.catalogReader.nameMatcher();
     int found = 0;
     RelDataType type = null;
     for (ScopeChild child : children) {
       SqlValidatorNamespace childNs = child.namespace;
       final RelDataType childRowType = childNs.getRowType();
       final RelDataTypeField field =
-          validator.catalogReader.field(childRowType, columnName);
+          nameMatcher.field(childRowType, columnName);
       if (field != null) {
         found++;
         type = field.getType();

@@ -78,11 +78,15 @@ public interface SqlValidatorCatalogReader {
    */
   List<String> getSchemaName();
 
-  /**
-   * Finds a field with a given name, using the case-sensitivity of the current
-   * session.
-   */
+  /** @deprecated Use
+   * {@link #nameMatcher()}.{@link SqlNameMatcher#field(RelDataType, String)} */
+  @Deprecated // to be removed before 2.0
   RelDataTypeField field(RelDataType rowType, String alias);
+
+  /** Returns an implementation of
+   * {@link org.apache.calcite.sql.validate.SqlNameMatcher}
+   * that matches the case-sensitivity policy. */
+  SqlNameMatcher nameMatcher();
 
   /** @deprecated Use
    * {@link #nameMatcher()}.{@link SqlNameMatcher#matches(String, String)} */
@@ -96,11 +100,6 @@ public interface SqlValidatorCatalogReader {
    * {@link #nameMatcher()}.{@link SqlNameMatcher#isCaseSensitive()} */
   @Deprecated // to be removed before 2.0
   boolean isCaseSensitive();
-
-  /** Returns an implementation of
-   * {@link org.apache.calcite.sql.validate.SqlNameMatcher}
-   * that matches the case-sensitivity policy. */
-  SqlNameMatcher nameMatcher();
 }
 
 // End SqlValidatorCatalogReader.java

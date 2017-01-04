@@ -64,6 +64,23 @@ group by "hr"."emps"."empid";
 
 !ok
 
+# Case-sensitive errors
+select empid from "hr"."emps";
+Column 'EMPID' not found in any table; did you mean 'empid'?
+!error
+
+select empid from "hr".emps;
+Table 'hr.EMPS' not found; did you mean 'hr.emps'?
+!error
+
+select empid from hr.emps;
+Table 'HR.EMPS' not found; did you mean 'hr.emps'?
+!error
+
+select empid from bad_cat.bad_schema.bad_table;
+Table 'HR.EMPS' not found; did you mean 'hr.emps'?
+!error
+
 # [CALCITE-307] CAST(timestamp AS DATE) gives ClassCastException
 # Based on [DRILL-1051]
 with data(c_row, c_timestamp) as (select * from (values

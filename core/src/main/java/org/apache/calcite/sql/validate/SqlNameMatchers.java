@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.sql.validate;
 
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.util.Util;
 
@@ -39,8 +41,11 @@ public class SqlNameMatchers {
     return caseSensitive ? CASE_SENSITIVE : CASE_INSENSITIVE;
   }
 
-  public static SqlNameMatcher foo() {
-    return new DebugMatcher();
+  /** Creates a name matcher that can suggest corrections to what the user
+   * typed. It matches liberally (case-insensitively) and also records the last
+   * match. */
+  public static SqlNameMatcher liberal() {
+    return new LiberalNameMatcher();
   }
 
   /** Partial implementation of {@link SqlNameMatcher}. */
@@ -109,13 +114,17 @@ public class SqlNameMatchers {
     public String bestString() {
       return SqlIdentifier.getString(bestMatch());
     }
+
+    public RelDataTypeField field(RelDataType rowType, String fieldName) {
+      return rowType.getField(fieldName, caseSensitive, false);
+    }
   }
 
   /** Matcher that remembers the requests that were made of it. */
-  private static class DebugMatcher extends BaseMatcher {
+  private static class LiberalNameMatcher extends BaseMatcher {
     List<String> matchedNames;
 
-    DebugMatcher() {
+    LiberalNameMatcher() {
       super(false);
     }
 

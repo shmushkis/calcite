@@ -173,11 +173,15 @@ public interface CalciteResource {
   @BaseMessage("Column ''{0}'' not found in any table")
   ExInst<SqlValidatorException> columnNotFound(String a0);
 
-  @BaseMessage("Column ''{0}'' not found in any table; did you mean ''{1}}''")
+  @BaseMessage("Column ''{0}'' not found in any table; did you mean ''{1}''?")
   ExInst<SqlValidatorException> columnNotFoundDidYouMean(String a0, String a1);
 
   @BaseMessage("Column ''{0}'' not found in table ''{1}''")
   ExInst<SqlValidatorException> columnNotFoundInTable(String a0, String a1);
+
+  @BaseMessage("Column ''{0}'' not found in table ''{1}''; did you mean ''{2}''?")
+  ExInst<SqlValidatorException> columnNotFoundInTableDidYouMean(String a0,
+      String a1, String a2);
 
   @BaseMessage("Column ''{0}'' is ambiguous")
   ExInst<SqlValidatorException> columnAmbiguous(String a0);

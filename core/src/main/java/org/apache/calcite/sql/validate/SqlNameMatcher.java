@@ -16,6 +16,9 @@
  */
 package org.apache.calcite.sql.validate;
 
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeField;
+
 import java.util.List;
 import java.util.Map;
 
@@ -45,6 +48,15 @@ public interface SqlNameMatcher {
    * <p>In the default implementation,
    * throws {@link UnsupportedOperationException}. */
   String bestString();
+
+  /** Finds a field with a given name, using the currenct case-sensitivity,
+   * returning null if not found.
+   *
+   * @param rowType    Row type
+   * @param fieldName Field name
+   * @return Field, or null if not found
+   */
+  RelDataTypeField field(RelDataType rowType, String fieldName);
 }
 
 // End SqlNameMatcher.java

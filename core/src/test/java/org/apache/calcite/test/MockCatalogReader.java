@@ -124,7 +124,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
   //~ Instance fields --------------------------------------------------------
 
   protected final RelDataTypeFactory typeFactory;
-  private final boolean caseSensitive;
+  private final SqlNameMatcher nameMatcher;
   private final Map<List<String>, MockTable> tables;
   protected final Map<String, MockSchema> schemas;
   private RelDataType addressType;
@@ -141,7 +141,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
   public MockCatalogReader(RelDataTypeFactory typeFactory,
       boolean caseSensitive) {
     this.typeFactory = typeFactory;
-    this.caseSensitive = caseSensitive;
+    this.nameMatcher = SqlNameMatchers.withCaseSensitive(caseSensitive);
     if (caseSensitive) {
       tables = Maps.newHashMap();
       schemas = Maps.newHashMap();
@@ -152,11 +152,11 @@ public class MockCatalogReader implements Prepare.CatalogReader {
   }
 
   @Override public boolean isCaseSensitive() {
-    return caseSensitive;
+    return nameMatcher.isCaseSensitive();
   }
 
   public SqlNameMatcher nameMatcher() {
-    return SqlNameMatchers.withCaseSensitive(caseSensitive);
+    return nameMatcher;
   }
 
   /**
@@ -563,17 +563,17 @@ public class MockCatalogReader implements Prepare.CatalogReader {
   }
 
   public RelDataTypeField field(RelDataType rowType, String alias) {
-    return SqlValidatorUtil.lookupField(caseSensitive, rowType, alias);
+    return nameMatcher.field(rowType, alias);
   }
 
   public boolean matches(String string, String name) {
-    return Util.matches(caseSensitive, string, name);
+    return nameMatcher.matches(string, name);
   }
 
   public RelDataType createTypeFromProjection(final RelDataType type,
       final List<String> columnNameList) {
     return SqlValidatorUtil.createTypeFromProjection(type, columnNameList,
-        typeFactory, caseSensitive);
+        typeFactory, nameMatcher.isCaseSensitive());
   }
 
   private static List<RelCollation> deduceMonotonicity(

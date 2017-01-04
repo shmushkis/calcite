@@ -76,23 +76,31 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   final CalciteSchema rootSchema;
   final JavaTypeFactory typeFactory;
   private final List<String> defaultSchema;
-  private final boolean caseSensitive;
+  private final SqlNameMatcher nameMatcher;
 
   public CalciteCatalogReader(
       CalciteSchema rootSchema,
       boolean caseSensitive,
       List<String> defaultSchema,
       JavaTypeFactory typeFactory) {
-    super();
+    this(rootSchema, SqlNameMatchers.withCaseSensitive(caseSensitive),
+        defaultSchema, typeFactory);
+  }
+
+  private CalciteCatalogReader(
+      CalciteSchema rootSchema,
+      SqlNameMatcher nameMatcher,
+      List<String> defaultSchema,
+      JavaTypeFactory typeFactory) {
     assert rootSchema != defaultSchema;
     this.rootSchema = rootSchema;
-    this.caseSensitive = caseSensitive;
+    this.nameMatcher = nameMatcher;
     this.defaultSchema = defaultSchema;
     this.typeFactory = typeFactory;
   }
 
   public CalciteCatalogReader withSchemaPath(List<String> schemaPath) {
-    return new CalciteCatalogReader(rootSchema, caseSensitive, schemaPath,
+    return new CalciteCatalogReader(rootSchema, nameMatcher, schemaPath,
         typeFactory);
   }
 
@@ -117,9 +125,11 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
       return null;
     }
     final String name = Util.last(names);
-    CalciteSchema.TableEntry entry = schema.getTable(name, caseSensitive);
+    CalciteSchema.TableEntry entry =
+        schema.getTable(name, nameMatcher.isCaseSensitive());
     if (entry == null) {
-      entry = schema.getTableBasedOnNullaryFunction(name, caseSensitive);
+      entry = schema.getTableBasedOnNullaryFunction(name,
+          nameMatcher.isCaseSensitive());
     }
     if (entry != null) {
       final Table table = entry.getTable();
@@ -158,7 +168,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   private CalciteSchema getSchema(Iterable<String> schemaNames) {
     CalciteSchema schema = rootSchema;
     for (String schemaName : schemaNames) {
-      schema = schema.getSubSchema(schemaName, caseSensitive);
+      schema = schema.getSubSchema(schemaName, nameMatcher.isCaseSensitive());
       if (schema == null) {
         return null;
       }
@@ -205,17 +215,17 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   }
 
   public RelDataTypeField field(RelDataType rowType, String alias) {
-    return SqlValidatorUtil.lookupField(caseSensitive, rowType, alias);
+    return nameMatcher.field(rowType, alias);
   }
 
   public boolean matches(String string, String name) {
-    return Util.matches(caseSensitive, string, name);
+    return nameMatcher.matches(string, name);
   }
 
   public RelDataType createTypeFromProjection(final RelDataType type,
       final List<String> columnNameList) {
     return SqlValidatorUtil.createTypeFromProjection(type, columnNameList,
-        typeFactory, caseSensitive);
+        typeFactory, nameMatcher.isCaseSensitive());
   }
 
   public void lookupOperatorOverloads(final SqlIdentifier opName,
@@ -345,11 +355,11 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   }
 
   @Override public boolean isCaseSensitive() {
-    return caseSensitive;
+    return nameMatcher.isCaseSensitive();
   }
 
   public SqlNameMatcher nameMatcher() {
-    return SqlNameMatchers.withCaseSensitive(caseSensitive);
+    return nameMatcher;
   }
 }
 

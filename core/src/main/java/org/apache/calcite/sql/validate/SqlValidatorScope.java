@@ -194,8 +194,7 @@ public interface SqlValidatorScope {
    * warrants it. */
   RelDataType nullifyType(SqlNode node, RelDataType type);
 
-  /** Callback from
-   * {@link SqlValidatorScope#resolve(List, boolean, Resolved)}. */
+  /** Callback from {@link SqlValidatorScope#resolve}. */
   interface Resolved {
     void found(SqlValidatorNamespace namespace, boolean nullable,
         SqlValidatorScope scope, Path path);
@@ -205,9 +204,9 @@ public interface SqlValidatorScope {
 
   /** A sequence of steps by which an identifier was resolved. */
   abstract class Path {
-    /** Creates a path which consists of this path plus one additional step. */
-    Step add(RelDataType rowType, int i, StructKind kind) {
-      return new Step(this, rowType, i, kind);
+    /** Creates a path that consists of this path plus one additional step. */
+    Step add(RelDataType rowType, int i, String name, StructKind kind) {
+      return new Step(this, rowType, i, name, kind);
     }
 
     /** Number of steps in this path. */
@@ -235,12 +234,15 @@ public interface SqlValidatorScope {
     final Path parent;
     final RelDataType rowType;
     public final int i;
+    public final String name;
     final StructKind kind;
 
-    Step(Path parent, RelDataType rowType, int i, StructKind kind) {
+    Step(Path parent, RelDataType rowType, int i, String name,
+        StructKind kind) {
       this.parent = Preconditions.checkNotNull(parent);
       this.rowType = rowType; // may be null
       this.i = i;
+      this.name = name;
       this.kind = Preconditions.checkNotNull(kind);
     }
 

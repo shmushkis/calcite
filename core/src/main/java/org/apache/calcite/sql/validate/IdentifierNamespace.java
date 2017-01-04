@@ -105,7 +105,7 @@ public class IdentifierNamespace extends AbstractNamespace {
     resolvedNamespace = parentScope.getTableNamespace(id.names, nameMatcher);
     if (resolvedNamespace == null) {
       if (nameMatcher.isCaseSensitive()) {
-        final SqlNameMatcher nameMatcher1 = SqlNameMatchers.foo();
+        final SqlNameMatcher nameMatcher1 = SqlNameMatchers.liberal();
         SqlValidatorNamespace ns2 = parentScope.getTableNamespace(id.names,
             nameMatcher1);
         if (ns2 != null) {

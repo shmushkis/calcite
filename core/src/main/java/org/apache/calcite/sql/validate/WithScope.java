@@ -62,7 +62,7 @@ class WithScope extends ListScope {
         && names.equals(withItem.name.names)) {
       final SqlValidatorNamespace ns = validator.getNamespace(withItem);
       final Step path = resolved.emptyPath()
-          .add(ns.getRowType(), 0, StructKind.FULLY_QUALIFIED);
+          .add(ns.getRowType(), 0, names.get(0), StructKind.FULLY_QUALIFIED);
       resolved.found(ns, false, null, path);
       return;
     }
