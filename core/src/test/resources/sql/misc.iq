@@ -78,7 +78,27 @@ Table 'HR.EMPS' not found; did you mean 'hr.emps'?
 !error
 
 select empid from bad_cat.bad_schema.bad_table;
-Table 'HR.EMPS' not found; did you mean 'hr.emps'?
+Object 'BAD_CAT' not found
+!error
+
+select empid from "catalog".bad_schema.bad_table;
+Object 'catalog' not found; did you mean 'CATALOG'?
+!error
+
+select empid from catalog.bad_schema.bad_table;
+Object 'BAD_SCHEMA' not found in 'CATALOG'
+!error
+
+select empid from catalog.HR.bad_table;
+Object 'HR' not found in 'CATALOG'; did you mean 'hr'?
+!error
+
+select empid from catalog."hr".bad_table;
+Object 'BAD_TABLE' not found in 'CATALOG.hr'
+!error
+
+select empid from catalog."hr".emp;
+Object 'EMP' not found in 'CATALOG.hr'; did you mean 'emp'?
 !error
 
 # [CALCITE-307] CAST(timestamp AS DATE) gives ClassCastException

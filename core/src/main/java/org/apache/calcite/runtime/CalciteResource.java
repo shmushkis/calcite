@@ -167,6 +167,12 @@ public interface CalciteResource {
   @BaseMessage("Table ''{0}'' not found")
   ExInst<CalciteException> tableNotFound(String tableName);
 
+  @BaseMessage("Object ''{0}'' not found")
+  ExInst<SqlValidatorException> objectNotFound(String a0);
+
+  @BaseMessage("Object ''{0}'' not found; did you mean ''{1}''?")
+  ExInst<SqlValidatorException> objectNotFoundDidYouMean(String a0, String a1);
+
   @BaseMessage("Table ''{0}'' is not a sequence")
   ExInst<SqlValidatorException> notASequence(String a0);
 

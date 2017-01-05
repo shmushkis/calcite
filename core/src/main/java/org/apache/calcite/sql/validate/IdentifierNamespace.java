@@ -26,7 +26,9 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.Util;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -100,24 +102,48 @@ public class IdentifierNamespace extends AbstractNamespace {
     }
   }
 
-  public RelDataType validateImpl(RelDataType targetRowType) {
+  private SqlValidatorNamespace zzz(SqlIdentifier id) {
     final SqlNameMatcher nameMatcher = validator.catalogReader.nameMatcher();
-    resolvedNamespace = parentScope.getTableNamespace(id.names, nameMatcher);
-    if (resolvedNamespace == null) {
+    final SqlIdentifier originalId = id;
+    for (;;) {
+      SqlValidatorNamespace resolvedNamespace =
+          parentScope.getTableNamespace(id.names, nameMatcher);
+      if (resolvedNamespace != null) {
+        return resolvedNamespace;
+      }
+
+      // Failed to match.  If we're matching case-sensitively, try a more
+      // lenient match. If we find something we can offer a helpful hint.
       if (nameMatcher.isCaseSensitive()) {
         final SqlNameMatcher liberalMatcher = SqlNameMatchers.liberal();
         SqlValidatorNamespace ns2 = parentScope.getTableNamespace(id.names,
             liberalMatcher);
         if (ns2 != null) {
+          final List<String> suffix =
+              Util.last(ns2.getTable().getQualifiedName(), id.names.size());
           throw validator.newValidationError(id,
               RESOURCE.tableNameNotFoundDidYouMean(id.toString(),
-                  liberalMatcher.bestString()));
+                  SqlIdentifier.getString(suffix)));
         }
       }
+
+      // Now try to shorten the identifier.
+      if (id.names.size() <= 1) {
+        break;
+      }
+      id = id.getComponent(0, id.names.size() - 1);
+    }
+    if (id == originalId) {
       throw validator.newValidationError(id,
           RESOURCE.tableNameNotFound(id.toString()));
+    } else {
+      throw validator.newValidationError(id,
+          RESOURCE.objectNotFound(id.toString()));
     }
+  }
 
+  public RelDataType validateImpl(RelDataType targetRowType) {
+    resolvedNamespace = Preconditions.checkNotNull(zzz(id));
     if (resolvedNamespace instanceof TableNamespace) {
       SqlValidatorTable table = resolvedNamespace.getTable();
       if (validator.shouldExpandIdentifiers()) {
