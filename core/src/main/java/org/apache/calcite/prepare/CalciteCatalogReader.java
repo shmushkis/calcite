@@ -51,6 +51,7 @@ import org.apache.calcite.sql.validate.SqlUserDefinedAggFunction;
 import org.apache.calcite.sql.validate.SqlUserDefinedFunction;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableFunction;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
+import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.Util;
 
@@ -102,6 +103,59 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   public CalciteCatalogReader withSchemaPath(List<String> schemaPath) {
     return new CalciteCatalogReader(rootSchema, nameMatcher, schemaPath,
         typeFactory);
+  }
+
+  public void resolve(List<String> names, SqlNameMatcher nameMatcher,
+      SqlValidatorScope.Path path, Resolved resolved) {
+    // First look in the default schema, if any.
+    if (defaultSchema != null) {
+      resolve_(names, defaultSchema, nameMatcher, path, resolved);
+      if (resolved.count() > 0) {
+        return;
+      }
+    }
+    // If not found, look in the root schema
+    resolve_(names, ImmutableList.<String>of(), nameMatcher, path, resolved);
+  }
+
+  void resolve_(List<String> names, List<String> schemaNames,
+      SqlNameMatcher nameMatcher, SqlValidatorScope.Path path,
+      Resolved resolved) {
+    final Iterable<String> concat = Iterables.concat(
+        schemaNames,
+        Util.skipLast(names));
+    CalciteSchema schema = rootSchema;
+    for (String schemaName : concat) {
+      final CalciteSchema previous = schema;
+      schema = schema.getSubSchema(schemaName, nameMatcher.isCaseSensitive());
+      if (schema == null) {
+        resolved.schema(previous, );
+      }
+      path = path.plus()
+    }
+    return schema;
+    CalciteSchema schema =
+        getSchema(
+            concat,
+            nameMatcher);
+    if (schema == null) {
+      return null;
+    }
+    final String name = Util.last(names);
+    CalciteSchema.TableEntry entry =
+        schema.getTable(name, nameMatcher.isCaseSensitive());
+    if (entry == null) {
+      entry = schema.getTableBasedOnNullaryFunction(name,
+          nameMatcher.isCaseSensitive());
+    }
+    if (entry != null) {
+      final Table table = entry.getTable();
+      final String name2 = entry.name;
+      RelOptTableImpl table2 =
+          RelOptTableImpl.create(this, table.getRowType(typeFactory),
+              schema.add(name2, table), null);
+      resolved.table(table2, null, Util.skip(names));
+    }
   }
 
   public RelOptTableImpl getTable(final List<String> names,

@@ -80,6 +80,15 @@ class EmptyScope implements SqlValidatorScope {
         : null;
   }
 
+  public void resolveTable(List<String> names, SqlNameMatcher nameMatcher,
+      Path path, Resolved resolved) {
+    final SqlValidatorTable table =
+        validator.catalogReader.getTable(names, nameMatcher);
+    if (table != null) {
+      resolved.found(new TableNamespace(validator, table), false, this, path, null);
+    }
+  }
+
   public RelDataType nullifyType(SqlNode node, RelDataType type) {
     return type;
   }

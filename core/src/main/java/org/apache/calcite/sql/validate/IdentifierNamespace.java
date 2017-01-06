@@ -105,11 +105,24 @@ public class IdentifierNamespace extends AbstractNamespace {
   private SqlValidatorNamespace zzz(SqlIdentifier id) {
     final SqlNameMatcher nameMatcher = validator.catalogReader.nameMatcher();
     final SqlIdentifier originalId = id;
+    final SqlValidatorScope.ResolvedImpl resolved =
+        new SqlValidatorScope.ResolvedImpl();
     for (;;) {
-      SqlValidatorNamespace resolvedNamespace =
-          parentScope.getTableNamespace(id.names, nameMatcher);
-      if (resolvedNamespace != null) {
-        return resolvedNamespace;
+      parentScope.resolveTable(id.names, nameMatcher,
+          SqlValidatorScope.Path.EMPTY, resolved);
+      if (resolved.count() == 1) {
+        final SqlValidatorScope.Resolve resolve = resolved.only();
+        if (resolve.remainingNames.isEmpty()) {
+          return resolve.namespace;
+        }
+        // If we're not case sensitive, give an error.
+        // If we're case sensitive, we'll shortly try again and give an error
+        // then.
+        if (!nameMatcher.isCaseSensitive()) {
+          throw validator.newValidationError(id,
+              RESOURCE.objectNotFoundWithin(resolve.remainingNames.get(0),
+                  resolve.path.stepNames()));
+        }
       }
 
       // Failed to match.  If we're matching case-sensitively, try a more

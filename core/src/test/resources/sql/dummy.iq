@@ -16,8 +16,21 @@
 # limitations under the License.
 #
 !use post
-values 1;
-EXPR$0
-1
-!ok
+# TODO do not commit
+select empid from bad_schema.bad_table;
+Object 'BAD_SCHEMA' not found
+!error
+
+select empid from "HR".bad_table;
+Object 'HR' not found; did you mean 'hr'?
+!error
+
+select empid from "hr".bad_table;
+Object 'catalog' not found; did you mean 'CATALOG'?
+!error
+
+select empid from "hr";
+xxx
+!error
+
 # End dummy.iq

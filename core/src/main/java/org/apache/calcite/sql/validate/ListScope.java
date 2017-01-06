@@ -176,9 +176,9 @@ public abstract class ListScope extends DelegatingScope {
     final ScopeChild child0 = findChild(names, nameMatcher);
     if (child0 != null) {
       final Step path =
-          resolved.emptyPath().add(child0.namespace.getRowType(),
-              child0.ordinal, child0.name, StructKind.FULLY_QUALIFIED);
-      resolved.found(child0.namespace, child0.nullable, this, path);
+          Path.EMPTY.plus(child0.namespace.getRowType(), child0.ordinal,
+              child0.name, StructKind.FULLY_QUALIFIED);
+      resolved.found(child0.namespace, child0.nullable, this, path, null);
       return;
     }
 
@@ -191,8 +191,8 @@ public abstract class ListScope extends DelegatingScope {
             nameMatcher.matches(child.name, names.get(0))
                 ? names.subList(1, names.size())
                 : names;
-        resolveInNamespace(child.namespace, child.nullable, names2,
-            nameMatcher, resolved.emptyPath(), resolved);
+        resolveInNamespace(child.namespace, child.nullable, names2, nameMatcher,
+            Path.EMPTY, resolved);
       }
       if (resolved.count() > 0) {
         return;

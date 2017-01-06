@@ -96,7 +96,7 @@ public abstract class DelegatingScope implements SqlValidatorScope {
       List<String> names, SqlNameMatcher nameMatcher, Path path,
       Resolved resolved) {
     if (names.isEmpty()) {
-      resolved.found(ns, nullable, this, path);
+      resolved.found(ns, nullable, this, path, null);
       return;
     }
     final RelDataType rowType = ns.getRowType();
@@ -113,7 +113,7 @@ public abstract class DelegatingScope implements SqlValidatorScope {
             final List<String> remainder = entry.getValue();
             final SqlValidatorNamespace ns2 =
                 new FieldNamespace(validator, field.getType());
-            final Step path2 = path.add(rowType, field.getIndex(),
+            final Step path2 = path.plus(rowType, field.getIndex(),
                 field.getName(), StructKind.FULLY_QUALIFIED);
             resolveInNamespace(ns2, nullable, remainder, nameMatcher, path2,
                 resolved);
@@ -126,7 +126,7 @@ public abstract class DelegatingScope implements SqlValidatorScope {
       final RelDataTypeField field0 = nameMatcher.field(rowType, name);
       if (field0 != null) {
         final SqlValidatorNamespace ns2 = ns.lookupChild(field0.getName());
-        final Step path2 = path.add(rowType, field0.getIndex(),
+        final Step path2 = path.plus(rowType, field0.getIndex(),
             field0.getName(), StructKind.FULLY_QUALIFIED);
         resolveInNamespace(ns2, nullable, names.subList(1, names.size()),
             nameMatcher, path2, resolved);
@@ -135,7 +135,7 @@ public abstract class DelegatingScope implements SqlValidatorScope {
           switch (field.getType().getStructKind()) {
           case PEEK_FIELDS:
           case PEEK_FIELDS_DEFAULT:
-            final Step path2 = path.add(rowType, field.getIndex(),
+            final Step path2 = path.plus(rowType, field.getIndex(),
                 field.getName(), field.getType().getStructKind());
             final SqlValidatorNamespace ns2 = ns.lookupChild(field.getName());
             resolveInNamespace(ns2, nullable, names, nameMatcher, path2,
@@ -200,6 +200,11 @@ public abstract class DelegatingScope implements SqlValidatorScope {
   public SqlValidatorNamespace getTableNamespace(List<String> names,
       SqlNameMatcher nameMatcher) {
     return parent.getTableNamespace(names, nameMatcher);
+  }
+
+  public void resolveTable(List<String> names, SqlNameMatcher nameMatcher,
+      Path path, Resolved resolved) {
+    parent.resolveTable(names, nameMatcher, path, resolved);
   }
 
   public SqlValidatorScope getOperandScope(SqlCall call) {
@@ -268,7 +273,7 @@ public abstract class DelegatingScope implements SqlValidatorScope {
 
       final ResolvedImpl resolved = new ResolvedImpl();
       resolveInNamespace(namespace, false, identifier.names, nameMatcher,
-          resolved.emptyPath(), resolved);
+          Path.EMPTY, resolved);
       final RelDataTypeField field =
           nameMatcher.field(namespace.getRowType(), columnName);
       if (field != null) {
@@ -333,7 +338,7 @@ public abstract class DelegatingScope implements SqlValidatorScope {
               map.entrySet().iterator().next();
           final String tableName2 = map.keySet().iterator().next();
           fromNs = entry.getValue().namespace;
-          fromPath = resolved.emptyPath();
+          fromPath = Path.EMPTY;
 
           // Adding table name is for RecordType column with StructKind.PEEK_FIELDS or
           // StructKind.PEEK_FIELDS only. Access to a field in a RecordType column of
@@ -397,8 +402,8 @@ public abstract class DelegatingScope implements SqlValidatorScope {
       }
       final SqlIdentifier suffix = identifier.getComponent(i, size);
       resolved.clear();
-      resolveInNamespace(fromNs, false, suffix.names, nameMatcher,
-          resolved.emptyPath(), resolved);
+      resolveInNamespace(fromNs, false, suffix.names, nameMatcher, Path.EMPTY,
+          resolved);
       final Path path;
       switch (resolved.count()) {
       case 0:
@@ -407,7 +412,7 @@ public abstract class DelegatingScope implements SqlValidatorScope {
           SqlNameMatcher liberalMatcher = SqlNameMatchers.liberal();
           resolved.clear();
           resolveInNamespace(fromNs, false, suffix.names, liberalMatcher,
-              resolved.emptyPath(), resolved);
+              Path.EMPTY, resolved);
           if (resolved.count() > 0) {
             int k = size - 1;
             final SqlIdentifier prefix = identifier.getComponent(0, i);
@@ -426,7 +431,7 @@ public abstract class DelegatingScope implements SqlValidatorScope {
           SqlIdentifier suffix2 = identifier.getComponent(i, k);
           resolved.clear();
           resolveInNamespace(fromNs, false, suffix2.names, nameMatcher,
-              resolved.emptyPath(), resolved);
+              Path.EMPTY, resolved);
           if (resolved.count() > 0) {
             break;
           }

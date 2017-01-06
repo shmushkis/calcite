@@ -16,10 +16,17 @@
  */
 package org.apache.calcite.sql.validate;
 
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.schema.Schema;
 import org.apache.calcite.sql.SqlIdentifier;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -35,15 +42,18 @@ public interface SqlValidatorCatalogReader {
   //~ Methods ----------------------------------------------------------------
 
   /**
-   * Finds a table with the given name, possibly qualified.
+   * Finds a table or schema with the given name, possibly qualified.
    *
    * <p>The name matcher is not null, and one typically uses
    * {@link #nameMatcher()}.
    *
    * @param names Name of table, may be qualified or fully-qualified
    * @param nameMatcher Name matcher
-   * @return named table, or null if not found
    */
+  void resolve(List<String> names, SqlNameMatcher nameMatcher,
+      SqlValidatorScope.Path path, Resolved resolved);
+
+  @Deprecated // to be removed before 2.0
   SqlValidatorTable getTable(List<String> names, SqlNameMatcher nameMatcher);
 
   /**
@@ -100,6 +110,63 @@ public interface SqlValidatorCatalogReader {
    * {@link #nameMatcher()}.{@link SqlNameMatcher#isCaseSensitive()} */
   @Deprecated // to be removed before 2.0
   boolean isCaseSensitive();
+
+  /** Callback from {@link SqlValidatorCatalogReader#resolve}. */
+  interface Resolved {
+    void table(RelOptTable table, SqlValidatorScope.Path path,
+        List<String> remainingNames);
+    void schema(Schema schema, SqlValidatorScope.Path path,
+        List<String> remainingNames);
+    int count();
+  }
+
+  /** Default implementation of {@link SqlValidatorCatalogReader.Resolved}. */
+  class ResolvedImpl implements Resolved {
+    final List<Resolve> resolves = new ArrayList<>();
+
+    public void table(RelOptTable table, SqlValidatorScope.Path path,
+        List<String> remainingNames) {
+      resolves.add(new Resolve(table, null, path, remainingNames));
+    }
+
+    public void schema(Schema schema, SqlValidatorScope.Path path,
+        List<String> remainingNames) {
+      resolves.add(new Resolve(null, schema, path, remainingNames));
+    }
+
+    public int count() {
+      return resolves.size();
+    }
+
+    public Resolve only() {
+      return Iterables.getOnlyElement(resolves);
+    }
+
+    /** Resets all state. */
+    public void clear() {
+      resolves.clear();
+    }
+
+  }
+
+  /** A match found when looking up a name. */
+  class Resolve {
+    public final RelOptTable table;
+    public final Schema schema;
+    public final SqlValidatorScope.Path path;
+    /** Empty if it was a full match. */
+    public final List<String> remainingNames;
+
+    Resolve(RelOptTable table, Schema schema, SqlValidatorScope.Path path,
+        List<String> remainingNames) {
+      this.table = table;
+      this.schema = schema;
+      Preconditions.checkArgument((table == null) ^ (schema == null));
+      this.path = Preconditions.checkNotNull(path);
+      this.remainingNames = remainingNames == null ? ImmutableList.<String>of()
+          : ImmutableList.copyOf(remainingNames);
+    }
+  }
 }
 
 // End SqlValidatorCatalogReader.java

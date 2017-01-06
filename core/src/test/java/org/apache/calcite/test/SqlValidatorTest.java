@@ -4660,8 +4660,12 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
    * @see #testStarIdentifier()
    */
   @Test public void testStarInFromFails() {
-    sql("select emp.empno AS x from ^sales.*^")
-        .fails("Table 'SALES.\\*' not found");
+    sql("select emp.empno AS x from ^sales^.*")
+        .fails("Object 'SALES' not found");
+    sql("select * from ^emp.*^")
+        .fails("Object 'SALES' not found");
+    sql("select emp.empno AS x from ^emp.*^")
+        .fails("Object 'SALES' not found");
     sql("select emp.empno from emp where emp.^*^ is not null")
         .fails("Unknown field '\\*'");
   }
@@ -7678,6 +7682,10 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
     tester.checkQueryFails("select * from ^\"sales\".emp^",
         "Table 'sales\\.EMP' not found; did you mean 'SALES\\.EMP'\\?");
     tester.checkQueryFails("select * from ^\"saLes\".\"eMp\"^",
+        "Table 'saLes\\.eMp' not found; did you mean 'SALES\\.EMP'\\?");
+
+    // Spurious after table
+    tester.checkQueryFails("select * from emp.foo",
         "Table 'saLes\\.eMp' not found; did you mean 'SALES\\.EMP'\\?");
 
     // Alias not found

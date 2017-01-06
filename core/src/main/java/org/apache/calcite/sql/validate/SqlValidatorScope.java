@@ -25,14 +25,17 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.util.Pair;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 
 /**
  * Name-resolution scope. Represents any position in a parse tree than an
@@ -175,8 +178,14 @@ public interface SqlValidatorScope {
    */
   void validateExpr(SqlNode expr);
 
+  /** @deprecated Use {@link #resolveTable(List, SqlNameMatcher, Path, Resolved)}. */
+  @Deprecated // to be removed before 2.0
+  SqlValidatorNamespace getTableNamespace(List<String> names,
+      SqlNameMatcher nameMatcher);
+
   /**
-   * Looks up a table in this scope from its name. If found, returns the
+   * Looks up a table in this scope from its name. If found, calls
+   * {@link Resolved#resolve(List, SqlNameMatcher, boolean, Resolved)}.
    * {@link TableNamespace} that wraps it. If the "table" is defined in a
    * {@code WITH} clause it may be a query, not a table after all.
    *
@@ -185,10 +194,10 @@ public interface SqlValidatorScope {
    *
    * @param names Name of table, may be qualified or fully-qualified
    * @param nameMatcher Name matcher
-   * @return Namespace of table
+   * @param path List of names that we have traversed through so far
    */
-  SqlValidatorNamespace getTableNamespace(List<String> names,
-      SqlNameMatcher nameMatcher);
+  void resolveTable(List<String> names, SqlNameMatcher nameMatcher, Path path,
+      Resolved resolved);
 
   /** Converts the type of an expression to nullable, if the context
    * warrants it. */
@@ -196,16 +205,19 @@ public interface SqlValidatorScope {
 
   /** Callback from {@link SqlValidatorScope#resolve}. */
   interface Resolved {
-    void found(SqlValidatorNamespace namespace, boolean nullable,
-        SqlValidatorScope scope, Path path);
+    void found(SqlValidatorNamespace namespace, boolean nullable, SqlValidatorScope scope,
+        Path path, List<String> remainingNames);
     int count();
-    Path emptyPath();
   }
 
-  /** A sequence of steps by which an identifier was resolved. */
+  /** A sequence of steps by which an identifier was resolved. Immutable. */
   abstract class Path {
+    /** The empty path. */
+    @SuppressWarnings("StaticInitializerReferencesSubClass")
+    public static final EmptyPath EMPTY = new EmptyPath();
+
     /** Creates a path that consists of this path plus one additional step. */
-    Step add(RelDataType rowType, int i, String name, StructKind kind) {
+    public Step plus(RelDataType rowType, int i, String name, StructKind kind) {
       return new Step(this, rowType, i, name, kind);
     }
 
@@ -222,6 +234,16 @@ public interface SqlValidatorScope {
     }
 
     protected void build(ImmutableList.Builder<Step> paths) {
+    }
+
+    /** Returns a string "step1.step2". */
+    public String stepNames() {
+      return SqlIdentifier.getString(Lists.transform(steps(),
+          new Function<Step, String>() {
+            public String apply(Step input) {
+              return input.name;
+            }
+          }));
     }
   }
 
@@ -260,19 +282,15 @@ public interface SqlValidatorScope {
    * {@link org.apache.calcite.sql.validate.SqlValidatorScope.Resolved}. */
   class ResolvedImpl implements Resolved {
     final List<Resolve> resolves = new ArrayList<>();
-    private final EmptyPath emptyPath = new EmptyPath();
 
     public void found(SqlValidatorNamespace namespace, boolean nullable,
-        SqlValidatorScope scope, Path path) {
-      resolves.add(new Resolve(namespace, nullable, scope, path));
+        SqlValidatorScope scope, Path path, List<String> remainingNames) {
+      resolves.add(
+          new Resolve(namespace, nullable, scope, path, remainingNames));
     }
 
     public int count() {
       return resolves.size();
-    }
-
-    public Path emptyPath() {
-      return emptyPath;
     }
 
     public Resolve only() {
@@ -292,13 +310,17 @@ public interface SqlValidatorScope {
     private final boolean nullable;
     public final SqlValidatorScope scope; // may be null
     public final Path path;
+    /** Empty if it was a full match. */
+    public final List<String> remainingNames;
 
     Resolve(SqlValidatorNamespace namespace, boolean nullable,
-        SqlValidatorScope scope, Path path) {
+        SqlValidatorScope scope, Path path, List<String> remainingNames) {
       this.namespace = Preconditions.checkNotNull(namespace);
       this.nullable = nullable;
       this.scope = scope;
       this.path = Preconditions.checkNotNull(path);
+      this.remainingNames = remainingNames == null ? ImmutableList.<String>of()
+          : ImmutableList.copyOf(remainingNames);
     }
 
     /** The row type of the found namespace, nullable if the lookup has
