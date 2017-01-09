@@ -41,7 +41,7 @@ import java.util.List;
 public interface SqlValidatorCatalogReader {
   //~ Methods ----------------------------------------------------------------
 
-  /**
+  /*
    * Finds a table or schema with the given name, possibly qualified.
    *
    * <p>The name matcher is not null, and one typically uses
@@ -49,9 +49,10 @@ public interface SqlValidatorCatalogReader {
    *
    * @param names Name of table, may be qualified or fully-qualified
    * @param nameMatcher Name matcher
-   */
+   o/
   void resolve(List<String> names, SqlNameMatcher nameMatcher,
       SqlValidatorScope.Path path, Resolved resolved);
+*/
 
   @Deprecated // to be removed before 2.0
   SqlValidatorTable getTable(List<String> names, SqlNameMatcher nameMatcher);

@@ -121,7 +121,7 @@ public class IdentifierNamespace extends AbstractNamespace {
         if (!nameMatcher.isCaseSensitive()) {
           throw validator.newValidationError(id,
               RESOURCE.objectNotFoundWithin(resolve.remainingNames.get(0),
-                  resolve.path.stepNames()));
+                  SqlIdentifier.getString(resolve.path.stepNames())));
         }
       }
 

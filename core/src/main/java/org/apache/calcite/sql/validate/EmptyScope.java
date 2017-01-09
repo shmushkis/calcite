@@ -16,7 +16,12 @@
  */
 package org.apache.calcite.sql.validate;
 
+import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.StructKind;
+import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDynamicParam;
@@ -26,8 +31,11 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.Util;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 
 import java.util.Collection;
 import java.util.List;
@@ -82,10 +90,58 @@ class EmptyScope implements SqlValidatorScope {
 
   public void resolveTable(List<String> names, SqlNameMatcher nameMatcher,
       Path path, Resolved resolved) {
-    final SqlValidatorTable table =
-        validator.catalogReader.getTable(names, nameMatcher);
-    if (table != null) {
-      resolved.found(new TableNamespace(validator, table), false, this, path, null);
+    // First look in the default schema, if any.
+    List<String> defaultSchema =
+        ((CalciteCatalogReader) validator.catalogReader).defaultSchema; // TODO: private
+    if (defaultSchema != null && !defaultSchema.isEmpty()) {
+      resolve_(names, defaultSchema, nameMatcher, path, resolved);
+      if (resolved.count() > 0) {
+        return;
+      }
+    }
+    // If not found, look in the root schema
+    resolve_(names, ImmutableList.<String>of(), nameMatcher, path, resolved);
+  }
+
+  private void resolve_(List<String> names, List<String> schemaNames,
+      SqlNameMatcher nameMatcher, SqlValidatorScope.Path path,
+      Resolved resolved) {
+    final Iterable<String> concat = Iterables.concat(schemaNames, names);
+    CalciteSchema schema = ((CalciteCatalogReader) validator.catalogReader).rootSchema; // TODO: private
+    SqlValidatorNamespace namespace = null;
+    for (String schemaName : concat) {
+      final CalciteSchema subSchema =
+          schema.getSubSchema(schemaName, nameMatcher.isCaseSensitive());
+      if (subSchema != null) {
+        path = path.plus(null, -1, schema.name, StructKind.NONE);
+        names = Util.skip(names);
+        schema = subSchema;
+        namespace = new SchemaNamespace(validator, ImmutableList.copyOf(path.stepNames()));
+        continue;
+      }
+      CalciteSchema.TableEntry entry =
+          schema.getTable(schemaName, nameMatcher.isCaseSensitive());
+      if (entry == null) {
+        entry = schema.getTableBasedOnNullaryFunction(schemaName,
+            nameMatcher.isCaseSensitive());
+      }
+      if (entry != null) {
+        path = path.plus(null, -1, schema.name, StructKind.NONE);
+        names = Util.skip(names);
+        final Table table = entry.getTable();
+        final String name2 = entry.name;
+        RelOptTableImpl table2 =
+            RelOptTableImpl.create(null, table.getRowType(validator.typeFactory),
+                schema.add(name2, table), null);
+        namespace = new TableNamespace(validator, table2);
+        resolved.found(namespace, false, this, path, names);
+        return;
+      }
+      // neither sub-schema nor table
+      if (namespace != null) {
+        resolved.found(namespace, false, this, path, names);
+      }
+      return;
     }
   }
 

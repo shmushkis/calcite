@@ -16,8 +16,8 @@
  */
 package org.apache.calcite.prepare;
 
-import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -51,7 +51,6 @@ import org.apache.calcite.sql.validate.SqlUserDefinedAggFunction;
 import org.apache.calcite.sql.validate.SqlUserDefinedFunction;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableFunction;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
-import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.Util;
 
@@ -74,16 +73,16 @@ import java.util.NavigableSet;
  * functions defined schemas.
  */
 public class CalciteCatalogReader implements Prepare.CatalogReader {
-  final CalciteSchema rootSchema;
-  private final JavaTypeFactory typeFactory;
-  private final List<String> defaultSchema;
-  private final SqlNameMatcher nameMatcher;
+  public final CalciteSchema rootSchema;
+  protected final RelDataTypeFactory typeFactory;
+  public final List<String> defaultSchema;
+  protected final SqlNameMatcher nameMatcher;
 
   public CalciteCatalogReader(
       CalciteSchema rootSchema,
       boolean caseSensitive,
       List<String> defaultSchema,
-      JavaTypeFactory typeFactory) {
+      RelDataTypeFactory typeFactory) {
     this(rootSchema, SqlNameMatchers.withCaseSensitive(caseSensitive),
         defaultSchema, typeFactory);
   }
@@ -92,7 +91,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
       CalciteSchema rootSchema,
       SqlNameMatcher nameMatcher,
       List<String> defaultSchema,
-      JavaTypeFactory typeFactory) {
+      RelDataTypeFactory typeFactory) {
     assert rootSchema != defaultSchema;
     this.rootSchema = rootSchema;
     this.nameMatcher = nameMatcher;
@@ -105,6 +104,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
         typeFactory);
   }
 
+/* TODO: remove resolve, resolve_
   public void resolve(List<String> names, SqlNameMatcher nameMatcher,
       SqlValidatorScope.Path path, Resolved resolved) {
     // First look in the default schema, if any.
@@ -121,6 +121,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   void resolve_(List<String> names, List<String> schemaNames,
       SqlNameMatcher nameMatcher, SqlValidatorScope.Path path,
       Resolved resolved) {
+    throw new AssertionError();
     final Iterable<String> concat = Iterables.concat(
         schemaNames,
         Util.skipLast(names));
@@ -157,8 +158,9 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
       resolved.table(table2, null, Util.skip(names));
     }
   }
+*/
 
-  public RelOptTableImpl getTable(final List<String> names,
+  public Prepare.PreparingTable getTable(final List<String> names,
       SqlNameMatcher nameMatcher) {
     // First look in the default schema, if any.
     if (defaultSchema != null) {
@@ -267,7 +269,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
     return defaultSchema;
   }
 
-  public RelOptTableImpl getTableForMember(List<String> names) {
+  public Prepare.PreparingTable getTableForMember(List<String> names) {
     return getTable(names, nameMatcher());
   }
 
@@ -397,7 +399,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
       return typeFactory.createTypeWithNullability(
           typeFactory.createSqlType(SqlTypeName.ANY), true);
     }
-    return typeFactory.toSql(type);
+    return JavaTypeFactoryImpl.toSql(typeFactory, type);
   }
 
   public List<SqlOperator> getOperatorList() {

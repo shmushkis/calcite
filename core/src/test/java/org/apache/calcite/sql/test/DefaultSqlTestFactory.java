@@ -16,8 +16,10 @@
  */
 package org.apache.calcite.sql.test;
 
+import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.sql.SqlOperatorTable;
@@ -90,8 +92,8 @@ public class DefaultSqlTestFactory implements SqlTestFactory {
     final boolean caseSensitive = (Boolean) factory.get("caseSensitive");
     final SqlConformance conformance =
         (SqlConformance) factory.get("conformance");
-    final RelDataTypeFactory typeFactory =
-        new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
+    final JavaTypeFactory typeFactory =
+        new JavaTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
     return SqlValidatorUtil.newValidator(operatorTable,
         new MockCatalogReader(typeFactory, caseSensitive).init(),
         typeFactory, conformance);

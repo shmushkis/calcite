@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.test;
 
+import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.linq4j.Queryable;
@@ -23,7 +25,9 @@ import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
+import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelDistribution;
@@ -54,7 +58,9 @@ import org.apache.calcite.schema.Path;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.Statistic;
 import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlAccessType;
 import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -107,7 +113,7 @@ import java.util.Set;
  * Also two streams "ORDERS", "SHIPMENTS";
  * and a view "EMP_20".
  */
-public class MockCatalogReader implements Prepare.CatalogReader {
+public class MockCatalogReader extends CalciteCatalogReader {
   //~ Static fields/initializers ---------------------------------------------
 
   protected static final String DEFAULT_CATALOG = "CATALOG";
@@ -123,10 +129,6 @@ public class MockCatalogReader implements Prepare.CatalogReader {
 
   //~ Instance fields --------------------------------------------------------
 
-  protected final RelDataTypeFactory typeFactory;
-  private final SqlNameMatcher nameMatcher;
-  private final Map<List<String>, MockTable> tables;
-  protected final Map<String, MockSchema> schemas;
   private RelDataType addressType;
 
   //~ Constructors -----------------------------------------------------------
@@ -140,15 +142,8 @@ public class MockCatalogReader implements Prepare.CatalogReader {
    */
   public MockCatalogReader(RelDataTypeFactory typeFactory,
       boolean caseSensitive) {
-    this.typeFactory = typeFactory;
-    this.nameMatcher = SqlNameMatchers.withCaseSensitive(caseSensitive);
-    if (caseSensitive) {
-      tables = Maps.newHashMap();
-      schemas = Maps.newHashMap();
-    } else {
-      tables = Maps.newTreeMap(CASE_INSENSITIVE_LIST_COMPARATOR);
-      schemas = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
-    }
+    super(CalciteSchema.createRootSchema(false), caseSensitive,
+        ImmutableList.of(DEFAULT_CATALOG, DEFAULT_SCHEMA), typeFactory);
   }
 
   @Override public boolean isCaseSensitive() {
@@ -163,6 +158,9 @@ public class MockCatalogReader implements Prepare.CatalogReader {
    * Initializes this catalog reader.
    */
   public MockCatalogReader init() {
+    CalciteSchema x = rootSchema.add(DEFAULT_CATALOG, new AbstractSchema());
+    CalciteSchema y = x.add(DEFAULT_SCHEMA, new AbstractSchema());
+
     final RelDataType intType =
         typeFactory.createSqlType(SqlTypeName.INTEGER);
     final RelDataType intTypeNull =
@@ -468,11 +466,11 @@ public class MockCatalogReader implements Prepare.CatalogReader {
     return ImmutableList.of();
   }
 
-  public Prepare.CatalogReader withSchemaPath(List<String> schemaPath) {
+  @Override public MockCatalogReader withSchemaPath(List<String> schemaPath) {
     return this;
   }
 
-  public Prepare.PreparingTable getTableForMember(List<String> names) {
+  @Override public Prepare.PreparingTable getTableForMember(List<String> names) {
     return getTable(names, nameMatcher());
   }
 
@@ -485,14 +483,33 @@ public class MockCatalogReader implements Prepare.CatalogReader {
 
   protected void registerTable(MockTable table) {
     table.onRegister(typeFactory);
-    tables.put(table.getQualifiedName(), table);
+    final CalciteSchema catalog =
+        rootSchema.getSubSchema(table.names.get(0), true);
+    final CalciteSchema schema =
+        catalog.getSubSchema(table.names.get(1), true);
+    schema.add(table.names.get(2), new Table() {
+      public RelDataType getRowType(RelDataTypeFactory typeFactory) {
+        return null;
+      }
+
+      public Statistic getStatistic() {
+        return null;
+      }
+
+      public Schema.TableType getJdbcTableType() {
+        return null;
+      }
+    });
   }
 
   protected void registerSchema(MockSchema schema) {
-    schemas.put(schema.name, schema);
+    final CalciteSchema catalog =
+        rootSchema.getSubSchema(schema.getCatalogName(), true);
+    catalog.add(schema.name, new AbstractSchema());
   }
 
-  public Prepare.PreparingTable getTable(final List<String> names,
+  /*
+  public Prepare.PreparingTable getTable_(final List<String> names,
       SqlNameMatcher nameMatcher) {
     switch (names.size()) {
     case 1:
@@ -508,6 +525,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
       return null;
     }
   }
+  */
 
   public RelDataType getNamedType(SqlIdentifier typeName) {
     if (typeName.equalsDeep(addressType.getSqlIdentifier(), Litmus.IGNORE)) {
@@ -517,6 +535,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
     }
   }
 
+  /*
   public List<SqlMoniker> getAllSchemaObjectNames(List<String> names) {
     List<SqlMoniker> result;
     switch (names.size()) {
@@ -557,6 +576,7 @@ public class MockCatalogReader implements Prepare.CatalogReader {
       return Collections.emptyList();
     }
   }
+  */
 
   public List<String> getSchemaName() {
     return ImmutableList.of(DEFAULT_CATALOG, DEFAULT_SCHEMA);

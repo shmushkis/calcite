@@ -35,7 +35,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nullable;
 
 /**
  * Name-resolution scope. Represents any position in a parse tree than an
@@ -236,14 +235,14 @@ public interface SqlValidatorScope {
     protected void build(ImmutableList.Builder<Step> paths) {
     }
 
-    /** Returns a string "step1.step2". */
-    public String stepNames() {
-      return SqlIdentifier.getString(Lists.transform(steps(),
+    /** Returns a list ["step1", "step2"]. */
+    public List<String> stepNames() {
+      return Lists.transform(steps(),
           new Function<Step, String>() {
             public String apply(Step input) {
               return input.name;
             }
-          }));
+          });
     }
   }
 
