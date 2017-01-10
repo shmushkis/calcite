@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -643,7 +642,7 @@ public abstract class SqlToRelTestBase {
       if (this.catalogReaderFactory != null) {
         return catalogReaderFactory.apply(typeFactory);
       }
-      return new MockCatalogReader((JavaTypeFactory) typeFactory, true).init();
+      return new MockCatalogReader(typeFactory, true).init();
     }
 
     public RelOptPlanner createPlanner() {

@@ -18,6 +18,7 @@ package org.apache.calcite.sql.validate;
 
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.StructKind;
@@ -35,7 +36,6 @@ import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 
 import java.util.Collection;
 import java.util.List;
@@ -90,31 +90,33 @@ class EmptyScope implements SqlValidatorScope {
 
   public void resolveTable(List<String> names, SqlNameMatcher nameMatcher,
       Path path, Resolved resolved) {
-    // First look in the default schema, if any.
-    List<String> defaultSchema =
-        ((CalciteCatalogReader) validator.catalogReader).defaultSchema; // TODO: private
-    if (defaultSchema != null && !defaultSchema.isEmpty()) {
-      resolve_(names, defaultSchema, nameMatcher, path, resolved);
-      if (resolved.count() > 0) {
+    // Look in the default schema, then default catalog, then root schema.
+    final CalciteCatalogReader catalogReader =
+        (CalciteCatalogReader) validator.catalogReader; // TODO: private
+    for (List<String> schemaPath : catalogReader.schemaPaths) {
+      resolve_(names, schemaPath, nameMatcher, path, resolved);
+      if (resolved.count() > 0
+          && ((ResolvedImpl) resolved).only().remainingNames.isEmpty()) {
         return;
       }
+      ((ResolvedImpl) resolved).clear();
     }
-    // If not found, look in the root schema
-    resolve_(names, ImmutableList.<String>of(), nameMatcher, path, resolved);
   }
 
   private void resolve_(List<String> names, List<String> schemaNames,
       SqlNameMatcher nameMatcher, SqlValidatorScope.Path path,
       Resolved resolved) {
-    final Iterable<String> concat = Iterables.concat(schemaNames, names);
+    final List<String> concat = ImmutableList.<String>builder()
+        .addAll(schemaNames).addAll(names).build();
     CalciteSchema schema = ((CalciteCatalogReader) validator.catalogReader).rootSchema; // TODO: private
     SqlValidatorNamespace namespace = null;
+    List<String> remainingNames = concat;
     for (String schemaName : concat) {
       final CalciteSchema subSchema =
           schema.getSubSchema(schemaName, nameMatcher.isCaseSensitive());
       if (subSchema != null) {
         path = path.plus(null, -1, schema.name, StructKind.NONE);
-        names = Util.skip(names);
+        remainingNames = Util.skip(remainingNames);
         schema = subSchema;
         namespace = new SchemaNamespace(validator, ImmutableList.copyOf(path.stepNames()));
         continue;
@@ -126,20 +128,24 @@ class EmptyScope implements SqlValidatorScope {
             nameMatcher.isCaseSensitive());
       }
       if (entry != null) {
-        path = path.plus(null, -1, schema.name, StructKind.NONE);
-        names = Util.skip(names);
+        path = path.plus(null, -1, entry.name, StructKind.NONE);
+        remainingNames = Util.skip(remainingNames);
         final Table table = entry.getTable();
         final String name2 = entry.name;
-        RelOptTableImpl table2 =
-            RelOptTableImpl.create(null, table.getRowType(validator.typeFactory),
-                schema.add(name2, table), null);
+        SqlValidatorTable table2 = table.unwrap(Prepare.PreparingTable.class);
+        if (table2 == null) {
+          table2 = RelOptTableImpl.create(null,
+              table.getRowType(validator.typeFactory),
+              schema.add(name2, table),
+              null);
+        }
         namespace = new TableNamespace(validator, table2);
-        resolved.found(namespace, false, this, path, names);
+        resolved.found(namespace, false, this, path, remainingNames);
         return;
       }
       // neither sub-schema nor table
       if (namespace != null) {
-        resolved.found(namespace, false, this, path, names);
+        resolved.found(namespace, false, this, path, remainingNames);
       }
       return;
     }

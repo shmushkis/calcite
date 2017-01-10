@@ -28,6 +28,10 @@ public abstract class AbstractTable implements Table {
   protected AbstractTable() {
   }
 
+  public <C> C unwrap(Class<C> aClass) {
+    return aClass.isInstance(this) ? aClass.cast(this) : null;
+  }
+
   // Default implementation. Override if you have statistics.
   public Statistic getStatistic() {
     return Statistics.UNKNOWN;

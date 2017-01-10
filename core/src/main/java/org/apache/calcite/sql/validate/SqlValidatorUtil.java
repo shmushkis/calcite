@@ -494,15 +494,10 @@ public class SqlValidatorUtil {
     List<String> subNames = Util.skipLast(names);
 
     // Try successively with catalog.schema, catalog and no prefix
-    List<String> x = catalogReader.getSchemaName();
-    for (;;) {
+    for (List<String> x : catalogReader.getSchemaPaths()) {
       final List<String> names2 =
           ImmutableList.<String>builder().addAll(x).addAll(subNames).build();
       hints.addAll(catalogReader.getAllSchemaObjectNames(names2));
-      if (x.isEmpty()) {
-        break;
-      }
-      x = Util.skipLast(x);
     }
   }
 

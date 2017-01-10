@@ -54,6 +54,7 @@ import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.Util;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
@@ -63,6 +64,7 @@ import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -75,7 +77,7 @@ import java.util.NavigableSet;
 public class CalciteCatalogReader implements Prepare.CatalogReader {
   public final CalciteSchema rootSchema;
   protected final RelDataTypeFactory typeFactory;
-  public final List<String> defaultSchema;
+  public final List<List<String>> schemaPaths;
   protected final SqlNameMatcher nameMatcher;
 
   public CalciteCatalogReader(
@@ -84,24 +86,27 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
       List<String> defaultSchema,
       RelDataTypeFactory typeFactory) {
     this(rootSchema, SqlNameMatchers.withCaseSensitive(caseSensitive),
-        defaultSchema, typeFactory);
+        ImmutableList.of(defaultSchema, ImmutableList.<String>of()),
+        typeFactory);
   }
 
-  private CalciteCatalogReader(
+  protected CalciteCatalogReader(
       CalciteSchema rootSchema,
       SqlNameMatcher nameMatcher,
-      List<String> defaultSchema,
+      List<List<String>> schemaPaths,
       RelDataTypeFactory typeFactory) {
-    assert rootSchema != defaultSchema;
-    this.rootSchema = rootSchema;
+    this.rootSchema = Preconditions.checkNotNull(rootSchema);
     this.nameMatcher = nameMatcher;
-    this.defaultSchema = defaultSchema;
+    this.schemaPaths =
+        Util.immutableCopy(Util.isDistinct(schemaPaths)
+            ? schemaPaths
+            : new LinkedHashSet<>(schemaPaths));
     this.typeFactory = typeFactory;
   }
 
   public CalciteCatalogReader withSchemaPath(List<String> schemaPath) {
-    return new CalciteCatalogReader(rootSchema, nameMatcher, schemaPath,
-        typeFactory);
+    return new CalciteCatalogReader(rootSchema, nameMatcher,
+        ImmutableList.of(schemaPath, ImmutableList.<String>of()), typeFactory);
   }
 
 /* TODO: remove resolve, resolve_
@@ -163,17 +168,18 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   public Prepare.PreparingTable getTable(final List<String> names,
       SqlNameMatcher nameMatcher) {
     // First look in the default schema, if any.
-    if (defaultSchema != null) {
-      RelOptTableImpl table = getTableFrom(names, defaultSchema, nameMatcher);
+    // If not found, look in the root schema.
+    for (List<String> schemaPath : schemaPaths) {
+      Prepare.PreparingTable table =
+          getTableFrom(names, schemaPath, nameMatcher);
       if (table != null) {
         return table;
       }
     }
-    // If not found, look in the root schema
-    return getTableFrom(names, ImmutableList.<String>of(), nameMatcher);
+    return null;
   }
 
-  private RelOptTableImpl getTableFrom(List<String> names,
+  private Prepare.PreparingTable getTableFrom(List<String> names,
       List<String> schemaNames, SqlNameMatcher nameMatcher) {
     CalciteSchema schema =
         getSchema(Iterables.concat(schemaNames, Util.skipLast(names)),
@@ -191,6 +197,11 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
     if (entry != null) {
       final Table table = entry.getTable();
       final String name2 = entry.name;
+      final Prepare.PreparingTable relOptTable =
+          table.unwrap(Prepare.PreparingTable.class);
+      if (relOptTable != null) {
+        return relOptTable;
+      }
       return RelOptTableImpl.create(this, table.getRowType(typeFactory),
           schema.add(name2, table), null);
     }
@@ -199,16 +210,21 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
 
   private Collection<Function> getFunctionsFrom(List<String> names) {
     final List<Function> functions2 = Lists.newArrayList();
-    final List<? extends List<String>> schemaNameList;
+    final List<List<String>> schemaNameList = new ArrayList<>();
     if (names.size() > 1) {
-      // If name is qualified, ignore path.
-      schemaNameList = ImmutableList.of(ImmutableList.<String>of());
-    } else {
-      CalciteSchema schema = getSchema(defaultSchema, nameMatcher);
-      if (schema == null) {
-        schemaNameList = ImmutableList.of();
+      // Name qualified: ignore path. But we do look in "/catalog" and "/",
+      // the last 2 items in the path.
+      if (schemaPaths.size() > 1) {
+        schemaNameList.addAll(Util.skip(schemaPaths));
       } else {
-        schemaNameList = schema.getPath();
+        schemaNameList.addAll(schemaPaths);
+      }
+    } else {
+      for (List<String> schemaPath : schemaPaths) {
+        CalciteSchema schema = getSchema(schemaPath, nameMatcher);
+        if (schema != null) {
+          schemaNameList.addAll(schema.getPath());
+        }
       }
     }
     for (List<String> schemaNames : schemaNameList) {
@@ -265,8 +281,8 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
     return result;
   }
 
-  public List<String> getSchemaName() {
-    return defaultSchema;
+  public List<List<String>> getSchemaPaths() {
+    return schemaPaths;
   }
 
   public Prepare.PreparingTable getTableForMember(List<String> names) {

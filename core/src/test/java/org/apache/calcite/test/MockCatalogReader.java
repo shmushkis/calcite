@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.test;
 
-import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.QueryProvider;
@@ -27,7 +26,6 @@ import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
-import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelDistribution;
@@ -59,6 +57,7 @@ import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.schema.Statistic;
+import org.apache.calcite.schema.StreamableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlAccessType;
@@ -73,9 +72,6 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ObjectSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlModality;
-import org.apache.calcite.sql.validate.SqlMoniker;
-import org.apache.calcite.sql.validate.SqlMonikerImpl;
-import org.apache.calcite.sql.validate.SqlMonikerType;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.calcite.sql.validate.SqlNameMatchers;
@@ -90,7 +86,6 @@ import org.apache.calcite.util.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
 import java.lang.reflect.Type;
@@ -123,10 +118,6 @@ public class MockCatalogReader extends CalciteCatalogReader {
   protected static final List<String> PREFIX_1 =
       ImmutableList.of(DEFAULT_CATALOG);
 
-  public static final Ordering<Iterable<String>>
-  CASE_INSENSITIVE_LIST_COMPARATOR =
-      Ordering.from(String.CASE_INSENSITIVE_ORDER).lexicographical();
-
   //~ Instance fields --------------------------------------------------------
 
   private RelDataType addressType;
@@ -142,8 +133,10 @@ public class MockCatalogReader extends CalciteCatalogReader {
    */
   public MockCatalogReader(RelDataTypeFactory typeFactory,
       boolean caseSensitive) {
-    super(CalciteSchema.createRootSchema(false), caseSensitive,
-        ImmutableList.of(DEFAULT_CATALOG, DEFAULT_SCHEMA), typeFactory);
+    super(CalciteSchema.createRootSchema(false),
+        SqlNameMatchers.withCaseSensitive(caseSensitive),
+        ImmutableList.of(PREFIX_2, PREFIX_1, ImmutableList.<String>of()),
+        typeFactory);
   }
 
   @Override public boolean isCaseSensitive() {
@@ -158,9 +151,6 @@ public class MockCatalogReader extends CalciteCatalogReader {
    * Initializes this catalog reader.
    */
   public MockCatalogReader init() {
-    CalciteSchema x = rootSchema.add(DEFAULT_CATALOG, new AbstractSchema());
-    CalciteSchema y = x.add(DEFAULT_SCHEMA, new AbstractSchema());
-
     final RelDataType intType =
         typeFactory.createSqlType(SqlTypeName.INTEGER);
     final RelDataType intTypeNull =
@@ -470,7 +460,8 @@ public class MockCatalogReader extends CalciteCatalogReader {
     return this;
   }
 
-  @Override public Prepare.PreparingTable getTableForMember(List<String> names) {
+  @Override public Prepare.PreparingTable getTableForMember(
+      List<String> names) {
     return getTable(names, nameMatcher());
   }
 
@@ -481,34 +472,35 @@ public class MockCatalogReader extends CalciteCatalogReader {
   public void registerRules(RelOptPlanner planner) {
   }
 
-  protected void registerTable(MockTable table) {
+  protected void registerTable(final MockTable table) {
     table.onRegister(typeFactory);
     final CalciteSchema catalog =
         rootSchema.getSubSchema(table.names.get(0), true);
     final CalciteSchema schema =
         catalog.getSubSchema(table.names.get(1), true);
-    schema.add(table.names.get(2), new Table() {
-      public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-        return null;
-      }
-
-      public Statistic getStatistic() {
-        return null;
-      }
-
-      public Schema.TableType getJdbcTableType() {
-        return null;
-      }
-    });
+    final XxTable xxTable = new XxTable(table);
+    if (table.stream) {
+      schema.add(table.names.get(2),
+          new StremableXxTable(table) {
+            public Table stream() {
+              return xxTable;
+            }
+          });
+    } else {
+      schema.add(table.names.get(2), xxTable);
+    }
   }
 
   protected void registerSchema(MockSchema schema) {
-    final CalciteSchema catalog =
+    CalciteSchema catalog =
         rootSchema.getSubSchema(schema.getCatalogName(), true);
+    if (catalog == null) {
+      catalog = rootSchema.add(schema.getCatalogName(), new AbstractSchema());
+    }
     catalog.add(schema.name, new AbstractSchema());
   }
 
-  /*
+/* TODO: remove
   public Prepare.PreparingTable getTable_(final List<String> names,
       SqlNameMatcher nameMatcher) {
     switch (names.size()) {
@@ -535,7 +527,7 @@ public class MockCatalogReader extends CalciteCatalogReader {
     }
   }
 
-  /*
+/* TODO: remove
   public List<SqlMoniker> getAllSchemaObjectNames(List<String> names) {
     List<SqlMoniker> result;
     switch (names.size()) {
@@ -577,10 +569,6 @@ public class MockCatalogReader extends CalciteCatalogReader {
     }
   }
   */
-
-  public List<String> getSchemaName() {
-    return ImmutableList.of(DEFAULT_CATALOG, DEFAULT_SCHEMA);
-  }
 
   public RelDataTypeField field(RelDataType rowType, String alias) {
     return nameMatcher.field(rowType, alias);
@@ -1224,6 +1212,59 @@ public class MockCatalogReader extends CalciteCatalogReader {
               return entries.size();
             }
           });
+    }
+  }
+
+  private static class XxTable implements Table {
+    private final MockTable table;
+
+    public XxTable(MockTable table) {
+      this.table = table;
+    }
+
+    public <C> C unwrap(Class<C> aClass) {
+      return aClass.isInstance(this) ? aClass.cast(this)
+          : aClass.isInstance(table) ? aClass.cast(table)
+          : null;
+    }
+
+    public RelDataType getRowType(RelDataTypeFactory typeFactory) {
+      return table.getRowType();
+    }
+
+    public Statistic getStatistic() {
+      return new Statistic() {
+        public Double getRowCount() {
+          return table.rowCount;
+        }
+
+        public boolean isKey(ImmutableBitSet columns) {
+          return table.isKey(columns);
+        }
+
+        public List<RelCollation> getCollations() {
+          return table.collationList;
+        }
+
+        public RelDistribution getDistribution() {
+          return table.getDistribution();
+        }
+      };
+    }
+
+    public Schema.TableType getJdbcTableType() {
+      return table.stream ? Schema.TableType.STREAM : Schema.TableType.TABLE;
+    }
+  }
+
+  private static class StremableXxTable extends XxTable
+      implements StreamableTable {
+    public StremableXxTable(MockTable table) {
+      super(table);
+    }
+
+    public Table stream() {
+      return this;
     }
   }
 }

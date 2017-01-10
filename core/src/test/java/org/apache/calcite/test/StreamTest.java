@@ -383,6 +383,10 @@ public class StreamTest {
     public Schema.TableType getJdbcTableType() {
       return Schema.TableType.TABLE;
     }
+
+    public <C> C unwrap(Class<C> aClass) {
+      return aClass.isInstance(this) ? aClass.cast(this) : null;
+    }
   }
 
   /** Mock table that returns a stream of orders from a fixed array. */
@@ -533,6 +537,10 @@ public class StreamTest {
             .build();
       }
     };
+
+    public <C> C unwrap(Class<C> aClass) {
+      return aClass.isInstance(this) ? aClass.cast(this) : null;
+    }
 
     public Enumerable<Object[]> scan(DataContext root) {
       return Linq4j.asEnumerable(rows);

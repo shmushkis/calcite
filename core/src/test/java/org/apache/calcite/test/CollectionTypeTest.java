@@ -387,6 +387,11 @@ public class CollectionTypeTest {
           .build();
     }
 
+
+    public <C> C unwrap(Class<C> aClass) {
+      return aClass.isInstance(this) ? aClass.cast(this) : null;
+    }
+
     public Statistic getStatistic() {
       return Statistics.UNKNOWN;
     }
@@ -415,6 +420,10 @@ public class CollectionTypeTest {
           .add("ARRAYFIELD", SqlTypeName.ANY)
           .add("STRINGARRAYFIELD", SqlTypeName.ANY)
           .build();
+    }
+
+    public <C> C unwrap(Class<C> aClass) {
+      return aClass.isInstance(this) ? aClass.cast(this) : null;
     }
 
     public Statistic getStatistic() {

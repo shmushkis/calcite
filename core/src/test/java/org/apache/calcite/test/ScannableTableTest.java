@@ -367,6 +367,10 @@ public class ScannableTableTest {
       return typeFactory.builder().add("i", SqlTypeName.INTEGER).build();
     }
 
+    public <C> C unwrap(Class<C> aClass) {
+      return aClass.isInstance(this) ? aClass.cast(this) : null;
+    }
+
     public Statistic getStatistic() {
       return Statistics.UNKNOWN;
     }
@@ -391,6 +395,10 @@ public class ScannableTableTest {
           .add("i", SqlTypeName.INTEGER)
           .add("j", SqlTypeName.VARCHAR)
           .build();
+    }
+
+    public <C> C unwrap(Class<C> aClass) {
+      return aClass.isInstance(this) ? aClass.cast(this) : null;
     }
 
     public Statistic getStatistic() {

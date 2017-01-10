@@ -41,7 +41,7 @@ import java.util.List;
 public interface SqlValidatorCatalogReader {
   //~ Methods ----------------------------------------------------------------
 
-  /*
+/*
    * Finds a table or schema with the given name, possibly qualified.
    *
    * <p>The name matcher is not null, and one typically uses
@@ -83,11 +83,11 @@ public interface SqlValidatorCatalogReader {
   List<SqlMoniker> getAllSchemaObjectNames(List<String> names);
 
   /**
-   * Returns the name of the current schema.
+   * Returns the paths of all schemas to look in for tables.
    *
-   * @return name of the current schema
+   * @return paths of current schema and root schema
    */
-  List<String> getSchemaName();
+  List<List<String>> getSchemaPaths();
 
   /** @deprecated Use
    * {@link #nameMatcher()}.{@link SqlNameMatcher#field(RelDataType, String)} */

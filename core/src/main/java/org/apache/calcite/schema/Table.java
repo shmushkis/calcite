@@ -56,6 +56,10 @@ public interface Table {
 
   /** Type of table. */
   Schema.TableType getJdbcTableType();
+
+  /** TODO: move to new interface Wrapper, remove default implementation from
+   * most Table sub-classes */
+  <C> C unwrap(Class<C> aClass);
 }
 
 // End Table.java
