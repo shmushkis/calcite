@@ -26,7 +26,6 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.Pair;
-import org.apache.calcite.util.Util;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -79,8 +78,7 @@ public class IdentifierNamespace extends AbstractNamespace {
     super(validator, enclosingNode);
     this.id = id;
     this.extendList = extendList;
-    this.parentScope = parentScope;
-    assert parentScope != null;
+    this.parentScope = Preconditions.checkNotNull(parentScope);
   }
 
   IdentifierNamespace(SqlValidatorImpl validator, SqlNode node,
@@ -108,10 +106,13 @@ public class IdentifierNamespace extends AbstractNamespace {
     final SqlValidatorScope.ResolvedImpl resolved =
         new SqlValidatorScope.ResolvedImpl();
     for (;;) {
-      parentScope.resolveTable(id.names, nameMatcher,
+      final List<String> names = SqlIdentifier.toStar(id.names);
+      parentScope.resolveTable(names, nameMatcher,
           SqlValidatorScope.Path.EMPTY, resolved);
+      SqlValidatorScope.Resolve previousResolve = null;
       if (resolved.count() == 1) {
         final SqlValidatorScope.Resolve resolve = resolved.only();
+        previousResolve = resolve;
         if (resolve.remainingNames.isEmpty()) {
           return resolve.namespace;
         }
@@ -129,22 +130,30 @@ public class IdentifierNamespace extends AbstractNamespace {
       // lenient match. If we find something we can offer a helpful hint.
       if (nameMatcher.isCaseSensitive()) {
         final SqlNameMatcher liberalMatcher = SqlNameMatchers.liberal();
-        SqlValidatorNamespace ns2 = parentScope.getTableNamespace(id.names,
-            liberalMatcher);
-        if (ns2 != null) {
-          final List<String> suffix =
-              Util.last(ns2.getTable().getQualifiedName(), id.names.size());
-          throw validator.newValidationError(id,
-              RESOURCE.tableNameNotFoundDidYouMean(id.toString(),
-                  SqlIdentifier.getString(suffix)));
+        parentScope.resolveTable(names, liberalMatcher,
+            SqlValidatorScope.Path.EMPTY, resolved);
+        if (resolved.count() == 1) {
+          final SqlValidatorScope.Resolve resolve = resolved.only();
+          if (resolve.remainingNames.isEmpty()
+              && previousResolve != null) {
+            // We didn't match it case-sensitive, so they must have had the
+            // right identifier, wrong case.
+            throw validator.newValidationError(id,
+                RESOURCE.tableNameNotFoundDidYouMean(id.toString(),
+                    SqlIdentifier.getString(previousResolve.remainingNames)));
+          } else {
+            throw validator.newValidationError(id,
+                RESOURCE.objectNotFoundWithin(resolve.remainingNames.get(0),
+                    SqlIdentifier.getString(resolve.path.stepNames())));
+          }
         }
       }
-
+if (true) break;
       // Now try to shorten the identifier.
-      if (id.names.size() <= 1) {
+      if (names.size() <= 1) {
         break;
       }
-      id = id.getComponent(0, id.names.size() - 1);
+      id = id.getComponent(0, names.size() - 1);
     }
     if (id == originalId) {
       throw validator.newValidationError(id,

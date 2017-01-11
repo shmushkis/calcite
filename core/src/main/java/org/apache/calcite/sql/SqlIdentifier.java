@@ -151,7 +151,12 @@ public class SqlIdentifier extends SqlNode {
 
   /** Converts a list of strings to a qualified identifier. */
   public static String getString(List<String> names) {
-    return Util.sepList(Lists.transform(names, EMPTY_TO_STAR), ".");
+    return Util.sepList(toStar(names), ".");
+  }
+
+  /** Converts empty strings in a list of names to stars. */
+  public static List<String> toStar(List<String> names) {
+    return Lists.transform(names, EMPTY_TO_STAR);
   }
 
   /**

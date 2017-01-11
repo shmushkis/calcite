@@ -111,12 +111,9 @@ import java.util.Set;
 public class MockCatalogReader extends CalciteCatalogReader {
   //~ Static fields/initializers ---------------------------------------------
 
-  protected static final String DEFAULT_CATALOG = "CATALOG";
-  protected static final String DEFAULT_SCHEMA = "SALES";
-  protected static final List<String> PREFIX_2 =
-      ImmutableList.of(DEFAULT_CATALOG, DEFAULT_SCHEMA);
-  protected static final List<String> PREFIX_1 =
-      ImmutableList.of(DEFAULT_CATALOG);
+  static final String DEFAULT_CATALOG = "CATALOG";
+  static final String DEFAULT_SCHEMA = "SALES";
+  static final List<String> PREFIX = ImmutableList.of(DEFAULT_SCHEMA);
 
   //~ Instance fields --------------------------------------------------------
 
@@ -133,9 +130,9 @@ public class MockCatalogReader extends CalciteCatalogReader {
    */
   public MockCatalogReader(RelDataTypeFactory typeFactory,
       boolean caseSensitive) {
-    super(CalciteSchema.createRootSchema(false),
+    super(CalciteSchema.createRootSchema(false, true, DEFAULT_CATALOG),
         SqlNameMatchers.withCaseSensitive(caseSensitive),
-        ImmutableList.of(PREFIX_2, PREFIX_1, ImmutableList.<String>of()),
+        ImmutableList.of(PREFIX, ImmutableList.<String>of()),
         typeFactory);
   }
 
@@ -474,29 +471,25 @@ public class MockCatalogReader extends CalciteCatalogReader {
 
   protected void registerTable(final MockTable table) {
     table.onRegister(typeFactory);
-    final CalciteSchema catalog =
-        rootSchema.getSubSchema(table.names.get(0), true);
+    final CalciteSchema catalog = rootSchema;
+    assert table.names.get(0).equals(DEFAULT_CATALOG);
     final CalciteSchema schema =
         catalog.getSubSchema(table.names.get(1), true);
-    final XxTable xxTable = new XxTable(table);
+    final WrapperTable wrapperTable = new WrapperTable(table);
     if (table.stream) {
       schema.add(table.names.get(2),
-          new StremableXxTable(table) {
+          new StreamableWrapperTable(table) {
             public Table stream() {
-              return xxTable;
+              return wrapperTable;
             }
           });
     } else {
-      schema.add(table.names.get(2), xxTable);
+      schema.add(table.names.get(2), wrapperTable);
     }
   }
 
   protected void registerSchema(MockSchema schema) {
-    CalciteSchema catalog =
-        rootSchema.getSubSchema(schema.getCatalogName(), true);
-    if (catalog == null) {
-      catalog = rootSchema.add(schema.getCatalogName(), new AbstractSchema());
-    }
+    CalciteSchema catalog = rootSchema;
     catalog.add(schema.name, new AbstractSchema());
   }
 
@@ -1215,10 +1208,12 @@ public class MockCatalogReader extends CalciteCatalogReader {
     }
   }
 
-  private static class XxTable implements Table {
+  /** Wrapper around a {@link MockTable}, giving it a {@link Table} interface.
+   * You can get the {@code MockTable} by calling {@link #unwrap(Class)}. */
+  private static class WrapperTable implements Table {
     private final MockTable table;
 
-    public XxTable(MockTable table) {
+    WrapperTable(MockTable table) {
       this.table = table;
     }
 
@@ -1257,9 +1252,11 @@ public class MockCatalogReader extends CalciteCatalogReader {
     }
   }
 
-  private static class StremableXxTable extends XxTable
+  /** Wrapper around a {@link MockTable}, giving it a {@link StreamableTable}
+   * interface. */
+  private static class StreamableWrapperTable extends WrapperTable
       implements StreamableTable {
-    public StremableXxTable(MockTable table) {
+    StreamableWrapperTable(MockTable table) {
       super(table);
     }
 

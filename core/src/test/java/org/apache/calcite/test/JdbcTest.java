@@ -5192,7 +5192,7 @@ public class JdbcTest {
             + "empid=150; deptno=10; name=Sebastian; salary=7000.0; commission=null\n"
             + "empid=110; deptno=10; name=Theodore; salary=11500.0; commission=250\n");
     that.query("select * from \"adhoc\".EMPLOYEES")
-        .throws_("Table 'adhoc.EMPLOYEES' not found");
+        .throws_("Object 'EMPLOYEES' not found within 'adhoc'");
   }
 
   /** Test case for
@@ -6126,7 +6126,7 @@ public class JdbcTest {
     // With [CALCITE-1563], the following query succeeded; it queried
     // metadata.tables.
     with.query("select COUNT(*) as c from `metaData`.`zoo`")
-        .throws_("Table 'metaData.zoo' not found");
+        .throws_("Object 'zoo' not found within 'metadata'");
     with.query("select COUNT(*) as c from `metaData`.`tAbLes`")
         .returns("c=2\n");
   }

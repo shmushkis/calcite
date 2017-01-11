@@ -94,28 +94,36 @@ class EmptyScope implements SqlValidatorScope {
     final CalciteCatalogReader catalogReader =
         (CalciteCatalogReader) validator.catalogReader; // TODO: private
     for (List<String> schemaPath : catalogReader.schemaPaths) {
+      ((ResolvedImpl) resolved).clear();
       resolve_(names, schemaPath, nameMatcher, path, resolved);
       if (resolved.count() > 0
           && ((ResolvedImpl) resolved).only().remainingNames.isEmpty()) {
         return;
       }
-      ((ResolvedImpl) resolved).clear();
     }
   }
 
   private void resolve_(List<String> names, List<String> schemaNames,
       SqlNameMatcher nameMatcher, SqlValidatorScope.Path path,
       Resolved resolved) {
+    if (names.size() > 1 && !schemaNames.isEmpty()) {
+      return; // if table name is qualified, don't look in default schema
+    }
     final List<String> concat = ImmutableList.<String>builder()
         .addAll(schemaNames).addAll(names).build();
     CalciteSchema schema = ((CalciteCatalogReader) validator.catalogReader).rootSchema; // TODO: private
     SqlValidatorNamespace namespace = null;
     List<String> remainingNames = concat;
     for (String schemaName : concat) {
+      if (schema == ((CalciteCatalogReader) validator.catalogReader).rootSchema
+          && nameMatcher.matches(schemaName, schema.name)) {
+        remainingNames = Util.skip(remainingNames);
+        continue;
+      }
       final CalciteSchema subSchema =
           schema.getSubSchema(schemaName, nameMatcher.isCaseSensitive());
       if (subSchema != null) {
-        path = path.plus(null, -1, schema.name, StructKind.NONE);
+        path = path.plus(null, -1, subSchema.name, StructKind.NONE);
         remainingNames = Util.skip(remainingNames);
         schema = subSchema;
         namespace = new SchemaNamespace(validator, ImmutableList.copyOf(path.stepNames()));

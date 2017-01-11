@@ -86,7 +86,8 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
       List<String> defaultSchema,
       RelDataTypeFactory typeFactory) {
     this(rootSchema, SqlNameMatchers.withCaseSensitive(caseSensitive),
-        ImmutableList.of(defaultSchema, ImmutableList.<String>of()),
+        ImmutableList.of(Preconditions.checkNotNull(defaultSchema),
+            ImmutableList.<String>of()),
         typeFactory);
   }
 
@@ -135,7 +136,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
       final CalciteSchema previous = schema;
       schema = schema.getSubSchema(schemaName, nameMatcher.isCaseSensitive());
       if (schema == null) {
-        resolved.schema(previous, );
+        resolved.schema(previous);
       }
       path = path.plus()
     }
@@ -164,6 +165,19 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
     }
   }
 */
+
+  public Prepare.PreparingTable getTable(final List<String> names) {
+    // First look in the default schema, if any.
+    // If not found, look in the root schema.
+    for (List<String> schemaPath : schemaPaths) {
+      Prepare.PreparingTable table =
+          getTableFrom(names, schemaPath, nameMatcher);
+      if (table != null) {
+        return table;
+      }
+    }
+    return null;
+  }
 
   public Prepare.PreparingTable getTable(final List<String> names,
       SqlNameMatcher nameMatcher) {
@@ -243,6 +257,10 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
       SqlNameMatcher nameMatcher) {
     CalciteSchema schema = rootSchema;
     for (String schemaName : schemaNames) {
+      if (schema == rootSchema
+          && nameMatcher.matches(schemaName, schema.getName())) {
+        continue;
+      }
       schema = schema.getSubSchema(schemaName, nameMatcher.isCaseSensitive());
       if (schema == null) {
         return null;
@@ -261,24 +279,38 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
       return ImmutableList.of();
     }
     final List<SqlMoniker> result = new ArrayList<>();
+
+    // Add root schema if not anonymous
+    if (!schema.name.equals("")) {
+      result.add(moniker(schema, null, SqlMonikerType.SCHEMA));
+    }
+
     final Map<String, CalciteSchema> schemaMap = schema.getSubSchemaMap();
 
     for (String subSchema : schemaMap.keySet()) {
-      result.add(
-          new SqlMonikerImpl(schema.path(subSchema), SqlMonikerType.SCHEMA));
+      result.add(moniker(schema, subSchema, SqlMonikerType.SCHEMA));
     }
 
     for (String table : schema.getTableNames()) {
-      result.add(
-          new SqlMonikerImpl(schema.path(table), SqlMonikerType.TABLE));
+      result.add(moniker(schema, table, SqlMonikerType.TABLE));
     }
 
     final NavigableSet<String> functions = schema.getFunctionNames();
     for (String function : functions) { // views are here as well
-      result.add(
-          new SqlMonikerImpl(schema.path(function), SqlMonikerType.FUNCTION));
+      result.add(moniker(schema, function, SqlMonikerType.FUNCTION));
     }
     return result;
+  }
+
+  private SqlMonikerImpl moniker(CalciteSchema schema, String name,
+      SqlMonikerType type) {
+    final List<String> path = schema.path(name);
+    if (path.size() == 1
+        && !schema.root().name.equals("")
+        && type == SqlMonikerType.SCHEMA) {
+      type = SqlMonikerType.CATALOG;
+    }
+    return new SqlMonikerImpl(path, type);
   }
 
   public List<List<String>> getSchemaPaths() {

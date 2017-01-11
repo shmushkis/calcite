@@ -53,7 +53,9 @@ public interface SqlValidatorCatalogReader {
   void resolve(List<String> names, SqlNameMatcher nameMatcher,
       SqlValidatorScope.Path path, Resolved resolved);
 */
+  SqlValidatorTable getTable(List<String> names);
 
+  // TODO: remove nameMatcher and match exact (case, qualification only)
   @Deprecated // to be removed before 2.0
   SqlValidatorTable getTable(List<String> names, SqlNameMatcher nameMatcher);
 
