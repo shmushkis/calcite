@@ -6113,7 +6113,15 @@ public class JdbcTest {
     final CalciteAssert.AssertThat with2 =
         CalciteAssert.that().with(Lex.JAVA);
     with2.query("select COUNT(*) as c from `metaData`.`tAbles`")
-        .throws_("Table 'metaData.tAbles' not found");
+        .throws_("Object 'metaData' not found; did you mean 'metadata'?");
+    with2.query("select COUNT(*) as c from `metaData`.`TABLES`")
+        .throws_("Object 'metaData' not found; did you mean 'metadata'?");
+    with2.query("select COUNT(*) as c from `metaData`.`tables`")
+        .throws_("Object 'metaData' not found; did you mean 'metadata'?");
+    with2.query("select COUNT(*) as c from `metaData`.`nonExistent`")
+        .throws_("Object 'metaData' not found; did you mean 'metadata'?");
+    with2.query("select COUNT(*) as c from `metadata`.`tAbles`")
+        .throws_("Object 'tAbles' not found; did you mean 'TABLES'?");
   }
 
   /** Test case for

@@ -165,16 +165,20 @@ public interface CalciteResource {
   /** Same message as {@link #tableNameNotFound(String)} but a different kind
    * of exception, so it can be used in {@code RelBuilder}. */
   @BaseMessage("Table ''{0}'' not found")
-  ExInst<CalciteException> tableNotFound(String tableName);
+  ExInst<CalciteException> tableNotFound(String tableName); // TODO: still used?
 
   @BaseMessage("Object ''{0}'' not found")
   ExInst<SqlValidatorException> objectNotFound(String a0);
 
+  @BaseMessage("Object ''{0}'' not found within ''{1}''")
+  ExInst<SqlValidatorException> objectNotFoundWithin(String a0, String a1);
+
   @BaseMessage("Object ''{0}'' not found; did you mean ''{1}''?")
   ExInst<SqlValidatorException> objectNotFoundDidYouMean(String a0, String a1);
 
-  @BaseMessage("Object ''{0}'' not found within ''{1}''")
-  ExInst<SqlValidatorException> objectNotFoundWithin(String a0, String a1);
+  @BaseMessage("Object ''{0}'' not found within ''{1}''; did you mean ''{2}''?")
+  ExInst<SqlValidatorException> objectNotFoundWithinDidYouMean(String a0,
+      String a1, String a2);
 
   @BaseMessage("Table ''{0}'' is not a sequence")
   ExInst<SqlValidatorException> notASequence(String a0);

@@ -26,6 +26,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.Util;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -111,8 +112,7 @@ public class IdentifierNamespace extends AbstractNamespace {
           SqlValidatorScope.Path.EMPTY, resolved);
       SqlValidatorScope.Resolve previousResolve = null;
       if (resolved.count() == 1) {
-        final SqlValidatorScope.Resolve resolve = resolved.only();
-        previousResolve = resolve;
+        final SqlValidatorScope.Resolve resolve = previousResolve = resolved.only();
         if (resolve.remainingNames.isEmpty()) {
           return resolve.namespace;
         }
@@ -135,12 +135,27 @@ public class IdentifierNamespace extends AbstractNamespace {
         if (resolved.count() == 1) {
           final SqlValidatorScope.Resolve resolve = resolved.only();
           if (resolve.remainingNames.isEmpty()
-              && previousResolve != null) {
+              || previousResolve == null) {
             // We didn't match it case-sensitive, so they must have had the
             // right identifier, wrong case.
-            throw validator.newValidationError(id,
-                RESOURCE.tableNameNotFoundDidYouMean(id.toString(),
-                    SqlIdentifier.getString(previousResolve.remainingNames)));
+            //
+            // If previousResolve is null, we matched nothing case-sensitive and
+            // everything case-insensitive, so the mismatch must have been at
+            // position 0.
+            final int i = previousResolve == null ? 0
+                : previousResolve.path.stepCount();
+            final int offset = resolve.path.stepCount() - names.size();
+            final List<String> prefix =
+                resolve.path.stepNames().subList(0, offset + i);
+            final String next = resolve.path.stepNames().get(i + offset);
+            if (prefix.isEmpty()) {
+              throw validator.newValidationError(id,
+                  RESOURCE.objectNotFoundDidYouMean(names.get(i), next));
+            } else {
+              throw validator.newValidationError(id,
+                  RESOURCE.objectNotFoundWithinDidYouMean(names.get(i),
+                      SqlIdentifier.getString(prefix), next));
+            }
           } else {
             throw validator.newValidationError(id,
                 RESOURCE.objectNotFoundWithin(resolve.remainingNames.get(0),
@@ -148,7 +163,7 @@ public class IdentifierNamespace extends AbstractNamespace {
           }
         }
       }
-if (true) break;
+if (true) break; // TODO:
       // Now try to shorten the identifier.
       if (names.size() <= 1) {
         break;

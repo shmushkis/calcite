@@ -7661,34 +7661,34 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1549">[CALCITE-1549]
    * Improve error message when table or column not found</a>. */
   @Test public void testTableNotFoundDidYouMean() {
-if (false) { // TODO:
+if (true) { // TODO:
     // No table in default schema
     tester.checkQueryFails("select * from ^unknownTable^",
         "Table 'UNKNOWNTABLE' not found");
 }
     // Similar table exists in default schema
     tester.checkQueryFails("select * from ^\"Emp\"^",
-        "Table 'Emp' not found; did you mean 'EMP'\\?");
+        "Object 'Emp' not found within 'SALES'; did you mean 'EMP'\\?");
 
     // Schema correct, but no table in specified schema
     tester.checkQueryFails("select * from ^sales.unknownTable^",
-        "Table 'SALES\\.UNKNOWNTABLE' not found");
+        "Object 'UNKNOWNTABLE' not found within 'SALES'");
     // Similar table exists in specified schema
     tester.checkQueryFails("select * from ^sales.\"Emp\"^",
-        "Table 'SALES\\.Emp' not found; did you mean 'SALES\\.EMP'\\?");
+        "Object 'Emp' not found within 'SALES'; did you mean 'EMP'\\?");
 
     // No schema found
     tester.checkQueryFails("select * from ^unknownSchema.unknownTable^",
         "Table 'UNKNOWNSCHEMA.UNKNOWNTABLE' not found");
     // Similar schema found
     tester.checkQueryFails("select * from ^\"sales\".emp^",
-        "Table 'sales\\.EMP' not found; did you mean 'SALES\\.EMP'\\?");
+        "Object 'sales' not found; did you mean 'SALES'\\?");
     tester.checkQueryFails("select * from ^\"saLes\".\"eMp\"^",
-        "Table 'saLes\\.eMp' not found; did you mean 'SALES\\.EMP'\\?");
+        "Object 'saLes' not found; did you mean 'SALES'\\?");
 
     // Spurious after table
-    tester.checkQueryFails("select * from emp.foo",
-        "Table 'saLes\\.eMp' not found; did you mean 'SALES\\.EMP'\\?");
+    tester.checkQueryFails("select * from ^emp.foo^",
+        "Table 'EMP\\.FOO' not found");
 
     // Alias not found
     tester.checkQueryFails("select ^aliAs^.\"name\"\n"
