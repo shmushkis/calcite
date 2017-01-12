@@ -158,7 +158,8 @@ class EmptyScope implements SqlValidatorScope {
         return;
       }
       // neither sub-schema nor table
-      if (namespace != null) {
+      if (namespace != null
+          && !remainingNames.equals(names)) {
         resolved.found(namespace, false, this, path, remainingNames);
       }
       return;

@@ -101,7 +101,7 @@ public class IdentifierNamespace extends AbstractNamespace {
     }
   }
 
-  private SqlValidatorNamespace zzz(SqlIdentifier id) {
+  private SqlValidatorNamespace zzz(SqlIdentifier id) { // TODO: rename
     final SqlNameMatcher nameMatcher = validator.catalogReader.nameMatcher();
     final SqlIdentifier originalId = id;
     final SqlValidatorScope.ResolvedImpl resolved =
@@ -130,7 +130,7 @@ public class IdentifierNamespace extends AbstractNamespace {
       // lenient match. If we find something we can offer a helpful hint.
       if (nameMatcher.isCaseSensitive()) {
         final SqlNameMatcher liberalMatcher = SqlNameMatchers.liberal();
-        resolved.clear();
+        resolved.clear(); // TODO: remove?
         parentScope.resolveTable(names, liberalMatcher,
             SqlValidatorScope.Path.EMPTY, resolved);
         if (resolved.count() == 1) {
