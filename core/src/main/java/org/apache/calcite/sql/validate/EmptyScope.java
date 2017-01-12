@@ -37,6 +37,7 @@ import org.apache.calcite.util.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -93,22 +94,27 @@ class EmptyScope implements SqlValidatorScope {
     // Look in the default schema, then default catalog, then root schema.
     final CalciteCatalogReader catalogReader =
         (CalciteCatalogReader) validator.catalogReader; // TODO: private
+    final List<Resolve> imperfectResolves = new ArrayList<>();
     for (List<String> schemaPath : catalogReader.schemaPaths) {
       ((ResolvedImpl) resolved).clear();
       resolve_(names, schemaPath, nameMatcher, path, resolved);
-      if (resolved.count() > 0
-          && ((ResolvedImpl) resolved).only().remainingNames.isEmpty()) {
-        return;
+      for (Resolve resolve : ((ResolvedImpl) resolved).resolves) {
+        if (resolve.remainingNames.isEmpty()) {
+          ((ResolvedImpl) resolved).clear();
+          ((ResolvedImpl) resolved).resolves.add(resolve);
+          return;
+        }
+        imperfectResolves.add(resolve);
       }
+    }
+    if (resolved.count() == 0) {
+      ((ResolvedImpl) resolved).resolves.addAll(imperfectResolves);
     }
   }
 
   private void resolve_(List<String> names, List<String> schemaNames,
       SqlNameMatcher nameMatcher, SqlValidatorScope.Path path,
       Resolved resolved) {
-    if (names.size() > 1 && !schemaNames.isEmpty()) {
-      return; // if table name is qualified, don't look in default schema
-    }
     final List<String> concat = ImmutableList.<String>builder()
         .addAll(schemaNames).addAll(names).build();
     CalciteSchema schema = ((CalciteCatalogReader) validator.catalogReader).rootSchema; // TODO: private

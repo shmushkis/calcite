@@ -130,6 +130,7 @@ public class IdentifierNamespace extends AbstractNamespace {
       // lenient match. If we find something we can offer a helpful hint.
       if (nameMatcher.isCaseSensitive()) {
         final SqlNameMatcher liberalMatcher = SqlNameMatchers.liberal();
+        resolved.clear();
         parentScope.resolveTable(names, liberalMatcher,
             SqlValidatorScope.Path.EMPTY, resolved);
         if (resolved.count() == 1) {
@@ -144,7 +145,7 @@ public class IdentifierNamespace extends AbstractNamespace {
             // position 0.
             final int i = previousResolve == null ? 0
                 : previousResolve.path.stepCount();
-            final int offset = resolve.path.stepCount() - names.size();
+            final int offset = resolve.path.stepCount() + resolve.remainingNames.size() - names.size();
             final List<String> prefix =
                 resolve.path.stepNames().subList(0, offset + i);
             final String next = resolve.path.stepNames().get(i + offset);
@@ -170,13 +171,8 @@ if (true) break; // TODO:
       }
       id = id.getComponent(0, names.size() - 1);
     }
-    if (id == originalId) {
-      throw validator.newValidationError(id,
-          RESOURCE.tableNameNotFound(id.toString()));
-    } else {
-      throw validator.newValidationError(id,
-          RESOURCE.objectNotFound(id.toString()));
-    }
+    throw validator.newValidationError(id,
+        RESOURCE.objectNotFound(id.getComponent(0).toString()));
   }
 
   public RelDataType validateImpl(RelDataType targetRowType) {

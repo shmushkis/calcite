@@ -7661,11 +7661,10 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1549">[CALCITE-1549]
    * Improve error message when table or column not found</a>. */
   @Test public void testTableNotFoundDidYouMean() {
-if (true) { // TODO:
     // No table in default schema
     tester.checkQueryFails("select * from ^unknownTable^",
-        "Table 'UNKNOWNTABLE' not found");
-}
+        "Object 'UNKNOWNTABLE' not found");
+
     // Similar table exists in default schema
     tester.checkQueryFails("select * from ^\"Emp\"^",
         "Object 'Emp' not found within 'SALES'; did you mean 'EMP'\\?");
@@ -7679,7 +7678,7 @@ if (true) { // TODO:
 
     // No schema found
     tester.checkQueryFails("select * from ^unknownSchema.unknownTable^",
-        "Table 'UNKNOWNSCHEMA.UNKNOWNTABLE' not found");
+        "Object 'UNKNOWNSCHEMA' not found");
     // Similar schema found
     tester.checkQueryFails("select * from ^\"sales\".emp^",
         "Object 'sales' not found; did you mean 'SALES'\\?");
@@ -7688,6 +7687,8 @@ if (true) { // TODO:
 
     // Spurious after table
     tester.checkQueryFails("select * from ^emp.foo^",
+        "Table 'EMP\\.FOO' not found");
+    tester.checkQueryFails("select * from ^sales.emp.foo^",
         "Table 'EMP\\.FOO' not found");
 
     // Alias not found

@@ -6121,7 +6121,7 @@ public class JdbcTest {
     with2.query("select COUNT(*) as c from `metaData`.`nonExistent`")
         .throws_("Object 'metaData' not found; did you mean 'metadata'?");
     with2.query("select COUNT(*) as c from `metadata`.`tAbles`")
-        .throws_("Object 'tAbles' not found; did you mean 'TABLES'?");
+        .throws_("Object 'tAbles' not found within 'metadata'; did you mean 'TABLES'?");
   }
 
   /** Test case for
