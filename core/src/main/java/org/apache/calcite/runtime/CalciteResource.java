@@ -165,7 +165,7 @@ public interface CalciteResource {
   /** Same message as {@link #tableNameNotFound(String)} but a different kind
    * of exception, so it can be used in {@code RelBuilder}. */
   @BaseMessage("Table ''{0}'' not found")
-  ExInst<CalciteException> tableNotFound(String tableName); // TODO: still used?
+  ExInst<CalciteException> tableNotFound(String tableName);
 
   @BaseMessage("Object ''{0}'' not found")
   ExInst<SqlValidatorException> objectNotFound(String a0);

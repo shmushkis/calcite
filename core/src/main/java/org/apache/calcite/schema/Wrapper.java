@@ -14,28 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.schema.impl;
-
-import org.apache.calcite.schema.Schema;
-import org.apache.calcite.schema.Statistic;
-import org.apache.calcite.schema.Statistics;
-import org.apache.calcite.schema.Table;
+package org.apache.calcite.schema;
 
 /**
- * Abstract base class for implementing {@link Table}.
+ * Mix-in interface that allows you to find sub-objects.
  */
-public abstract class AbstractTable implements Table {
-  protected AbstractTable() {
-  }
-
-  // Default implementation. Override if you have statistics.
-  public Statistic getStatistic() {
-    return Statistics.UNKNOWN;
-  }
-
-  public Schema.TableType getJdbcTableType() {
-    return Schema.TableType.TABLE;
-  }
+public interface Wrapper {
+  /** Returns an instance of a class, or null. */
+  <C> C unwrap(Class<C> aClass);
 }
 
-// End AbstractTable.java
+// End Wrapper.java

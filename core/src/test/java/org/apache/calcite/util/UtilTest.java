@@ -1699,7 +1699,7 @@ public class UtilTest {
 
   }
 
-  /** Tests {@link Util#immutableCopy(List)}. */
+  /** Tests {@link Util#immutableCopy(Iterable)}. */
   @Test public void testImmutableCopy() {
     final List<Integer> list3 = Arrays.asList(1, 2, 3);
     final List<Integer> immutableList3 = ImmutableList.copyOf(list3);

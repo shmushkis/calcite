@@ -34,6 +34,9 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
  * <a href="http://en.wikipedia.org/wiki/Inode">i-node</a> concept in the UNIX
  * filesystem.)</p>
  *
+ * <p>A particular table instance may also implement {@link Wrapper},
+ * to give access to sub-objects.
+ *
  * @see TableMacro
  */
 public interface Table {
@@ -57,9 +60,6 @@ public interface Table {
   /** Type of table. */
   Schema.TableType getJdbcTableType();
 
-  /** TODO: move to new interface Wrapper, remove default implementation from
-   * most Table sub-classes */
-  <C> C unwrap(Class<C> aClass);
 }
 
 // End Table.java

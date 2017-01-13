@@ -44,11 +44,6 @@ public abstract class DelegatingSqlValidatorCatalogReader
     return catalogReader.getTable(names);
   }
 
-  public SqlValidatorTable getTable(List<String> names,
-      SqlNameMatcher nameMatcher) {
-    return catalogReader.getTable(names, nameMatcher);
-  }
-
   public RelDataType getNamedType(SqlIdentifier typeName) {
     return catalogReader.getNamedType(typeName);
   }

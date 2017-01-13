@@ -43,12 +43,10 @@ class SchemaNamespace extends AbstractNamespace {
   protected RelDataType validateImpl(RelDataType targetRowType) {
     final RelDataTypeFactory.FieldInfoBuilder builder =
         validator.getTypeFactory().builder();
-    final SqlNameMatcher nameMatcher = validator.catalogReader.nameMatcher();
     for (SqlMoniker moniker
         : validator.catalogReader.getAllSchemaObjectNames(names)) {
       final List<String> names1 = moniker.getFullyQualifiedNames();
-      final SqlValidatorTable table =
-          validator.catalogReader.getTable(names1, nameMatcher);
+      final SqlValidatorTable table = validator.catalogReader.getTable(names1);
       builder.add(Util.last(names1), table.getRowType());
     }
     return builder.build();

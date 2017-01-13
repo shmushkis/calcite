@@ -179,14 +179,14 @@ public abstract class DelegatingScope implements SqlValidatorScope {
     return parent.findQualifyingTableName(columnName, ctx);
   }
 
-  @Override public Map<String, ScopeChild> findQualifyingTableNames(
-      String columnName, SqlNode ctx, SqlNameMatcher nameMatcher) {
-    return parent.findQualifyingTableNames(columnName, ctx, nameMatcher);
-  }
-
   protected Map<String, ScopeChild> findQualifyingTables(String columnName,
       SqlNameMatcher nameMatcher) {
     return ImmutableMap.of();
+  }
+
+  public Map<String, ScopeChild> findQualifyingTableNames(String columnName,
+      SqlNode ctx, SqlNameMatcher nameMatcher) {
+    return parent.findQualifyingTableNames(columnName, ctx, nameMatcher);
   }
 
   public RelDataType resolveColumn(String name, SqlNode ctx) {
@@ -197,9 +197,8 @@ public abstract class DelegatingScope implements SqlValidatorScope {
     return parent.nullifyType(node, type);
   }
 
-  public SqlValidatorNamespace getTableNamespace(List<String> names,
-      SqlNameMatcher nameMatcher) {
-    return parent.getTableNamespace(names, nameMatcher);
+  public SqlValidatorNamespace getTableNamespace(List<String> names) {
+    return parent.getTableNamespace(names);
   }
 
   public void resolveTable(List<String> names, SqlNameMatcher nameMatcher,

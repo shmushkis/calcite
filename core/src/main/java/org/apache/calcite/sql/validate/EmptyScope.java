@@ -17,12 +17,12 @@
 package org.apache.calcite.sql.validate;
 
 import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.StructKind;
 import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.Wrapper;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDynamicParam;
@@ -80,10 +80,8 @@ class EmptyScope implements SqlValidatorScope {
       boolean deep, Resolved resolved) {
   }
 
-  public SqlValidatorNamespace getTableNamespace(List<String> names,
-      SqlNameMatcher nameMatcher) {
-    final SqlValidatorTable table =
-        validator.catalogReader.getTable(names, nameMatcher);
+  public SqlValidatorNamespace getTableNamespace(List<String> names) {
+    SqlValidatorTable table = validator.catalogReader.getTable(names);
     return table != null
         ? new TableNamespace(validator, table)
         : null;
@@ -91,37 +89,40 @@ class EmptyScope implements SqlValidatorScope {
 
   public void resolveTable(List<String> names, SqlNameMatcher nameMatcher,
       Path path, Resolved resolved) {
-    // Look in the default schema, then default catalog, then root schema.
-    final CalciteCatalogReader catalogReader =
-        (CalciteCatalogReader) validator.catalogReader; // TODO: private
     final List<Resolve> imperfectResolves = new ArrayList<>();
-    for (List<String> schemaPath : catalogReader.schemaPaths) {
-      ((ResolvedImpl) resolved).clear();
-      resolve_(names, schemaPath, nameMatcher, path, resolved);
-      for (Resolve resolve : ((ResolvedImpl) resolved).resolves) {
+    final List<Resolve> resolves = ((ResolvedImpl) resolved).resolves;
+
+    // Look in the default schema, then default catalog, then root schema.
+    for (List<String> schemaPath : validator.catalogReader.getSchemaPaths()) {
+      resolve_(validator.catalogReader.getRootSchema(), names, schemaPath,
+          nameMatcher, path, resolved);
+      for (Resolve resolve : resolves) {
         if (resolve.remainingNames.isEmpty()) {
+          // There is a full match. Return it as the only match.
           ((ResolvedImpl) resolved).clear();
-          ((ResolvedImpl) resolved).resolves.add(resolve);
+          resolves.add(resolve);
           return;
         }
-        imperfectResolves.add(resolve);
       }
+      imperfectResolves.addAll(resolves);
     }
-    if (resolved.count() == 0) {
-      ((ResolvedImpl) resolved).resolves.addAll(imperfectResolves);
+    // If there were no matches in the last round, restore those found in
+    // previous rounds
+    if (resolves.isEmpty()) {
+      resolves.addAll(imperfectResolves);
     }
   }
 
-  private void resolve_(List<String> names, List<String> schemaNames,
-      SqlNameMatcher nameMatcher, SqlValidatorScope.Path path,
+  private void resolve_(final CalciteSchema rootSchema, List<String> names,
+      List<String> schemaNames, SqlNameMatcher nameMatcher, Path path,
       Resolved resolved) {
     final List<String> concat = ImmutableList.<String>builder()
         .addAll(schemaNames).addAll(names).build();
-    CalciteSchema schema = ((CalciteCatalogReader) validator.catalogReader).rootSchema; // TODO: private
+    CalciteSchema schema = rootSchema;
     SqlValidatorNamespace namespace = null;
     List<String> remainingNames = concat;
     for (String schemaName : concat) {
-      if (schema == ((CalciteCatalogReader) validator.catalogReader).rootSchema
+      if (schema == rootSchema
           && nameMatcher.matches(schemaName, schema.name)) {
         remainingNames = Util.skip(remainingNames);
         continue;
@@ -132,7 +133,8 @@ class EmptyScope implements SqlValidatorScope {
         path = path.plus(null, -1, subSchema.name, StructKind.NONE);
         remainingNames = Util.skip(remainingNames);
         schema = subSchema;
-        namespace = new SchemaNamespace(validator, ImmutableList.copyOf(path.stepNames()));
+        namespace = new SchemaNamespace(validator,
+            ImmutableList.copyOf(path.stepNames()));
         continue;
       }
       CalciteSchema.TableEntry entry =
@@ -146,11 +148,13 @@ class EmptyScope implements SqlValidatorScope {
         remainingNames = Util.skip(remainingNames);
         final Table table = entry.getTable();
         final String name2 = entry.name;
-        SqlValidatorTable table2 = table.unwrap(Prepare.PreparingTable.class);
+        SqlValidatorTable table2 = null;
+        if (table instanceof Wrapper) {
+          table2 = ((Wrapper) table).unwrap(Prepare.PreparingTable.class);
+        }
         if (table2 == null) {
           table2 = RelOptTableImpl.create(null,
-              table.getRowType(validator.typeFactory),
-              schema.add(name2, table),
+              table.getRowType(validator.typeFactory), schema.add(name2, table),
               null);
         }
         namespace = new TableNamespace(validator, table2);

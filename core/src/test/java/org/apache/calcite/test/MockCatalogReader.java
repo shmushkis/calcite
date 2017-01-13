@@ -21,7 +21,6 @@ import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.linq4j.tree.Expression;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.prepare.CalciteCatalogReader;
@@ -59,14 +58,12 @@ import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.schema.Statistic;
 import org.apache.calcite.schema.StreamableTable;
 import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.Wrapper;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlAccessType;
 import org.apache.calcite.sql.SqlCollation;
-import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlIntervalQualifier;
-import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ObjectSqlType;
@@ -76,7 +73,6 @@ import org.apache.calcite.sql.validate.SqlMonotonicity;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.calcite.sql.validate.SqlNameMatchers;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
-import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Litmus;
@@ -444,37 +440,11 @@ public class MockCatalogReader extends CalciteCatalogReader {
 
   //~ Methods ----------------------------------------------------------------
 
-  public void lookupOperatorOverloads(SqlIdentifier opName,
-      SqlFunctionCategory category, SqlSyntax syntax,
-      List<SqlOperator> operatorList) {
-  }
-
-  public List<SqlOperator> getOperatorList() {
-    return ImmutableList.of();
-  }
-
-  @Override public MockCatalogReader withSchemaPath(List<String> schemaPath) {
-    return this;
-  }
-
-  @Override public Prepare.PreparingTable getTableForMember(
-      List<String> names) {
-    return getTable(names, nameMatcher());
-  }
-
-  public RelDataTypeFactory getTypeFactory() {
-    return typeFactory;
-  }
-
-  public void registerRules(RelOptPlanner planner) {
-  }
-
   protected void registerTable(final MockTable table) {
     table.onRegister(typeFactory);
-    final CalciteSchema catalog = rootSchema;
     assert table.names.get(0).equals(DEFAULT_CATALOG);
     final CalciteSchema schema =
-        catalog.getSubSchema(table.names.get(1), true);
+        rootSchema.getSubSchema(table.names.get(1), true);
     final WrapperTable wrapperTable = new WrapperTable(table);
     if (table.stream) {
       schema.add(table.names.get(2),
@@ -489,28 +459,8 @@ public class MockCatalogReader extends CalciteCatalogReader {
   }
 
   protected void registerSchema(MockSchema schema) {
-    CalciteSchema catalog = rootSchema;
-    catalog.add(schema.name, new AbstractSchema());
+    rootSchema.add(schema.name, new AbstractSchema());
   }
-
-/* TODO: remove
-  public Prepare.PreparingTable getTable_(final List<String> names,
-      SqlNameMatcher nameMatcher) {
-    switch (names.size()) {
-    case 1:
-      // assume table in SALES schema (the original default)
-      // if it's not supplied, because SqlValidatorTest is effectively
-      // using SALES as its default schema.
-      return nameMatcher.get(tables, PREFIX_2, names);
-    case 2:
-      return nameMatcher.get(tables, PREFIX_1, names);
-    case 3:
-      return nameMatcher.get(tables, ImmutableList.<String>of(), names);
-    default:
-      return null;
-    }
-  }
-  */
 
   public RelDataType getNamedType(SqlIdentifier typeName) {
     if (typeName.equalsDeep(addressType.getSqlIdentifier(), Litmus.IGNORE)) {
@@ -518,63 +468,6 @@ public class MockCatalogReader extends CalciteCatalogReader {
     } else {
       return null;
     }
-  }
-
-/* TODO: remove
-  public List<SqlMoniker> getAllSchemaObjectNames(List<String> names) {
-    List<SqlMoniker> result;
-    switch (names.size()) {
-    case 0:
-      // looking for catalog and schema names
-      return ImmutableList.<SqlMoniker>builder()
-          .add(new SqlMonikerImpl(DEFAULT_CATALOG, SqlMonikerType.CATALOG))
-          .addAll(getAllSchemaObjectNames(ImmutableList.of(DEFAULT_CATALOG)))
-          .build();
-    case 1:
-      // looking for schema names
-      result = Lists.newArrayList();
-      for (MockSchema schema : schemas.values()) {
-        final String catalogName = names.get(0);
-        if (schema.getCatalogName().equals(catalogName)) {
-          final ImmutableList<String> names1 =
-              ImmutableList.of(catalogName, schema.name);
-          result.add(new SqlMonikerImpl(names1, SqlMonikerType.SCHEMA));
-        }
-      }
-      return result;
-    case 2:
-      // looking for table names in the given schema
-      MockSchema schema = schemas.get(names.get(1));
-      if (schema == null) {
-        return Collections.emptyList();
-      }
-      result = Lists.newArrayList();
-      for (String tableName : schema.tableNames) {
-        result.add(
-            new SqlMonikerImpl(
-                ImmutableList.of(schema.getCatalogName(), schema.name,
-                    tableName),
-                SqlMonikerType.TABLE));
-      }
-      return result;
-    default:
-      return Collections.emptyList();
-    }
-  }
-  */
-
-  public RelDataTypeField field(RelDataType rowType, String alias) {
-    return nameMatcher.field(rowType, alias);
-  }
-
-  public boolean matches(String string, String name) {
-    return nameMatcher.matches(string, name);
-  }
-
-  public RelDataType createTypeFromProjection(final RelDataType type,
-      final List<String> columnNameList) {
-    return SqlValidatorUtil.createTypeFromProjection(type, columnNameList,
-        typeFactory, nameMatcher.isCaseSensitive());
   }
 
   private static List<RelCollation> deduceMonotonicity(
@@ -1210,7 +1103,7 @@ public class MockCatalogReader extends CalciteCatalogReader {
 
   /** Wrapper around a {@link MockTable}, giving it a {@link Table} interface.
    * You can get the {@code MockTable} by calling {@link #unwrap(Class)}. */
-  private static class WrapperTable implements Table {
+  private static class WrapperTable implements Table, Wrapper {
     private final MockTable table;
 
     WrapperTable(MockTable table) {

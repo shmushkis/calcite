@@ -47,12 +47,11 @@ class WithScope extends ListScope {
     return withItem;
   }
 
-  @Override public SqlValidatorNamespace getTableNamespace(List<String> names,
-      SqlNameMatcher nameMatcher) {
+  @Override public SqlValidatorNamespace getTableNamespace(List<String> names) {
     if (names.size() == 1 && names.get(0).equals(withItem.name.getSimple())) {
       return validator.getNamespace(withItem);
     }
-    return super.getTableNamespace(names, nameMatcher);
+    return super.getTableNamespace(names);
   }
 
   @Override public void resolveTable(List<String> names,

@@ -177,10 +177,10 @@ public interface SqlValidatorScope {
    */
   void validateExpr(SqlNode expr);
 
-  /** @deprecated Use {@link #resolveTable(List, SqlNameMatcher, Path, Resolved)}. */
+  /** @deprecated Use
+   * {@link #resolveTable(List, SqlNameMatcher, Path, Resolved)}. */
   @Deprecated // to be removed before 2.0
-  SqlValidatorNamespace getTableNamespace(List<String> names,
-      SqlNameMatcher nameMatcher);
+  SqlValidatorNamespace getTableNamespace(List<String> names);
 
   /**
    * Looks up a table in this scope from its name. If found, calls
@@ -204,8 +204,8 @@ public interface SqlValidatorScope {
 
   /** Callback from {@link SqlValidatorScope#resolve}. */
   interface Resolved {
-    void found(SqlValidatorNamespace namespace, boolean nullable, SqlValidatorScope scope,
-        Path path, List<String> remainingNames);
+    void found(SqlValidatorNamespace namespace, boolean nullable,
+        SqlValidatorScope scope, Path path, List<String> remainingNames);
     int count();
   }
 
@@ -232,17 +232,17 @@ public interface SqlValidatorScope {
       return paths.build();
     }
 
-    protected void build(ImmutableList.Builder<Step> paths) {
-    }
-
     /** Returns a list ["step1", "step2"]. */
-    public List<String> stepNames() {
+    List<String> stepNames() {
       return Lists.transform(steps(),
           new Function<Step, String>() {
             public String apply(Step input) {
               return input.name;
             }
           });
+    }
+
+    protected void build(ImmutableList.Builder<Step> paths) {
     }
   }
 
@@ -309,8 +309,8 @@ public interface SqlValidatorScope {
     private final boolean nullable;
     public final SqlValidatorScope scope; // may be null
     public final Path path;
-    /** Empty if it was a full match. */
-    public final List<String> remainingNames;
+    /** Names not matched; empty if it was a full match. */
+    final List<String> remainingNames;
 
     Resolve(SqlValidatorNamespace namespace, boolean nullable,
         SqlValidatorScope scope, Path path, List<String> remainingNames) {

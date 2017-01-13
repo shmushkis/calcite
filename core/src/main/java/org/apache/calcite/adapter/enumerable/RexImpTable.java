@@ -1663,8 +1663,7 @@ public class RexImpTable {
       List<String> names = Util.stringToList((String) x.value);
       final Prepare.CatalogReader catalogReader =
           Prepare.CatalogReader.THREAD_LOCAL.get();
-      RelOptTable table =
-          catalogReader.getTable(names, catalogReader.nameMatcher());
+      RelOptTable table = catalogReader.getTable(names);
       System.out.println("Now, do something with table " + table);
       return super.implement(translator, call, translatedOperands);
     }
