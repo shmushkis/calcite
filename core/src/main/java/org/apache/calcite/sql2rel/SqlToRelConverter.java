@@ -1745,13 +1745,14 @@ public class SqlToRelConverter {
       case TRUE_FALSE_UNKNOWN:
         if (validator.getValidatedNodeType(node).isNullable()) {
           break;
-        } else if (true) {
+        } else if (true) { // TODO:
           break;
         }
         // fall through
       case UNKNOWN_AS_FALSE:
         logic = RelOptUtil.Logic.TRUE;
       }
+      logic = RelOptUtil.Logic.TRUE_FALSE_UNKNOWN;
       bb.registerSubQuery(node, logic);
     }
   }
