@@ -1752,7 +1752,6 @@ public class SqlToRelConverter {
       case UNKNOWN_AS_FALSE:
         logic = RelOptUtil.Logic.TRUE;
       }
-      logic = RelOptUtil.Logic.TRUE_FALSE_UNKNOWN;
       bb.registerSubQuery(node, logic);
     }
   }

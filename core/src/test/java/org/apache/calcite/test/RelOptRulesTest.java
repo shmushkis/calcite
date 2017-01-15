@@ -2828,8 +2828,8 @@ public class RelOptRulesTest extends RelOptTestBase {
    * Sub-queries connected by OR</a>. */
   @Test public void testWhereOrSubQuery() {
     final String sql = "select * from emp\n"
-        + "where sal = 4 OR\n"
-        + "  empno NOT IN (select deptno from dept)";
+        + "where sal = 4\n"
+        + "or empno NOT IN (select deptno from dept)";
     checkSubQuery(sql).withLateDecorrelation(true).check();
   }
 

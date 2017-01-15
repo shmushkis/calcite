@@ -6718,8 +6718,8 @@ LogicalProject(SAL=[$5])
     <TestCase name="testWhereOrSubQuery">
         <Resource name="sql">
             <![CDATA[select * from emp
-where sal = 4 OR
-  empno NOT IN (select deptno from dept)]]>
+where sal = 4
+or empno NOT IN (select deptno from dept)]]>
         </Resource>
         <Resource name="planBefore">
             <![CDATA[
@@ -6732,6 +6732,19 @@ LogicalProject(DEPTNO=[$0])
 ]]>
         </Resource>
         <Resource name="planMid">
+            <![CDATA[
+LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8])
+  LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8])
+    LogicalFilter(condition=[OR(=($5, 4), NOT(CASE(IS NOT NULL($10), true, false)))])
+      LogicalJoin(condition=[=($0, $9)], joinType=[left])
+        LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+        LogicalAggregate(group=[{0, 1}])
+          LogicalProject(DEPTNO=[$0], i=[true])
+            LogicalProject(DEPTNO=[$0])
+              LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+]]>
+        </Resource>
+        <Resource name="planAfter">
             <![CDATA[
 LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8])
   LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8])
