@@ -15,9 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-!use post
-values 1;
-EXPR$0
-1
+# TODO: revert before merging to master
+!use scott
+select deptno
+from "scott".emp
+where ename in (
+  select min('MARTIN') from "scott".dept
+  where dept.deptno = emp.deptno and 1 = 2);
++--------+
+| DEPTNO |
++--------+
+|     30 |
++--------+
+(1 row)
+
 !ok
 # End dummy.iq

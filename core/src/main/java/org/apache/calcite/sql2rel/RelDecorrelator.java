@@ -904,9 +904,19 @@ public class RelDecorrelator implements ReflectiveVisitor {
     RelNode valueGen =
         createValueGenerator(corVarList, leftInputOutputCount, corDefOutputs);
 
+    JoinRelType joinType = JoinRelType.INNER;
+    if (corVarList.size() == 1
+        && false) {
+      final CorRef correlation = Iterables.getOnlyElement(corVarList);
+      final Correlate r = (Correlate) cm.mapCorToCorRel.get(correlation.corr);
+      if (r.getRight() instanceof Aggregate
+          && ((Aggregate) r.getRight()).getGroupSet().isEmpty()) {
+        joinType = JoinRelType.RIGHT;
+      }
+    }
     RelNode join =
         LogicalJoin.create(frame.r, valueGen, rexBuilder.makeLiteral(true),
-            ImmutableSet.<CorrelationId>of(), JoinRelType.INNER);
+            ImmutableSet.<CorrelationId>of(), joinType);
 
     // Join or Filter does not change the old input ordering. All
     // input fields from newLeftInput (i.e. the original input to the old

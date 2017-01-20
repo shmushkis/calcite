@@ -3058,6 +3058,39 @@ public class RelOptRulesTest extends RelOptTestBase {
   }
 
   /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-1583">[CALCITE-1583]
+   * Incorrect plan for correlated "GROUP BY ()" sub-query</a>. */
+  @Test public void testDecorrelateExistsGroupByEmpty() throws Exception {
+    final String sql = "select * from dept as d\n"
+        + "where EXISTS (\n"
+        + "  select count(*) from emp e where d.deptno = e.deptno)";
+    checkSubQuery(sql).withLateDecorrelation(true).check();
+  }
+
+  @Test public void testDecorrelateExistsEmpty() throws Exception {
+    final String sql = "select * from dept as d\n"
+        + "where NOT EXISTS (\n"
+        + "  select count(*) from emp e having false)";
+    checkSubQuery(sql).withLateDecorrelation(true).check();
+  }
+
+  @Test public void testDecorrelateInGroupByEmpty() throws Exception {
+    final String sql = "select * from dept as d\n"
+        + "where deptno in (\n"
+        + "  select sum(deptno) from emp e\n"
+        + "  where d.deptno = e.deptno)";
+    checkSubQuery(sql).withLateDecorrelation(true).check();
+  }
+
+  @Test public void testDecorrelateScalarGroupByEmpty() throws Exception {
+    final String sql = "select * from dept as d\n"
+        + "where deptno <> (\n"
+        + "  select count(deptno) from emp as e\n"
+        + "  where d.name = e.ename)";
+    checkSubQuery(sql).withLateDecorrelation(true).check();
+  }
+
+  /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1511">[CALCITE-1511]
    * AssertionError while decorrelating query with two EXISTS
    * sub-queries</a>. */

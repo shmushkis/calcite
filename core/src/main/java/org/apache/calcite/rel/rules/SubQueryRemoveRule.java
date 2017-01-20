@@ -154,10 +154,11 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
   protected RexNode apply(RexSubQuery e, Set<CorrelationId> variablesSet,
       RelOptUtil.Logic logic,
       RelBuilder builder, int inputCount, int offset) {
+    final RelMetadataQuery mq;
     switch (e.getKind()) {
     case SCALAR_QUERY:
       builder.push(e.rel);
-      final RelMetadataQuery mq = RelMetadataQuery.instance();
+      mq = RelMetadataQuery.instance();
       final Boolean unique = mq.areColumnsUnique(builder.peek(),
           ImmutableBitSet.of());
       if (unique == null || !unique) {
@@ -168,8 +169,21 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
       builder.join(JoinRelType.LEFT, builder.literal(true), variablesSet);
       return field(builder, inputCount, offset);
 
-    case IN:
     case EXISTS:
+      // If the query is guaranteed to produce at least once row, just return
+      // TRUE.
+      mq = RelMetadataQuery.instance();
+      final Double minRowCount = mq.getMinRowCount(e.rel);
+      if (minRowCount != null && minRowCount >= 1D) {
+        return builder.literal(true);
+      }
+      final Double maxRowCount = mq.getMaxRowCount(e.rel);
+      if (maxRowCount != null && maxRowCount < 1D) {
+        return builder.literal(false);
+      }
+      // fall through
+
+    case IN:
       // Most general case, where the left and right keys might have nulls, and
       // caller requires 3-valued logic return.
       //
