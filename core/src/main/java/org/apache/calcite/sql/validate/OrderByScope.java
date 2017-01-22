@@ -18,9 +18,7 @@ package org.apache.calcite.sql.validate;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlIdentifier;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSelect;
@@ -73,38 +71,39 @@ public class OrderByScope extends DelegatingScope {
     // If it's a simple identifier, look for an alias.
     if (identifier.isSimple()
         && validator.getConformance().isSortByAlias()) {
-      String name = identifier.names.get(0);
+      final String name = identifier.names.get(0);
       final SqlValidatorNamespace selectNs =
           validator.getNamespace(select);
       final RelDataType rowType = selectNs.getRowType();
 
       final SqlNameMatcher nameMatcher = validator.catalogReader.nameMatcher();
       final RelDataTypeField field = nameMatcher.field(rowType, name);
-      int qualifidSelectAsCount = 0;
-      String simpleOrderByName = identifier.getSimple();
-      for (SqlNode selectedColumn : select.getSelectList()) {
-        if (selectedColumn instanceof SqlBasicCall) {
-          SqlBasicCall basicCall = (SqlBasicCall) selectedColumn;
-          if (basicCall.getOperator().getKind().equals(SqlKind.AS)) {
-            SqlIdentifier columnAsIdentifier =
-              (SqlIdentifier) basicCall.getOperandList().get(1);
-            String simpleSelect = columnAsIdentifier.getSimple();
-            if (simpleOrderByName.equals(simpleSelect)) {
-              qualifidSelectAsCount++;
-            }
-          }
-        }
-        if (qualifidSelectAsCount > 1) {
-          throw validator.newValidationError(identifier,
-              RESOURCE.columnAmbiguous(simpleOrderByName));
-        }
+      final int aliasCount = aliasCount(nameMatcher, name);
+      if (aliasCount > 1) {
+        // More than one column has this alias.
+        throw validator.newValidationError(identifier,
+            RESOURCE.columnAmbiguous(name));
       }
-      if (field != null && !field.isDynamicStar() && qualifidSelectAsCount == 1) {
+      if (field != null && !field.isDynamicStar() && aliasCount == 1) {
         // if identifier is resolved to a dynamic star, use super.fullyQualify() for such case.
         return SqlQualified.create(this, 1, selectNs, identifier);
       }
     }
     return super.fullyQualify(identifier);
+  }
+
+  /** Returns the number of columns in the SELECT clause that have {@code name}
+   * as their implicit (e.g. {@code t.name}) or explicit (e.g.
+   * {@code t.c as name}) alias. */
+  private int aliasCount(SqlNameMatcher nameMatcher, String name) {
+    int n = 0;
+    for (SqlNode s : select.getSelectList()) {
+      final String alias = SqlValidatorUtil.getAlias(s, -1);
+      if (alias != null && nameMatcher.matches(alias, name)) {
+        n++;
+      }
+    }
+    return n;
   }
 
   public RelDataType resolveColumn(String name, SqlNode ctx) {
