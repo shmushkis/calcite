@@ -25,6 +25,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelRecordType;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.runtime.Feature;
@@ -111,7 +112,6 @@ import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -222,6 +222,8 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
   protected final RelDataTypeFactory typeFactory;
   protected final RelDataType unknownType;
   private final RelDataType booleanType;
+  private final DefaultValueFactory defaultValueFactory;
+  private final DefaultValueFactory nullDefaultValueFactory;
 
   /**
    * Map of derived RelDataType for each node. This is an IdentityHashMap
@@ -256,9 +258,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
   private boolean inWindow;                        // Allow nested aggregates
 
-  private DefaultValueFactory defaultValueFactory;
-  private DefaultValueFactory nullDefaultValueFactory;
-
   //~ Constructors -----------------------------------------------------------
 
   /**
@@ -267,6 +266,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
    * @param opTab         Operator table
    * @param catalogReader Catalog reader
    * @param typeFactory   Type factory
+   * @param defaultValueFactory Factory for default values
    * @param conformance   Compatibility mode
    */
   protected SqlValidatorImpl(
@@ -278,7 +278,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     this.opTab = Preconditions.checkNotNull(opTab);
     this.catalogReader = Preconditions.checkNotNull(catalogReader);
     this.typeFactory = Preconditions.checkNotNull(typeFactory);
-    this.defaultValueFactory = defaultValueFactory;
+    this.defaultValueFactory = Preconditions.checkNotNull(defaultValueFactory);
     this.nullDefaultValueFactory = new NullDefaultValueFactory(typeFactory);
     this.conformance = Preconditions.checkNotNull(conformance);
 
@@ -3700,18 +3700,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
   }
 
   /**
-   * Derives a row-type for INSERT and UPDATE operations that implicitly specify the column-set.
-   *
-   * @param targetRowType       Target row type of for INSERT/UPDATE
-   * @param implicitColumnCount The source column count
-   * @return Rowtype
-   */
-  protected RelDataType createImplicitSubsetTargetRowType(
-      RelDataType targetRowType,
-      int implicitColumnCount) {
-    return new RelRecordType(targetRowType.getFieldList().subList(0, implicitColumnCount));
-  }
-  /**
    * Derives a row-type for INSERT and UPDATE operations.
    *
    * @param table            Target table for INSERT/UPDATE
@@ -3813,25 +3801,20 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
             RESOURCE.unmatchInsertColumn(targetFieldCount, sourceFieldCount));
       }
 
-      Iterator<RelDataTypeField> allFields = table.getRowType().getFieldList().iterator();
-      while (allFields.hasNext()) {
-        RelDataTypeField nextTargetType = allFields.next();
-        if (!nextTargetType.getType().isNullable()) {
-          final boolean fieldIsInSubset =
-              null != logicalTargetRowType.getField(
-                  nextTargetType.getName(),
-                  true,
-                  false);
-          final boolean defaultIsNull =
-              nullDefaultValueFactory.newColumnDefaultValue(
-                  (RelOptTable) table,
-                  nextTargetType.getIndex()).equals(
-                  defaultValueFactory.newColumnDefaultValue(
-                      (RelOptTable) table,
-                      nextTargetType.getIndex()));
-          if (!fieldIsInSubset && defaultIsNull) {
+      for (RelDataTypeField field : table.getRowType().getFieldList()) {
+        if (!field.getType().isNullable()) {
+          final RelDataTypeField targetField =
+              logicalTargetRowType.getField(field.getName(), true, false);
+          final RexNode defaultValue =
+              nullDefaultValueFactory.newColumnDefaultValue((RelOptTable) table,
+                  field.getIndex());
+          final RexNode defaultValue1 =
+              defaultValueFactory.newColumnDefaultValue((RelOptTable) table,
+                  field.getIndex());
+          final boolean defaultIsNull = defaultValue.equals(defaultValue1);
+          if (targetField == null && defaultIsNull) {
             throw newValidationError(node,
-                RESOURCE.columnNotNullable(nextTargetType.getName()));
+                RESOURCE.columnNotNullable(field.getName()));
           }
         }
       }
@@ -3847,19 +3830,23 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
   protected RelDataType getLogicalTargetRowType(
       RelDataType targetRowType,
       SqlInsert insert) {
-    if (conformance.isInsertSubsetColumnsAllowed() && null == insert.getTargetColumnList()) {
+    if (conformance.isInsertSubsetColumnsAllowed()
+        && insert.getTargetColumnList() == null) {
       // Target an implicit subset of columns.
       final SqlNode source = insert.getSource();
       final RelDataType sourceRowType = getNamespace(source).getRowType();
       final RelDataType logicalSourceRowType =
           getLogicalSourceRowType(sourceRowType, insert);
       targetRowType =
-          createImplicitSubsetTargetRowType(targetRowType, logicalSourceRowType.getFieldCount());
+          typeFactory.createStructType(
+              targetRowType.getFieldList()
+                  .subList(0, logicalSourceRowType.getFieldCount()));
       final SqlValidatorNamespace targetNamespace = getNamespace(insert);
       validateNamespace(targetNamespace, targetRowType);
       return targetRowType;
     } else {
-      // Either the set of columns are explicitly targeted, or target the full set of columns.
+      // Either the set of columns are explicitly targeted, or target the full
+      // set of columns.
       return targetRowType;
     }
   }

@@ -160,10 +160,15 @@ public interface SqlConformance {
   boolean isApplyAllowed();
 
   /**
-   * Whether @{code INSERT} is allowed with a subset of columns that exist
-   * in the target table.
-   * TODO: complete the docs
-   * @return
+   * Whether to allow {@code INSERT} (or {@code UPSERT}) with no column list but
+   * fewer values than the target table. The N values provided are assumed to
+   * match the first N columns of the table, and the default value is used for
+   * the remaining columns.
+   *
+   * <p>Among the built-in conformance levels, true in
+   * {@link SqlConformanceEnum#PRAGMATIC_99},
+   * {@link SqlConformanceEnum#PRAGMATIC_2003};
+   * false otherwise.
    */
   boolean isInsertSubsetColumnsAllowed();
 }

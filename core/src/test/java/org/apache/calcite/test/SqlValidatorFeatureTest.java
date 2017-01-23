@@ -153,8 +153,8 @@ public class SqlValidatorFeatureTest extends SqlValidatorTestCase {
         SqlValidatorCatalogReader catalogReader,
         RelDataTypeFactory typeFactory,
         SqlConformance conformance) {
-      super(opTab, catalogReader, typeFactory, new NullDefaultValueFactory(typeFactory),
-          conformance);
+      super(opTab, catalogReader, typeFactory,
+          new NullDefaultValueFactory(typeFactory), conformance);
     }
 
     protected void validateFeature(

@@ -192,13 +192,28 @@ public class SqlValidatorUtil {
       SqlOperatorTable opTab,
       SqlValidatorCatalogReader catalogReader,
       RelDataTypeFactory typeFactory,
+      NullDefaultValueFactory defaultValueFactory,
       SqlConformance conformance) {
     return new SqlValidatorImpl(opTab, catalogReader, typeFactory,
+        defaultValueFactory, conformance);
+  }
+
+  /**
+   * Factory method for {@link SqlValidator}.
+   */
+  @Deprecated // to be removed before 2.0
+  public static SqlValidatorWithHints newValidator(
+      SqlOperatorTable opTab,
+      SqlValidatorCatalogReader catalogReader,
+      RelDataTypeFactory typeFactory,
+      SqlConformance conformance) {
+    return newValidator(opTab, catalogReader, typeFactory,
         new NullDefaultValueFactory(typeFactory), conformance);
   }
 
   /**
-   * Factory method for {@link SqlValidator}, with default conformance.
+   * Factory method for {@link SqlValidator}, with default conformance and
+   * default value factory.
    */
   @Deprecated // to be removed before 2.0
   public static SqlValidatorWithHints newValidator(
@@ -206,7 +221,7 @@ public class SqlValidatorUtil {
       SqlValidatorCatalogReader catalogReader,
       RelDataTypeFactory typeFactory) {
     return newValidator(opTab, catalogReader, typeFactory,
-        SqlConformanceEnum.DEFAULT);
+        new NullDefaultValueFactory(typeFactory), SqlConformanceEnum.DEFAULT);
   }
 
   /**

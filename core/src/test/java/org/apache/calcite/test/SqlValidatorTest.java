@@ -8065,32 +8065,45 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
   }
 
   @Test public void testInsert() {
-    tester.checkQuery("insert into emp "
-            + "values (1, 'nom', 'job', 0, timestamp '1970-01-01 00:00:00', 1, 1, 1, false)");
-    tester.checkQuery("insert into emp "
-            + "(empno, ename, job, mgr, hiredate, sal, comm, deptno, slacker)"
-            + "select 1, 'nom', 'job', 0, timestamp '1970-01-01 00:00:00', 1, 1, 1, false "
-            + "from (values 'a')");
+    final String sql = "insert into emp\n"
+        + "values (1, 'nom', 'job', 0, timestamp '1970-01-01 00:00:00', 1, 1,\n"
+        + "  1, false)";
+    tester.checkQuery(sql);
+    final String sql2 = "insert into emp (empno, ename, job, mgr, hiredate,\n"
+        + "  sal, comm, deptno, slacker)\n"
+        + "select 1, 'nom', 'job', 0, timestamp '1970-01-01 00:00:00',\n"
+        + "  1, 1, 1, false\n"
+        + "from (values 'a')";
+    tester.checkQuery(sql2);
   }
 
   @Test public void testInsertSubset() {
-    final SqlTester pragmaticTester = tester.withConformance(SqlConformanceEnum.PRAGMATIC_2003);
-    pragmaticTester.checkQuery("insert into empnullables "
-        + "values (1, 'nom', 'job', 0, timestamp '1970-01-01 00:00:00')");
+    final SqlTester pragmaticTester =
+        tester.withConformance(SqlConformanceEnum.PRAGMATIC_2003);
+    final String sql1 = "insert into empnullables\n"
+        + "values (1, 'nom', 'job', 0, timestamp '1970-01-01 00:00:00')";
+    pragmaticTester.checkQuery(sql1);
 
-    pragmaticTester.checkQuery("insert into empnullables (empno, ename, job, hiredate) "
-        + "values (1, 'Jim', 'Baker', timestamp '1970-01-01 00:00:00')");
-    /* pragmaticTester.checkQuery("insert into emp (empno) select 1 from (values 'a')");
+    final String sql2 = "insert into empnullables (\n"
+        + "  empno, ename, job, hiredate)\n"
+        + "values (1, 'Jim', 'Baker', timestamp '1970-01-01 00:00:00')";
+    pragmaticTester.checkQuery(sql2);
 
+    if (false) {
+      // TODO: fix or remove
+      pragmaticTester.checkQuery(
+          "insert into emp (empno) select 1 from (values 'a')");
 
-    tester.checkQuery("insert into ^empnullables^ (empno) values (1)");
-    tester.checkQuery("insert into ^empnullables^ (empno) select 1 from (values 'a')");*/
+      tester.checkQuery("insert into ^empnullables^ (empno) values (1)");
+      tester.checkQuery(
+          "insert into ^empnullables^ (empno) select 1 from (values 'a')");
+    }
   }
 
   @Test public void testInsertSubsetAllowedFailNullability() {
-    final SqlTester pragmaticTester = tester.withConformance(SqlConformanceEnum.PRAGMATIC_2003);
-    pragmaticTester.checkQueryFails(
-        "insert into ^empnullables^ values (1)",
+    final SqlTester pragmaticTester =
+        tester.withConformance(SqlConformanceEnum.PRAGMATIC_2003);
+    pragmaticTester.checkQueryFails("insert into ^empnullables^ values (1)",
         "Column 'ENAME' is not nullable");
     pragmaticTester.checkQueryFails(
         "insert into ^empnullables^ (ename) values ('Kevin')",
@@ -8098,42 +8111,48 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
   }
 
   @Test public void testInsertSubsetDisallowed() {
-    tester.checkQueryFails(
-        "insert into ^emp^ values (1)",
-        "Number of INSERT target columns \\(9\\) does not equal number of source items \\(1\\)");
+    tester.checkQueryFails("insert into ^emp^ values (1)",
+        "Number of INSERT target columns \\(9\\) does not equal number of "
+            + "source items \\(1\\)");
     tester.checkQueryFails(
         "insert into ^emp^ (empno, ename) values (1, 'Kevin')",
-        "Number of INSERT target columns \\(9\\) does not equal number of source items \\(2\\)");
+        "Number of INSERT target columns \\(9\\) does not equal number of "
+            + "source items \\(2\\)");
   }
 
   @Test public void testInsertBind() {
-    final SqlTester pragmaticTester = tester.withConformance(SqlConformanceEnum.PRAGMATIC_2003);
+    final SqlTester pragmaticTester =
+        tester.withConformance(SqlConformanceEnum.PRAGMATIC_2003);
     // VALUES
-    sql(pragmaticTester, "insert into empnullables (empno, deptno) values (?, ?)")
-        .ok()
+    final String sql0 = "insert into empnullables (empno, deptno)\n"
+        + "values (?, ?)";
+    sql(sql0).tester(pragmaticTester).ok()
         .bindType("RecordType(INTEGER ?0, INTEGER ?1)");
 
     // multiple VALUES
-    sql(pragmaticTester,
-        "insert into empnullables (empno, deptno) values (?, 1), (2, ?), (3, null)")
-        .ok()
+    final String sql1 = "insert into empnullables (empno, deptno)\n"
+        + "values (?, 1), (2, ?), (3, null)";
+    sql(sql1).tester(pragmaticTester).ok()
         .bindType("RecordType(INTEGER ?0, INTEGER ?1)");
 
     // VALUES with expression
-    sql(pragmaticTester, "insert into empnullables (ename, empno) values (?, ? + 1)")
+    sql("insert into empnullables (ename, empno) values (?, ? + 1)")
+        .tester(pragmaticTester)
         .ok()
         .bindType("RecordType(VARCHAR(20) ?0, INTEGER ?1)");
 
     // SELECT
-    sql(pragmaticTester, "insert into empnullables (ename, empno) select ?, ? from (values (1))")
+    sql("insert into empnullables (ename, empno) select ?, ? from (values (1))")
+        .tester(pragmaticTester)
         .ok()
         .bindType("RecordType(VARCHAR(20) ?0, INTEGER ?1)");
 
     // WITH
-    final String sql = "insert into empnullables (ename, empno)\n"
+    final String sql3 = "insert into empnullables (ename, empno)\n"
         + "with v as (values ('a'))\n"
         + "select ?, ? from (values (1))";
-    sql(pragmaticTester, sql).ok().bindType("RecordType(VARCHAR(20) ?0, INTEGER ?1)");
+    sql(sql3).tester(pragmaticTester).ok()
+        .bindType("RecordType(VARCHAR(20) ?0, INTEGER ?1)");
 
     // UNION
     final String sql2 = "insert into empnullables (ename, empno)\n"
@@ -8142,10 +8161,13 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         + "select ?, ? from (values (time '1:2:3'))";
     final String expected2 = "RecordType(VARCHAR(20) ?0, INTEGER ?1,"
         + " VARCHAR(20) ?2, INTEGER ?3)";
-    sql(pragmaticTester, sql2).ok().bindType(expected2);
+    sql(sql2).tester(pragmaticTester).ok().bindType(expected2);
   }
 
   @Test public void testInsertBindWithCustomColumnResolving() {
+    final SqlTester pragmaticTester =
+        tester.withConformance(SqlConformanceEnum.PRAGMATIC_2003);
+
     final String sql = "insert into struct.t\n"
         + "values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     final String expected = "RecordType(VARCHAR(20) ?0, VARCHAR(20) ?1,"
@@ -8153,27 +8175,31 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         + " INTEGER ?7, INTEGER ?8)";
     sql(sql).ok().bindType(expected);
 
-    final SqlTester pragmaticTester = tester.withConformance(SqlConformanceEnum.PRAGMATIC_2003);
-
     final String sql2 =
         "insert into struct.t_nullables (c0, c2, c1) values (?, ?, ?)";
     final String expected2 =
         "RecordType(INTEGER ?0, INTEGER ?1, VARCHAR(20) ?2)";
-    sql(pragmaticTester, sql2).ok().bindType(expected2);
+    sql(sql2).tester(pragmaticTester).ok().bindType(expected2);
 
     final String sql3 =
         "insert into struct.t_nullables (f1.c0, f1.c2, f0.c1) values (?, ?, ?)";
     final String expected3 =
         "RecordType(INTEGER ?0, INTEGER ?1, INTEGER ?2)";
-    sql(pragmaticTester, sql3).ok().bindType(expected3);
+    sql(sql3).tester(pragmaticTester).ok().bindType(expected3);
 
-    sql(pragmaticTester, "insert into struct.t_nullables (c0, ^c4^, c1) values (?, ?, ?)")
+    sql("insert into struct.t_nullables (c0, ^c4^, c1) values (?, ?, ?)")
+        .tester(pragmaticTester)
         .fails("Unknown target column 'C4'");
-    sql(pragmaticTester, "insert into struct.t_nullables (^a0^, c2, c1) values (?, ?, ?)")
+    sql("insert into struct.t_nullables (^a0^, c2, c1) values (?, ?, ?)")
+        .tester(pragmaticTester)
         .fails("Unknown target column 'A0'");
-    sql(pragmaticTester, "insert into struct.t_nullables (f1.c0, ^f0.a0^, f0.c1) values (?, ?, ?)")
+    final String sql4 = "insert into struct.t_nullables (\n"
+        + "  f1.c0, ^f0.a0^, f0.c1) values (?, ?, ?)";
+    sql(sql4).tester(pragmaticTester)
         .fails("Unknown target column 'F0.A0'");
-    sql(pragmaticTester, "insert into struct.t_nullables (f1.c0, f1.c2, ^f1.c0^) values (?, ?, ?)")
+    final String sql5 = "insert into struct.t_nullables (\n"
+        + "  f1.c0, f1.c2, ^f1.c0^) values (?, ?, ?)";
+    sql(sql5).tester(pragmaticTester)
         .fails("Target column '\"F1\".\"C0\"' is assigned more than once");
   }
 
