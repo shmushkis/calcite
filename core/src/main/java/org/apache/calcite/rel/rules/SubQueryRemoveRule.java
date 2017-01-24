@@ -115,7 +115,9 @@ public abstract class SubQueryRemoveRule extends RelOptRule {
             c = c.accept(shuttle);
           }
           builder.filter(c);
+          builder.optimize();
           builder.project(fields(builder, filter.getRowType().getFieldCount()));
+          builder.convert(filter.getRowType(), false); // because of "optimize"
           call.transformTo(builder.build());
         }
       };

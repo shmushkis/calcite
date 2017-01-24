@@ -669,6 +669,18 @@ where exists (
 
 !ok
 
+select min('martin') as mm, count(deptno) as cd, count(*) as c
+from "scott".dept
+where 1 = 2;
++----+----+---+
+| MM | CD | C |
++----+----+---+
+|    |  0 | 0 |
++----+----+---+
+(1 row)
+
+!ok
+
 select deptno
 from "scott".emp
 where ename in (
@@ -677,9 +689,8 @@ where ename in (
 +--------+
 | DEPTNO |
 +--------+
-|     30 |
 +--------+
-(1 row)
+(0 rows)
 
 !ok
 
@@ -690,5 +701,99 @@ select deptno,
 from "scott".emp;
 !ok
 !}
+
+# Sub-query returns one row for each deptno. Two happen to match.
+select * from "scott".dept
+where deptno = (
+  select count(*)
+  from "scott".emp
+  where deptno = dept.deptno) * 10 - 30;
++--------+----------+---------+
+| DEPTNO | DNAME    | LOC     |
++--------+----------+---------+
+|     20 | RESEARCH | DALLAS  |
+|     30 | SALES    | CHICAGO |
++--------+----------+---------+
+(2 rows)
+
+!ok
+
+# Same query using IN
+select * from "scott".dept
+where deptno in (
+  select count(*) * 10 - 30
+  from "scott".emp
+  where deptno = dept.deptno);
++--------+----------+---------+
+| DEPTNO | DNAME    | LOC     |
++--------+----------+---------+
+|     20 | RESEARCH | DALLAS  |
+|     30 | SALES    | CHICAGO |
++--------+----------+---------+
+(2 rows)
+
+!ok
+
+# Same query using SUM
+select * from "scott".dept
+where deptno in (
+  select sum(1) * 10 - 30
+  from "scott".emp
+  where deptno = dept.deptno);
++--------+----------+---------+
+| DEPTNO | DNAME    | LOC     |
++--------+----------+---------+
+|     20 | RESEARCH | DALLAS  |
+|     30 | SALES    | CHICAGO |
++--------+----------+---------+
+(2 rows)
+
+!ok
+
+# Similar, NOT IN
+select * from "scott".dept
+where deptno NOT IN (
+  select count(*) * 10 - 30
+  from "scott".emp
+  where deptno = dept.deptno);
++--------+------------+----------+
+| DEPTNO | DNAME      | LOC      |
++--------+------------+----------+
+|     10 | ACCOUNTING | NEW YORK |
+|     40 | OPERATIONS | BOSTON   |
++--------+------------+----------+
+(2 rows)
+
+!ok
+
+# Sub-query returns one row for each deptno
+select * from "scott".dept
+where deptno = (
+  select count(*)
+  from "scott".emp
+  where deptno = dept.deptno - 10) + 10;
++--------+------------+----------+
+| DEPTNO | DNAME      | LOC      |
++--------+------------+----------+
+|     10 | ACCOUNTING | NEW YORK |
++--------+------------+----------+
+(1 row)
+
+!ok
+
+# Same query using IN
+select * from "scott".dept
+where deptno IN (
+  select count(*) + 10
+  from "scott".emp
+  where deptno = dept.deptno - 10);
++--------+------------+----------+
+| DEPTNO | DNAME      | LOC      |
++--------+------------+----------+
+|     10 | ACCOUNTING | NEW YORK |
++--------+------------+----------+
+(1 row)
+
+!ok
 
 # End sub-query.iq

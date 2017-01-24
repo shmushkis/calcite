@@ -909,8 +909,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
         && false) {
       final CorRef correlation = Iterables.getOnlyElement(corVarList);
       final Correlate r = (Correlate) cm.mapCorToCorRel.get(correlation.corr);
-      if (r.getRight() instanceof Aggregate
-          && ((Aggregate) r.getRight()).getGroupSet().isEmpty()) {
+      if (cm.joinType(correlation) && false) { // TODO:
         joinType = JoinRelType.RIGHT;
       }
     }
@@ -1130,13 +1129,41 @@ public class RelDecorrelator implements ReflectiveVisitor {
           rightFrame.oldToNewOutputs.get(i) + newLeftFieldCount);
     }
 
-    final RexNode condition =
-        RexUtil.composeConjunction(rexBuilder, conditions, false);
-    RelNode newJoin =
-        LogicalJoin.create(leftFrame.r, rightFrame.r, condition,
-            ImmutableSet.<CorrelationId>of(), rel.getJoinType().toJoinType());
+    final boolean fixEmpty =
+        rel.getRight() instanceof Aggregate
+            && ((Aggregate) rel.getRight()).getGroupSet().isEmpty();
 
-    return register(rel, newJoin, mapOldToNewOutputs, corDefOutputs);
+    relBuilder.push(leftFrame.r)
+        .push(rightFrame.r)
+        .join(fixEmpty ? JoinRelType.LEFT : rel.getJoinType().toJoinType(),
+            conditions);
+    if (fixEmpty) {
+      final List<RexNode> projects = new ArrayList<>();
+      final Aggregate aggregate = (Aggregate) rightFrame.r;
+      final int firstAggCall = leftFrame.r.getRowType().getFieldCount()
+          + aggregate.getGroupSet().cardinality();
+      int changeCount = 0;
+      for (RexNode f : relBuilder.fields()) {
+        int i = projects.size() - firstAggCall;
+        if (i >= 0) {
+          final AggregateCall x = aggregate.getAggCallList().get(i);
+          switch (x.getAggregation().getKind()) {
+          case COUNT:
+          case SUM:
+            f = rexBuilder.makeCall(SqlStdOperatorTable.CASE,
+                rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, f),
+                rexBuilder.makeExactLiteral(BigDecimal.ZERO),
+                f);
+            ++changeCount;
+          }
+        }
+        projects.add(f);
+      }
+      if (changeCount > 0) {
+        relBuilder.project(projects, relBuilder.peek().getRowType().getFieldNames());
+      }
+    }
+    return register(rel, relBuilder.build(), mapOldToNewOutputs, corDefOutputs);
   }
 
   /**
@@ -2651,6 +2678,17 @@ public class RelDecorrelator implements ReflectiveVisitor {
      */
     public boolean hasCorrelation() {
       return !mapCorToCorRel.isEmpty();
+    }
+
+    /** Returns the type of the join that a correlation will turn into,
+     * corrected for the fact that an empty {@link Aggregate#getGroupSet()}. */
+    private boolean joinType(CorRef correlation) {
+      final Correlate r = (Correlate) mapCorToCorRel.get(correlation.corr);
+      if (r.getRight() instanceof Aggregate
+          && ((Aggregate) r.getRight()).getGroupSet().isEmpty()) {
+        return true;
+      }
+      return false;
     }
   }
 

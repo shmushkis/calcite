@@ -30,6 +30,8 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.CorrelationId;
+import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
@@ -51,6 +53,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSimplify;
 import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.runtime.ConsList;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.server.CalciteServerStatement;
@@ -812,12 +815,52 @@ public class RelBuilder {
     if (x.isAlwaysFalse()) {
       return empty();
     }
-    if (!x.isAlwaysTrue()) {
-      final Frame frame = stack.pop();
-      final RelNode filter = filterFactory.createFilter(frame.rel, x);
-      stack.push(new Frame(filter, frame.fields));
+    if (x.isAlwaysTrue()) {
+      return this;
+    }
+    final Frame frame = stack.pop();
+    final RelNode filter = filterFactory.createFilter(frame.rel, x);
+    stack.push(new Frame(filter, frame.fields));
+    return this;
+  }
+
+  /** Optimizes the top entry (or entries) on the stack.
+   *
+   * <p>May change whether fields are nullable; if you call this method from a
+   * planner rule, consider calling {@link #convert(RelDataType, boolean)} to
+   * maintain the original row type. */
+  public RelBuilder optimize() {
+    if (peek() instanceof Filter) {
+      final Filter filter = (Filter) peek();
+      if (filter.getInput() instanceof Join) {
+        final Join join = (Join) filter.getInput();
+        final List<RexNode> newPredicates =
+            RelOptUtil.conjunctions(filter.getCondition());
+        JoinRelType joinType =
+            RelOptUtil.simplifyJoin(join, newPredicates, join.getJoinType());
+        if (joinType == JoinRelType.INNER) {
+          stack.pop();
+          push(join.getLeft());
+          push(join.getRight());
+          final List<RexNode> joinFilter = ConsList.of(join.getCondition(),
+              RexUtil.fixUp(getRexBuilder(), newPredicates, fieldTypes(2)));
+          join(joinType, joinFilter);
+        }
+      }
     }
     return this;
+  }
+
+  /** Returns the types of the fields of the {@code inputCount} top items on
+   * the stack; they will become the input fields to the next relational
+   * operator. */
+  private List<RelDataType> fieldTypes(int inputCount) {
+    final ImmutableList.Builder<RelDataType> builder = ImmutableList.builder();
+    for (int i = 0; i < inputCount; i++) {
+      final RelNode r = peek(inputCount, i);
+      builder.addAll(RelOptUtil.getFieldTypeList(r.getRowType()));
+    }
+    return builder.build();
   }
 
   /** Creates a {@link org.apache.calcite.rel.core.Project} of the given list

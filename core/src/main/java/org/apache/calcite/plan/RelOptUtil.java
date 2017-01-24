@@ -2236,8 +2236,10 @@ public abstract class RelOptUtil {
    * @param joinType Join type, can not be inner join
    */
   public static JoinRelType simplifyJoin(RelNode joinRel,
-      ImmutableList<RexNode> aboveFilters,
-      JoinRelType joinType) {
+      List<RexNode> aboveFilters, JoinRelType joinType) {
+    if (joinType == JoinRelType.INNER) {
+      return joinType;
+    }
     final int nTotalFields = joinRel.getRowType().getFieldCount();
     final int nSysFields = 0;
     final int nFieldsLeft =
@@ -2262,7 +2264,7 @@ public abstract class RelOptUtil {
         joinType = joinType.cancelNullsOnRight();
       }
       if (joinType == JoinRelType.INNER) {
-        break;
+        return joinType;
       }
     }
     return joinType;

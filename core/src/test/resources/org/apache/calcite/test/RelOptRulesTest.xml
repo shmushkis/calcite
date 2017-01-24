@@ -271,9 +271,8 @@ LogicalProject(DEPTNO=[$0], NAME=[$1])
     <TestCase name="testDecorrelateExistsGroupByEmpty">
         <Resource name="sql">
             <![CDATA[select * from dept as d
-where deptno in (
-  select sum(deptno) from emp e
-  where d.deptno = e.deptno)]]>
+where EXISTS (
+  select count(*) from emp e where d.deptno = e.deptno)]]>
         </Resource>
         <Resource name="planBefore">
             <![CDATA[
@@ -326,29 +325,25 @@ LogicalProject(DEPTNO=[$0], NAME=[$1])
     LogicalFilter(condition=[=($0, $2)])
       LogicalCorrelate(correlation=[$cor0], joinType=[INNER], requiredColumns=[{0}])
         LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
-        LogicalAggregate(group=[{0}])
-          LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
-            LogicalProject(DEPTNO=[$7])
-              LogicalFilter(condition=[=($cor0.DEPTNO, $7)])
-                LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+        LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
+          LogicalProject(DEPTNO=[$7])
+            LogicalFilter(condition=[=($cor0.DEPTNO, $7)])
+              LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 ]]>
         </Resource>
         <Resource name="planAfter">
             <![CDATA[
 LogicalProject(DEPTNO=[$0], NAME=[$1])
   LogicalProject(DEPTNO=[$0], NAME=[$1])
-    LogicalJoin(condition=[AND(=($0, $3), =($0, $2))], joinType=[inner])
+    LogicalJoin(condition=[AND(=($0, $2), =($0, $3))], joinType=[inner])
       LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
-      LogicalAggregate(group=[{0, 1}])
-        LogicalProject(EXPR$0=[$1], DEPTNO0=[$0])
-          LogicalAggregate(group=[{0}], EXPR$0=[SUM($1)])
-            LogicalProject(DEPTNO0=[$1], DEPTNO=[$0])
-              LogicalProject(DEPTNO=[$7], DEPTNO0=[$9])
-                LogicalJoin(condition=[=($9, $7)], joinType=[inner])
-                  LogicalTableScan(table=[[CATALOG, SALES, EMP]])
-                  LogicalAggregate(group=[{0}])
-                    LogicalProject(DEPTNO=[$0])
-                      LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+      LogicalAggregate(group=[{0}], EXPR$0=[SUM($1)])
+        LogicalProject(DEPTNO0=[$1], DEPTNO=[$0])
+          LogicalProject(DEPTNO=[$7], DEPTNO0=[$9])
+            LogicalJoin(condition=[=($9, $7)], joinType=[inner])
+              LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+              LogicalProject(DEPTNO=[$0])
+                LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
 ]]>
         </Resource>
     </TestCase>
@@ -6747,13 +6742,12 @@ LogicalFilter(condition=[<($0, 20)])
             <![CDATA[
 LogicalProject(EMPNO=[$0])
   LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], SLACKER=[$8])
-    LogicalFilter(condition=[<($5, 100)])
-      LogicalJoin(condition=[true], joinType=[inner])
-        LogicalTableScan(table=[[CATALOG, SALES, EMP]])
-        LogicalAggregate(group=[{0}])
-          LogicalProject(i=[true])
-            LogicalFilter(condition=[<($0, 20)])
-              LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+    LogicalJoin(condition=[<($5, 100)], joinType=[inner])
+      LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+      LogicalAggregate(group=[{0}])
+        LogicalProject(i=[true])
+          LogicalFilter(condition=[<($0, 20)])
+            LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 ]]>
         </Resource>
     </TestCase>
