@@ -17,17 +17,19 @@
 #
 # TODO: revert before merging to master
 !use scott
-select deptno
-from "scott".emp
-where ename in (
-  select min('MARTIN') from "scott".dept
-  where dept.deptno = emp.deptno and 1 = 2);
-+--------+
-| DEPTNO |
-+--------+
-|     30 |
-+--------+
+!set outputformat mysql
+select * from "scott".dept
+where deptno IN (
+  select count(*) + 10
+  from "scott".emp
+  where deptno = dept.deptno - 10);
++--------+------------+----------+
+| DEPTNO | DNAME      | LOC      |
++--------+------------+----------+
+|     10 | ACCOUNTING | NEW YORK |
++--------+------------+----------+
 (1 row)
 
 !ok
+!plan
 # End dummy.iq

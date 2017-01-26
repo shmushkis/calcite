@@ -694,6 +694,20 @@ where ename in (
 
 !ok
 
+select deptno
+from "scott".emp
+where ename in (
+  select min('MARTIN') from "scott".dept
+  where dept.deptno = emp.deptno);
++--------+
+| DEPTNO |
++--------+
+|     30 |
++--------+
+(1 row)
+
+!ok
+
 # Scalar-sub-query variant of above.
 !if (fixed.calcite685) {
 select deptno,
@@ -793,6 +807,39 @@ where deptno IN (
 |     10 | ACCOUNTING | NEW YORK |
 +--------+------------+----------+
 (1 row)
+
+!ok
+
+select * from "scott".dept
+where deptno <> (
+  select count(*)
+  from "scott".emp
+  where ename = dept.dname);
++--------+------------+----------+
+| DEPTNO | DNAME      | LOC      |
++--------+------------+----------+
+|     10 | ACCOUNTING | NEW YORK |
+|     20 | RESEARCH   | DALLAS   |
+|     30 | SALES      | CHICAGO  |
+|     40 | OPERATIONS | BOSTON   |
++--------+------------+----------+
+(4 rows)
+
+!ok
+
+select * from "scott".dept
+where deptno - 10 <> (
+  select count(*)
+  from "scott".emp
+  where ename = dept.dname);
++--------+------------+---------+
+| DEPTNO | DNAME      | LOC     |
++--------+------------+---------+
+|     20 | RESEARCH   | DALLAS  |
+|     30 | SALES      | CHICAGO |
+|     40 | OPERATIONS | BOSTON  |
++--------+------------+---------+
+(3 rows)
 
 !ok
 

@@ -1130,6 +1130,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     }
 
     final boolean fixEmpty =
+        false && // TODO:
         rel.getRight() instanceof Aggregate
             && ((Aggregate) rel.getRight()).getGroupSet().isEmpty();
 

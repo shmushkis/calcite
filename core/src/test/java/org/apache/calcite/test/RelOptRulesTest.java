@@ -3082,6 +3082,14 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).withLateDecorrelation(true).check();
   }
 
+  @Test public void testDecorrelateExpressionInGroupByEmpty() throws Exception {
+    final String sql = "select * from dept as d\n"
+        + "where deptno in (\n"
+        + "  select count(*) + 10 from emp e\n"
+        + "  where deptno = d.deptno - 10)";
+    checkSubQuery(sql).withLateDecorrelation(true).check();
+  }
+
   @Test public void testDecorrelateScalarGroupByEmpty() throws Exception {
     final String sql = "select * from dept as d\n"
         + "where deptno <> (\n"
