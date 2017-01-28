@@ -5046,39 +5046,35 @@ public abstract class SqlOperatorBaseTest {
     tester.checkFails("extract(week from interval '2 3:4:5.678' day to second)",
         INVALID_EXTRACT_UNIT_CONVERTLET_ERROR, true);
 
-    if (TODO) {
-      // Not supported, fails in type validation because
-      // the extract unit is YearMonth interval type unit.
-      tester.checkScalar(
-          "extract(month from interval '2 3:4:5.678' day to second)",
-          "0",
-          "BIGINT NOT NULL");
+    tester.checkScalar(
+        "extract(month from interval '2 3:4:5.678' day to second)",
+        "0",
+        "BIGINT NOT NULL");
 
-      tester.checkScalar(
-          "extract(quarter from interval '2 3:4:5.678' day to second)",
-          "0",
-          "BIGINT NOT NULL");
+    tester.checkScalar(
+        "extract(quarter from interval '2 3:4:5.678' day to second)",
+        "0",
+        "BIGINT NOT NULL");
 
-      tester.checkScalar(
-          "extract(year from interval '2 3:4:5.678' day to second)",
-          "0",
-          "BIGINT NOT NULL");
+    tester.checkScalar(
+        "extract(year from interval '2 3:4:5.678' day to second)",
+        "0",
+        "BIGINT NOT NULL");
 
-      tester.checkScalar(
-          "extract(decade from interval '2 3:4:5.678' day to second)",
-          "0",
-          "BIGINT NOT NULL");
+    tester.checkScalar(
+        "extract(decade from interval '2 3:4:5.678' day to second)",
+        "0",
+        "BIGINT NOT NULL");
 
-      tester.checkScalar(
-          "extract(century from interval '2 3:4:5.678' day to second)",
-          "0",
-          "BIGINT NOT NULL");
+    tester.checkScalar(
+        "extract(century from interval '2 3:4:5.678' day to second)",
+        "0",
+        "BIGINT NOT NULL");
 
-      tester.checkScalar(
-          "extract(millennium from interval '2 3:4:5.678' day to second)",
-          "0",
-          "BIGINT NOT NULL");
-    }
+    tester.checkScalar(
+        "extract(millennium from interval '2 3:4:5.678' day to second)",
+        "0",
+        "BIGINT NOT NULL");
   }
 
   @Test public void testExtractDate() {
@@ -5132,38 +5128,60 @@ public abstract class SqlOperatorBaseTest {
         "2008",
         "BIGINT NOT NULL");
 
-    // TODO: Not implemented in operator test execution code
-    tester.checkFails(
+    tester.checkScalar(
         "extract(doy from date '2008-2-23')",
-        "cannot translate call EXTRACT.*",
-        true);
+        "54",
+        "BIGINT NOT NULL");
 
-    // TODO: Not implemented in operator test execution code
-    tester.checkFails(
+    tester.checkScalar(
         "extract(dow from date '2008-2-23')",
-        "cannot translate call EXTRACT.*",
-        true);
+        "7",
+        "BIGINT NOT NULL");
 
-    // TODO: Not implemented in operator test execution code
-    tester.checkFails(
+    tester.checkScalar(
+        "extract(dow from date '2008-2-24')",
+        "1",
+        "BIGINT NOT NULL");
+
+    tester.checkScalar(
         "extract(week from date '2008-2-23')",
-        "cannot translate call EXTRACT.*",
-        true);
+        "8",
+        "BIGINT NOT NULL");
+
+    tester.checkScalar(
+        "extract(week from timestamp '2008-2-23 01:23:45')",
+        "8",
+        "BIGINT NOT NULL");
+
+    tester.checkScalar(
+        "extract(week from cast(null as date))",
+        null,
+        "BIGINT");
 
     tester.checkScalar(
         "extract(decade from date '2008-2-23')",
         "200",
         "BIGINT NOT NULL");
 
-    tester.checkScalar(
-        "extract(century from date '2008-2-23')",
-        "20",
-        "BIGINT NOT NULL");
+    tester.checkScalar("extract(century from date '2008-2-23')",
+        "21", "BIGINT NOT NULL");
+    tester.checkScalar("extract(century from date '2001-01-01')",
+        "21", "BIGINT NOT NULL");
+    tester.checkScalar("extract(century from date '2000-12-31')",
+        "20", "BIGINT NOT NULL");
+    tester.checkScalar("extract(century from date '1852-06-07')",
+        "19", "BIGINT NOT NULL");
+    tester.checkScalar("extract(century from date '0001-02-01')",
+        "1", "BIGINT NOT NULL");
 
-    tester.checkScalar(
-        "extract(millennium from date '2008-2-23')",
-        "2",
-        "BIGINT NOT NULL");
+    tester.checkScalar("extract(millennium from date '2000-2-23')",
+        "2", "BIGINT NOT NULL");
+    tester.checkScalar("extract(millennium from date '1969-2-23')",
+        "2", "BIGINT NOT NULL");
+    tester.checkScalar("extract(millennium from date '2000-12-31')",
+        "2", "BIGINT NOT NULL");
+    tester.checkScalar("extract(millennium from date '2001-01-01')",
+        "3", "BIGINT NOT NULL");
   }
 
   @Test public void testExtractTimestamp() {
