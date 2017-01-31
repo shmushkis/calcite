@@ -454,7 +454,6 @@ public class RelDecorrelator implements ReflectiveVisitor {
       // If input has not been rewritten, do not rewrite this rel.
       return null;
     }
-    assert !frame.corDefOutputs.isEmpty();
     final RelNode newInput = frame.r;
 
     // map from newInput
@@ -833,7 +832,8 @@ public class RelDecorrelator implements ReflectiveVisitor {
       // generator.
       if (map.size() == corVarList.size()) {
         map.putAll(frame.corDefOutputs);
-        register(oldInput, oldInput, frame.oldToNewOutputs, map);
+        register(oldInput, oldInput,
+            identityMap(oldInput.getRowType().getFieldCount()), map);
         return;
       }
     }
@@ -1381,7 +1381,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
   Frame register(RelNode rel, RelNode newRel,
       Map<Integer, Integer> oldToNewOutputs,
       SortedMap<CorDef, Integer> corDefOutputs) {
-    final Frame frame = new Frame(newRel, corDefOutputs, oldToNewOutputs);
+    final Frame frame = new Frame(rel, newRel, corDefOutputs, oldToNewOutputs);
     map.put(rel, frame);
     return frame;
   }
@@ -2692,7 +2692,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     final ImmutableSortedMap<CorDef, Integer> corDefOutputs;
     final ImmutableSortedMap<Integer, Integer> oldToNewOutputs;
 
-    Frame(RelNode r, SortedMap<CorDef, Integer> corDefOutputs,
+    Frame(RelNode oldRel, RelNode r, SortedMap<CorDef, Integer> corDefOutputs,
         Map<Integer, Integer> oldToNewOutputs) {
       this.r = Preconditions.checkNotNull(r);
       this.corDefOutputs = ImmutableSortedMap.copyOf(corDefOutputs);
@@ -2700,6 +2700,8 @@ public class RelDecorrelator implements ReflectiveVisitor {
       assert allLessThan(corDefOutputs.values(),
           r.getRowType().getFieldCount(), Litmus.THROW);
       assert allLessThan(oldToNewOutputs.keySet(),
+          oldRel.getRowType().getFieldCount(), Litmus.THROW);
+      assert allLessThan(oldToNewOutputs.values(),
           r.getRowType().getFieldCount(), Litmus.THROW);
     }
   }
