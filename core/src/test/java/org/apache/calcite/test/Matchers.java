@@ -16,6 +16,10 @@
  */
 package org.apache.calcite.test;
 
+import org.apache.calcite.util.Util;
+
+import com.google.common.base.Functions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import org.hamcrest.CustomTypeSafeMatcher;
@@ -79,6 +83,33 @@ public class Matchers {
       }
     };
   }
+
+  public static <E extends Comparable> Matcher<Iterable<E>> equalsUnordered(
+      E... lines) {
+    final List<String> expectedList =
+        Lists.newArrayList(toStringList(Arrays.asList(lines)));
+    Collections.sort(expectedList);
+    final String description = Util.lines(expectedList);
+    return new CustomTypeSafeMatcher<Iterable<E>>(description) {
+      @Override protected void describeMismatchSafely(Iterable<E> items,
+          Description description) {
+        description.appendText("was ")
+            .appendValue(Util.lines(toStringList(items)));
+      }
+
+      protected boolean matchesSafely(Iterable<E> actuals) {
+        final List<String> actualList =
+            Lists.newArrayList(toStringList(actuals));
+        Collections.sort(actualList);
+        return actualList.equals(expectedList);
+      }
+    };
+  }
+
+  private static <E> Iterable<String> toStringList(Iterable<E> items) {
+    return Iterables.transform(items, Functions.toStringFunction());
+  }
+
 }
 
 // End Matchers.java

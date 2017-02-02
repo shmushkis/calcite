@@ -28,6 +28,7 @@ import org.apache.calcite.plan.volcano.TraitPropagationTest;
 import org.apache.calcite.plan.volcano.VolcanoPlannerTest;
 import org.apache.calcite.plan.volcano.VolcanoPlannerTraitTest;
 import org.apache.calcite.prepare.LookupOperatorOverloadsTest;
+import org.apache.calcite.profile.ProfilerTest;
 import org.apache.calcite.rel.RelCollationTest;
 import org.apache.calcite.rel.rel2sql.RelToSqlConverterTest;
 import org.apache.calcite.rel.rules.DateRangeRulesTest;
@@ -153,6 +154,7 @@ import org.junit.runners.Suite;
     LinqFrontJdbcBackTest.class,
     JdbcFrontJdbcBackLinqMiddleTest.class,
     CalciteSqlOperatorTest.class,
+    ProfilerTest.class,
     LatticeTest.class,
     ReflectiveSchemaTest.class,
     JdbcTest.class,
