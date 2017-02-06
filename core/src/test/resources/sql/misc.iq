@@ -1705,6 +1705,11 @@ values cast(' -5 ' as double);
 
 !ok
 
+# [CALCITE-1620] CAST('<string>' AS BINARY) is supported by Hive, but not by Calcite
+values cast('123' as binary);
+Cast function cannot convert value of type CHAR(3) to type BINARY(1)
+!error
+
 # RAND_INTEGER with seed
 select i, rand_integer(1, 5) as r
 from (values 1, 2, 3, 4, 5) as t(i);

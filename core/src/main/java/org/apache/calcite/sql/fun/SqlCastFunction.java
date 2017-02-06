@@ -138,7 +138,7 @@ public class SqlCastFunction extends SqlFunction {
     RelDataType returnType =
         callBinding.getValidator().deriveType(callBinding.getScope(), right);
     if (!SqlTypeUtil.canCastFrom(returnType, validatedNodeType, true)) {
-      if (throwOnFailure) {
+      if (throwOnFailure && false) {
         throw callBinding.newError(
             RESOURCE.cannotCastValue(validatedNodeType.toString(),
                 returnType.toString()));
@@ -148,7 +148,7 @@ public class SqlCastFunction extends SqlFunction {
     if (SqlTypeUtil.areCharacterSetsMismatched(
         validatedNodeType,
         returnType)) {
-      if (throwOnFailure) {
+      if (throwOnFailure && false) {
         // Include full type string to indicate character
         // set mismatch.
         throw callBinding.newError(
