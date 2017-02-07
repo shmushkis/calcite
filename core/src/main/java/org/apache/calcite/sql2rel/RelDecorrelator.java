@@ -306,8 +306,10 @@ public class RelDecorrelator implements ReflectiveVisitor {
     return planner.findBestExp();
   }
 
-  protected RexNode decorrelateExpr(RexNode exp) {
-    DecorrelateRexShuttle shuttle = new DecorrelateRexShuttle();
+  protected RexNode decorrelateExpr(RelNode currentRel,
+      Map<RelNode, Frame> map, CorelMap cm, RexNode exp) {
+    DecorrelateRexShuttle shuttle =
+        new DecorrelateRexShuttle(currentRel, map, cm);
     return exp.accept(shuttle);
   }
 
@@ -646,7 +648,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // If this Project has correlated reference, create value generator
     // and produce the correlated variables in the new output.
     if (cm.mapRefRelToCorRef.containsKey(rel)) {
-      frame = decorrelateInputWithValueGenerator(rel);
+      frame = decorrelateInputWithValueGenerator(rel, frame);
     }
 
     // Project projects the original expressions
@@ -656,7 +658,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
       projects.add(
           newPos,
           Pair.of(
-              decorrelateExpr(oldProjects.get(newPos)),
+              decorrelateExpr(currentRel, map, cm, oldProjects.get(newPos)),
               relOutput.get(newPos).getName()));
       mapOldToNewOutputs.put(newPos, newPos);
     }
@@ -796,11 +798,10 @@ public class RelDecorrelator implements ReflectiveVisitor {
     return r.getInput(0);
   }
 
-  private Frame decorrelateInputWithValueGenerator(RelNode rel) {
+  private Frame decorrelateInputWithValueGenerator(RelNode rel, Frame frame) {
     // currently only handles one input
     assert rel.getInputs().size() == 1;
-    RelNode oldInput = rel.getInput(0);
-    final Frame frame = map.get(oldInput);
+    RelNode oldInput = frame.r;
 
     final SortedMap<CorDef, Integer> corDefOutputs =
         new TreeMap<>(frame.corDefOutputs);
@@ -938,13 +939,15 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // If this Filter has correlated reference, create value generator
     // and produce the correlated variables in the new output.
     if (cm.mapRefRelToCorRef.containsKey(rel)) {
-      frame = decorrelateInputWithValueGenerator(rel);
+      frame = decorrelateInputWithValueGenerator(rel, frame);
     }
+
+    final CorelMap cm2 = new CorelMapBuilder().build(frame.r);
 
     // Replace the filter expression to reference output of the join
     // Map filter to the new filter over join
     relBuilder.push(frame.r)
-        .filter(decorrelateExpr(rel.getCondition()));
+        .filter(decorrelateExpr(currentRel, map, cm2, rel.getCondition()));
 
     // Filter does not change the input ordering.
     // Filter rel does not permute the input.
@@ -1084,7 +1087,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
 
     final RelNode newJoin =
         LogicalJoin.create(leftFrame.r, rightFrame.r,
-            decorrelateExpr(rel.getCondition()),
+            decorrelateExpr(currentRel, map, cm, rel.getCondition()),
             ImmutableSet.<CorrelationId>of(), rel.getJoinType());
 
     // Create the mapping between the output of the old correlation rel
@@ -1119,7 +1122,8 @@ public class RelDecorrelator implements ReflectiveVisitor {
     return register(rel, newJoin, mapOldToNewOutputs, corDefOutputs);
   }
 
-  private RexInputRef getNewForOldInputRef(RexInputRef oldInputRef) {
+  private static RexInputRef getNewForOldInputRef(RelNode currentRel,
+      Map<RelNode, Frame> map, RexInputRef oldInputRef) {
     assert currentRel != null;
 
     int oldOrdinal = oldInputRef.getIndex();
@@ -1396,7 +1400,18 @@ public class RelDecorrelator implements ReflectiveVisitor {
   //~ Inner Classes ----------------------------------------------------------
 
   /** Shuttle that decorrelates. */
-  private class DecorrelateRexShuttle extends RexShuttle {
+  private static class DecorrelateRexShuttle extends RexShuttle {
+    private final RelNode currentRel;
+    private final Map<RelNode, Frame> map;
+    private final CorelMap cm;
+
+    private DecorrelateRexShuttle(RelNode currentRel,
+        Map<RelNode, Frame> map, CorelMap cm) {
+      this.currentRel = Preconditions.checkNotNull(currentRel);
+      this.map = Preconditions.checkNotNull(map);
+      this.cm = Preconditions.checkNotNull(cm);
+    }
+
     @Override public RexNode visitFieldAccess(RexFieldAccess fieldAccess) {
       int newInputOutputOffset = 0;
       for (RelNode input : currentRel.getInputs()) {
@@ -1427,7 +1442,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     }
 
     @Override public RexNode visitInputRef(RexInputRef inputRef) {
-      final RexInputRef ref = getNewForOldInputRef(inputRef);
+      final RexInputRef ref = getNewForOldInputRef(currentRel, map, inputRef);
       if (ref.getIndex() == inputRef.getIndex()
           && ref.getType() == inputRef.getType()) {
         return inputRef; // re-use old object, to prevent needless expr cloning
