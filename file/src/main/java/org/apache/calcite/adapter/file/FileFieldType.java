@@ -82,4 +82,5 @@ enum FileFieldType {
     return MAP.get(typeString);
   }
 }
+
 // End FileFieldType.java

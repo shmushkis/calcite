@@ -82,6 +82,7 @@ class CsvEnumerator<E> implements Enumerator<E> {
       } else {
         this.reader = openCsv(source);
       }
+      this.reader.readNext(); // skip header row
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

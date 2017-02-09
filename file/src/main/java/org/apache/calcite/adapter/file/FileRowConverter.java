@@ -123,6 +123,8 @@ class FileRowConverter {
               addFieldDef(name, type, fieldConfig, sourceIx);
             }
           }
+        } catch (RuntimeException e) {
+          throw e;
         } catch (Exception e) {
           throw new RuntimeException(e);
         }
@@ -136,6 +138,8 @@ class FileRowConverter {
       }
 
       // ToDo
+    } catch (RuntimeException e) {
+      throw e;
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

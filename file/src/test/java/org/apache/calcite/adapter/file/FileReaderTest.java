@@ -31,6 +31,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.net.MalformedURLException;
 import java.util.Iterator;
 
@@ -47,15 +48,21 @@ public class FileReaderTest {
       Sources.url(
           "http://en.wikipedia.org/wiki/List_of_states_and_territories_of_the_United_States");
 
+  /** Converts a path that is relative to the module into a path that is
+   * relative to where the test is running. */
+  public static String file(String s) {
+    return "file/" + s;
+  }
+
   /** Tests {@link FileReader} URL instantiation - no path. */
-  @Test public void testFileReaderURLNoPath() throws FileReaderException {
+  @Test public void testFileReaderUrlNoPath() throws FileReaderException {
     Assume.assumeTrue(FileSuite.hazNetwork());
     FileReader t = new FileReader(STATES_SOURCE);
     t.refresh();
   }
 
   /** Tests {@link FileReader} URL instantiation - with path. */
-  @Test public void testFileReaderURLWithPath() throws FileReaderException {
+  @Test public void testFileReaderUrlWithPath() throws FileReaderException {
     Assume.assumeTrue(FileSuite.hazNetwork());
     FileReader t =
         new FileReader(CITIES_SOURCE,
@@ -64,14 +71,14 @@ public class FileReaderTest {
   }
 
   /** Tests {@link FileReader} URL fetch. */
-  @Test public void testFileReaderURLFetch() throws FileReaderException {
+  @Test public void testFileReaderUrlFetch() throws FileReaderException {
     Assume.assumeTrue(FileSuite.hazNetwork());
     FileReader t = new FileReader(STATES_SOURCE, "#mw-content-text > table.wikitable.sortable", 0);
     int i = 0;
     for (Elements row : t) {
       i++;
     }
-    assertTrue(i == 50);
+    assertThat(i, is(51));
   }
 
   /** Tests failed {@link FileReader} instantiation - malformed URL. */
@@ -97,7 +104,8 @@ public class FileReaderTest {
   /** Tests failed {@link FileReader} instantiation - bad selector. */
   @Test(expected = FileReaderException.class)
   public void testFileReaderBadSelector() throws FileReaderException {
-    final Source source = Sources.file(null, "target/test-classes/tableOK.html");
+    final Source source =
+        Sources.file(null, file("target/test-classes/tableOK.html"));
     FileReader t = new FileReader(source, "table:eq(1)");
     t.refresh();
   }
@@ -105,7 +113,7 @@ public class FileReaderTest {
   /** Test {@link FileReader} with static file - headings. */
   @Test public void testFileReaderHeadings() throws FileReaderException {
     final Source source =
-        Sources.file(null, "target/test-classes/tableOK.html");
+        Sources.file(null, file("target/test-classes/tableOK.html"));
     FileReader t = new FileReader(source);
     Elements headings = t.getHeadings();
     assertTrue(headings.get(1).text().equals("H1"));
@@ -114,7 +122,7 @@ public class FileReaderTest {
   /** Test {@link FileReader} with static file - data. */
   @Test public void testFileReaderData() throws FileReaderException {
     final Source source =
-        Sources.file(null, "target/test-classes/tableOK.html");
+        Sources.file(null, file("target/test-classes/tableOK.html"));
     FileReader t = new FileReader(source);
     Iterator<Elements> i = t.iterator();
     Elements row = i.next();
@@ -126,7 +134,7 @@ public class FileReaderTest {
   /** Tests {@link FileReader} with bad static file - headings. */
   @Test public void testFileReaderHeadingsBadFile() throws FileReaderException {
     final Source source =
-        Sources.file(null, "target/test-classes/tableNoTheadTbody.html");
+        Sources.file(null, file("target/test-classes/tableNoTheadTbody.html"));
     FileReader t = new FileReader(source);
     Elements headings = t.getHeadings();
     assertTrue(headings.get(1).text().equals("H1"));
@@ -135,7 +143,7 @@ public class FileReaderTest {
   /** Tests {@link FileReader} with bad static file - data. */
   @Test public void testFileReaderDataBadFile() throws FileReaderException {
     final Source source =
-        Sources.file(null, "target/test-classes/tableNoTheadTbody.html");
+        Sources.file(null, file("target/test-classes/tableNoTheadTbody.html"));
     FileReader t = new FileReader(source);
     Iterator<Elements> i = t.iterator();
     Elements row = i.next();
@@ -147,7 +155,7 @@ public class FileReaderTest {
   /** Tests {@link FileReader} with no headings static file - data. */
   @Test public void testFileReaderDataNoTh() throws FileReaderException {
     final Source source =
-        Sources.file(null, "target/test-classes/tableNoTH.html");
+        Sources.file(null, file("target/test-classes/tableNoTH.html"));
     FileReader t = new FileReader(source);
     Iterator<Elements> i = t.iterator();
     Elements row = i.next();
@@ -156,8 +164,9 @@ public class FileReaderTest {
 
   /** Tests {@link FileReader} iterator with static file, */
   @Test public void testFileReaderIterator() throws FileReaderException {
+    System.out.println(new File("").getAbsolutePath());
     final Source source =
-        Sources.file(null, "target/test-classes/tableOK.html");
+        Sources.file(null, file("target/test-classes/tableOK.html"));
     FileReader t = new FileReader(source);
     Elements row = null;
     for (Elements aT : t) {

@@ -19,13 +19,12 @@ package org.apache.calcite.adapter.file;
 import com.google.common.base.Function;
 
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.PrintStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
@@ -39,23 +38,10 @@ import static org.junit.Assert.assertEquals;
 public class SqlTest {
   // helper functions
 
-  private void checkSql(String model, String sql) throws SQLException {
-    checkSql(sql, model, new Function<ResultSet, Void>() {
-      public Void apply(ResultSet resultSet) {
-        try {
-          output(resultSet, System.out);
-        } catch (SQLException e) {
-          throw new RuntimeException(e);
-        }
-        return null;
-      }
-    });
-  }
-
-  private void checkSql(String model, String sql, final String... expecteds)
+  private void checkSql(String model, String sql, final String... lines)
       throws SQLException {
     final StringBuilder b = new StringBuilder();
-    for (String s : expecteds) {
+    for (String s : lines) {
       b.append(s).append('\n');
     }
     final String expected = b.toString();
@@ -83,12 +69,11 @@ public class SqlTest {
     Statement statement = null;
     try {
       Properties info = new Properties();
-      info.put("model", "target/test-classes/" + model + ".json");
+      info.put("model",
+          FileReaderTest.file("target/test-classes/" + model + ".json"));
       connection = DriverManager.getConnection("jdbc:calcite:", info);
       statement = connection.createStatement();
-      final ResultSet resultSet =
-          statement.executeQuery(
-              sql);
+      final ResultSet resultSet = statement.executeQuery(sql);
       fn.apply(resultSet);
     } finally {
       close(connection, statement);
@@ -110,23 +95,6 @@ public class SqlTest {
       buf.append("\n");
     }
     return buf.toString();
-  }
-
-  private void output(ResultSet resultSet, PrintStream out)
-      throws SQLException {
-    final ResultSetMetaData metaData = resultSet.getMetaData();
-    final int columnCount = metaData.getColumnCount();
-    while (resultSet.next()) {
-      for (int i = 1;; i++) {
-        out.print(resultSet.getString(i));
-        if (i < columnCount) {
-          out.print(", ");
-        } else {
-          out.println();
-          break;
-        }
-      }
-    }
   }
 
   private void close(Connection connection, Statement statement) {
@@ -170,6 +138,7 @@ public class SqlTest {
   }
 
   /** Reads from a URL and checks the result. */
+  @Ignore
   @Test public void testUrlSelect() throws SQLException {
     Assume.assumeTrue(FileSuite.hazNetwork());
     final String sql = "select \"State\", \"Statehood\" from \"States\"\n"
