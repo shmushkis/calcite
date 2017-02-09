@@ -18,8 +18,6 @@ package org.apache.calcite.adapter.file;
 
 import org.apache.calcite.util.Source;
 
-import com.google.common.base.Throwables;
-
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -151,9 +149,10 @@ public class FileReader implements Iterable<Elements> {
     if (this.tableElement == null) {
       try {
         getTable();
+      } catch (RuntimeException | Error e) {
+        throw e;
       } catch (Exception e) {
-        // TODO: temporary hack
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 

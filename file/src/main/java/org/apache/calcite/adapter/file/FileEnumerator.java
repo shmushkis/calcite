@@ -18,8 +18,6 @@ package org.apache.calcite.adapter.file;
 
 import org.apache.calcite.linq4j.Enumerator;
 
-import com.google.common.base.Throwables;
-
 import org.jsoup.select.Elements;
 
 import java.util.Iterator;
@@ -62,8 +60,10 @@ class FileEnumerator implements Enumerator<Object> {
         current = null;
         return false;
       }
+    } catch (RuntimeException | Error e) {
+      throw e;
     } catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

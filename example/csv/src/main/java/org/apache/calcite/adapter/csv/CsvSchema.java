@@ -89,7 +89,7 @@ public class CsvSchema extends AbstractSchema {
       final Source sourceSansJson = sourceSansGz.trimOrNull(".json");
       if (sourceSansJson != null) {
         JsonTable table = new JsonTable(source);
-        builder.put(sourceSansJson.path(), table);
+        builder.put(sourceSansJson.relative(baseSource).path(), table);
         continue;
       }
       final Source sourceSansCsv = sourceSansGz.trim(".csv");
