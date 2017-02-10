@@ -33,8 +33,8 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,7 +53,7 @@ class FileRowConverter {
   private boolean initialized = false;
 
   // row parser configuration
-  private ArrayList<FieldDef> fields;
+  private final List<FieldDef> fields = new ArrayList<>();
 
   // constructor
   FileRowConverter(FileReader fileReader, List<Map<String, Object>> fieldConfigs) {
@@ -69,11 +69,10 @@ class FileRowConverter {
       return;
     }
     try {
-      this.fields = new ArrayList<>();
       final Elements headerElements = this.fileReader.getHeadings();
 
       // create a name to index map for HTML table elements
-      final Map<String, Integer> headerMap = new HashMap<>();
+      final Map<String, Integer> headerMap = new LinkedHashMap<>();
       int i = 0;
       for (Element th : headerElements) {
         String heading = th.text();
@@ -131,13 +130,13 @@ class FileRowConverter {
       }
 
       // pick up any data elements not explicitly defined
-      for (String name : headerMap.keySet()) {
+      for (Map.Entry<String, Integer> e : headerMap.entrySet()) {
+        final String name = e.getKey();
         if (!sources.contains(name) && !colNames.contains(name)) {
-          addFieldDef(name, null, null, headerMap.get(name));
+          addFieldDef(name, null, null, e.getValue());
         }
       }
 
-      // ToDo
     } catch (RuntimeException e) {
       throw e;
     } catch (Exception e) {

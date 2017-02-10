@@ -51,7 +51,11 @@ public class FileReaderTest {
   /** Converts a path that is relative to the module into a path that is
    * relative to where the test is running. */
   public static String file(String s) {
-    return "file/" + s;
+    if (new File("file").exists()) {
+      return "file/" + s;
+    } else {
+      return s;
+    }
   }
 
   /** Tests {@link FileReader} URL instantiation - no path. */

@@ -150,11 +150,11 @@ public class SqlTest {
   @Test public void testSalesEmps() throws SQLException {
     final String sql = "select * from sales.emps";
     checkSql("sales", sql,
-        "EMPNO=100; DEPTNO=30; NAME=Fred",
-        "EMPNO=110; DEPTNO=20; NAME=Eric",
-        "EMPNO=110; DEPTNO=40; NAME=John",
-        "EMPNO=120; DEPTNO=20; NAME=Wilma",
-        "EMPNO=130; DEPTNO=40; NAME=Alice");
+        "EMPNO=100; NAME=Fred; DEPTNO=30",
+        "EMPNO=110; NAME=Eric; DEPTNO=20",
+        "EMPNO=110; NAME=John; DEPTNO=40",
+        "EMPNO=120; NAME=Wilma; DEPTNO=20",
+        "EMPNO=130; NAME=Alice; DEPTNO=40");
   }
 
   /** Reads the DEPTS table. */
