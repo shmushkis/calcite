@@ -2828,6 +2828,14 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).withLateDecorrelation(true).check();
   }
 
+  @Test public void testWhereNotInCorrelated2() {
+    final String sql = "select * from emp e1\n"
+        + "  where e1.empno NOT IN\n"
+        + "   (select empno from (select ename, empno, sal as r from emp) e2\n"
+        + "    where r > 2 and e1.ename= e2.ename)";
+    checkSubQuery(sql).withLateDecorrelation(true).check();
+  }
+
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1546">[CALCITE-1546]
    * Sub-queries connected by OR</a>. */

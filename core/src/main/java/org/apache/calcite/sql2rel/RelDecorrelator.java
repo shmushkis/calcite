@@ -92,6 +92,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -798,10 +799,51 @@ public class RelDecorrelator implements ReflectiveVisitor {
     return r.getInput(0);
   }
 
+  /** Adds a value generator to satisfy the correlating variables used by
+   * a relational expression, if those variables are not already provided by
+   * its input. */
+  private Frame maybeAddValueGenerator(RelNode rel, Frame frame) {
+    final CorelMap cm1 = new CorelMapBuilder().build(frame.r, rel);
+    if (!cm1.mapRefRelToCorRef.containsKey(rel)) {
+      return frame;
+    }
+    final Collection<CorRef> needs = cm1.mapRefRelToCorRef.get(rel);
+    final ImmutableSortedSet<CorDef> haves = frame.corDefOutputs.keySet();
+    if (hasAll(needs, haves)) {
+      return frame;
+    }
+    return decorrelateInputWithValueGenerator(rel, frame);
+  }
+
+  /** Returns whether all of a collection of {@link CorRef}s are satisfied
+   * by at least one of a collection of {@link CorDef}s. */
+  private boolean hasAll(Collection<CorRef> corRefs,
+      Collection<CorDef> corDefs) {
+    for (CorRef corRef : corRefs) {
+      if (!has(corDefs, corRef.corr)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Returns whether a {@link CorrelationId} is satisfied by at least one of a
+   * collection of {@link CorDef}s. */
+  private boolean has(Collection<CorDef> corDefs, CorrelationId id) {
+    for (CorDef corDef : corDefs) {
+      if (corDef.corr.equals(id)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private Frame decorrelateInputWithValueGenerator(RelNode rel, Frame frame) {
     // currently only handles one input
     assert rel.getInputs().size() == 1;
     RelNode oldInput = frame.r;
+    assert RelOptUtil.equal("oldInput", oldInput.getRowType(),
+        "rel.input(0)", rel.getInput(0).getRowType(), Litmus.THROW);
 
     final SortedMap<CorDef, Integer> corDefOutputs =
         new TreeMap<>(frame.corDefOutputs);
@@ -938,11 +980,15 @@ public class RelDecorrelator implements ReflectiveVisitor {
 
     // If this Filter has correlated reference, create value generator
     // and produce the correlated variables in the new output.
-    if (cm.mapRefRelToCorRef.containsKey(rel)) {
-      frame = decorrelateInputWithValueGenerator(rel, frame);
+    if (false) {
+      if (cm.mapRefRelToCorRef.containsKey(rel)) {
+        frame = decorrelateInputWithValueGenerator(rel, frame);
+      }
+    } else {
+      frame = maybeAddValueGenerator(rel, frame);
     }
 
-    final CorelMap cm2 = new CorelMapBuilder().build(frame.r);
+    final CorelMap cm2 = new CorelMapBuilder().build(rel);
 
     // Replace the filter expression to reference output of the join
     // Map filter to the new filter over join
@@ -2599,8 +2645,10 @@ public class RelDecorrelator implements ReflectiveVisitor {
     final Deque<RelNode> stack = new ArrayDeque<>();
 
     /** Creates a CorelMap by iterating over a {@link RelNode} tree. */
-    CorelMap build(RelNode rel) {
-      stripHep(rel).accept(this);
+    CorelMap build(RelNode... rels) {
+      for (RelNode rel : rels) {
+        stripHep(rel).accept(this);
+      }
       return new CorelMap(mapRefRelToCorRef, mapCorToCorRel,
           mapFieldAccessToCorVar);
     }
