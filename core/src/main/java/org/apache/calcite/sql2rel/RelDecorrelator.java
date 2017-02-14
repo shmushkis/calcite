@@ -57,6 +57,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexChecker;
 import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
@@ -370,7 +371,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // the output position should not change since there are no corVars
     // coming from below.
     return register(rel, newRel, identityMap(rel.getRowType().getFieldCount()),
-        ImmutableSortedMap.<CorDef, Integer>of());
+        ImmutableSortedMap.<CorDef, RexNode>of());
   }
 
   /**
@@ -487,18 +488,23 @@ public class RelDecorrelator implements ReflectiveVisitor {
       newPos++;
     }
 
-    final SortedMap<CorDef, Integer> corDefOutputs = new TreeMap<>();
+    final SortedMap<CorDef, RexNode> corDefOutputs = new TreeMap<>();
     if (!frame.corDefOutputs.isEmpty()) {
       // If input produces correlated variables, move them to the front,
       // right after any existing GROUP BY fields.
 
       // Now add the corVars from the input, starting from
       // position oldGroupKeyCount.
-      for (Map.Entry<CorDef, Integer> entry : frame.corDefOutputs.entrySet()) {
-        projects.add(RexInputRef.of2(entry.getValue(), newInputOutput));
-
-        corDefOutputs.put(entry.getKey(), newPos);
-        mapNewInputToProjOutputs.put(entry.getValue(), newPos);
+      for (Map.Entry<CorDef, RexNode> entry : frame.corDefOutputs.entrySet()) {
+        final RexNode e = entry.getValue();
+        if (e instanceof RexInputRef) {
+          final int i = ((RexInputRef) e).getIndex();
+          projects.add(RexInputRef.of2(i, newInputOutput));
+          mapNewInputToProjOutputs.put(i, newPos);
+        } else {
+          projects.add(Pair.of(e, (String) null));
+        }
+        corDefOutputs.put(entry.getKey(), e);
         newPos++;
       }
     }
@@ -665,12 +671,10 @@ public class RelDecorrelator implements ReflectiveVisitor {
     }
 
     // Project any correlated variables the input wants to pass along.
-    final SortedMap<CorDef, Integer> corDefOutputs = new TreeMap<>();
-    for (Map.Entry<CorDef, Integer> entry : frame.corDefOutputs.entrySet()) {
-      projects.add(
-          RexInputRef.of2(entry.getValue(),
-              frame.r.getRowType().getFieldList()));
-      corDefOutputs.put(entry.getKey(), newPos);
+    final SortedMap<CorDef, RexNode> corDefOutputs = new TreeMap<>();
+    for (Map.Entry<CorDef, RexNode> entry : frame.corDefOutputs.entrySet()) {
+      projects.add(Pair.of(entry.getValue(), (String) null));
+      corDefOutputs.put(entry.getKey(), entry.getValue());
       newPos++;
     }
 
@@ -693,7 +697,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
   private RelNode createValueGenerator(
       Iterable<CorRef> correlations,
       int valueGenFieldOffset,
-      SortedMap<CorDef, Integer> corDefOutputs) {
+      SortedMap<CorDef, RexNode> corDefOutputs) {
     final Map<RelNode, List<Integer>> mapNewInputToOutputs = new HashMap<>();
 
     final Map<RelNode, Integer> mapNewInputToNewOffset = new HashMap<>();
@@ -788,7 +792,8 @@ public class RelDecorrelator implements ReflectiveVisitor {
               + mapNewInputToNewOffset.get(newInput)
               + valueGenFieldOffset;
 
-      corDefOutputs.put(corRef.def(), newOutput);
+      corDefOutputs.put(corRef.def(),
+          rexBuilder.makeInputRef(newInput, newOutput));
     }
 
     return r;
@@ -797,7 +802,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
   private Frame getFrame(RelNode r, boolean safe) {
     final Frame frame = map.get(r);
     if (frame == null && safe) {
-      return new Frame(r, r, ImmutableSortedMap.<CorDef, Integer>of(),
+      return new Frame(r, r, ImmutableSortedMap.<CorDef, RexNode>of(),
           identityMap(r.getRowType().getFieldCount()));
     }
     return frame;
@@ -854,7 +859,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     assert RelOptUtil.equal("oldInput", oldInput.getRowType(),
         "rel.input(0)", rel.getInput(0).getRowType(), Litmus.THROW);
 
-    final SortedMap<CorDef, Integer> corDefOutputs =
+    final SortedMap<CorDef, RexNode> corDefOutputs =
         new TreeMap<>(frame.corDefOutputs);
 
     final Collection<CorRef> corVarList = cm.mapRefRelToCorRef.get(rel);
@@ -862,7 +867,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // Try to populate correlation variables using local fields.
     // This means that we do not need a value generator.
     if (rel instanceof Filter) {
-      SortedMap<CorDef, Integer> map = new TreeMap<>();
+      SortedMap<CorDef, RexNode> map = new TreeMap<>();
       for (CorRef correlation : corVarList) {
         final CorDef def = correlation.def();
         if (corDefOutputs.containsKey(def) || map.containsKey(def)) {
@@ -871,7 +876,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
         try {
           findCorrelationEquivalent(correlation, ((Filter) rel).getCondition());
         } catch (Util.FoundOne e) {
-          map.put(def, (Integer) e.getNode());
+          map.put(def, (RexNode) e.getNode());
         }
       }
       // If all correlation variables are now satisfied, skip creating a value
@@ -910,11 +915,11 @@ public class RelDecorrelator implements ReflectiveVisitor {
       final List<RexNode> operands = call.getOperands();
       if (references(operands.get(0), correlation)
           && operands.get(1) instanceof RexInputRef) {
-        throw new Util.FoundOne(((RexInputRef) operands.get(1)).getIndex());
+        throw new Util.FoundOne(operands.get(1));
       }
       if (references(operands.get(1), correlation)
           && operands.get(0) instanceof RexInputRef) {
-        throw new Util.FoundOne(((RexInputRef) operands.get(0)).getIndex());
+        throw new Util.FoundOne(operands.get(0));
       }
       break;
     case AND:
@@ -1049,7 +1054,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // Change correlator rel into a join.
     // Join all the correlated variables produced by this correlator rel
     // with the values generated and propagated from the right input
-    final SortedMap<CorDef, Integer> corDefOutputs =
+    final SortedMap<CorDef, RexNode> corDefOutputs =
         new TreeMap<>(rightFrame.corDefOutputs);
     final List<RexNode> conditions = new ArrayList<>();
     final List<RelDataTypeField> newLeftOutput =
@@ -1059,19 +1064,17 @@ public class RelDecorrelator implements ReflectiveVisitor {
     final List<RelDataTypeField> newRightOutput =
         rightFrame.r.getRowType().getFieldList();
 
-    for (Map.Entry<CorDef, Integer> rightOutput
+    for (Map.Entry<CorDef, RexNode> rightOutput
         : new ArrayList<>(corDefOutputs.entrySet())) {
       final CorDef corDef = rightOutput.getKey();
       if (!corDef.corr.equals(rel.getCorrelationId())) {
         continue;
       }
       final int newLeftPos = leftFrame.oldToNewOutputs.get(corDef.field);
-      final int newRightPos = rightOutput.getValue();
       conditions.add(
           rexBuilder.makeCall(SqlStdOperatorTable.EQUALS,
               RexInputRef.of(newLeftPos, newLeftOutput),
-              new RexInputRef(newLeftFieldCount + newRightPos,
-                  newRightOutput.get(newRightPos).getType())));
+              RexUtil.shift(rightOutput.getValue(), newLeftFieldCount)));
 
       // remove this corVar from output position mapping
       corDefOutputs.remove(corDef);
@@ -1080,8 +1083,8 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // Update the output position for the corVars: only pass on the cor
     // vars that are not used in the join key.
     for (CorDef corDef : corDefOutputs.keySet()) {
-      int newPos = corDefOutputs.get(corDef) + newLeftFieldCount;
-      corDefOutputs.put(corDef, newPos);
+      corDefOutputs.put(corDef,
+          RexUtil.shift(corDefOutputs.get(corDef), newLeftFieldCount));
     }
 
     // then add any corVar from the left input. Do not need to change
@@ -1165,14 +1168,14 @@ public class RelDecorrelator implements ReflectiveVisitor {
           rightFrame.oldToNewOutputs.get(i) + newLeftFieldCount);
     }
 
-    final SortedMap<CorDef, Integer> corDefOutputs =
+    final SortedMap<CorDef, RexNode> corDefOutputs =
         new TreeMap<>(leftFrame.corDefOutputs);
 
     // Right input positions are shifted by newLeftFieldCount.
-    for (Map.Entry<CorDef, Integer> entry
+    for (Map.Entry<CorDef, RexNode> entry
         : rightFrame.corDefOutputs.entrySet()) {
       corDefOutputs.put(entry.getKey(),
-          entry.getValue() + newLeftFieldCount);
+          RexUtil.shift(entry.getValue(), newLeftFieldCount));
     }
     return register(rel, newJoin, mapOldToNewOutputs, corDefOutputs);
   }
@@ -1428,7 +1431,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
    * after decorrelation. */
   Frame register(RelNode rel, RelNode newRel,
       Map<Integer, Integer> oldToNewOutputs,
-      SortedMap<CorDef, Integer> corDefOutputs) {
+      SortedMap<CorDef, RexNode> corDefOutputs) {
     final Frame frame = new Frame(rel, newRel, corDefOutputs, oldToNewOutputs);
     map.put(rel, frame);
     return frame;
@@ -1439,6 +1442,19 @@ public class RelDecorrelator implements ReflectiveVisitor {
     for (int value : integers) {
       if (value >= limit) {
         return ret.fail("out of range; value: {}, limit: {}", value, limit);
+      }
+    }
+    return ret.succeed();
+  }
+
+  static boolean allValid(Collection<RexNode> exprs, RelDataType rowType,
+      Litmus ret) {
+    if (!exprs.isEmpty()) {
+      final RexChecker checker = new RexChecker(rowType, null, ret);
+      for (RexNode e : exprs) {
+        if (!checker.isValid(e)) {
+          return false;
+        }
       }
     }
     return ret.succeed();
@@ -1477,12 +1493,10 @@ public class RelDecorrelator implements ReflectiveVisitor {
           final CorRef corRef = cm.mapFieldAccessToCorRef.get(fieldAccess);
 
           if (corRef != null) {
-            Integer newInputPos = frame.corDefOutputs.get(corRef.def());
+            RexNode newInputPos = frame.corDefOutputs.get(corRef.def());
             if (newInputPos != null) {
               // This input does produce the corVar referenced.
-              return new RexInputRef(newInputPos + newInputOutputOffset,
-                  frame.r.getRowType().getFieldList().get(newInputPos)
-                      .getType());
+              return RexUtil.shift(newInputPos, newInputOutputOffset);
             }
           }
 
@@ -2750,16 +2764,15 @@ public class RelDecorrelator implements ReflectiveVisitor {
    * among its output fields. */
   static class Frame {
     final RelNode r;
-    final ImmutableSortedMap<CorDef, Integer> corDefOutputs;
+    final ImmutableSortedMap<CorDef, RexNode> corDefOutputs;
     final ImmutableSortedMap<Integer, Integer> oldToNewOutputs;
 
-    Frame(RelNode oldRel, RelNode r, SortedMap<CorDef, Integer> corDefOutputs,
+    Frame(RelNode oldRel, RelNode r, SortedMap<CorDef, RexNode> corDefOutputs,
         Map<Integer, Integer> oldToNewOutputs) {
       this.r = Preconditions.checkNotNull(r);
       this.corDefOutputs = ImmutableSortedMap.copyOf(corDefOutputs);
       this.oldToNewOutputs = ImmutableSortedMap.copyOf(oldToNewOutputs);
-      assert allLessThan(corDefOutputs.values(),
-          r.getRowType().getFieldCount(), Litmus.THROW);
+//      assert allValid(corDefOutputs.values(), r.getRowType(), Litmus.THROW);
       assert allLessThan(oldToNewOutputs.keySet(),
           oldRel.getRowType().getFieldCount(), Litmus.THROW);
       assert allLessThan(oldToNewOutputs.values(),

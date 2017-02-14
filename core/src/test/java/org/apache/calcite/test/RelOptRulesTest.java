@@ -3087,6 +3087,14 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkSubQuery(sql).withLateDecorrelation(true).check();
   }
 
+  @Test public void testWhereExpressionInCorrelated() {
+    final String sql = "select ename from (\n"
+        + "  select ename, deptno, sal + 1 as salPlus from emp) as e\n"
+        + "where deptno in (\n"
+        + "  select deptno from emp where sal + 1 = e.salPlus)";
+    checkSubQuery(sql).withLateDecorrelation(true).check();
+  }
+
   @Test public void testExpandWhereComparisonCorrelated() throws Exception {
     final String sql = "select empno\n"
         + "from sales.emp as e\n"
