@@ -93,6 +93,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -865,6 +866,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // This means that we do not need a value generator.
     if (rel instanceof Filter) {
       SortedMap<CorDef, Integer> map = new TreeMap<>();
+      List<RexNode> projects = new ArrayList<>();
       for (CorRef correlation : corVarList) {
         final CorDef def = correlation.def();
         if (corDefOutputs.containsKey(def) || map.containsKey(def)) {
@@ -873,14 +875,28 @@ public class RelDecorrelator implements ReflectiveVisitor {
         try {
           findCorrelationEquivalent(correlation, ((Filter) rel).getCondition());
         } catch (Util.FoundOne e) {
-          map.put(def, (Integer) e.getNode());
+          if (e.getNode() instanceof RexInputRef) {
+            map.put(def, ((RexInputRef) e.getNode()).getIndex());
+          } else {
+            map.put(def,
+                frame.r.getRowType().getFieldCount() + projects.size());
+            projects.add((RexNode) e.getNode());
+          }
         }
       }
       // If all correlation variables are now satisfied, skip creating a value
       // generator.
       if (map.size() == corVarList.size()) {
         map.putAll(frame.corDefOutputs);
-        return register(oldInput, oldInput,
+        final RelNode r;
+        if (!projects.isEmpty()) {
+          relBuilder.push(oldInput)
+              .project(Iterables.concat(relBuilder.fields(), projects));
+          r = relBuilder.build();
+        } else {
+          r = oldInput;
+        }
+        return register(oldInput, r,
             identityMap(oldInput.getRowType().getFieldCount()), map);
       }
     }
@@ -910,13 +926,11 @@ public class RelDecorrelator implements ReflectiveVisitor {
     case EQUALS:
       final RexCall call = (RexCall) e;
       final List<RexNode> operands = call.getOperands();
-      if (references(operands.get(0), correlation)
-          && operands.get(1) instanceof RexInputRef) {
-        throw new Util.FoundOne(((RexInputRef) operands.get(1)).getIndex());
+      if (references(operands.get(0), correlation)) {
+        throw new Util.FoundOne(operands.get(1));
       }
-      if (references(operands.get(1), correlation)
-          && operands.get(0) instanceof RexInputRef) {
-        throw new Util.FoundOne(((RexInputRef) operands.get(0)).getIndex());
+      if (references(operands.get(1), correlation)) {
+        throw new Util.FoundOne(operands.get(0));
       }
       break;
     case AND:
@@ -2760,11 +2774,11 @@ public class RelDecorrelator implements ReflectiveVisitor {
       this.r = Preconditions.checkNotNull(r);
       this.corDefOutputs = ImmutableSortedMap.copyOf(corDefOutputs);
       this.oldToNewOutputs = ImmutableSortedMap.copyOf(oldToNewOutputs);
-      assert allLessThan(corDefOutputs.values(),
+      assert allLessThan(this.corDefOutputs.values(),
           r.getRowType().getFieldCount(), Litmus.THROW);
-      assert allLessThan(oldToNewOutputs.keySet(),
+      assert allLessThan(this.oldToNewOutputs.keySet(),
           oldRel.getRowType().getFieldCount(), Litmus.THROW);
-      assert allLessThan(oldToNewOutputs.values(),
+      assert allLessThan(this.oldToNewOutputs.values(),
           r.getRowType().getFieldCount(), Litmus.THROW);
     }
   }
