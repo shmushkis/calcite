@@ -139,6 +139,7 @@ joinCondition:
 
 tableReference:
       tablePrimary
+      [ matchRecognize ]
       [ [ AS ] alias [ '(' columnAlias [, columnAlias ]* ')' ] ]
 
 tablePrimary:
@@ -359,6 +360,7 @@ DECADE,
 DEFAULTS,
 DEFERRABLE,
 DEFERRED,
+**DEFINE**,
 DEFINED,
 DEFINER,
 DEGREE,
@@ -495,6 +497,7 @@ M,
 MAP,
 **MATCH**,
 MATCHED,
+**MATCH_RECOGNIZE**,
 **MAX**,
 MAXVALUE,
 **MEMBER**,
@@ -572,9 +575,11 @@ PARTIAL,
 PASCAL,
 PASSTHROUGH,
 PATH,
+**PATTERN**,
 **PERCENTILE_CONT**,
 **PERCENTILE_DISC**,
 **PERCENT_RANK**,
+**PERMUTE**,
 PLACING,
 PLAN,
 PLI,
@@ -584,6 +589,7 @@ PRECEDING,
 **PRECISION**,
 **PREPARE**,
 PRESERVE,
+**PREV**,
 **PRIMARY**,
 PRIOR,
 PRIVILEGES,
@@ -635,6 +641,7 @@ ROUTINE_SCHEMA,
 **ROWS**,
 ROW_COUNT,
 **ROW_NUMBER**,
+**RUNNING**,
 **SAVEPOINT**,
 SCALE,
 SCHEMA,
@@ -1425,4 +1432,75 @@ Here are some examples:
 * `f(c => 3, d => 1, a => 0)` is equivalent to `f(0, NULL, 3, 1, NULL)`;
 * `f(c => 3, d => 1)` is not legal, because you have not specified a value for
   `a` and `a` is not optional.
+```
 
+### MATCH_RECOGNIZE
+
+`MATCH_RECOGNIZE` is a SQL extension for recognizing sequences of
+events in complex event processing (CEP).
+
+It is experimental in Calcite, and yet not fully implemented.
+
+#### Syntax
+
+{% highlight sql %}
+matchRecognize:
+      MATCH_RECOGNIZE '('
+      [ PARTITION BY expression [, expression ]* ]
+      [ ORDER BY orderItem [, orderItem ]* ]
+      [ MEASURES measureColumn [, measureColumn ]* ]
+      [ ON ROW PER MATCH | ALL ROWS PER MATCH ]
+      [ AFTER MATCH
+            ( SKIP TO NEXT ROW
+            | SKIP PAST LAST ROW
+            | SKIP TO FIRST variable
+            | SKIP TO LAST variable
+            | SKIP TO variable )
+      ]
+      PATTERN '(' pattern ')'
+      [ SUBSET variable [, variable ]* ]
+      DEFINE variable AS condition [, variable AS condition ]*
+      ')'
+
+measureColumn:
+      expression AS alias
+
+pattern:
+      patternTerm ['|' patternTerm ]*
+
+patternTerm:
+      patternFactor [ patternFactor ]*
+
+patternFactor:
+      patternPrimary [ patternQuantifier ]
+
+patternPrimary:
+      variable
+  |   '$'
+  |   '^'
+  |   '(' [ pattern ] ')'
+  |   '{-' pattern '-}'
+  |   PERMUTE '(' pattern [, pattern ]* ')'
+
+patternQuantifier:
+      '*'
+  |   '*?'
+  |   '+'
+  |   '+?'
+  |   '?'
+  |   '??'
+  |   '{' { [ minRepeat ], [ maxRepeat ] } '}' ['?']
+  |   '{' repeat '}'
+{% endhighlight %}
+
+In *patternQuantifier*, *repeat* is a positive integer,
+and *minRepeat* and *maxRepeat* are non-negative integers.
+
+The following clauses are not implemented:
+
+* `PARTITION BY`
+* `ORDER BY`
+* `MEASURES`
+* `ON ROW PER MATCH`, `ALL ROWS PER MATCH`
+* `AFTER MATCH`
+* `SUBSET`
