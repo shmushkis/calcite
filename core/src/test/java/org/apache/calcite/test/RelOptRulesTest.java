@@ -83,6 +83,8 @@ import org.apache.calcite.rel.rules.SemiJoinRemoveRule;
 import org.apache.calcite.rel.rules.SemiJoinRule;
 import org.apache.calcite.rel.rules.SortJoinTransposeRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
+import org.apache.calcite.rel.rules.SortRemoveEquivalenceRule;
+import org.apache.calcite.rel.rules.SortRemoveRule;
 import org.apache.calcite.rel.rules.SortUnionTransposeRule;
 import org.apache.calcite.rel.rules.SubQueryRemoveRule;
 import org.apache.calcite.rel.rules.TableScanRule;
@@ -2141,6 +2143,49 @@ public class RelOptRulesTest extends RelOptTestBase {
             + "select cast(gender as varchar(128)) from sales.emps");
   }
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-873">[CALCITE-873]
+   Prevent sort when ORDER BY not necessary due to equality constraints</a>. */
+  @Test public void testSortRemoveConstantKeys() throws Exception {
+    final HepProgram program = new HepProgramBuilder()
+        .addRuleInstance(SortRemoveEquivalenceRule.INSTANCE)
+        .build();
+    final String sql = "select * from emp where deptno = 10\n"
+        + "order by empno, deptno desc";
+    sql(sql).with(program).check();
+  }
+
+  @Test public void testSortRemoveConstantKeys2() throws Exception {
+    // All of the fields are constant, so we remove the sort.
+    final HepProgram program = new HepProgramBuilder()
+        .addRuleInstance(SortRemoveEquivalenceRule.INSTANCE)
+        .build();
+    final String sql = "select * from emp\n"
+        + "where deptno = 10 and empno = 5\n"
+        + "order by empno, deptno desc";
+    sql(sql).with(program).check();
+  }
+
+  @Test public void testSortRemoveConstantKeys3() throws Exception {
+    // All of the fields are constant, but there is still a LIMIT.
+    final HepProgram program = new HepProgramBuilder()
+        .addRuleInstance(SortRemoveEquivalenceRule.INSTANCE)
+        .build();
+    final String sql = "select * from emp\n"
+        + "where deptno = 10 and empno = 5\n"
+        + "order by empno, deptno desc limit 3";
+    sql(sql).with(program).check();
+  }
+
+  @Test public void testSortRemove() throws Exception {
+    final HepProgram program = new HepProgramBuilder()
+        .addRuleInstance(SortRemoveRule.INSTANCE)
+        .build();
+    final String sql = "select * from emp\n"
+        + "order by empno, deptno desc";
+    sql(sql).withTester(collationAwareTester()).with(program).check();
+  }
+
   private void basePushAggThroughUnion() throws Exception {
     HepProgram program = new HepProgramBuilder()
         .addRuleInstance(ProjectSetOpTransposeRule.INSTANCE)
@@ -2859,9 +2904,27 @@ public class RelOptRulesTest extends RelOptTestBase {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-931">[CALCITE-931]
    * Wrong collation trait in SortJoinTransposeRule for right joins</a>. */
   @Test public void testSortJoinTranspose4() {
-    // Create a customized test with RelCollation trait in the test cluster.
-    Tester tester = new TesterImpl(getDiffRepos(), true, true, false, false,
-        null, null) {
+    final HepProgram preProgram = new HepProgramBuilder()
+        .addRuleInstance(SortProjectTransposeRule.INSTANCE)
+        .build();
+    final HepProgram program = new HepProgramBuilder()
+        .addRuleInstance(SortJoinTransposeRule.INSTANCE)
+        .build();
+    final String sql = "select * from sales.emp e right join (\n"
+        + "select * from sales.dept d) using (deptno)\n"
+        + "order by name";
+    sql(sql)
+        .withTester(collationAwareTester())
+        .withPre(preProgram)
+        .with(program)
+        .check();
+  }
+
+  /** Creates a customized tester with RelCollation trait in the test
+   * cluster. */
+  private Tester collationAwareTester() {
+    return new TesterImpl(getDiffRepos(), true, true, false, false, null,
+        null) {
       @Override public RelOptPlanner createPlanner() {
         return new MockRelOptPlanner() {
           @Override public List<RelTraitDef> getRelTraitDefs() {
@@ -2874,17 +2937,6 @@ public class RelOptRulesTest extends RelOptTestBase {
         };
       }
     };
-
-    final HepProgram preProgram = new HepProgramBuilder()
-        .addRuleInstance(SortProjectTransposeRule.INSTANCE)
-        .build();
-    final HepProgram program = new HepProgramBuilder()
-        .addRuleInstance(SortJoinTransposeRule.INSTANCE)
-        .build();
-    final String sql = "select * from sales.emp e right join (\n"
-        + "select * from sales.dept d) using (deptno)\n"
-        + "order by name";
-    checkPlanning(tester, preProgram, new HepPlanner(program), sql);
   }
 
   /** Test case for

@@ -270,6 +270,15 @@ abstract class RelOptTestBase extends SqlToRelTestBase {
           });
     }
 
+    public Sql withTester(final Tester tester) {
+      return withTransform(
+          new Function<Tester, Tester>() {
+            public Tester apply(Tester ignore) {
+              return tester;
+            }
+          });
+    }
+
     public Sql withTrim(final boolean b) {
       return withTransform(
           new Function<Tester, Tester>() {

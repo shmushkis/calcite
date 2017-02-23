@@ -16,27 +16,29 @@
  */
 package org.apache.calcite.rel.rules;
 
-import com.google.common.collect.ImmutableMap;
-
+import org.apache.calcite.plan.RelOptPredicateList;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
-import org.apache.calcite.plan.RelOptPredicateList;
-import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollationTraitDef;
+import org.apache.calcite.rel.RelCollations;
+import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
-import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 
+import com.google.common.collect.ImmutableMap;
+
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.List;
+
 /**
- * Planner rule that removes
- * a {@link org.apache.calcite.rel.core.Sort} if its input has only constant fields
- *
- * <p>Requires {@link RelCollationTraitDef}.
+ * Planner rule that removes from a
+ * a {@link org.apache.calcite.rel.core.Sort} any keys that are constant.
  */
 public class SortRemoveEquivalenceRule extends RelOptRule {
-  public static final SortRemoveEquivalenceRule INSTANCE = new SortRemoveEquivalenceRule();
+  public static final SortRemoveEquivalenceRule INSTANCE =
+      new SortRemoveEquivalenceRule();
 
   private SortRemoveEquivalenceRule() {
     super(
@@ -45,44 +47,40 @@ public class SortRemoveEquivalenceRule extends RelOptRule {
   }
 
   @Override public void onMatch(RelOptRuleCall call) {
-    if (!call.getPlanner().getRelTraitDefs()
-        .contains(RelCollationTraitDef.INSTANCE)) {
-      // Collation is not an active trait.
-      return;
-    }
     final Sort sort = call.rel(0);
-    if (sort.offset != null || sort.fetch != null) {
-      // Don't remove sort if would also remove OFFSET or LIMIT.
-      return;
-    }
 
-    final RexBuilder rexBuilder = sort.getCluster().getRexBuilder();
     final RelMetadataQuery mq = RelMetadataQuery.instance();
     final RelOptPredicateList predicates =
-            mq.getPulledUpPredicates(sort.getInput());
+        mq.getPulledUpPredicates(sort.getInput());
     if (predicates == null) {
       return;
     }
 
-    final ImmutableMap<RexNode, RexNode> constants =
-            ReduceExpressionsRule.predicateConstants(RexNode.class, rexBuilder,
-                    predicates);
-    boolean foundNonConstantField = false;
-    for (RexNode currentExp: fieldExps) {
-      if (!constants.containsKey(currentExp)) {
-        foundNonConstantField = true;
+    final ImmutableMap<RexNode, RexNode> constants = predicates.constantMap;
+    final BitSet constantInputs = new BitSet();
+    for (RexNode constant : constants.keySet()) {
+      if (constant instanceof RexInputRef) {
+        constantInputs.set(((RexInputRef) constant).getIndex());
       }
     }
-
-    if (!foundNonConstantField) {
-      // Express the "sortedness" requirement in terms of a collation trait and
-      // we can get rid of the sort. This allows us to use rels that just happen
-      // to be sorted but get the same effect.
-      final RelCollation collation = sort.getCollation();
-      assert collation == sort.getTraitSet()
-              .getTrait(RelCollationTraitDef.INSTANCE);
-      final RelTraitSet traits = sort.getInput().getTraitSet().replace(collation);
-      call.transformTo(convert(sort.getInput(), traits));
+    final List<RelFieldCollation> fieldCollations = new ArrayList<>();
+    for (RelFieldCollation fc : sort.collation.getFieldCollations()) {
+      if (!constantInputs.get(fc.getFieldIndex())) {
+        fieldCollations.add(fc);
+      }
+    }
+    if (fieldCollations.size() == sort.collation.getFieldCollations().size()) {
+      return;
+    }
+    if (fieldCollations.isEmpty()
+        && sort.fetch == null
+        && sort.offset == null) {
+      // Sort is trival. Remove it.
+      call.transformTo(sort.getInput());
+    } else {
+      call.transformTo(
+          sort.copy(sort.getTraitSet(), sort.getInput(),
+              RelCollations.of(fieldCollations)));
     }
   }
 }
