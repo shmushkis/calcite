@@ -832,7 +832,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
   private boolean hasAll(Collection<CorRef> corRefs,
       Collection<CorDef> corDefs) {
     for (CorRef corRef : corRefs) {
-      if (!has(corDefs, corRef.corr)) {
+      if (!has(corDefs, corRef)) {
         return false;
       }
     }
@@ -841,9 +841,9 @@ public class RelDecorrelator implements ReflectiveVisitor {
 
   /** Returns whether a {@link CorrelationId} is satisfied by at least one of a
    * collection of {@link CorDef}s. */
-  private boolean has(Collection<CorDef> corDefs, CorrelationId id) {
+  private boolean has(Collection<CorDef> corDefs, CorRef corr) {
     for (CorDef corDef : corDefs) {
-      if (corDef.corr.equals(id)) {
+      if (corDef.corr.equals(corr.corr) && corDef.field == corr.field) {
         return true;
       }
     }
@@ -854,8 +854,6 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // currently only handles one input
     assert rel.getInputs().size() == 1;
     RelNode oldInput = frame.r;
-    assert RelOptUtil.equal("oldInput", oldInput.getRowType(),
-        "rel.input(0)", rel.getInput(0).getRowType(), Litmus.THROW);
 
     final SortedMap<CorDef, Integer> corDefOutputs =
         new TreeMap<>(frame.corDefOutputs);
@@ -896,8 +894,8 @@ public class RelDecorrelator implements ReflectiveVisitor {
         } else {
           r = oldInput;
         }
-        return register(oldInput, r,
-            identityMap(oldInput.getRowType().getFieldCount()), map);
+        return register(rel.getInput(0), r,
+            frame.oldToNewOutputs, map);
       }
     }
 
@@ -915,7 +913,7 @@ public class RelDecorrelator implements ReflectiveVisitor {
     // Join or Filter does not change the old input ordering. All
     // input fields from newLeftInput (i.e. the original input to the old
     // Filter) are in the output and in the same position.
-    return register(oldInput, join, frame.oldToNewOutputs, corDefOutputs);
+    return register(rel.getInput(0), join, frame.oldToNewOutputs, corDefOutputs);
   }
 
   /** Finds a {@link RexInputRef} that is equivalent to a {@link CorRef},
