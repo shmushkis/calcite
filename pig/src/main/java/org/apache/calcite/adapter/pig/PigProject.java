@@ -26,10 +26,11 @@ import org.apache.calcite.rex.RexNode;
 
 import java.util.List;
 
-/**
- */
+/** Implementation of {@link org.apache.calcite.rel.core.Project} in
+ * {@link PigRel#CONVENTION Pig calling convention}. */
 public class PigProject extends Project implements PigRel {
 
+  /** Creates a PigProject. */
   public PigProject(RelOptCluster cluster, RelTraitSet traitSet, RelNode input,
       List<? extends RexNode> projects, RelDataType rowType) {
     super(cluster, traitSet, input, projects, rowType);

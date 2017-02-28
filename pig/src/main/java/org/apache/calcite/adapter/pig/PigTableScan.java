@@ -34,10 +34,11 @@ import com.google.common.base.Joiner;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- */
+/** Implementation of {@link org.apache.calcite.rel.core.TableScan} in
+ * {@link PigRel#CONVENTION Pig calling convention}. */
 public class PigTableScan extends TableScan implements PigRel {
 
+  /** Creates a PigTableScan. */
   public PigTableScan(RelOptCluster cluster, RelTraitSet traitSet, RelOptTable table) {
     super(cluster, traitSet, table);
     assert getConvention() == PigRel.CONVENTION;

@@ -48,8 +48,11 @@ public interface PigRel extends RelNode {
   class Implementor {
 
     /**
-     * An ordered list or Pig Latin statements.
-     * @see https://pig.apache.org/docs/r0.13.0/start.html#pl-statements
+     * An ordered list of Pig Latin statements.
+     *
+     * <p>See
+     * <a href="https://pig.apache.org/docs/r0.13.0/start.html#pl-statements">
+     * Pig Latin reference</a>.
      */
     private final List<String> statements = new ArrayList<>();
 

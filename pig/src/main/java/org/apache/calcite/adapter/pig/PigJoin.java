@@ -32,10 +32,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
-/**
- */
+/** Implementation of {@link org.apache.calcite.rel.core.Join} in
+ * {@link PigRel#CONVENTION Pig calling convention}. */
 public class PigJoin extends Join implements PigRel {
 
+  /** Creates a PigJoin. */
   public PigJoin(RelOptCluster cluster, RelTraitSet traitSet, RelNode left, RelNode right,
       RexNode condition, JoinRelType joinType) {
     super(cluster, traitSet, left, right, condition, new HashSet<CorrelationId>(0), joinType);

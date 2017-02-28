@@ -36,10 +36,11 @@ import java.util.List;
 import static org.apache.calcite.sql.SqlKind.INPUT_REF;
 import static org.apache.calcite.sql.SqlKind.LITERAL;
 
-/**
- */
+/** Implementation of {@link org.apache.calcite.rel.core.Filter} in
+ * {@link PigRel#CONVENTION Pig calling convention}. */
 public class PigFilter extends Filter implements PigRel {
 
+  /** Creates a PigFilter. */
   public PigFilter(RelOptCluster cluster, RelTraitSet traitSet, RelNode input, RexNode condition) {
     super(cluster, traitSet, input, condition);
     assert getConvention() == PigRel.CONVENTION;
@@ -63,9 +64,11 @@ public class PigFilter extends Filter implements PigRel {
   }
 
   /**
-   * Generates Pig Latin filtering statements, e.g. : <code>
-   * table = FILTER table BY score > 2.0;
-   * </code>
+   * Generates Pig Latin filtering statements, for example
+   *
+   * <blockquote>
+   *   <pre>table = FILTER table BY score &gt; 2.0;</pre>
+   * </blockquote>
    */
   private String getPigFilterStatement(Implementor implementor) {
     Preconditions.checkState(containsOnlyConjunctions(condition));

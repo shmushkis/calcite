@@ -33,19 +33,23 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Set;
 
-/**
- */
+/** Implementations of factories in {@link RelFactories}
+ * for the Pig adapter. */
 public class PigRelFactories {
 
-  public static final Context ALL_PIG_REL_FACTORIES = Contexts.of(PigTableScanFactory.INSTANCE,
-      PigFilterFactory.INSTANCE, PigAggregateFactory.INSTANCE, PigJoinFactory.INSTANCE);
+  public static final Context ALL_PIG_REL_FACTORIES =
+      Contexts.of(PigTableScanFactory.INSTANCE,
+          PigFilterFactory.INSTANCE,
+          PigAggregateFactory.INSTANCE,
+          PigJoinFactory.INSTANCE);
 
   // prevent instantiation
   private PigRelFactories() {
   }
 
   /**
-   * Implementation of {@link RelFactories.TableScanFactory} that
+   * Implementation of
+   * {@link org.apache.calcite.rel.core.RelFactories.TableScanFactory} that
    * returns a {@link PigTableScan}.
    */
   public static class PigTableScanFactory implements RelFactories.TableScanFactory {
@@ -58,7 +62,8 @@ public class PigRelFactories {
   }
 
   /**
-   * Implementation of {@link RelFactories.FilterFactory} that
+   * Implementation of
+   * {@link org.apache.calcite.rel.core.RelFactories.FilterFactory} that
    * returns a {@link PigFilter}.
    */
   public static class PigFilterFactory implements RelFactories.FilterFactory {
@@ -72,7 +77,8 @@ public class PigRelFactories {
   }
 
   /**
-   * Implementation of {@link RelFactories.AggregateFactory} that
+   * Implementation of
+   * {@link org.apache.calcite.rel.core.RelFactories.AggregateFactory} that
    * returns a {@link PigAggregate}.
    */
   public static class PigAggregateFactory implements RelFactories.AggregateFactory {
@@ -88,7 +94,8 @@ public class PigRelFactories {
   }
 
   /**
-   * Implementation of {@link RelFactories.JoinFactory} that
+   * Implementation of
+   * {@link org.apache.calcite.rel.core.RelFactories.JoinFactory} that
    * returns a {@link PigJoin}.
    */
   public static class PigJoinFactory implements RelFactories.JoinFactory {

@@ -24,42 +24,42 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.AbstractTable;
-import org.apache.calcite.util.Pair;
 
 import org.apache.pig.data.DataType;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Represents a Pig relation that is created by Pig Latin
  * <a href="https://pig.apache.org/docs/r0.13.0/basic.html#load">
- * <code>LOAD</code></a> statement. Only the default load function
- * is supported at this point (PigStorage()). Only VARCHAR (CHARARRAY in Pig)
- * type supported at this point.
+ * <code>LOAD</code></a> statement.
+ *
+ * <p>Only the default load function is supported at this point (PigStorage()).
+ *
+ * <p>Only VARCHAR (CHARARRAY in Pig) type supported at this point.
+ *
+ * @see PigTableFactory
  */
 public class PigTable extends AbstractTable implements TranslatableTable {
 
   private final String filePath;
   private final String[] fieldNames;
 
+  /** Creates a PigTable. */
   public PigTable(String filePath, String[] fieldNames) {
     this.filePath = filePath;
     this.fieldNames = fieldNames;
   }
 
   @Override public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-    final int columnCount = fieldNames.length;
-    final List<Pair<String, RelDataType>> columnDesc = new ArrayList<>(columnCount);
-    for (int i = 0; i < columnCount; i++) {
+    final RelDataTypeFactory.FieldInfoBuilder builder = typeFactory.builder();
+    for (String fieldName : fieldNames) {
       // only supports CHARARRAY types for now
       final RelDataType relDataType = typeFactory
           .createSqlType(PigDataType.valueOf(DataType.CHARARRAY).getSqlType());
       final RelDataType nullableRelDataType = typeFactory
           .createTypeWithNullability(relDataType, true);
-      columnDesc.add(Pair.of(fieldNames[i], nullableRelDataType));
+      builder.add(fieldName, nullableRelDataType);
     }
-    return typeFactory.createStructType(columnDesc);
+    return builder.build();
   }
 
   public String getFilePath() {

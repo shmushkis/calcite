@@ -37,8 +37,9 @@ import java.util.List;
  * Relational expression representing a scan of a table in a Pig data source.
  */
 public class PigToEnumerableConverter
-  extends ConverterImpl
-  implements EnumerableRel {
+    extends ConverterImpl
+    implements EnumerableRel {
+  /** Creates a PigToEnumerableConverter. */
   protected PigToEnumerableConverter(
       RelOptCluster cluster,
       RelTraitSet traits,
@@ -52,20 +53,23 @@ public class PigToEnumerableConverter
   }
 
   /**
-   * This implementation does not actually execute the associated Pig Latin script
-   * and return results. Instead it returns an empty {@link Result} in order to allow
-   * for testing and verification of every step of query processing up to actual physical
-   * execution and result verification.
+   * {@inheritDoc}
    *
-   * Next step is to invoke Pig from here, likely in local mode, have it store results
-   * in a predefined file so they can be read here and returned as a {@link Result} object.
+   * <p>This implementation does not actually execute the associated Pig Latin
+   * script and return results. Instead it returns an empty
+   * {@link org.apache.calcite.adapter.enumerable.EnumerableRel.Result}
+   * in order to allow for testing and verification of every step of query
+   * processing up to actual physical execution and result verification.
+   *
+   * <p>Next step is to invoke Pig from here, likely in local mode, have it
+   * store results in a predefined file so they can be read here and returned as
+   * a {@code Result} object.
    */
   public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
     final BlockBuilder list = new BlockBuilder();
     final PhysType physType =
-        PhysTypeImpl.of(
-                implementor.getTypeFactory(), rowType,
-                pref.prefer(JavaRowFormat.ARRAY));
+        PhysTypeImpl.of(implementor.getTypeFactory(), rowType,
+            pref.prefer(JavaRowFormat.ARRAY));
     PigRel.Implementor impl = new PigRel.Implementor();
     impl.visitChild(0, getInput());
     Hook.QUERY_PLAN.run(impl.getScript()); // for script validation in tests

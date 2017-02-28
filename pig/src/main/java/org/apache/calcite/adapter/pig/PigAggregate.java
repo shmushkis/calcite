@@ -34,12 +34,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- */
+/** Implementation of {@link org.apache.calcite.rel.core.Aggregate} in
+ * {@link PigRel#CONVENTION Pig calling convention}. */
 public class PigAggregate extends Aggregate implements PigRel {
 
   public static final String DISTINCT_FIELD_SUFFIX = "_DISTINCT";
 
+  /** Creates a PigAggregate. */
   public PigAggregate(RelOptCluster cluster, RelTraitSet traits, RelNode child, boolean indicator,
       ImmutableBitSet groupSet, List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
     super(cluster, traits, child, indicator, groupSet, groupSets, aggCalls);
@@ -172,14 +173,15 @@ public class PigAggregate extends Aggregate implements PigRel {
   /**
    * A agg function call like <code>COUNT(DISTINCT COL)</code> in Pig is
    * achieved via two statements in a FOREACH that follows a GROUP statement:
-   * <pre>
-   * {@code
-   * TABLE = GROUP TABLE ALL;
-   * TABLE = FOREACH TABLE {
-   *   <b>COL.DISTINCT = DISTINCT COL;
-   *   GENERATE COUNT(COL.DISTINCT) AS C;</b>
-   * }
-   * </pre>
+   *
+   * <blockquote>
+   * <code>
+   * TABLE = GROUP TABLE ALL;<br>
+   * TABLE = FOREACH TABLE {<br>
+   * &nbsp;&nbsp;<b>COL.DISTINCT = DISTINCT COL;<br>
+   * &nbsp;&nbsp;GENERATE COUNT(COL.DISTINCT) AS C;</b><br>
+   * }</code>
+   * </blockquote>
    */
   private List<String> getDistinctCalls(Implementor implementor) {
     final String relAlias = implementor.getPigRelationAlias(this);
