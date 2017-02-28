@@ -200,4 +200,5 @@ public class PigAggregate extends Aggregate implements PigRel {
     return getInput().getRowType().getFieldList().get(fieldIndex).getName();
   }
 }
+
 // End PigAggregate.java

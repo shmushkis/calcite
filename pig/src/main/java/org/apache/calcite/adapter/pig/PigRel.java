@@ -84,4 +84,5 @@ public interface PigRel extends RelNode {
     }
   }
 }
+
 // End PigRel.java

@@ -87,4 +87,5 @@ public class PigTableScan extends TableScan implements PigRel {
     planner.removeRule(EnumerableRules.ENUMERABLE_JOIN_RULE);
   }
 }
+
 // End PigTableScan.java

@@ -27,20 +27,24 @@ import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 
+import com.google.common.collect.ImmutableList;
+
+import java.util.List;
+
 /**
  * Various {@link RelOptRule}s using the Pig convention.
  */
 public class PigRules {
 
-  public static final RelOptRule[] ALL_PIG_OPT_RULES = new RelOptRule[] { PigFilterRule.INSTANCE,
-    PigTableScanRule.INSTANCE, PigProjectRule.INSTANCE, PigAggregateRule.INSTANCE,
-    PigJoinRule.INSTANCE};
+  public static final List<ConverterRule> ALL_PIG_OPT_RULES =
+      ImmutableList.of(PigFilterRule.INSTANCE,
+          PigTableScanRule.INSTANCE,
+          PigProjectRule.INSTANCE,
+          PigAggregateRule.INSTANCE,
+          PigJoinRule.INSTANCE);
 
-  /**
-   * Prevent instantiation.
-   */
-  private PigRules() {
-  }
+  // prevent instantiation
+  private PigRules() {}
 
   /**
    * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalFilter} to a
@@ -136,4 +140,5 @@ public class PigRules {
     }
   }
 }
+
 // End PigRules.java

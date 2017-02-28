@@ -71,4 +71,5 @@ public class PigTable extends AbstractTable implements TranslatableTable {
     return new PigTableScan(cluster, cluster.traitSetOf(PigRel.CONVENTION), relOptTable);
   }
 }
+
 // End PigTable.java

@@ -45,6 +45,8 @@ public class PigRelFactories {
   }
 
   /**
+   * Implementation of {@link RelFactories.TableScanFactory} that
+   * returns a {@link PigTableScan}.
    */
   public static class PigTableScanFactory implements RelFactories.TableScanFactory {
 
@@ -56,6 +58,8 @@ public class PigRelFactories {
   }
 
   /**
+   * Implementation of {@link RelFactories.FilterFactory} that
+   * returns a {@link PigFilter}.
    */
   public static class PigFilterFactory implements RelFactories.FilterFactory {
 
@@ -68,6 +72,8 @@ public class PigRelFactories {
   }
 
   /**
+   * Implementation of {@link RelFactories.AggregateFactory} that
+   * returns a {@link PigAggregate}.
    */
   public static class PigAggregateFactory implements RelFactories.AggregateFactory {
 
@@ -82,6 +88,8 @@ public class PigRelFactories {
   }
 
   /**
+   * Implementation of {@link RelFactories.JoinFactory} that
+   * returns a {@link PigJoin}.
    */
   public static class PigJoinFactory implements RelFactories.JoinFactory {
 
@@ -98,4 +106,5 @@ public class PigRelFactories {
     }
   }
 }
+
 // End PigRelFactories.java

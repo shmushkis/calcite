@@ -53,4 +53,5 @@ public class PigProject extends Project implements PigRel {
     return getInput().getTable();
   }
 }
+
 // End PigProject.java

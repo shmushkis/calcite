@@ -47,4 +47,5 @@ public enum PigAggFunction {
     throw new IllegalArgumentException("Pig agg func for " + calciteFunc + " is not supported");
   }
 }
+
 // End PigAggFunction.java
