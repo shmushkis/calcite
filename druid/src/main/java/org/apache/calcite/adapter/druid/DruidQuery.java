@@ -66,6 +66,7 @@ import org.apache.calcite.util.Util;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -847,7 +848,8 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
   }
 
   /** Translates scalar expressions to Druid field references. */
-  private static class Translator {
+  @VisibleForTesting
+  protected static class Translator {
     final List<String> dimensions = new ArrayList<>();
     final List<String> metrics = new ArrayList<>();
     final DruidTable druidTable;
@@ -909,6 +911,7 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
       case LESS_THAN:
       case LESS_THAN_OR_EQUAL:
       case IN:
+      case BETWEEN:
         call = (RexCall) e;
         int posRef;
         int posConstant;
@@ -941,10 +944,17 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
               call.getOperands().get(posRef).getType().getFamily() == SqlTypeFamily.NUMERIC);
         case IN:
           ImmutableList.Builder listBuilder = ImmutableList.builder();
-          for (RexNode rexNode: call.operands) {
-            listBuilder.add(rexNode.toString());
+          for (RexNode rexNode: call.getOperands()) {
+            if (rexNode.getKind().equals(SqlKind.LITERAL)) {
+              listBuilder.add(((RexLiteral) rexNode).getValue2().toString());
+            }
           }
           return new JsonInFilter("in", tr(e, posRef), listBuilder.build());
+        case BETWEEN:
+          return new JsonBound("bound", tr(e, posRef), tr(e, 2), false,
+                  tr(e, 3), false,
+                  call.getOperands().get(posRef).getType().getFamily() == SqlTypeFamily.NUMERIC
+          );
         }
         break;
       case AND:
@@ -1153,7 +1163,8 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
   }
 
   /** Bound filter. */
-  private static class JsonBound extends JsonFilter {
+  @VisibleForTesting
+  protected static class JsonBound extends JsonFilter {
     private final String dimension;
     private final String lower;
     private final boolean lowerStrict;
@@ -1215,7 +1226,7 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
   }
 
   /** IN filter. */
-  private static class JsonInFilter extends JsonFilter {
+  protected static class JsonInFilter extends JsonFilter {
     private final String dimension;
     private final List<String> values;
 
