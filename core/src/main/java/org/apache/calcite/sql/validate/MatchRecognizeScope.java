@@ -86,4 +86,5 @@ public class MatchRecognizeScope extends ListScope {
   }
 
 }
+
 // End MatchRecognizeScope.java

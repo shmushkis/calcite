@@ -27,61 +27,50 @@ import org.apache.calcite.rex.RexNode;
 import java.util.Map;
 
 /**
- * sub class of {@link org.apache.calcite.rel.core.MatchRecognize}
- * not targeted at any particular engine or calling convention
+ * Sub-class of {@link org.apache.calcite.rel.core.MatchRecognize}
+ * not targeted at any particular engine or calling convention.
  */
 public class LogicalMatchRecognize extends MatchRecognize {
 
   /**
-   * Creates a MatchRecognize
+   * Creates a LogicalMatchRecognize.
+   *
    * @param cluster cluster
-   * @param traits Trait set
+   * @param traitSet Trait set
    * @param input Input to MatchRecognize
    * @param pattern Regular Expression defining pattern variables
-   * @param isStrictStarts Whether it is a strict start pattern
-   * @param isStrictEnds Whether it is a strict end pattern
-   * @param defns pattern defiintions
-   * @param rowType rowtype
+   * @param strictStart Whether it is a strict start pattern
+   * @param strictEnd Whether it is a strict end pattern
+   * @param patternDefinitions Pattern definitions
+   * @param rowType Row type
    */
-  public LogicalMatchRecognize(
-    RelOptCluster cluster,
-    RelTraitSet traits,
-    RelNode input,
-    RexNode pattern,
-    boolean isStrictStarts,
-    boolean isStrictEnds,
-    Map<String, RexNode> defns,
-    RelDataType rowType) {
-    super(cluster, traits, input, pattern, isStrictStarts, isStrictEnds, defns, rowType);
+  public LogicalMatchRecognize(RelOptCluster cluster, RelTraitSet traitSet,
+      RelNode input, RexNode pattern, boolean strictStart, boolean strictEnd,
+      Map<String, RexNode> patternDefinitions, RelDataType rowType) {
+    super(cluster, traitSet, input, pattern, strictStart, strictEnd,
+        patternDefinitions, rowType);
   }
 
   /**
-   * Create a logicalMatchRecoginize
+   * Creates a LogicalMatchRecognize.
    */
-  public static LogicalMatchRecognize create(
-    RelNode input,
-    RexNode pattern,
-    boolean isStrictStarts,
-    boolean isStrictEnds,
-    Map<String, RexNode> defns,
-    RelDataType rowType) {
+  public static LogicalMatchRecognize create(RelNode input, RexNode pattern,
+      boolean strictStart, boolean strictEnd,
+      Map<String, RexNode> patternDefinitions, RelDataType rowType) {
     final RelOptCluster cluster = input.getCluster();
     final RelTraitSet traitSet = cluster.traitSetOf(Convention.NONE);
     return new LogicalMatchRecognize(cluster, traitSet, input, pattern,
-      isStrictStarts, isStrictEnds, defns, rowType);
+        strictStart, strictEnd, patternDefinitions, rowType);
   }
 
   //~ Methods ------------------------------------------------------
 
-  @Override public MatchRecognize copy(
-    RelNode input,
-    RexNode pattern,
-    boolean isStrictStarts,
-    boolean isStrictEnds,
-    Map<String, RexNode> defns,
-    RelDataType rowType) {
-    return new LogicalMatchRecognize(getCluster(), getCluster().traitSetOf(Convention.NONE),
-      input, pattern, isStrictStarts, isStrictEnds, defns, rowType);
+  @Override public MatchRecognize copy(RelNode input, RexNode pattern,
+      boolean strictStart, boolean strictEnd,
+      Map<String, RexNode> patternDefinitions, RelDataType rowType) {
+    final RelTraitSet traitSet = getCluster().traitSetOf(Convention.NONE);
+    return new LogicalMatchRecognize(getCluster(), traitSet,
+        input, pattern, strictStart, strictEnd, patternDefinitions, rowType);
   }
 }
 

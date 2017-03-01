@@ -7110,160 +7110,188 @@ public class SqlParserTest {
             + "VALUES (ROW(1, (CURRENT VALUE FOR `MY_SEQ`)))");
   }
 
-  @Test public void testMatchRecognizePatternExpression() {
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern (strt down+ up+)\n"
-      + "    define \n"
-      + "      down as down.price < PREV(down.price),\n"
-      + "      up as up.price > prev(up.price)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+  @Test public void testMatchRecognize1() {
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern (strt down+ up+)\n"
+        + "    define\n"
+        + "      down as down.price < PREV(down.price),\n"
+        + "      up as up.price > prev(up.price)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN (((`STRT` (`DOWN` +)) (`UP` +)))\n"
         + "DEFINE "
         + "`DOWN` AS (`DOWN`.`PRICE` < (PREV(`DOWN`.`PRICE`, 1))), "
         + "`UP` AS (`UP`.`PRICE` > (PREV(`UP`.`PRICE`, 1)))"
-        + ") AS `MR`");
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern (strt down+ up+$)\n"
-      + "    define \n"
-      + "      down as down.price < PREV(down.price),\n"
-      + "      up as up.price > prev(up.price)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+        + ") AS `MR`";
+    sql(sql).ok(expected);
+  }
+
+  @Test public void testMatchRecognize2() {
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern (strt down+ up+$)\n"
+        + "    define\n"
+        + "      down as down.price < PREV(down.price),\n"
+        + "      up as up.price > prev(up.price)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN (((`STRT` (`DOWN` +)) (`UP` +)) $)\n"
         + "DEFINE "
         + "`DOWN` AS (`DOWN`.`PRICE` < (PREV(`DOWN`.`PRICE`, 1))), "
         + "`UP` AS (`UP`.`PRICE` > (PREV(`UP`.`PRICE`, 1)))"
-        + ") AS `MR`");
+        + ") AS `MR`";
+    sql(sql).ok(expected);
+  }
 
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern (^strt down+ up+)\n"
-      + "    define \n"
-      + "      down as down.price < PREV(down.price),\n"
-      + "      up as up.price > prev(up.price)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+  @Test public void testMatchRecognize3() {
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern (^strt down+ up+)\n"
+        + "    define\n"
+        + "      down as down.price < PREV(down.price),\n"
+        + "      up as up.price > prev(up.price)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN (^ ((`STRT` (`DOWN` +)) (`UP` +)))\n"
         + "DEFINE "
         + "`DOWN` AS (`DOWN`.`PRICE` < (PREV(`DOWN`.`PRICE`, 1))), "
         + "`UP` AS (`UP`.`PRICE` > (PREV(`UP`.`PRICE`, 1)))"
-        + ") AS `MR`");
+        + ") AS `MR`";
+    sql(sql).ok(expected);
+  }
 
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern (^strt down+ up+$)\n"
-      + "    define \n"
-      + "      down as down.price < PREV(down.price),\n"
-      + "      up as up.price > prev(up.price)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+  @Test public void testMatchRecognize4() {
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern (^strt down+ up+$)\n"
+        + "    define\n"
+        + "      down as down.price < PREV(down.price),\n"
+        + "      up as up.price > prev(up.price)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN (^ ((`STRT` (`DOWN` +)) (`UP` +)) $)\n"
         + "DEFINE "
         + "`DOWN` AS (`DOWN`.`PRICE` < (PREV(`DOWN`.`PRICE`, 1))), "
         + "`UP` AS (`UP`.`PRICE` > (PREV(`UP`.`PRICE`, 1)))"
-        + ") AS `MR`");
+        + ") AS `MR`";
+    sql(sql).ok(expected);
+  }
 
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern (strt down* up?)\n"
-      + "    define \n"
-      + "      down as down.price < PREV(down.price),\n"
-      + "      up as up.price > prev(up.price)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+  @Test public void testMatchRecognize5() {
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern (strt down* up?)\n"
+        + "    define\n"
+        + "      down as down.price < PREV(down.price),\n"
+        + "      up as up.price > prev(up.price)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN (((`STRT` (`DOWN` *)) (`UP` ?)))\n"
         + "DEFINE "
         + "`DOWN` AS (`DOWN`.`PRICE` < (PREV(`DOWN`.`PRICE`, 1))), "
         + "`UP` AS (`UP`.`PRICE` > (PREV(`UP`.`PRICE`, 1)))"
-        + ") AS `MR`");
+        + ") AS `MR`";
+    sql(sql).ok(expected);
+  }
 
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern (strt {-down-} up?)\n"
-      + "    define \n"
-      + "      down as down.price < PREV(down.price),\n"
-      + "      up as up.price > prev(up.price)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+  @Test public void testMatchRecognize6() {
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern (strt {-down-} up?)\n"
+        + "    define\n"
+        + "      down as down.price < PREV(down.price),\n"
+        + "      up as up.price > prev(up.price)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN (((`STRT` ({- `DOWN` -})) (`UP` ?)))\n"
         + "DEFINE "
         + "`DOWN` AS (`DOWN`.`PRICE` < (PREV(`DOWN`.`PRICE`, 1))), "
         + "`UP` AS (`UP`.`PRICE` > (PREV(`UP`.`PRICE`, 1)))"
-        + ") AS `MR`");
+        + ") AS `MR`";
+    sql(sql).ok(expected);
+  }
 
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern (strt down{2} up{3,})\n"
-      + "    define \n"
-      + "      down as down.price < PREV(down.price),\n"
-      + "      up as up.price > prev(up.price)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+  @Test public void testMatchRecognize7() {
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern (strt down{2} up{3,})\n"
+        + "    define\n"
+        + "      down as down.price < PREV(down.price),\n"
+        + "      up as up.price > prev(up.price)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN (((`STRT` (`DOWN` { 2 })) (`UP` { 3, })))\n"
         + "DEFINE "
         + "`DOWN` AS (`DOWN`.`PRICE` < (PREV(`DOWN`.`PRICE`, 1))), "
         + "`UP` AS (`UP`.`PRICE` > (PREV(`UP`.`PRICE`, 1)))"
-        + ") AS `MR`");
+        + ") AS `MR`";
+    sql(sql).ok(expected);
+  }
 
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern (strt down{,2} up{3,5})\n"
-      + "    define \n"
-      + "      down as down.price < PREV(down.price),\n"
-      + "      up as up.price > prev(up.price)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+  @Test public void testMatchRecognize8() {
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern (strt down{,2} up{3,5})\n"
+        + "    define\n"
+        + "      down as down.price < PREV(down.price),\n"
+        + "      up as up.price > prev(up.price)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN (((`STRT` (`DOWN` { , 2 })) (`UP` { 3, 5 })))\n"
         + "DEFINE "
         + "`DOWN` AS (`DOWN`.`PRICE` < (PREV(`DOWN`.`PRICE`, 1))), "
         + "`UP` AS (`UP`.`PRICE` > (PREV(`UP`.`PRICE`, 1)))"
-        + ") AS `MR`");
+        + ") AS `MR`";
+    sql(sql).ok(expected);
+  }
 
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern (strt {-down+-} {-up*-})\n"
-      + "    define \n"
-      + "      down as down.price < PREV(down.price),\n"
-      + "      up as up.price > prev(up.price)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+  @Test public void testMatchRecognize9() {
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern (strt {-down+-} {-up*-})\n"
+        + "    define\n"
+        + "      down as down.price < PREV(down.price),\n"
+        + "      up as up.price > prev(up.price)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN (((`STRT` ({- (`DOWN` +) -})) ({- (`UP` *) -})))\n"
         + "DEFINE "
         + "`DOWN` AS (`DOWN`.`PRICE` < (PREV(`DOWN`.`PRICE`, 1))), "
         + "`UP` AS (`UP`.`PRICE` > (PREV(`UP`.`PRICE`, 1)))"
-        + ") AS `MR`");
+        + ") AS `MR`";
+    sql(sql).ok(expected);
+  }
 
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern ( A B C | A C B | B A C | B C A | C A B | C B A)\n"
-      + "    define \n"
-      + "      A as A.price > PREV(A.price),\n"
-      + "      B as B.price < prev(B.price),\n"
-      + "      C as C.price > prev(C.price)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+  @Test public void testMatchRecognize10() {
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern ( A B C | A C B | B A C | B C A | C A B | C B A)\n"
+        + "    define\n"
+        + "      A as A.price > PREV(A.price),\n"
+        + "      B as B.price < prev(B.price),\n"
+        + "      C as C.price > prev(C.price)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN ((((((((`A` `B`) `C`) | ((`A` `C`) `B`)) | ((`B` `A`) `C`)) "
         + "| ((`B` `C`) `A`)) | ((`C` `A`) `B`)) | ((`C` `B`) `A`)))\n"
@@ -7271,73 +7299,101 @@ public class SqlParserTest {
         + "`A` AS (`A`.`PRICE` > (PREV(`A`.`PRICE`, 1))), "
         + "`B` AS (`B`.`PRICE` < (PREV(`B`.`PRICE`, 1))), "
         + "`C` AS (`C`.`PRICE` > (PREV(`C`.`PRICE`, 1)))"
-        + ") AS `MR`");
+        + ") AS `MR`";
+    sql(sql).ok(expected);
+  }
+
+  @Test public void testMatchRecognize11() {
+    final String sql = "select *\n"
+        + "  from t match_recognize (\n"
+        + "    pattern ( \"a\" \"b c\")\n"
+        + "    define\n"
+        + "      \"A\" as A.price > PREV(A.price),\n"
+        + "      \"b c\" as \"b c\".foo\n"
+        + "  ) as mr(c1, c2) join e as x on foo = baz";
+    final String expected = "SELECT *\n"
+        + "FROM `T` MATCH_RECOGNIZE(\n"
+        + "PATTERN ((`a` `b c`))\n"
+        + "DEFINE `A` AS (`A`.`PRICE` > (PREV(`A`.`PRICE`, 1))),"
+        + " `b c` AS `b c`.`FOO`) AS `MR` (`C1`, `C2`)\n"
+        + "INNER JOIN `E` AS `X` ON (`FOO` = `BAZ`)";
+    sql(sql).ok(expected);
   }
 
   @Test public void testMatchRecognizeDefineClause() {
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern (strt down+ up+)\n"
-      + "    define \n"
-      + "      down as down.price < PREV(down.price),\n"
-      + "      up as up.price > NEXT(up.price)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern (strt down+ up+)\n"
+        + "    define\n"
+        + "      down as down.price < PREV(down.price),\n"
+        + "      up as up.price > NEXT(up.price)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN (((`STRT` (`DOWN` +)) (`UP` +)))\n"
         + "DEFINE "
         + "`DOWN` AS (`DOWN`.`PRICE` < (PREV(`DOWN`.`PRICE`, 1))), "
         + "`UP` AS (`UP`.`PRICE` > (NEXT(`UP`.`PRICE`, 1)))"
-        + ") AS `MR`");
+        + ") AS `MR`";
+    sql(sql).ok(expected);
+  }
 
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern (strt down+ up+)\n"
-      + "    define \n"
-      + "      down as down.price < FIRST(down.price),\n"
-      + "      up as up.price > LAST(up.price)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+  @Test public void testMatchRecognizeDefineClause2() {
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern (strt down+ up+)\n"
+        + "    define\n"
+        + "      down as down.price < FIRST(down.price),\n"
+        + "      up as up.price > LAST(up.price)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN (((`STRT` (`DOWN` +)) (`UP` +)))\n"
         + "DEFINE "
         + "`DOWN` AS (`DOWN`.`PRICE` < (FIRST(`DOWN`.`PRICE`, 0))), "
         + "`UP` AS (`UP`.`PRICE` > (LAST(`UP`.`PRICE`, 0)))"
-        + ") AS `MR`");
+        + ") AS `MR`";
+    sql(sql).ok(expected);
+  }
 
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern (strt down+ up+)\n"
-      + "    define \n"
-      + "      down as down.price < PREV(down.price,1),\n"
-      + "      up as up.price > LAST(up.price + up.TAX)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+  @Test public void testMatchRecognizeDefineClause3() {
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern (strt down+ up+)\n"
+        + "    define\n"
+        + "      down as down.price < PREV(down.price,1),\n"
+        + "      up as up.price > LAST(up.price + up.TAX)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN (((`STRT` (`DOWN` +)) (`UP` +)))\n"
         + "DEFINE "
         + "`DOWN` AS (`DOWN`.`PRICE` < (PREV(`DOWN`.`PRICE`, 1))), "
         + "`UP` AS (`UP`.`PRICE` > (LAST((`UP`.`PRICE` + `UP`.`TAX`), 0)))"
-        + ") AS `MR`");
+        + ") AS `MR`";
+    sql(sql).ok(expected);
+  }
 
-    sql("select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
-      + "    pattern (strt down+ up+)\n"
-      + "    define \n"
-      + "      down as down.price < PREV(down.price,1),\n"
-      + "      up as up.price > PREV(LAST(up.price + up.TAX),3)\n"
-      + "  ) mr")
-      .ok("SELECT *\n"
+  @Test public void testMatchRecognizeDefineClause4() {
+    final String sql = "select *\n"
+        + "  from t match_recognize\n"
+        + "  (\n"
+        + "    pattern (strt down+ up+)\n"
+        + "    define\n"
+        + "      down as down.price < PREV(down.price,1),\n"
+        + "      up as up.price > PREV(LAST(up.price + up.TAX),3)\n"
+        + "  ) mr";
+    final String expected = "SELECT *\n"
         + "FROM `T` MATCH_RECOGNIZE(\n"
         + "PATTERN (((`STRT` (`DOWN` +)) (`UP` +)))\n"
         + "DEFINE "
         + "`DOWN` AS (`DOWN`.`PRICE` < (PREV(`DOWN`.`PRICE`, 1))), "
         + "`UP` AS (`UP`.`PRICE` > (PREV((LAST((`UP`.`PRICE` + `UP`.`TAX`), 0)), 3)))"
-        + ") AS `MR`");
+        + ") AS `MR`";
+    sql(sql).ok(expected);
   }
 
   //~ Inner Interfaces -------------------------------------------------------

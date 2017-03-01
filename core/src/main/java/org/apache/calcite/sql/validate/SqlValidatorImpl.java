@@ -92,6 +92,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -965,7 +966,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     return orderScopes.get(select);
   }
 
-  @Override public SqlValidatorScope getMatchRecognizeScope(SqlNode node) {
+  public SqlValidatorScope getMatchRecognizeScope(SqlMatchRecognize node) {
     return scopes.get(node);
   }
 
@@ -1794,24 +1795,25 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
   }
 
   private void registerMatchRecognize(
-    SqlValidatorScope parentScope,
-    SqlValidatorScope usingScope,
-    SqlMatchRecognize call,
-    SqlNode enclosingNode,
-    String alias,
-    boolean forceNullable) {
+      SqlValidatorScope parentScope,
+      SqlValidatorScope usingScope,
+      SqlMatchRecognize call,
+      SqlNode enclosingNode,
+      String alias,
+      boolean forceNullable) {
 
     final MatchRecognizeNamespace matchRecognizeNamespace =
-      createMatchRecognizeNameSpace(call, enclosingNode);
+        createMatchRecognizeNameSpace(call, enclosingNode);
     registerNamespace(usingScope, alias, matchRecognizeNamespace, forceNullable);
 
-    final MatchRecognizeScope matchRecognizeScope = new MatchRecognizeScope(parentScope, call);
+    final MatchRecognizeScope matchRecognizeScope =
+        new MatchRecognizeScope(parentScope, call);
     scopes.put(call, matchRecognizeScope);
 
-    //parse input query
+    // parse input query
     SqlNode expr = call.getTableRef();
     SqlNode newExpr = registerFrom(usingScope, matchRecognizeScope, expr,
-      expr, null, null, forceNullable);
+        expr, null, null, forceNullable);
     if (expr != newExpr) {
       call.setOperand(0, newExpr);
     }
@@ -4285,9 +4287,11 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
   @Override public void validateMatchRecognize(SqlCall call) {
     SqlMatchRecognize matchRecognize = (SqlMatchRecognize) call;
-    final MatchRecognizeScope scope = (MatchRecognizeScope) getMatchRecognizeScope(call);
+    final MatchRecognizeScope scope =
+        (MatchRecognizeScope) getMatchRecognizeScope(matchRecognize);
 
-    final MatchRecognizeNamespace ns = getNamespace(call).unwrap(MatchRecognizeNamespace.class);
+    final MatchRecognizeNamespace ns =
+        getNamespace(call).unwrap(MatchRecognizeNamespace.class);
     assert ns.rowType == null;
 
     // retrieve pattern variables used in pattern and subset
@@ -4323,8 +4327,8 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       inferUnknownTypes(booleanType, scope, expand);
       expand.validate(this, scope);
 
-      //some extra work need required here
-      //in PREV, NEXT, FINAL and LAST, only one pattern variable is allowed
+      // Some extra work need required here.
+      // In PREV, NEXT, FINAL and LAST, only one pattern variable is allowed.
       SqlNode newNode = SqlStdOperatorTable.AS.createCall(SqlParserPos.ZERO, expand,
         new SqlIdentifier(aliases.get(i), SqlParserPos.ZERO));
       sqlNodes.add(newNode);
@@ -4520,6 +4524,30 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       List<RelDataType> argTypes,
       List<SqlNode> operands) {
     throw new UnsupportedOperationException();
+  }
+
+  private static boolean isPhysicalNavigation(SqlKind kind) {
+    return kind == SqlKind.PREV || kind == SqlKind.NEXT;
+  }
+
+  private static boolean isLogicalNavigation(SqlKind kind) {
+    return kind == SqlKind.FIRST || kind == SqlKind.LAST;
+  }
+
+  private static boolean isAggregation(SqlKind kind) {
+    return kind == SqlKind.SUM || kind == SqlKind.SUM0
+        || kind == SqlKind.AVG || kind == SqlKind.COUNT
+        || kind == SqlKind.MAX || kind == SqlKind.MIN;
+  }
+
+  private static boolean isRunningOrFinal(SqlKind kind) {
+    return kind == SqlKind.RUNNING || kind == SqlKind.FINAL;
+  }
+
+  private static boolean isSingleVarRequired(SqlKind kind) {
+    return isPhysicalNavigation(kind)
+        || isLogicalNavigation(kind)
+        || isAggregation(kind);
   }
 
   //~ Inner Classes ----------------------------------------------------------
@@ -5000,28 +5028,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     VALID
   }
 
-  private boolean isPhysicNavigation(SqlKind kind) {
-    return kind == SqlKind.PREV || kind == SqlKind.NEXT;
-  }
-
-  private boolean isLogicNavigation(SqlKind kind) {
-    return kind == SqlKind.FIRST || kind == SqlKind.LAST;
-  }
-
-  private boolean isAggregation(SqlKind kind) {
-    return kind == SqlKind.SUM || kind == SqlKind.SUM0
-      || kind == SqlKind.AVG || kind == SqlKind.COUNT
-      || kind == SqlKind.MAX || kind == SqlKind.MIN;
-  }
-
-  private boolean isRunningOrFinal(SqlKind kind) {
-    return kind == SqlKind.RUNNING || kind == SqlKind.FINAL;
-  }
-
-  private boolean isSingleVarRequired(SqlKind kind) {
-    return isPhysicNavigation(kind) || isLogicNavigation(kind) || isAggregation(kind);
-  }
-
   /**
    * Modify the nodes in navigation function
    * such as FIRST, LAST, PREV AND NEXT.
@@ -5070,14 +5076,14 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       SqlKind kind = call.getKind();
       List<SqlNode> operands = call.getOperandList();
       List<SqlNode> newOperands = new ArrayList<>();
-      if (isLogicNavigation(kind) || isPhysicNavigation(kind)) {
+      if (isLogicalNavigation(kind) || isPhysicalNavigation(kind)) {
         SqlNode inner = operands.get(0);
         SqlNode offset = operands.get(1);
 
-        //merge two straight prev/next, update offset
-        if (isPhysicNavigation(kind)) {
+        // merge two straight prev/next, update offset
+        if (isPhysicalNavigation(kind)) {
           SqlKind innerKind = inner.getKind();
-          if (isPhysicNavigation(innerKind)) {
+          if (isPhysicalNavigation(innerKind)) {
             List<SqlNode> innerOperands = ((SqlCall) inner).getOperandList();
             SqlNode innerOffset = innerOperands.get(1);
             SqlOperator newOperator = innerKind == kind
@@ -5122,7 +5128,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
     @Override public SqlNode visit(SqlCall call) {
       SqlKind kind = call.getKind();
-      if (isLogicNavigation(kind) || isAggregation(kind) || isRunningOrFinal(kind)) {
+      if (isLogicalNavigation(kind) || isAggregation(kind) || isRunningOrFinal(kind)) {
         return call;
       }
 
@@ -5156,22 +5162,22 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
   /**
    * Within one navigation function, the pattern var should be same
    */
-  private class PatternValidator extends SqlBasicVisitor<Set<String>> {
-    private boolean isMeasure = false;
-    int firstLastC = 0;
-    int prevNextC = 0;
-    int aggrC = 0;
+  private static class PatternValidator extends SqlBasicVisitor<Set<String>> {
+    private final boolean isMeasure;
+    int firstLastCount;
+    int prevNextCount;
+    int aggregateCount;
 
-
-    public PatternValidator(boolean isMeasure) {
-      this.isMeasure = isMeasure;
+    PatternValidator(boolean isMeasure) {
+      this(isMeasure, 0, 0, 0);
     }
 
-    public PatternValidator(boolean isMeasure, int firstLastC, int prevNextC, int aggrC) {
+    PatternValidator(boolean isMeasure, int firstLastCount, int prevNextCount,
+        int aggregateCount) {
       this.isMeasure = isMeasure;
-      this.firstLastC = firstLastC;
-      this.prevNextC = prevNextC;
-      this.aggrC = aggrC;
+      this.firstLastCount = firstLastCount;
+      this.prevNextCount = prevNextCount;
+      this.aggregateCount = aggregateCount;
     }
 
     @Override public Set<String> visit(SqlCall call) {
@@ -5182,52 +5188,58 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
       if (isSingleVarRequired(kind)) {
         isSingle = true;
-        if (isPhysicNavigation(kind)) {
+        if (isPhysicalNavigation(kind)) {
           Preconditions.checkArgument(!isMeasure,
-            "Cannot use PREV/NEXT in MEASURE: " + call.toString());
-          Preconditions.checkArgument(firstLastC == 0,
-            "Cannot nest PREV/NEXT under LAST/FIRST: " + call.toString());
-          prevNextC++;
-        } else if (isLogicNavigation(kind)) {
-          Preconditions.checkArgument(firstLastC == 0,
-            "Cannot nest PREV/NEXT under LAST/FIRST: " + call.toString());
-          firstLastC++;
+              "Cannot use PREV/NEXT in MEASURE: " + call.toString());
+          Preconditions.checkArgument(
+              firstLastCount == 0,
+              "Cannot nest PREV/NEXT under LAST/FIRST: " + call.toString());
+          prevNextCount++;
+        } else if (isLogicalNavigation(kind)) {
+          Preconditions.checkArgument(
+              firstLastCount == 0,
+              "Cannot nest PREV/NEXT under LAST/FIRST: " + call.toString());
+          firstLastCount++;
         } else if (isAggregation(kind)) {
           // cannot apply aggregation in PREV/NEXT, FIRST/LAST
-          Preconditions.checkArgument(firstLastC == 0 && prevNextC == 0,
-            "Cannot use Aggregation in Navigation: " + call.toString());
+          Preconditions.checkArgument(
+              firstLastCount == 0 && prevNextCount == 0,
+              "Cannot use Aggregation in Navigation: " + call.toString());
 
           if (kind == SqlKind.COUNT) {
             Preconditions.checkArgument(call.getOperandList().size() <= 1,
-              "Invalid Parameter in COUNT: " + call.toString());
+                "Invalid Parameter in COUNT: " + call.toString());
           }
-          aggrC++;
+          aggregateCount++;
         }
       }
 
       if (isRunningOrFinal(kind)) {
         Preconditions.checkArgument(isMeasure,
-          "Cannot use RUNNING/FINAL in DEFINE: " + call.toString());
+            "Cannot use RUNNING/FINAL in DEFINE: " + call.toString());
       }
 
       for (SqlNode node : operands) {
-        vars.addAll(node.accept(new PatternValidator(isMeasure, firstLastC, prevNextC, aggrC)));
+        vars.addAll(
+            node.accept(
+                new PatternValidator(isMeasure, firstLastCount, prevNextCount,
+                    aggregateCount)));
       }
 
       if (isSingle) {
         if (kind != SqlKind.COUNT) {
           Preconditions.checkArgument(vars.size() == 1,
-            "Only ONE pattern variable allowed in : " + call.toString());
+              "Only ONE pattern variable allowed in : " + call.toString());
         } else {
           Preconditions.checkArgument(vars.size() <= 1,
-            "Multiple pattern variables in : " + call.toString());
+              "Multiple pattern variables in : " + call.toString());
         }
       }
       return vars;
     }
 
     @Override public Set<String> visit(SqlIdentifier identifier) {
-      boolean check = prevNextC > 0 || firstLastC > 0 || aggrC > 0;
+      boolean check = prevNextCount > 0 || firstLastCount > 0 || aggregateCount > 0;
       Set<String> vars = new HashSet<>();
       if (identifier.names.size() > 1 && check) {
         vars.add(identifier.names.get(0));
@@ -5236,19 +5248,19 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
 
     @Override public Set<String> visit(SqlLiteral literal) {
-      return new HashSet<>();
+      return ImmutableSet.of();
     }
 
     @Override public Set<String> visit(SqlIntervalQualifier qualifier) {
-      return new HashSet<>();
+      return ImmutableSet.of();
     }
 
     @Override public Set<String> visit(SqlDataTypeSpec type) {
-      return new HashSet<>();
+      return ImmutableSet.of();
     }
 
     @Override public Set<String> visit(SqlDynamicParam param) {
-      return new HashSet<>();
+      return ImmutableSet.of();
     }
   }
 }

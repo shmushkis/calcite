@@ -139,6 +139,7 @@ joinCondition:
 
 tableReference:
       tablePrimary
+      [ matchRecognize ]
       [ [ AS ] alias [ '(' columnAlias [, columnAlias ]* ')' ] ]
 
 tablePrimary:
@@ -1433,89 +1434,70 @@ Here are some examples:
   `a` and `a` is not optional.
 ```
 
-### MATCH_RECOGNIZE functions(not fully implemented)
-#### MATCH_RECOGNIZE syntax
-```sql
-MatchRecognizeOpt :
-  MATCH_RECOGNIZE 
-  "("
-    [match_recognize_partition_by_clause]
-    [match_recognize_order_by_clause]
-    [match_recognize_measures_clause]
-    [match_recognize_rows_per_match_clause]
-    [match_recognize_skip_to_clause]
-    PATTERN "(" match_recognize_pattern_clause ")"
-    [match_recognize_subset_clause]
-    DEFINE [match_recognize_define_clause]    
-  ")"  
+### MATCH_RECOGNIZE
 
-match_recognize_partition_by_clause :
-  PARTITION BY expressionCommaList
+`MATCH_RECOGNIZE` is a SQL extension for recognizing sequences of
+events in complex event processing (CEP).
 
-match_recognize_order_by_clause :
-  ORDER By orderbyList
+It is experimental in Calcite, and yet not fully implemented.
 
-match_recognize_measures_clause :
-  MEASURES measureColumnCommaList
+#### Syntax
 
-match_recognize_rows_per_match_clause :
-  ON ROW PER MATCH
-  |
-  ALL ROWS PER MATCH
+{% highlight sql %}
+matchRecognize:
+      MATCH_RECOGNIZE '('
+      [ PARTITION BY expression [, expression ]* ]
+      [ ORDER BY orderItem [, orderItem ]* ]
+      [ MEASURES measureColumn [, measureColumn ]* ]
+      [ ON ROW PER MATCH | ALL ROWS PER MATCH ]
+      [ AFTER MATCH
+            ( SKIP TO NEXT ROW
+            | SKIP PAST LAST ROW
+            | SKIP TO FIRST variable
+            | SKIP TO LAST variable
+            | SKIP TO variable )
+      ]
+      PATTERN '(' pattern ')'
+      [ SUBSET variable [, variable ]* ]
+      DEFINE variable AS condition [, variable AS condition ]*
+      ')'
 
-match_recognize_skip_to_clause :
-  AFTER MATCH
-  {
-    SKIP TO NEXT ROW
-    |
-    SKIP PAST LAST ROW
-    |
-    SKIP TO FIRST variable_name
-    |
-    SKIP TO LAST variable_name
-    |
-    SKIP TO variable_name
-  }
+pattern:
+      patternTerm ['|' patternTerm ]*
 
-match_recognize_pattern_clause :
-  match_recognize_pattern_term ("|" match_recognize_pattern_term)*
+patternTerm:
+      patternFactor [ patternFactor ]*
 
-match_recognize_pattern_term :
-   match_recognize_pattern_factor (match_recognize_pattern_factor)*
+patternFactor:
+      patternPrimary [ patternQuantifier ]
 
-match_recognize_pattern_factor :
-  match_recognize_pattern_primary [match_recognize_pattern_quantifier]
+patternPrimary:
+      variable
+  |   '$'
+  |   '^'
+  |   '(' [ pattern ] ')'
+  |   '{-' pattern '-}'
+  |   PERMUTE '(' pattern [, pattern ]* ')'
 
-match_recognize_pattern_primary:
-  variable_name
-  | $
-  | ^
-  | ( [match_recognize_pattern_clause] )
-  | "{-" match_recognize_pattern_clause "-}"
-  | match_recognize_pattern_permute_clause
+patternQuantifier:
+      '*'
+  |   '*?'
+  |   '+'
+  |   '+?'
+  |   '?'
+  |   '??'
+  |   '{' { [ minRepeat ], [ maxRepeat ] } '}' ['?']
+  |   '{' repeat '}'
+{% endhighlight %}
 
-match_recognize_pattern_permute_clause :
-  PERMUTE (match_recognize_pattern_clause [, match_recognize_pattern_clause] *)  
+In *patternQuantifier*, *repeat* is a positive integer,
+and *minRepeat* and *maxRepeat* are non-negative integers.
 
-match_recognize_pattern_quantifier :
-    * [?]
-  | + [?]
-  | ? [?]
-  | "{" { integer, integer } "}" [?]
-  | "{" integer "}"
+The following clauses are not implemented:
 
-
-match_recognize_subset_clause :
-  SUBSET variable_name [, variable_name]*
-
-match_recognize_define_clause :
-  variable_name as condition
-```
-NOT implemented
-
-* match_recognize_partition_by_clause
-* match_recognize_order_by_clause
-* match_recognize_measures_clause
-* match_recognize_rows_per_match_clause
-* match_recognize_skip_to_clause
-* match_recognize_subset_clause
+* `PARTITION BY`
+* `ORDER BY`
+* `MEASURES`
+* `ON ROW PER MATCH`, `ALL ROWS PER MATCH`
+* `AFTER MATCH`
+* `SUBSET`

@@ -34,12 +34,16 @@ import org.apache.calcite.sql.fun.SqlMinMaxAggFunction;
 import org.apache.calcite.sql.fun.SqlSumAggFunction;
 import org.apache.calcite.sql.fun.SqlSumEmptyIsZeroAggFunction;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableSortedSet;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * Relational expression that represent a match_recognize node
@@ -50,55 +54,47 @@ public abstract class MatchRecognize extends SingleRel {
   //~ Instance fields ---------------------------------------------
   protected final ImmutableMap<String, RexNode> measures;
   protected final RexNode pattern;
-  protected final boolean isStrictStarts;
-  protected final boolean isStrictEnds;
+  protected final boolean strictStart;
+  protected final boolean strictEnd;
   protected final ImmutableMap<String, RexNode> patternDefinitions;
-  protected Set<RexMRAggCall> aggregateCalls = Sets.newTreeSet();
+  protected final Set<RexMRAggCall> aggregateCalls;
 
-  //`~ Constructors -----------------------------------------------
+  //~ Constructors -----------------------------------------------
 
   /**
-   * create a MatchRecognize
-   * @param cluster cluster
-   * @param traits trait set
-   * @param input input to MatchRecognize
-   * @param pattern Regular Expression defining pattern variables
-   * @param isStrictStarts Whether it is a strict start pattern
-   * @param isStrictEnds Whether it is a strict end pattern
-   * @param defns pattern definitions
-   * @param rowType rowType
+   * Creates a MatchRecognize.
+   *
+   * @param cluster Cluster
+   * @param traitSet Trait set
+   * @param input   Input relational expression
+   * @param pattern Regular expression that defines pattern variables
+   * @param strictStart Whether it is a strict start pattern
+   * @param strictEnd Whether it is a strict end pattern
+   * @param patternDefinitions Pattern definitions
+   * @param rowType Row type
    */
-  protected  MatchRecognize(
-    RelOptCluster cluster,
-    RelTraitSet traits,
-    RelNode input,
-    RexNode pattern,
-    boolean isStrictStarts,
-    boolean isStrictEnds,
-    Map<String, RexNode> defns,
-    RelDataType rowType) {
-    super(cluster, traits, input);
-    this.pattern = pattern;
-    this.isStrictStarts = isStrictStarts;
-    this.isStrictEnds = isStrictEnds;
-    this.patternDefinitions = ImmutableMap.copyOf(defns);
+  protected  MatchRecognize(RelOptCluster cluster, RelTraitSet traitSet,
+      RelNode input, RexNode pattern, boolean strictStart, boolean strictEnd,
+      Map<String, RexNode> patternDefinitions, RelDataType rowType) {
+    super(cluster, traitSet, input);
+    this.pattern = Preconditions.checkNotNull(pattern);
+    Preconditions.checkArgument(patternDefinitions.size() > 0);
+    this.strictStart = strictStart;
+    this.strictEnd = strictEnd;
+    this.patternDefinitions = ImmutableMap.copyOf(patternDefinitions);
     this.rowType = rowType;
     this.measures = ImmutableMap.of();
-    assert defns.size() > 0;
-    assert pattern != null;
-    for (RexNode rex : patternDefinitions.values()) {
-      parseAggregateCalls(rex);
-    }
 
+    final AggregateFinder aggregateFinder = new AggregateFinder();
+    for (RexNode rex : this.patternDefinitions.values()) {
+      if (rex instanceof RexCall) {
+        aggregateFinder.go((RexCall) rex);
+      }
+    }
+    aggregateCalls = ImmutableSortedSet.copyOf(aggregateFinder.aggregateCalls);
   }
 
   //~ Methods --------------------------------------------------
-  private void parseAggregateCalls(RexNode rex) {
-    if (!(rex instanceof RexCall)) {
-      return;
-    }
-    new AggregateFinder().go((RexCall) rex);
-  }
 
   public Set<RexMRAggCall> getAggregateCalls() {
     return aggregateCalls;
@@ -112,41 +108,35 @@ public abstract class MatchRecognize extends SingleRel {
     return pattern;
   }
 
-  public boolean isStrictStarts() {
-    return isStrictStarts;
+  public boolean isStrictStart() {
+    return strictStart;
   }
 
-  public boolean isStrictEnds() {
-    return isStrictEnds;
+  public boolean isStrictEnd() {
+    return strictEnd;
   }
 
   public ImmutableMap<String, RexNode> getPatternDefinitions() {
     return patternDefinitions;
   }
 
-  public abstract MatchRecognize copy(
-    RelNode input,
-    RexNode pattern,
-    boolean isStrictStarts,
-    boolean isStrictEnds,
-    Map<String, RexNode> defns,
-    RelDataType rowType);
+  public abstract MatchRecognize copy(RelNode input, RexNode pattern,
+      boolean strictStart, boolean strictEnd,
+      Map<String, RexNode> patternDefinitions, RelDataType rowType);
 
   @Override public RelNode copy(
-    RelTraitSet traitSet,
-    List<RelNode> inputs) {
+      RelTraitSet traitSet,
+      List<RelNode> inputs) {
     if (getInputs().equals(inputs)
-      && traitSet == getTraitSet()) {
+        && traitSet == getTraitSet()) {
       return this;
     }
 
     return copy(
-      inputs.get(0),
-      pattern,
-      isStrictStarts,
-      isStrictEnds,
-      patternDefinitions,
-      rowType);
+        inputs.get(0),
+        pattern, strictStart, strictEnd,
+        patternDefinitions,
+        rowType);
   }
 
   @Override public RelWriter explainTerms(RelWriter pw) {
@@ -168,10 +158,12 @@ public abstract class MatchRecognize extends SingleRel {
 
 
   /**
-   * Find aggregate functions in operands
+   * Find aggregate functions in operands.
    */
-  private class AggregateFinder extends RexVisitorImpl {
-    public AggregateFinder() {
+  private static class AggregateFinder extends RexVisitorImpl {
+    final SortedSet<RexMRAggCall> aggregateCalls = new TreeSet<>();
+
+    AggregateFinder() {
       super(true);
     }
 
@@ -198,7 +190,7 @@ public abstract class MatchRecognize extends SingleRel {
       }
       if (aggFunction != null) {
         RexMRAggCall aggCall = new RexMRAggCall(aggFunction,
-          call.getType(), call.getOperands(), aggregateCalls.size());
+            call.getType(), call.getOperands(), aggregateCalls.size());
         aggregateCalls.add(aggCall);
         Set<String> pv = new PatternVarFinder().go(call.getOperands());
       }
@@ -211,14 +203,14 @@ public abstract class MatchRecognize extends SingleRel {
   }
 
   /**
-   * visit the operands of a aggregate call to retrieve relevant pattern variables
+   * Visits the operands of an aggregate call to retrieve relevant pattern
+   * variables.
    */
-  private class PatternVarFinder extends RexVisitorImpl {
-    Set<String> patternVars;
+  private static class PatternVarFinder extends RexVisitorImpl {
+    final Set<String> patternVars = new HashSet<>();
 
-    public PatternVarFinder() {
+    PatternVarFinder() {
       super(true);
-      patternVars = Sets.newHashSet();
     }
 
     @Override public Object visitPatternFieldRef(RexPatternFieldRef fieldRef) {
@@ -247,17 +239,17 @@ public abstract class MatchRecognize extends SingleRel {
   }
 
   /**
-   * agg calls in match recognize
+   * Aggregate calls in match recognize.
    */
   public static class RexMRAggCall extends RexCall implements Comparable<RexMRAggCall> {
-    public final int ordianl;
+    public final int ordinal;
     public RexMRAggCall(
-      SqlAggFunction aggFun,
-      RelDataType type,
-      List<RexNode> operands,
-      int ordianl) {
+        SqlAggFunction aggFun,
+        RelDataType type,
+        List<RexNode> operands,
+        int ordinal) {
       super(type, aggFun, operands);
-      this.ordianl = ordianl;
+      this.ordinal = ordinal;
       digest = computeDigest();
     }
 

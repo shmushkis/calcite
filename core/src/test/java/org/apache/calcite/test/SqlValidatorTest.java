@@ -8944,36 +8944,60 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         + "group by session(rowtime, interval '1' hour)").ok();
   }
 
+  /** Tries to create a calls to some internal operators in
+   * MATCH_RECOGNIZE. Should fail. */
+  @Test public void testMatchRecognizeInternals() throws Exception {
+    sql("values ^pattern_define_as(1, 2)^")
+        .fails("No match found for function signature .*");
+    sql("values ^pattern_exclude(1, 2)^")
+        .fails("No match found for function signature .*");
+    sql("values ^\"|\"(1, 2)^")
+        .fails("No match found for function signature .*");
+    // TODO: FINAL and other functions should not be visible outside of
+    // MATCH_RECOGNIZE
+    sql("values ^\"FINAL\"(1, 2)^")
+        .fails("No match found for function signature .*");
+    sql("values ^\"RUNNING\"(1, 2)^")
+        .fails("No match found for function signature .*");
+    sql("values ^\"FIRST\"(1, 2)^")
+        .fails("No match found for function signature .*");
+    sql("values ^\"LAST\"(1, 2)^")
+        .fails("No match found for function signature .*");
+    sql("values ^\"PREV\"(1, 2)^")
+        .fails("No match found for function signature .*");
+  }
+
   @Test public void testMatchRecognizeDefines() throws Exception {
-    final String sql0 = "select * \n"
-      + "  from emp match_recognize \n"
-      + "  (\n"
+    final String sql = "select *\n"
+      + "  from emp match_recognize (\n"
       + "    pattern (strt down+ up+)\n"
-      + "    define \n"
+      + "    define\n"
       + "      down as down.sal < PREV(down.sal),\n"
       + "      up as up.sal > PREV(up.sal)\n"
       + "  ) mr";
-    sql(sql0).ok();
+    sql(sql).ok();
+  }
 
-    final String sql1 = "select * \n"
-      + "  from t match_recognize \n"
-      + "  (\n"
+  @Test public void testMatchRecognizeDefines2() throws Exception {
+    final String sql = "select *\n"
+      + "  from t match_recognize (\n"
       + "    pattern (strt down+ up+)\n"
-      + "    define \n"
+      + "    define\n"
       + "      down as down.price < PREV(down.price),\n"
-      + "      down as up.price > PREV(up.price)\n"
+      + "      ^down^ as up.price > PREV(up.price)\n"
       + "  ) mr";
-    sql(sql1).fails("DOWN has already been defined!");
+    sql(sql).fails("DOWN has already been defined!");
+  }
 
-    final String sql2 = "select * \n"
-      + "  from emp match_recognize \n"
-      + "  (\n"
+  @Test public void testMatchRecognizeDefines3() throws Exception {
+    final String sql = "select *\n"
+      + "  from emp match_recognize (\n"
       + "    pattern (strt down+up+)\n"
-      + "    define \n"
+      + "    define\n"
       + "      down as down.sal < PREV(down.sal),\n"
       + "      up as up.sal > PREV(up.sal)\n"
       + "  ) mr";
-    sql(sql2).ok();
+    sql(sql).ok();
   }
 }
 

@@ -389,30 +389,25 @@ public class RelFactories {
 
   /**
    * Can convert a {@link MatchRecognize} of
-   * the appropriate type of a rule's calling convertion
+   * the appropriate type of a rule's calling convention.
    */
   public interface MatchRecognizeFactory {
-    RelNode createMatchRecognize(RelNode input,
-      RexNode pattern,
-      boolean isStrictStarts,
-      boolean isStrictEnds,
-      Map<String, RexNode> defns,
-      RelDataType rowType);
+    /** Creates a {@link MatchRecognize}. */
+    RelNode createMatchRecognize(RelNode input, RexNode pattern,
+        boolean strictStarts, boolean strictEnds,
+        Map<String, RexNode> defns, RelDataType rowType);
   }
 
   /**
-   * Implementation of {@Link MatchRecognizeFactory} that returns a {@link LogicalMatchRecognize}
+   * Implementation of {@link MatchRecognizeFactory}
+   * that returns a {@link LogicalMatchRecognize}.
    */
   private static class MatchRecognizeFactoryImpl implements MatchRecognizeFactory {
-
-    @Override public RelNode createMatchRecognize(RelNode input,
-      RexNode pattern,
-      boolean isStrictStarts,
-      boolean isStrictEnds,
-      Map<String, RexNode> defns,
-      RelDataType rowType) {
+    public RelNode createMatchRecognize(RelNode input, RexNode pattern,
+        boolean strictStarts, boolean strictEnds, Map<String, RexNode> defns,
+        RelDataType rowType) {
       return LogicalMatchRecognize.create(input, pattern,
-        isStrictStarts, isStrictEnds, defns, rowType);
+          strictStarts, strictEnds, defns, rowType);
     }
   }
 }

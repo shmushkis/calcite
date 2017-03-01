@@ -21,13 +21,12 @@ import org.apache.calcite.sql.SqlMatchRecognize;
 import org.apache.calcite.sql.SqlNode;
 
 /**
- * MatchRecognize Namespace
+ * MatchRecognize namespace.
  */
 public class MatchRecognizeNamespace extends AbstractNamespace {
-  //~ Instance fields
   private final SqlMatchRecognize matchRecognize;
 
-  //~ Contructors
+  /** Creates a MatchRecognizeNamespace. */
   protected MatchRecognizeNamespace(SqlValidatorImpl validator,
       SqlMatchRecognize matchRecognize,
       SqlNode enclosingNode) {

@@ -2088,7 +2088,7 @@ public class SqlToRelConverter {
 
     final Blackboard mrBlackBoard = createBlackboard(scope, null, false);
     final RelDataType rowType = ns.getRowType();
-    //convert inner query, could be a table name or a derived table
+    // convert inner query, could be a table name or a derived table
     SqlNode expr = matchRecognize.getTableRef();
     convertFrom(mrBlackBoard, expr);
     final RelNode input = mrBlackBoard.root;
@@ -2127,9 +2127,10 @@ public class SqlToRelConverter {
     mrBlackBoard.setPatternVarRef(true);
 
     // convert definitions
-    final ImmutableMap.Builder<String, RexNode> definitionNodes = ImmutableMap.builder();
-    for (SqlNode defn : matchRecognize.getPatternDefList()) {
-      List<SqlNode> operands = ((SqlCall) defn).getOperandList();
+    final ImmutableMap.Builder<String, RexNode> definitionNodes =
+        ImmutableMap.builder();
+    for (SqlNode def : matchRecognize.getPatternDefList()) {
+      List<SqlNode> operands = ((SqlCall) def).getOperandList();
       String alias = ((SqlIdentifier) operands.get(1)).getSimple();
       RexNode rex = mrBlackBoard.convertExpression(operands.get(0));
       definitionNodes.put(alias, rex);
@@ -2137,13 +2138,14 @@ public class SqlToRelConverter {
 
     mrBlackBoard.setPatternVarRef(false);
 
-    final RelNode rel = RelFactories.DEFAULT_MATCH_RECOGNIZE_FACTORY.createMatchRecognize(
-      input,
-      patternNode,
-      matchRecognize.getIsStrictStarts().booleanValue(),
-      matchRecognize.getIsStrictEnds().booleanValue(),
-      definitionNodes.build(),
-      rowType);
+    final RelFactories.MatchRecognizeFactory factory =
+        RelFactories.DEFAULT_MATCH_RECOGNIZE_FACTORY;
+    final RelNode rel =
+        factory.createMatchRecognize(input, patternNode,
+            matchRecognize.getStrictStart().booleanValue(),
+            matchRecognize.getStrictEnd().booleanValue(),
+            definitionNodes.build(),
+            rowType);
     bb.setRoot(rel, false);
   }
 

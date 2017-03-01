@@ -368,8 +368,8 @@ public class RelToSqlConverter extends SqlImplementor
 
     RexNode rexPattern = e.getPattern();
     final SqlNode pattern = context.toSql(null, rexPattern);
-    final SqlLiteral isStrictStarts = SqlLiteral.createBoolean(e.isStrictStarts(), POS);
-    final SqlLiteral isStrictEnds = SqlLiteral.createBoolean(e.isStrictEnds(), POS);
+    final SqlLiteral isStrictStarts = SqlLiteral.createBoolean(e.isStrictStart(), POS);
+    final SqlLiteral isStrictEnds = SqlLiteral.createBoolean(e.isStrictEnd(), POS);
 
     List<SqlNode> list = Lists.newArrayList();
     for (Map.Entry<String, RexNode> entry : e.getPatternDefinitions().entrySet()) {
