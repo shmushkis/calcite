@@ -901,7 +901,7 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
       }
     }
 
-    @SuppressWarnings("incomplete-switch") private JsonFilter translateFilter(RexNode e) {
+    private JsonFilter translateFilter(RexNode e) {
       final RexCall call;
       switch (e.getKind()) {
       case EQUALS:
@@ -924,47 +924,50 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
         } else {
           throw new AssertionError("it is not a valid comparison: " + e);
         }
+        final boolean numeric =
+            call.getOperands().get(posRef).getType().getFamily()
+                == SqlTypeFamily.NUMERIC;
         switch (e.getKind()) {
         case EQUALS:
           return new JsonSelector("selector", tr(e, posRef), tr(e, posConstant));
         case NOT_EQUALS:
           return new JsonCompositeFilter("not",
-              ImmutableList.of(new JsonSelector("selector", tr(e, posRef), tr(e, posConstant))));
+              new JsonSelector("selector", tr(e, posRef), tr(e, posConstant)));
         case GREATER_THAN:
-          return new JsonBound("bound", tr(e, posRef), tr(e, posConstant), true, null, false,
-              call.getOperands().get(posRef).getType().getFamily() == SqlTypeFamily.NUMERIC);
+          return new JsonBound("bound", tr(e, posRef), tr(e, posConstant),
+              true, null, false, numeric);
         case GREATER_THAN_OR_EQUAL:
-          return new JsonBound("bound", tr(e, posRef), tr(e, posConstant), false, null, false,
-              call.getOperands().get(posRef).getType().getFamily() == SqlTypeFamily.NUMERIC);
+          return new JsonBound("bound", tr(e, posRef), tr(e, posConstant),
+              false, null, false, numeric);
         case LESS_THAN:
-          return new JsonBound("bound", tr(e, posRef), null, false, tr(e, posConstant), true,
-              call.getOperands().get(posRef).getType().getFamily() == SqlTypeFamily.NUMERIC);
+          return new JsonBound("bound", tr(e, posRef), null, false,
+              tr(e, posConstant), true, numeric);
         case LESS_THAN_OR_EQUAL:
-          return new JsonBound("bound", tr(e, posRef), null, false, tr(e, posConstant), false,
-              call.getOperands().get(posRef).getType().getFamily() == SqlTypeFamily.NUMERIC);
+          return new JsonBound("bound", tr(e, posRef), null, false,
+              tr(e, posConstant), false, numeric);
         case IN:
-          ImmutableList.Builder listBuilder = ImmutableList.builder();
+          ImmutableList.Builder<String> listBuilder = ImmutableList.builder();
           for (RexNode rexNode: call.getOperands()) {
-            if (rexNode.getKind().equals(SqlKind.LITERAL)) {
+            if (rexNode.getKind() == SqlKind.LITERAL) {
               listBuilder.add(((RexLiteral) rexNode).getValue2().toString());
             }
           }
           return new JsonInFilter("in", tr(e, posRef), listBuilder.build());
         case BETWEEN:
           return new JsonBound("bound", tr(e, posRef), tr(e, 2), false,
-                  tr(e, 3), false,
-                  call.getOperands().get(posRef).getType().getFamily() == SqlTypeFamily.NUMERIC
-          );
+              tr(e, 3), false, numeric);
+        default:
+          throw new AssertionError();
         }
-        break;
       case AND:
       case OR:
       case NOT:
         call = (RexCall) e;
         return new JsonCompositeFilter(e.getKind().toString().toLowerCase(),
             translateFilters(call.getOperands()));
+      default:
+        throw new AssertionError("cannot translate filter: " + e);
       }
-      throw new AssertionError("cannot translate filter: " + e);
     }
 
     private String tr(RexNode call, int index) {
@@ -1206,9 +1209,13 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
     private final List<? extends JsonFilter> fields;
 
     private JsonCompositeFilter(String type,
-        List<? extends JsonFilter> fields) {
+        Iterable<? extends JsonFilter> fields) {
       super(type);
-      this.fields = fields;
+      this.fields = ImmutableList.copyOf(fields);
+    }
+
+    private JsonCompositeFilter(String type, JsonFilter... fields) {
+      this(type, ImmutableList.copyOf(fields));
     }
 
     public void write(JsonGenerator generator) throws IOException {
