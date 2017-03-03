@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.adapter.druid;
 
-import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
@@ -27,11 +26,10 @@ import org.apache.calcite.sql.type.SqlTypeName;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -42,107 +40,87 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.List;
 
+import static org.hamcrest.core.Is.is;
+
 /**
- * Test class for druid filter generation
+ * Tests generating Druid filters.
  */
 public class DruidQueryFilterTest {
 
-  private JavaTypeFactory typeFactory;
+  @Test public void testInFilter() throws NoSuchMethodException,
+      InvocationTargetException, IllegalAccessException, IOException {
+    final Fixture f = new Fixture();
+    final List<? extends RexNode> listRexNodes =
+        ImmutableList.of(f.rexBuilder.makeInputRef(f.varcharRowType, 0),
+            f.rexBuilder.makeExactLiteral(BigDecimal.valueOf(1)),
+            f.rexBuilder.makeExactLiteral(BigDecimal.valueOf(5)),
+            f.rexBuilder.makeLiteral("value1"));
 
-  private RexBuilder rexBuilder;
-
-  private DruidTable druidTable;
-
-  private RelDataType varCharRowType;
-
-  private DruidQuery.Translator translatorStringKind;
-
-  @Before
-  public void setup() {
-    typeFactory = new JavaTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
-    rexBuilder = new RexBuilder(typeFactory);
-    druidTable = new DruidTable(
-            Mockito.mock(DruidSchema.class),
-            "dataSource",
-            null,
-            ImmutableSet.<String>of(),
-            "timestamp",
-            null
-    );
-    final RelDataType varCharType = typeFactory.createSqlType(SqlTypeName.VARCHAR);
-    varCharRowType = typeFactory.builder()
-            .add("dimensionName", varCharType)
-            .build();
-    translatorStringKind = new DruidQuery.Translator(druidTable, varCharRowType);
-  }
-
-  @Test
-  public void testInFilter()
-      throws NoSuchMethodException, InvocationTargetException, IllegalAccessException,
-          IOException {
-    final List<? extends RexNode> listRexNodes = Lists.newArrayList(
-            rexBuilder.makeInputRef(varCharRowType, 0),
-            rexBuilder.makeExactLiteral(BigDecimal.valueOf(1)),
-            rexBuilder.makeExactLiteral(BigDecimal.valueOf(5)),
-            rexBuilder.makeLiteral("value1")
-    );
-
-    RexNode inRexNode = rexBuilder.makeCall(SqlStdOperatorTable.IN, listRexNodes);
-    RexNode[] rexNodes = new RexNode[1];
-    rexNodes[0] = inRexNode;
-    Method translateFilter = DruidQuery.Translator.class.getDeclaredMethod(
-            "translateFilter",
-            RexNode.class
-    );
+    RexNode inRexNode =
+        f.rexBuilder.makeCall(SqlStdOperatorTable.IN, listRexNodes);
+    Method translateFilter =
+        DruidQuery.Translator.class.getDeclaredMethod("translateFilter",
+            RexNode.class);
     translateFilter.setAccessible(true);
-    DruidQuery.JsonInFilter returnValue = (DruidQuery.JsonInFilter) translateFilter
-            .invoke(translatorStringKind, rexNodes);
+    DruidQuery.JsonInFilter returnValue =
+        (DruidQuery.JsonInFilter) translateFilter.invoke(f.translatorStringKind,
+            inRexNode);
     JsonFactory jsonFactory = new JsonFactory();
     final StringWriter sw = new StringWriter();
     JsonGenerator jsonGenerator = jsonFactory.createGenerator(sw);
     returnValue.write(jsonGenerator);
     jsonGenerator.close();
-    Assert.assertEquals(
-            "{\"type\":\"in\",\"dimension\":\"dimensionName\",\"values\":[\"1\",\"5\",\"value1\"]}",
-            sw.toString()
-    );
+
+    Assert.assertThat(sw.toString(),
+        is("{\"type\":\"in\",\"dimension\":\"dimensionName\","
+            + "\"values\":[\"1\",\"5\",\"value1\"]}"));
   }
 
-  @Test
-  public void testBetweenFilterStringCase()
-      throws NoSuchMethodException, InvocationTargetException, IllegalAccessException,
-          IOException {
+  @Test public void testBetweenFilterStringCase() throws NoSuchMethodException,
+      InvocationTargetException, IllegalAccessException, IOException {
+    final Fixture f = new Fixture();
+    final List<RexNode> listRexNodes =
+        ImmutableList.of(f.rexBuilder.makeLiteral(false),
+            f.rexBuilder.makeInputRef(f.varcharRowType, 0),
+            f.rexBuilder.makeLiteral("lower-bound"),
+            f.rexBuilder.makeLiteral("upper-bound"));
+    RelDataType relDataType = f.typeFactory.createSqlType(SqlTypeName.BOOLEAN);
+    RexNode betweenRexNode = f.rexBuilder.makeCall(relDataType,
+        SqlStdOperatorTable.BETWEEN, listRexNodes);
 
-    final List<RexNode> listRexNodes = Lists.newArrayList(
-            rexBuilder.makeLiteral(false),
-            rexBuilder.makeInputRef(varCharRowType, 0),
-            rexBuilder.makeLiteral("lower-bound"),
-            rexBuilder.makeLiteral("upper-bound")
-    );
-    RelDataType relDataType = typeFactory.createSqlType(SqlTypeName.BOOLEAN);
-    RexNode betweenRexNode = rexBuilder
-            .makeCall(relDataType, SqlStdOperatorTable.BETWEEN, listRexNodes);
-    RexNode[] rexNodes = new RexNode[1];
-    rexNodes[0] = betweenRexNode;
-
-    Method translateFilter = DruidQuery.Translator.class.getDeclaredMethod(
-            "translateFilter",
-            RexNode.class
-    );
+    Method translateFilter =
+        DruidQuery.Translator.class.getDeclaredMethod("translateFilter",
+            RexNode.class);
     translateFilter.setAccessible(true);
-    DruidQuery.JsonBound returnValue = (DruidQuery.JsonBound) translateFilter
-            .invoke(translatorStringKind, rexNodes);
+    DruidQuery.JsonBound returnValue =
+        (DruidQuery.JsonBound) translateFilter.invoke(f.translatorStringKind,
+            betweenRexNode);
     JsonFactory jsonFactory = new JsonFactory();
     final StringWriter sw = new StringWriter();
     JsonGenerator jsonGenerator = jsonFactory.createGenerator(sw);
     returnValue.write(jsonGenerator);
     jsonGenerator.close();
-    Assert.assertEquals(
-            "{\"type\":\"bound\",\"dimension\":\"dimensionName\",\"lower\":\"lower-bound\","
-                    + "\"lowerStrict\":false,\"upper\":\"upper-bound\",\"upperStrict\":false,"
-                    + "\"alphaNumeric\":false}",
-            sw.toString()
-    );
+    Assert.assertThat(sw.toString(),
+        is("{\"type\":\"bound\",\"dimension\":\"dimensionName\",\"lower\":\"lower-bound\","
+            + "\"lowerStrict\":false,\"upper\":\"upper-bound\",\"upperStrict\":false,"
+            + "\"alphaNumeric\":false}"));
+  }
+
+  /** Everything a test needs for a healthy, active life. */
+  static class Fixture {
+    final JavaTypeFactoryImpl typeFactory =
+        new JavaTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
+    final RexBuilder rexBuilder = new RexBuilder(typeFactory);
+    final DruidTable druidTable =
+        new DruidTable(Mockito.mock(DruidSchema.class), "dataSource", null,
+            ImmutableSet.<String>of(), "timestamp", null);
+    final RelDataType varcharType =
+        typeFactory.createSqlType(SqlTypeName.VARCHAR);
+    final RelDataType varcharRowType = typeFactory.builder()
+        .add("dimensionName", varcharType)
+        .build();
+    final DruidQuery.Translator translatorStringKind =
+        new DruidQuery.Translator(druidTable, varcharRowType);
   }
 }
 
