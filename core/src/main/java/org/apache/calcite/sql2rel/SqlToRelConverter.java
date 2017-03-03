@@ -2138,8 +2138,8 @@ public class SqlToRelConverter {
 
     mrBlackBoard.setPatternVarRef(false);
 
-    final RelFactories.MatchRecognizeFactory factory =
-        RelFactories.DEFAULT_MATCH_RECOGNIZE_FACTORY;
+    final RelFactories.MatchFactory factory =
+        RelFactories.DEFAULT_MATCH_FACTORY;
     final RelNode rel =
         factory.createMatchRecognize(input, patternNode,
             matchRecognize.getStrictStart().booleanValue(),

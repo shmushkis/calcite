@@ -46,11 +46,11 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 /**
- * Relational expression that represent a match_recognize node
+ * Relational expression that represent a MATCH_RECOGNIZE node.
  *
- * <p>Each out put row has columns defined in the measure statments</p>
+ * <p>Each output row has the columns defined in the measure statements.
  */
-public abstract class MatchRecognize extends SingleRel {
+public abstract class Match extends SingleRel {
   //~ Instance fields ---------------------------------------------
   protected final ImmutableMap<String, RexNode> measures;
   protected final RexNode pattern;
@@ -62,18 +62,18 @@ public abstract class MatchRecognize extends SingleRel {
   //~ Constructors -----------------------------------------------
 
   /**
-   * Creates a MatchRecognize.
+   * Creates a Match.
    *
    * @param cluster Cluster
    * @param traitSet Trait set
-   * @param input   Input relational expression
+   * @param input Input relational expression
    * @param pattern Regular expression that defines pattern variables
    * @param strictStart Whether it is a strict start pattern
    * @param strictEnd Whether it is a strict end pattern
    * @param patternDefinitions Pattern definitions
    * @param rowType Row type
    */
-  protected  MatchRecognize(RelOptCluster cluster, RelTraitSet traitSet,
+  protected Match(RelOptCluster cluster, RelTraitSet traitSet,
       RelNode input, RexNode pattern, boolean strictStart, boolean strictEnd,
       Map<String, RexNode> patternDefinitions, RelDataType rowType) {
     super(cluster, traitSet, input);
@@ -120,7 +120,7 @@ public abstract class MatchRecognize extends SingleRel {
     return patternDefinitions;
   }
 
-  public abstract MatchRecognize copy(RelNode input, RexNode pattern,
+  public abstract Match copy(RelNode input, RexNode pattern,
       boolean strictStart, boolean strictEnd,
       Map<String, RexNode> patternDefinitions, RelDataType rowType);
 

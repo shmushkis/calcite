@@ -27,7 +27,7 @@ import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalIntersect;
 import org.apache.calcite.rel.logical.LogicalJoin;
-import org.apache.calcite.rel.logical.LogicalMatchRecognize;
+import org.apache.calcite.rel.logical.LogicalMatch;
 import org.apache.calcite.rel.logical.LogicalMinus;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalSort;
@@ -75,6 +75,9 @@ public class RelFactories {
   public static final AggregateFactory DEFAULT_AGGREGATE_FACTORY =
     new AggregateFactoryImpl();
 
+  public static final MatchFactory DEFAULT_MATCH_FACTORY =
+      new MatchFactoryImpl();
+
   public static final SetOpFactory DEFAULT_SET_OP_FACTORY =
       new SetOpFactoryImpl();
 
@@ -83,9 +86,6 @@ public class RelFactories {
 
   public static final TableScanFactory DEFAULT_TABLE_SCAN_FACTORY =
       new TableScanFactoryImpl();
-
-  public static final MatchRecognizeFactory DEFAULT_MATCH_RECOGNIZE_FACTORY =
-    new MatchRecognizeFactoryImpl();
 
   /** A {@link RelBuilderFactory} that creates a {@link RelBuilder} that will
    * create logical relational expressions for everything. */
@@ -97,6 +97,7 @@ public class RelFactories {
               DEFAULT_SEMI_JOIN_FACTORY,
               DEFAULT_SORT_FACTORY,
               DEFAULT_AGGREGATE_FACTORY,
+              DEFAULT_MATCH_FACTORY,
               DEFAULT_SET_OP_FACTORY,
               DEFAULT_VALUES_FACTORY,
               DEFAULT_TABLE_SCAN_FACTORY));
@@ -388,26 +389,26 @@ public class RelFactories {
   }
 
   /**
-   * Can convert a {@link MatchRecognize} of
-   * the appropriate type of a rule's calling convention.
+   * Can create a {@link Match} of
+   * the appropriate type for a rule's calling convention.
    */
-  public interface MatchRecognizeFactory {
-    /** Creates a {@link MatchRecognize}. */
+  public interface MatchFactory {
+    /** Creates a {@link Match}. */
     RelNode createMatchRecognize(RelNode input, RexNode pattern,
         boolean strictStarts, boolean strictEnds,
-        Map<String, RexNode> defns, RelDataType rowType);
+        Map<String, RexNode> patternDefinitions, RelDataType rowType);
   }
 
   /**
-   * Implementation of {@link MatchRecognizeFactory}
-   * that returns a {@link LogicalMatchRecognize}.
+   * Implementation of {@link MatchFactory}
+   * that returns a {@link LogicalMatch}.
    */
-  private static class MatchRecognizeFactoryImpl implements MatchRecognizeFactory {
+  private static class MatchFactoryImpl implements MatchFactory {
     public RelNode createMatchRecognize(RelNode input, RexNode pattern,
-        boolean strictStarts, boolean strictEnds, Map<String, RexNode> defns,
-        RelDataType rowType) {
-      return LogicalMatchRecognize.create(input, pattern,
-          strictStarts, strictEnds, defns, rowType);
+        boolean strictStarts, boolean strictEnds,
+        Map<String, RexNode> patternDefinitions, RelDataType rowType) {
+      return LogicalMatch.create(input, pattern, strictStarts, strictEnds,
+          patternDefinitions, rowType);
     }
   }
 }

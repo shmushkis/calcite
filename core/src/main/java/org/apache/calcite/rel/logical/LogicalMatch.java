@@ -20,31 +20,31 @@ import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.MatchRecognize;
+import org.apache.calcite.rel.core.Match;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 
 import java.util.Map;
 
 /**
- * Sub-class of {@link org.apache.calcite.rel.core.MatchRecognize}
+ * Sub-class of {@link Match}
  * not targeted at any particular engine or calling convention.
  */
-public class LogicalMatchRecognize extends MatchRecognize {
+public class LogicalMatch extends Match {
 
   /**
-   * Creates a LogicalMatchRecognize.
+   * Creates a LogicalMatch.
    *
    * @param cluster cluster
    * @param traitSet Trait set
-   * @param input Input to MatchRecognize
+   * @param input Input relational expression
    * @param pattern Regular Expression defining pattern variables
    * @param strictStart Whether it is a strict start pattern
    * @param strictEnd Whether it is a strict end pattern
    * @param patternDefinitions Pattern definitions
    * @param rowType Row type
    */
-  public LogicalMatchRecognize(RelOptCluster cluster, RelTraitSet traitSet,
+  public LogicalMatch(RelOptCluster cluster, RelTraitSet traitSet,
       RelNode input, RexNode pattern, boolean strictStart, boolean strictEnd,
       Map<String, RexNode> patternDefinitions, RelDataType rowType) {
     super(cluster, traitSet, input, pattern, strictStart, strictEnd,
@@ -52,26 +52,26 @@ public class LogicalMatchRecognize extends MatchRecognize {
   }
 
   /**
-   * Creates a LogicalMatchRecognize.
+   * Creates a LogicalMatch.
    */
-  public static LogicalMatchRecognize create(RelNode input, RexNode pattern,
+  public static LogicalMatch create(RelNode input, RexNode pattern,
       boolean strictStart, boolean strictEnd,
       Map<String, RexNode> patternDefinitions, RelDataType rowType) {
     final RelOptCluster cluster = input.getCluster();
     final RelTraitSet traitSet = cluster.traitSetOf(Convention.NONE);
-    return new LogicalMatchRecognize(cluster, traitSet, input, pattern,
+    return new LogicalMatch(cluster, traitSet, input, pattern,
         strictStart, strictEnd, patternDefinitions, rowType);
   }
 
   //~ Methods ------------------------------------------------------
 
-  @Override public MatchRecognize copy(RelNode input, RexNode pattern,
+  @Override public Match copy(RelNode input, RexNode pattern,
       boolean strictStart, boolean strictEnd,
       Map<String, RexNode> patternDefinitions, RelDataType rowType) {
     final RelTraitSet traitSet = getCluster().traitSetOf(Convention.NONE);
-    return new LogicalMatchRecognize(getCluster(), traitSet,
+    return new LogicalMatch(getCluster(), traitSet,
         input, pattern, strictStart, strictEnd, patternDefinitions, rowType);
   }
 }
 
-// End LogicalMatchRecognize.java
+// End LogicalMatch.java
