@@ -24,6 +24,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -37,6 +38,9 @@ import java.util.Set;
 
 /** Avatica utilities. */
 public class AvaticaUtils {
+  /** The UTF-8 character set. */
+  public static final Charset CHARSET_UTF_8 = Charset.forName("UTF-8");
+
   private static final Map<Class, Class> BOX;
 
   private static final MethodHandle SET_LARGE_MAX_ROWS =

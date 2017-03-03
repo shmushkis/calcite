@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.avatica.server;
 
+import org.apache.calcite.avatica.AvaticaUtils;
 import org.apache.calcite.avatica.SpnegoTestUtil;
 import org.apache.calcite.avatica.remote.AvaticaCommonsHttpClientSpnegoImpl;
 
@@ -220,7 +221,8 @@ public class HttpServerSpnegoWithJaasTest {
 
     // We should get a response which is "OK" with our client's name
     assertNotNull(response);
-    assertEquals("OK " + SpnegoTestUtil.CLIENT_PRINCIPAL, new String(response));
+    assertEquals("OK " + SpnegoTestUtil.CLIENT_PRINCIPAL,
+        new String(response, AvaticaUtils.CHARSET_UTF_8));
   }
 }
 

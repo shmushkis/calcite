@@ -477,7 +477,7 @@ public class AvaticaSite {
       return (byte[]) x;
     }
     if (x instanceof String) {
-      return ((String) x).getBytes();
+      return ((String) x).getBytes(AvaticaUtils.CHARSET_UTF_8);
     }
     throw unsupportedCast(x.getClass(), byte[].class);
   }

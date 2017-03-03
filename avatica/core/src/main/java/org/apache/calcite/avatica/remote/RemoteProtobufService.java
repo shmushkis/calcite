@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.avatica.remote;
 
+import org.apache.calcite.avatica.AvaticaUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +53,8 @@ public class RemoteProtobufService extends ProtobufService {
     try {
       resp = translation.parseResponse(response);
     } catch (IOException e) {
-      LOG.debug("Failed to deserialize reponse to {}. '{}'", request, new String(response));
+      LOG.debug("Failed to deserialize reponse to {}. '{}'", request,
+          new String(response, AvaticaUtils.CHARSET_UTF_8));
       // Not a protobuf that we could parse.
       throw new RuntimeException(e);
     }
