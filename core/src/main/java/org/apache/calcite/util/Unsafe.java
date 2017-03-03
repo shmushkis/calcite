@@ -14,25 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.adapter.druid;
+package org.apache.calcite.util;
 
-import java.util.Locale;
+/**
+ * Contains methods that call JDK methods that the
+ * <a href="https://github.com/policeman-tools/forbidden-apis">forbidden
+ * APIs checker</a> does not approve of.
+ *
+ * <p>This class is excluded from the check, so methods called via this class
+ * will not fail the build.
+ */
+public class Unsafe {
+  private Unsafe() {}
 
-/** Granularity of a Druid query. */
-public enum Granularity {
-  ALL,
-  YEAR,
-  QUARTER,
-  MONTH,
-  WEEK,
-  DAY,
-  HOUR,
-  MINUTE,
-  SECOND,
-  NONE;
+  /** Calls {@link System#exit}. */
+  public static void systemExit(int status) {
+    System.exit(status);
+  }
 
-  /** JSON attribute value in a Druid query. */
-  public final String value = name().toLowerCase(Locale.ROOT);
+  /** Calls {@link Object#notifyAll()}. */
+  public static void notifyAll(Object o) {
+    o.notifyAll();
+  }
+
+  /** Calls {@link Object#wait()}. */
+  public static void wait(Object o) throws InterruptedException {
+    o.wait();
+  }
 }
 
-// End Granularity.java
+// End Unsafe.java

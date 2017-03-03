@@ -20,7 +20,6 @@ import com.google.common.base.Preconditions;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -55,11 +54,6 @@ public abstract class Sources {
     } catch (MalformedURLException e) {
       throw new RuntimeException("Malformed URL: '" + url + "'", e);
     }
-  }
-
-  private static String trim(String s, String suffix) {
-    String trimmed = trimOrNull(s, suffix);
-    return trimmed != null ? trimmed : s;
   }
 
   /** Looks for a suffix on a path and returns
@@ -126,12 +120,9 @@ public abstract class Sources {
         final InputStream fis = openStream();
         is = new GZIPInputStream(fis);
       } else {
-        if (file != null) {
-          return new FileReader(file);
-        }
         is = openStream();
       }
-      return new InputStreamReader(is);
+      return new InputStreamReader(is, Util.CHARSET_UTF_8);
     }
 
     public InputStream openStream() throws IOException {

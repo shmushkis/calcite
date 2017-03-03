@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.runtime;
 
+import org.apache.calcite.util.Util;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
@@ -67,8 +69,8 @@ public class HttpUtils {
         if (i++ != 0) {
           out.append("&");
         }
-        out.append(URLEncoder.encode(me.getKey(), "UTF-8"));
-        out.append("=")
+        out.append(URLEncoder.encode(me.getKey(), "UTF-8"))
+            .append("=")
             .append(URLEncoder.encode(me.getValue(), "UTF-8"));
       }
     } catch (UnsupportedEncodingException ignore) {
@@ -136,7 +138,9 @@ public class HttpUtils {
       return conn.getInputStream();
     }
     conn.setDoOutput(true);
-    try (Writer w = new OutputStreamWriter(conn.getOutputStream())) {
+    try (Writer w =
+             new OutputStreamWriter(conn.getOutputStream(),
+                 Util.CHARSET_UTF_8)) {
       w.write(data.toString());
       w.flush(); // Get the response
       return conn.getInputStream();

@@ -17,6 +17,7 @@
 package org.apache.calcite.adapter.file;
 
 import org.apache.calcite.util.Source;
+import org.apache.calcite.util.Util;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -24,6 +25,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Iterator;
 
 /**
@@ -31,12 +33,10 @@ import java.util.Iterator;
  */
 public class FileReader implements Iterable<Elements> {
 
-  private static final String DEFAULT_CHARSET = "UTF-8";
-
   private final Source source;
   private final String selector;
   private final Integer index;
-  private final String charset = DEFAULT_CHARSET;
+  private final Charset charset = Util.CHARSET_UTF_8;
   private Element tableElement;
   private Elements headings;
 
@@ -63,7 +63,7 @@ public class FileReader implements Iterable<Elements> {
     try {
       String proto = source.protocol();
       if (proto.equals("file")) {
-        doc = Jsoup.parse(source.file(), this.charset);
+        doc = Jsoup.parse(source.file(), this.charset.name());
       } else {
         doc = Jsoup.connect(source.path()).get();
       }

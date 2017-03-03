@@ -18,6 +18,7 @@ package org.apache.calcite.util;
 
 import java.nio.ByteOrder;
 import java.text.NumberFormat;
+import java.util.Locale;
 
 import static org.apache.calcite.util.Static.RESOURCE;
 
@@ -75,7 +76,7 @@ public class ConversionUtil {
               1));
     }
 
-    return ret.toString().toUpperCase();
+    return ret.toString().toUpperCase(Locale.ROOT);
   }
 
   /**

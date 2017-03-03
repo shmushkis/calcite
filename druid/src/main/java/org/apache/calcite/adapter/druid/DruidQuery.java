@@ -963,7 +963,7 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
       case OR:
       case NOT:
         call = (RexCall) e;
-        return new JsonCompositeFilter(e.getKind().toString().toLowerCase(),
+        return new JsonCompositeFilter(e.getKind().lowerName,
             translateFilters(call.getOperands()));
       default:
         throw new AssertionError("cannot translate filter: " + e);

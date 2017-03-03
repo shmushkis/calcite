@@ -37,6 +37,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
@@ -821,7 +822,9 @@ public class SqlPrettyWriter implements SqlWriter {
   public void keyword(String s) {
     maybeWhitespace(s);
     pw.print(
-        isKeywordsLowerCase() ? s.toLowerCase() : s.toUpperCase());
+        isKeywordsLowerCase()
+            ? s.toLowerCase(Locale.ROOT)
+            : s.toUpperCase(Locale.ROOT));
     charCount += s.length();
     if (!s.equals("")) {
       setNeedWhitespace(needWhitespaceAfter(s));
@@ -1148,7 +1151,7 @@ public class SqlPrettyWriter implements SqlWriter {
     }
 
     private String stripPrefix(String name, int offset) {
-      return name.substring(offset, offset + 1).toLowerCase()
+      return name.substring(offset, offset + 1).toLowerCase(Locale.ROOT)
           + name.substring(offset + 1);
     }
 
