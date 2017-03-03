@@ -16,15 +16,13 @@
  */
 package org.apache.calcite.avatica.remote;
 
+import org.apache.calcite.avatica.ConnectionConfigImpl;
 import org.apache.calcite.avatica.ConnectionProperty;
 
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
-
-import static org.apache.calcite.avatica.ConnectionConfigImpl.PropEnv;
-import static org.apache.calcite.avatica.ConnectionConfigImpl.parse;
 
 /**
  * Enumeration of Avatica remote driver's built-in connection properties.
@@ -73,8 +71,8 @@ public enum AvaticaRemoteConnectionProperty implements ConnectionProperty {
     return type.defaultValueClass();
   }
 
-  public PropEnv wrap(Properties properties) {
-    return new PropEnv(parse(properties, NAME_TO_PROPS), this);
+  public ConnectionConfigImpl.PropEnv wrap(Properties properties) {
+    return ConnectionConfigImpl.env(properties, NAME_TO_PROPS, this);
   }
 
   public boolean required() {

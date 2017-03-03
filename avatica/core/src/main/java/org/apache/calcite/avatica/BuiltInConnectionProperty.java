@@ -25,9 +25,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import static org.apache.calcite.avatica.ConnectionConfigImpl.PropEnv;
-import static org.apache.calcite.avatica.ConnectionConfigImpl.parse;
-
 /**
  * Enumeration of Avatica's built-in connection properties.
  */
@@ -136,8 +133,8 @@ public enum BuiltInConnectionProperty implements ConnectionProperty {
     return valueClass;
   }
 
-  public PropEnv wrap(Properties properties) {
-    return new PropEnv(parse(properties, NAME_TO_PROPS), this);
+  public ConnectionConfigImpl.PropEnv wrap(Properties properties) {
+    return ConnectionConfigImpl.env(properties, NAME_TO_PROPS, this);
   }
 
   /**

@@ -133,19 +133,27 @@ public class ConnectionConfigImpl implements ConnectionConfig {
     return map;
   }
 
-  /** The combination of a property definition and a map of property values. */
-  public static class PropEnv {
-    final Map<? extends ConnectionProperty, String> map;
-    private final ConnectionProperty property;
+  /** Binds a property to a means to get its value. */
+  public static PropEnv env(Properties properties,
+      Map<String, ? extends ConnectionProperty> nameToProps,
+      ConnectionProperty property) {
+    return new MapPropEnv(parse(properties, nameToProps), property);
+  }
 
-    public PropEnv(Map<? extends ConnectionProperty, String> map,
-        ConnectionProperty property) {
-      this.map = map;
+  /** The combination of a property definition and a way to get its value. */
+  public abstract static class PropEnv {
+    protected final ConnectionProperty property;
+
+    /** Creates a PropEnv. */
+    protected PropEnv(ConnectionProperty property) {
       this.property = property;
     }
 
+    /** Gets the value of the property as a string. */
+    protected abstract String get();
+
     private <T> T get_(Converter<T> converter, String defaultValue) {
-      final String s = map.get(property);
+      final String s = get();
       if (s != null) {
         return converter.apply(property, s);
       }
@@ -153,7 +161,7 @@ public class ConnectionConfigImpl implements ConnectionConfig {
     }
 
     private <T> T getDefaultNull(Converter<T> converter) {
-      final String s = map.get(property);
+      final String s = get();
       if (s != null) {
         return converter.apply(property, s);
       }
@@ -272,6 +280,21 @@ public class ConnectionConfigImpl implements ConnectionConfig {
       assert property.type() == ConnectionProperty.Type.PLUGIN;
       return get_(pluginConverter(pluginClass, defaultInstance),
           defaultClassName);
+    }
+  }
+
+  /** The combination of a property definition and a map of property values. */
+  static class MapPropEnv extends PropEnv {
+    final Map<? extends ConnectionProperty, String> map;
+
+    MapPropEnv(Map<? extends ConnectionProperty, String> map,
+        ConnectionProperty property) {
+      super(property);
+      this.map = map;
+    }
+
+    protected String get() {
+      return map.get(property);
     }
   }
 

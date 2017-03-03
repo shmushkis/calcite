@@ -315,8 +315,7 @@ public class AvaticaUtilsTest {
     public ConnectionConfigImpl.PropEnv wrap(Properties properties) {
       final HashMap<String, ConnectionProperty> map = new HashMap<>();
       map.put(name, this);
-      return new ConnectionConfigImpl.PropEnv(
-          ConnectionConfigImpl.parse(properties, map), this);
+      return ConnectionConfigImpl.env(properties, map, this);
     }
 
     public boolean required() {
