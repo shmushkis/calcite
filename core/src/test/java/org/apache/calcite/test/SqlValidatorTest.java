@@ -8953,18 +8953,20 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         .fails("No match found for function signature .*");
     sql("values ^\"|\"(1, 2)^")
         .fails("No match found for function signature .*");
-    // TODO: FINAL and other functions should not be visible outside of
-    // MATCH_RECOGNIZE
-    sql("values ^\"FINAL\"(1, 2)^")
-        .fails("No match found for function signature .*");
-    sql("values ^\"RUNNING\"(1, 2)^")
-        .fails("No match found for function signature .*");
-    sql("values ^\"FIRST\"(1, 2)^")
-        .fails("No match found for function signature .*");
-    sql("values ^\"LAST\"(1, 2)^")
-        .fails("No match found for function signature .*");
-    sql("values ^\"PREV\"(1, 2)^")
-        .fails("No match found for function signature .*");
+    if (TODO) {
+      // FINAL and other functions should not be visible outside of
+      // MATCH_RECOGNIZE
+      sql("values ^\"FINAL\"(1, 2)^")
+          .fails("No match found for function signature .*");
+      sql("values ^\"RUNNING\"(1, 2)^")
+          .fails("No match found for function signature .*");
+      sql("values ^\"FIRST\"(1, 2)^")
+          .fails("No match found for function signature .*");
+      sql("values ^\"LAST\"(1, 2)^")
+          .fails("No match found for function signature .*");
+      sql("values ^\"PREV\"(1, 2)^")
+          .fails("No match found for function signature .*");
+    }
   }
 
   @Test public void testMatchRecognizeDefines() throws Exception {
@@ -8984,9 +8986,9 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
       + "    pattern (strt down+ up+)\n"
       + "    define\n"
       + "      down as down.price < PREV(down.price),\n"
-      + "      ^down^ as up.price > PREV(up.price)\n"
+      + "      ^down as up.price > PREV(up.price)^\n"
       + "  ) mr";
-    sql(sql).fails("DOWN has already been defined!");
+    sql(sql).fails("Pattern variable 'DOWN' has already been defined");
   }
 
   @Test public void testMatchRecognizeDefines3() throws Exception {
@@ -8998,6 +9000,45 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
       + "      up as up.sal > PREV(up.sal)\n"
       + "  ) mr";
     sql(sql).ok();
+  }
+
+  @Test public void testMatchRecognizeDefines4() throws Exception {
+    final String sql = "select * \n"
+        + "  from emp match_recognize \n"
+        + "  (\n"
+        + "    pattern (strt down+ up+)\n"
+        + "    define \n"
+        + "      down as down.sal < PREV(down.sal),\n"
+        + "      up as up.sal > FIRST(^PREV(up.sal)^)\n"
+        + "  ) mr";
+    sql(sql)
+        .fails("Cannot nest PREV/NEXT under LAST/FIRST 'PREV\\(`UP`\\.`SAL`, 1\\)'");
+  }
+
+  @Test public void testMatchRecognizeDefines5() throws Exception {
+    final String sql = "select * \n"
+        + "  from emp match_recognize \n"
+        + "  (\n"
+        + "    pattern (strt down+ up+)\n"
+        + "    define \n"
+        + "      down as down.sal < PREV(down.sal),\n"
+        + "      up as up.sal > FIRST(^FIRST(up.sal)^)\n"
+        + "  ) mr";
+    sql(sql)
+        .fails("Cannot nest PREV/NEXT under LAST/FIRST 'FIRST\\(`UP`\\.`SAL`, 0\\)'");
+  }
+
+  @Test public void testMatchRecognizeDefines6() throws Exception {
+    final String sql = "select * \n"
+        + "  from emp match_recognize \n"
+        + "  (\n"
+        + "    pattern (strt down+ up+)\n"
+        + "    define \n"
+        + "      down as down.sal < PREV(down.sal),\n"
+        + "      up as up.sal > ^COUNT(down.sal, up.sal)^\n"
+        + "  ) mr";
+    sql(sql)
+        .fails("Invalid number of parameters to COUNT method");
   }
 }
 

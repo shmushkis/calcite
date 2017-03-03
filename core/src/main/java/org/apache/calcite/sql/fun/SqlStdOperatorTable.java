@@ -1399,26 +1399,32 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
       new SqlBaseContextVariable("PI", ReturnTypes.DOUBLE,
           SqlFunctionCategory.NUMERIC);
 
+  /** {@code FINAL} function to be used within {@code MATCH_RECOGNIZE}. */
   public static final SqlFunction FINAL =
       new SqlFunction("FINAL", SqlKind.FINAL, ReturnTypes.ARG0_NULLABLE, null,
           OperandTypes.ANY, SqlFunctionCategory.MATCH_RECOGNIZE);
 
+  /** {@code RUNNING} function to be used within {@code MATCH_RECOGNIZE}. */
   public static final SqlFunction RUNNING =
       new SqlFunction("RUNNING", SqlKind.RUNNING, ReturnTypes.ARG0_NULLABLE,
           null, OperandTypes.ANY, SqlFunctionCategory.MATCH_RECOGNIZE);
 
+  /** {@code FIRST} function to be used within {@code MATCH_RECOGNIZE}. */
   public static final SqlFunction FIRST =
       new SqlFunction("FIRST", SqlKind.FIRST, ReturnTypes.ARG0_NULLABLE,
           null, OperandTypes.ANY_NUMERIC, SqlFunctionCategory.MATCH_RECOGNIZE);
 
+  /** {@code LAST} function to be used within {@code MATCH_RECOGNIZE}. */
   public static final SqlFunction LAST =
       new SqlFunction("LAST", SqlKind.LAST, ReturnTypes.ARG0_NULLABLE,
           null, OperandTypes.ANY_NUMERIC, SqlFunctionCategory.MATCH_RECOGNIZE);
 
+  /** {@code PREV} function to be used within {@code MATCH_RECOGNIZE}. */
   public static final SqlFunction PREV =
       new SqlFunction("PREV", SqlKind.PREV, ReturnTypes.ARG0_NULLABLE,
           null, OperandTypes.ANY_NUMERIC, SqlFunctionCategory.MATCH_RECOGNIZE);
 
+  /** {@code NEXT} function to be used within {@code MATCH_RECOGNIZE}. */
   public static final SqlFunction NEXT =
       new SqlFunction("NEXT", SqlKind.NEXT, ReturnTypes.ARG0_NULLABLE, null,
           OperandTypes.ANY_NUMERIC, SqlFunctionCategory.MATCH_RECOGNIZE);
@@ -1927,12 +1933,25 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlFunction SESSION_END =
       SESSION.auxiliary(SqlKind.SESSION_END);
 
+  /** {@code |} operator to create alternate patterns
+   * within {@code MATCH_RECOGNIZE}.
+   *
+   * <p>If {@code p1} and {@code p2} are patterns then {@code p1 | p2} is a
+   * pattern that matches {@code p1} or {@code p2}. */
   public static final SqlBinaryOperator PATTERN_ALTER =
       new SqlBinaryOperator("|", SqlKind.PATTERN_ALTER, 70, true, null, null, null);
 
+  /** Operator to concatenate patterns within {@code MATCH_RECOGNIZE}.
+   *
+   * <p>If {@code p1} and {@code p2} are patterns then {@code p1 p2} is a
+   * pattern that matches {@code p1} followed by {@code p2}. */
   public static final SqlBinaryOperator PATTERN_CONCAT =
       new SqlBinaryOperator("", SqlKind.PATTERN_CONCAT, 80, true, null, null, null);
 
+  /** Operator to quantify patterns within {@code MATCH_RECOGNIZE}.
+   *
+   * <p>If {@code p} is a pattern then {@code p{3, 5}} is a
+   * pattern that matches between 3 and 5 occurrences of {@code p}. */
   public static final SqlSpecialOperator PATTERN_QUANTIFIER =
       new SqlSpecialOperator("PATTERN_QUANTIFIER", SqlKind.PATTERN_QUANTIFIER,
           90) {
@@ -1970,6 +1989,12 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
         }
       };
 
+  /** {@code PERMUTE} operator to combine patterns within
+   * {@code MATCH_RECOGNIZE}.
+   *
+   * <p>If {@code p1} and {@code p2} are patterns then {@code PERMUTE (p1, p2)}
+   * is a pattern that matches all permutations of {@code p1} and
+   * {@code p2}. */
   public static final SqlSpecialOperator PATTERN_PERMUTE =
       new SqlSpecialOperator("PATTERN_PERMUTE", SqlKind.PATTERN_PERMUTE, 100) {
         @Override public void unparse(SqlWriter writer, SqlCall call,
@@ -1987,6 +2012,10 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
         }
       };
 
+  /** {@code EXCLUDE} operator within {@code MATCH_RECOGNIZE}.
+   *
+   * <p>If {@code p} is a pattern then {@code {- p -} }} is a
+   * pattern that excludes {@code p} from the output. */
   public static final SqlSpecialOperator PATTERN_EXCLUDE =
       new SqlSpecialOperator("PATTERN_EXCLUDE", SqlKind.PATTERN_EXCLUDED,
           100) {
@@ -1999,6 +2028,8 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
         }
       };
 
+  /** {@code AS} function that defines a measure inside {@code MATCH_RECOGNIZE}.
+   * The order of operands will change when the expression is unparsed. */
   public static final SqlSpecialOperator PATTERN_DEFINE_AS =
       new SqlAsOperator("PATTERN_DEFINE_AS", SqlKind.AS, 20, true,
           ReturnTypes.ARG0, InferTypes.RETURN_TYPE, OperandTypes.ANY_ANY) {

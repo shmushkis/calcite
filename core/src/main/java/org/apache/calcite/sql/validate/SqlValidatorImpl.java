@@ -4303,25 +4303,23 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     ns.setType(getNamespace(matchRecognize.getTableRef()).getRowType());
   }
 
-  public void validateDefinitions(SqlMatchRecognize mr, MatchRecognizeScope scope) {
-    final List<SqlNode> sqlNodes = Lists.newArrayList();
-    final List<String> aliases = Lists.newArrayList();
-
-    final SqlNodeList defns = mr.getPatternDefList();
-
-    for (int i = 0; i < defns.size(); i++) {
-      SqlNode item = defns.get(i);
-      assert item instanceof SqlCall;
-      String alias = ((SqlIdentifier) ((SqlCall) item).getOperandList().get(1)).getSimple();
-      Preconditions.checkArgument(!aliases.contains(alias), alias + " has already been defined!");
-      aliases.add(alias);
+  private void validateDefinitions(SqlMatchRecognize mr,
+      MatchRecognizeScope scope) {
+    final Set<String> aliases = new HashSet<>();
+    for (SqlNode item : mr.getPatternDefList().getList()) {
+      final String alias = alias(item);
+      if (!aliases.add(alias)) {
+        throw newValidationError(item,
+            Static.RESOURCE.PatternVarAlreadyDefined(alias));
+      }
       scope.addPatternVar(alias);
     }
 
-    for (int i = 0; i < defns.size(); i++) {
-      SqlNode item = defns.get(i);
+    final List<SqlNode> sqlNodes = new ArrayList<>();
+    for (SqlNode item : mr.getPatternDefList().getList()) {
+      final String alias = alias(item);
       SqlNode expand = expand(item, scope);
-      expand = navigationInDefine(expand, aliases.get(i));
+      expand = navigationInDefine(expand, alias);
       setOriginal(expand, item);
 
       inferUnknownTypes(booleanType, scope, expand);
@@ -4329,9 +4327,9 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
       // Some extra work need required here.
       // In PREV, NEXT, FINAL and LAST, only one pattern variable is allowed.
-      SqlNode newNode = SqlStdOperatorTable.AS.createCall(SqlParserPos.ZERO, expand,
-        new SqlIdentifier(aliases.get(i), SqlParserPos.ZERO));
-      sqlNodes.add(newNode);
+      sqlNodes.add(
+          SqlStdOperatorTable.AS.createCall(SqlParserPos.ZERO, expand,
+              new SqlIdentifier(alias, SqlParserPos.ZERO)));
 
       final RelDataType type = deriveType(scope, expand);
       if (!SqlTypeUtil.inBooleanFamily(type)) {
@@ -4340,12 +4338,19 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       setValidatedNodeType(item, type);
     }
 
-    SqlNodeList list = new SqlNodeList(sqlNodes, defns.getParserPosition());
+    SqlNodeList list =
+        new SqlNodeList(sqlNodes, mr.getPatternDefList().getParserPosition());
     inferUnknownTypes(unknownType, scope, list);
     for (SqlNode node : list) {
       validateExpr(node, scope);
     }
     mr.setOperand(SqlMatchRecognize.OPERAND_PATTERN_DEFINES, list);
+  }
+
+  private static String alias(SqlNode item) {
+    assert item instanceof SqlCall;
+    final SqlIdentifier identifier = ((SqlCall) item).operand(1);
+    return identifier.getSimple();
   }
 
   /**
@@ -5006,28 +5011,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
   }
 
-  //~ Enums ------------------------------------------------------------------
-
-  /**
-   * Validation status.
-   */
-  public enum Status {
-    /**
-     * Validation has not started for this scope.
-     */
-    UNVALIDATED,
-
-    /**
-     * Validation is in progress for this scope.
-     */
-    IN_PROGRESS,
-
-    /**
-     * Validation has completed (perhaps unsuccessfully).
-     */
-    VALID
-  }
-
   /**
    * Modify the nodes in navigation function
    * such as FIRST, LAST, PREV AND NEXT.
@@ -5128,7 +5111,9 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
     @Override public SqlNode visit(SqlCall call) {
       SqlKind kind = call.getKind();
-      if (isLogicalNavigation(kind) || isAggregation(kind) || isRunningOrFinal(kind)) {
+      if (isLogicalNavigation(kind)
+          || isAggregation(kind)
+          || isRunningOrFinal(kind)) {
         return call;
       }
 
@@ -5162,7 +5147,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
   /**
    * Within one navigation function, the pattern var should be same
    */
-  private static class PatternValidator extends SqlBasicVisitor<Set<String>> {
+  private class PatternValidator extends SqlBasicVisitor<Set<String>> {
     private final boolean isMeasure;
     int firstLastCount;
     int prevNextCount;
@@ -5189,34 +5174,38 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       if (isSingleVarRequired(kind)) {
         isSingle = true;
         if (isPhysicalNavigation(kind)) {
-          Preconditions.checkArgument(!isMeasure,
-              "Cannot use PREV/NEXT in MEASURE: " + call.toString());
-          Preconditions.checkArgument(
-              firstLastCount == 0,
-              "Cannot nest PREV/NEXT under LAST/FIRST: " + call.toString());
+          if (isMeasure) {
+            throw newValidationError(call,
+                Static.RESOURCE.PatternPrevFunctionInMeasure(call.toString()));
+          }
+          if (firstLastCount != 0) {
+            throw newValidationError(call,
+                Static.RESOURCE.PatternPrevFunctionOrder(call.toString()));
+          }
           prevNextCount++;
         } else if (isLogicalNavigation(kind)) {
-          Preconditions.checkArgument(
-              firstLastCount == 0,
-              "Cannot nest PREV/NEXT under LAST/FIRST: " + call.toString());
+          if (firstLastCount != 0) {
+            throw newValidationError(call,
+                Static.RESOURCE.PatternPrevFunctionOrder(call.toString()));
+          }
           firstLastCount++;
         } else if (isAggregation(kind)) {
           // cannot apply aggregation in PREV/NEXT, FIRST/LAST
-          Preconditions.checkArgument(
-              firstLastCount == 0 && prevNextCount == 0,
-              "Cannot use Aggregation in Navigation: " + call.toString());
-
-          if (kind == SqlKind.COUNT) {
-            Preconditions.checkArgument(call.getOperandList().size() <= 1,
-                "Invalid Parameter in COUNT: " + call.toString());
+          if (firstLastCount != 0 || prevNextCount != 0) {
+            throw newValidationError(call,
+                Static.RESOURCE.PatternAggregationInNavigation(call.toString()));
+          }
+          if (kind == SqlKind.COUNT && call.getOperandList().size() > 1) {
+            throw newValidationError(call,
+                Static.RESOURCE.PatternCountFunctionArg());
           }
           aggregateCount++;
         }
       }
 
-      if (isRunningOrFinal(kind)) {
-        Preconditions.checkArgument(isMeasure,
-            "Cannot use RUNNING/FINAL in DEFINE: " + call.toString());
+      if (isRunningOrFinal(kind) && isMeasure) {
+        throw newValidationError(call,
+            Static.RESOURCE.PatternRunningFunctionInDefine(call.toString()));
       }
 
       for (SqlNode node : operands) {
@@ -5227,12 +5216,19 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       }
 
       if (isSingle) {
-        if (kind != SqlKind.COUNT) {
-          Preconditions.checkArgument(vars.size() == 1,
-              "Only ONE pattern variable allowed in : " + call.toString());
-        } else {
-          Preconditions.checkArgument(vars.size() <= 1,
-              "Multiple pattern variables in : " + call.toString());
+        switch (kind) {
+        case COUNT:
+          if (vars.size() > 1) {
+            throw newValidationError(call,
+                Static.RESOURCE.PatternFunctionVariableCheck(call.toString()));
+          }
+          break;
+        default:
+          if (vars.size() != 1) {
+            throw newValidationError(call,
+                Static.RESOURCE.PatternCountFunctionArg());
+          }
+          break;
         }
       }
       return vars;
@@ -5263,6 +5259,29 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       return ImmutableSet.of();
     }
   }
+
+  //~ Enums ------------------------------------------------------------------
+
+  /**
+   * Validation status.
+   */
+  public enum Status {
+    /**
+     * Validation has not started for this scope.
+     */
+    UNVALIDATED,
+
+    /**
+     * Validation is in progress for this scope.
+     */
+    IN_PROGRESS,
+
+    /**
+     * Validation has completed (perhaps unsuccessfully).
+     */
+    VALID
+  }
+
 }
 
 // End SqlValidatorImpl.java

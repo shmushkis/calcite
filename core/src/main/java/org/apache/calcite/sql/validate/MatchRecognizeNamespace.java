@@ -21,7 +21,7 @@ import org.apache.calcite.sql.SqlMatchRecognize;
 import org.apache.calcite.sql.SqlNode;
 
 /**
- * MatchRecognize namespace.
+ * Namespace for a {@code MATCH_RECOGNIZE} clause.
  */
 public class MatchRecognizeNamespace extends AbstractNamespace {
   private final SqlMatchRecognize matchRecognize;

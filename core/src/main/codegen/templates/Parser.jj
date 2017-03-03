@@ -4819,18 +4819,22 @@ SqlCall MatchRecognizeNavigationLogical() :
 }
 {
     (
-        <RUNNING> { runningOp = SqlStdOperatorTable.RUNNING; }
+        <RUNNING> { runningOp = SqlStdOperatorTable.RUNNING; pos = getPos(); }
     |
-        <FINAL> { runningOp = SqlStdOperatorTable.FINAL; }
+        <FINAL> { runningOp = SqlStdOperatorTable.FINAL; pos = getPos(); }
     |
-        { runningOp = null; }
+        { runningOp = null; pos = null; }
     )
-    { pos = getPos(); }
     (
         <FIRST> { funcOp = SqlStdOperatorTable.FIRST; }
     |
         <LAST> { funcOp = SqlStdOperatorTable.LAST; }
     )
+    {
+        if (pos == null) {
+            pos = getPos();
+        }
+    }
     <LPAREN>
     arg0 = Expression(ExprContext.ACCEPT_SUB_QUERY)
     [ <COMMA> arg1 = NumericLiteral() ]

@@ -846,7 +846,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test public void testMatchRecognizeDefineClause() {
-    final String sql ="select *\n"
+    final String sql = "select *\n"
         + "  from \"product\" match_recognize\n"
         + "  (\n"
         + "    pattern (strt down+ up+)\n"
@@ -865,7 +865,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test public void testMatchRecognizeDefineClause2() {
-    final String sql ="select *\n"
+    final String sql = "select *\n"
         + "  from \"product\" match_recognize\n"
         + "  (\n"
         + "    pattern (strt down+ up+)\n"
@@ -904,7 +904,7 @@ public class RelToSqlConverterTest {
   }
 
   @Test public void testMatchRecognizeDefineClause4() {
-    final String sql ="select *\n"
+    final String sql = "select *\n"
         + "  from \"product\" match_recognize\n"
         + "  (\n"
         + "    pattern (strt down+ up+)\n"

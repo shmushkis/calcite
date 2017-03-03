@@ -1462,6 +1462,9 @@ matchRecognize:
       DEFINE variable AS condition [, variable AS condition ]*
       ')'
 
+measureColumn:
+      expression AS alias
+
 pattern:
       patternTerm ['|' patternTerm ]*
 

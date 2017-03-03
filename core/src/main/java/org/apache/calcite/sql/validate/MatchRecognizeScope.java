@@ -29,16 +29,18 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * MatchRecognize scope, define variables and use them as prefix of columns reference
+ * Scope for expressions in a {@code MATCH_RECOGNIZE} clause. Defines variables and use them as prefix of columns reference.
  */
 public class MatchRecognizeScope extends ListScope {
   private static final String STAR = "*";
+
   //~ Instance fields ---------------------------------------------
   private final SqlMatchRecognize matchRecognize;
   private Set<String> patternVars;
-  //~ Constructors -------------------------------------------------
+
+  /** Creates a MatchRecognizeScope. */
   public MatchRecognizeScope(SqlValidatorScope parent,
-    SqlMatchRecognize matchRecognize) {
+      SqlMatchRecognize matchRecognize) {
     super(parent);
     this.matchRecognize = matchRecognize;
     patternVars = Sets.newHashSet(STAR);
@@ -65,7 +67,7 @@ public class MatchRecognizeScope extends ListScope {
     final Map<String, ScopeChild> map = new HashMap<>();
     for (ScopeChild child : children) {
       final RelDataType rowType = child.namespace.getRowType();
-      if (validator.catalogReader.field(rowType, columnName) != null) {
+      if (nameMatcher.field(rowType, columnName) != null) {
         map.put(STAR, child);
       }
     }
