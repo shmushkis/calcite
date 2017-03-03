@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.avatica.server;
 
+import org.apache.calcite.avatica.AvaticaUtils;
 import org.apache.calcite.avatica.remote.AuthenticationType;
 
 import org.hamcrest.BaseMatcher;
@@ -72,7 +73,7 @@ public class AbstractAvaticaHandlerTest {
       }
 
       @Override public boolean matches(Object item) {
-        String msg = new String((byte[]) item);
+        String msg = new String((byte[]) item, AvaticaUtils.CHARSET_UTF_8);
         return msg.contains("User is not authenticated");
       }
 
