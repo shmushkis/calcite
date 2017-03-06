@@ -114,38 +114,44 @@ public class DruidRules {
           SORT_PROJECT_TRANSPOSE);
 
   /** Predicate that returns whether Druid can not handle an aggregate. */
-  private static boolean isBadAgg(Aggregate aggregate, RelOptPlanner planner) {
-    final CalciteConnectionConfig config = planner.getContext()
-        .unwrap(CalciteConnectionConfig.class);
-    for (AggregateCall aggregateCall : aggregate.getAggCallList()) {
-      switch (aggregateCall.getAggregation().getKind()) {
-      case COUNT:
-      case SUM:
-      case SUM0:
-      case MIN:
-      case MAX:
-        final RelDataType type = aggregateCall.getType();
-        final SqlTypeName sqlTypeName = type.getSqlTypeName();
-        if (SqlTypeFamily.APPROXIMATE_NUMERIC.getTypeNames().contains(sqlTypeName)
-            || SqlTypeFamily.INTEGER.getTypeNames().contains(sqlTypeName)) {
-          continue;
-        } else if (SqlTypeFamily.EXACT_NUMERIC.getTypeNames().contains(sqlTypeName)) {
-          // Decimal
-          assert sqlTypeName == SqlTypeName.DECIMAL;
-          if (type.getScale() == 0 || config.approximateDecimal()) {
-            // If scale is zero or we allow approximating decimal, we can proceed
-            continue;
+  private static final Predicate<Pair<RelOptRuleCall, Aggregate>> BAD_AGG =
+      new PredicateImpl<Pair<RelOptRuleCall, Aggregate>>() {
+        public boolean test(Pair<RelOptRuleCall, Aggregate> pair) {
+          final Aggregate aggregate = pair.right;
+          final RelOptRuleCall call = pair.left;
+          final CalciteConnectionConfig config =
+              call.getPlanner().getContext()
+                  .unwrap(CalciteConnectionConfig.class);
+          for (AggregateCall aggregateCall : aggregate.getAggCallList()) {
+            switch (aggregateCall.getAggregation().getKind()) {
+            case COUNT:
+            case SUM:
+            case SUM0:
+            case MIN:
+            case MAX:
+              final RelDataType type = aggregateCall.getType();
+              final SqlTypeName sqlTypeName = type.getSqlTypeName();
+              if (SqlTypeFamily.APPROXIMATE_NUMERIC.getTypeNames().contains(sqlTypeName)
+                      || SqlTypeFamily.INTEGER.getTypeNames().contains(sqlTypeName)) {
+                continue;
+              } else if (SqlTypeFamily.EXACT_NUMERIC.getTypeNames().contains(sqlTypeName)) {
+                // Decimal
+                assert sqlTypeName == SqlTypeName.DECIMAL;
+                if (type.getScale() == 0 || config.approximateDecimal()) {
+                  // If scale is zero or we allow approximating decimal, we can proceed
+                  continue;
+                }
+              }
+              // Cannot handle this aggregate function
+              return true;
+            default:
+              // Cannot handle this aggregate function
+              return true;
+            }
           }
+          return false;
         }
-        // Cannot handle this aggregate function
-        return true;
-      default:
-        // Cannot handle this aggregate function
-        return true;
-      }
-    }
-    return false;
-  }
+      };
 
   /**
    * Rule to push a {@link org.apache.calcite.rel.core.Filter} into a {@link DruidQuery}.
@@ -389,9 +395,9 @@ public class DruidRules {
         return;
       }
       if (aggregate.indicator
-          || aggregate.getGroupSets().size() != 1
-          || isBadAgg(aggregate, call.getPlanner())
-          || !validAggregate(aggregate, query)) {
+              || aggregate.getGroupSets().size() != 1
+              || BAD_AGG.apply(Pair.of(call, aggregate))
+              || !validAggregate(aggregate, query)) {
         return;
       }
       final RelNode newAggregate = aggregate.copy(aggregate.getTraitSet(),
@@ -437,7 +443,7 @@ public class DruidRules {
       }
       if (aggregate.indicator
           || aggregate.getGroupSets().size() != 1
-          || isBadAgg(aggregate, call.getPlanner())
+          || BAD_AGG.apply(Pair.of(call, aggregate))
           || !validAggregate(aggregate, timestampIdx)) {
         return;
       }

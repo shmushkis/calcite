@@ -18,7 +18,6 @@ package org.apache.calcite.adapter.druid;
 
 import org.apache.calcite.DataContext;
 import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.interpreter.BindableRel;
 import org.apache.calcite.interpreter.Bindables;
@@ -95,6 +94,7 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
   final DruidTable druidTable;
   final ImmutableList<LocalInterval> intervals;
   final ImmutableList<RelNode> rels;
+  final boolean approximateTopN;
 
   private static final Pattern VALID_SIG = Pattern.compile("sf?p?a?l?");
   private static final String EXTRACT_COLUMN_NAME_PREFIX = "extract";
@@ -110,15 +110,17 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
    * @param druidTable     Druid table
    * @param intervals      Intervals for the query
    * @param rels           Internal relational expressions
+   * @param approximateTopN Are inexact results for TopN queries acceptable?
    */
   protected DruidQuery(RelOptCluster cluster, RelTraitSet traitSet,
-      RelOptTable table, DruidTable druidTable,
-      List<LocalInterval> intervals, List<RelNode> rels) {
+      RelOptTable table, DruidTable druidTable, List<LocalInterval> intervals,
+      List<RelNode> rels, boolean approximateTopN) {
     super(cluster, traitSet);
     this.table = table;
     this.druidTable = druidTable;
     this.intervals = ImmutableList.copyOf(intervals);
     this.rels = ImmutableList.copyOf(rels);
+    this.approximateTopN = approximateTopN;
 
     assert isValid(Litmus.THROW, null);
   }
@@ -271,30 +273,42 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
 
   /** Creates a DruidQuery. */
   public static DruidQuery create(RelOptCluster cluster, RelTraitSet traitSet,
+      RelOptTable table, DruidTable druidTable, List<RelNode> rels,
+      boolean approximateTopN) {
+    return new DruidQuery(cluster, traitSet, table, druidTable,
+        druidTable.intervals, rels, approximateTopN);
+  }
+
+  /** Creates a DruidQuery that does not allow approximate TopN. */
+  @Deprecated // to be removed before 2.0
+  public static DruidQuery create(RelOptCluster cluster, RelTraitSet traitSet,
       RelOptTable table, DruidTable druidTable, List<RelNode> rels) {
-    return new DruidQuery(cluster, traitSet, table, druidTable, druidTable.intervals, rels);
+    return create(cluster, traitSet, table, druidTable, druidTable.intervals,
+        rels, false);
   }
 
   /** Creates a DruidQuery. */
   private static DruidQuery create(RelOptCluster cluster, RelTraitSet traitSet,
       RelOptTable table, DruidTable druidTable, List<LocalInterval> intervals,
-      List<RelNode> rels) {
-    return new DruidQuery(cluster, traitSet, table, druidTable, intervals, rels);
+      List<RelNode> rels, boolean approximateTopN) {
+    return new DruidQuery(cluster, traitSet, table, druidTable, intervals, rels,
+        approximateTopN);
   }
 
   /** Extends a DruidQuery. */
   public static DruidQuery extendQuery(DruidQuery query, RelNode r) {
     final ImmutableList.Builder<RelNode> builder = ImmutableList.builder();
-    return DruidQuery.create(query.getCluster(), r.getTraitSet().replace(query.getConvention()),
-        query.getTable(), query.druidTable, query.intervals,
-        builder.addAll(query.rels).add(r).build());
+    return create(query.getCluster(),
+        r.getTraitSet().replace(query.getConvention()), query.getTable(),
+        query.druidTable, query.intervals,
+        builder.addAll(query.rels).add(r).build(), query.approximateTopN);
   }
 
   /** Extends a DruidQuery. */
   public static DruidQuery extendQuery(DruidQuery query,
       List<LocalInterval> intervals) {
-    return DruidQuery.create(query.getCluster(), query.getTraitSet(), query.getTable(),
-        query.druidTable, intervals, query.rels);
+    return create(query.getCluster(), query.getTraitSet(), query.getTable(),
+        query.druidTable, intervals, query.rels, query.approximateTopN);
   }
 
   @Override public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
@@ -483,9 +497,6 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
       ImmutableBitSet groupSet, List<AggregateCall> aggCalls, List<String> aggNames,
       List<Integer> collationIndexes, List<Direction> collationDirections,
       ImmutableBitSet numericCollationIndexes, Integer fetch) {
-    final CalciteConnectionConfig config =
-        getCluster().getPlanner().getContext()
-            .unwrap(CalciteConnectionConfig.class);
     QueryType queryType = QueryType.SELECT;
     final Translator translator = new Translator(druidTable, rowType);
     List<String> fieldNames = rowType.getFieldNames();
@@ -660,7 +671,7 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
           && sortsMetric
           && collations.size() == 1
           && fetch != null
-          && config.approximateTopN()) {
+          && approximateTopN) {
         queryType = QueryType.TOP_N;
       } else {
         queryType = QueryType.GROUP_BY;
