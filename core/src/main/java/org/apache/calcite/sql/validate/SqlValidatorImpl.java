@@ -3871,9 +3871,10 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
   /**
    * Validates insert values against the constraint of a modifiable view.
-   * @param validatorTable The SqlValidatorTable which may wrap a ModifiableViewTable.
-   * @param source         The values being inserted.
-   * @param targetRowType  The target type for the view.
+   *
+   * @param table         Table that may wrap a ModifiableViewTable
+   * @param source        The values being inserted
+   * @param targetRowType The target type for the view
    */
   private void checkConstraint(
       SqlValidatorTable validatorTable,
@@ -3909,10 +3910,39 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
   }
 
   /**
+<<<<<<< HEAD
    * Returns a mapping of the column ordinal in the underlying table to a column constraint of the
    * modifiable view.
    * @param modifiableViewTable The modifiable view which has a constraint.
    * @param targetRowType       The target type.
+=======
+   * Gets the bit-set to the column ordinals in the target table for the
+   * targeted columns.
+   *
+   * @param modifiableViewTable The target modifiable view table
+   * @param targetRowType       The target row-type
+   */
+  private ImmutableBitSet getOrdinalBitSet(
+      ModifiableViewTable modifiableViewTable, RelDataType targetRowType) {
+    final Table table = modifiableViewTable.unwrap(Table.class);
+    final List<Integer> ordinalBitSet = new ArrayList<>(targetRowType.getFieldCount());
+    for (RelDataTypeField target : targetRowType.getFieldList()) {
+      final RelDataTypeField tableField =
+          table.getRowType(typeFactory).getField(target.getName(), true, false);
+      if (tableField != null) {
+        ordinalBitSet.add(tableField.getIndex());
+      }
+    }
+    return ImmutableBitSet.of(ordinalBitSet);
+  }
+
+  /**
+   * Returns a mapping of the column ordinal in the underlying table to a column
+   * constraint of the modifiable view.
+   *
+   * @param modifiableViewTable The modifiable view which has a constraint
+   * @param targetRowType       The target type
+>>>>>>> 514a874... fix up 1666
    */
   private Map<Integer, RexNode> getConstraintForModifiableView(
       ModifiableViewTable modifiableViewTable, RelDataType targetRowType) {

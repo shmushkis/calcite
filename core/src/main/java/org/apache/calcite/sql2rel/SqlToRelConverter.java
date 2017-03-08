@@ -2144,16 +2144,15 @@ public class SqlToRelConverter {
         datasetStack.isEmpty() ? null : datasetStack.peek();
     final boolean[] usedDataset = {false};
     RelOptTable table =
-        SqlValidatorUtil.getRelOptTable(
-            fromNamespace,
-            catalogReader,
-            datasetName,
-            usedDataset);
+        SqlValidatorUtil.getRelOptTable(fromNamespace, catalogReader,
+            datasetName, usedDataset);
     if (extendedColumns != null && extendedColumns.size() > 0) {
       assert table != null;
+      final SqlValidatorTable validatorTable =
+          table.unwrap(SqlValidatorTable.class);
       final List<RelDataTypeField> extendedFields =
-          SqlValidatorUtil.getExtendedColumns(validator,
-              table.unwrap(SqlValidatorTable.class), extendedColumns);
+          SqlValidatorUtil.getExtendedColumns(validator, validatorTable,
+              extendedColumns);
       table = table.extend(extendedFields);
     }
     final RelNode tableRel;
