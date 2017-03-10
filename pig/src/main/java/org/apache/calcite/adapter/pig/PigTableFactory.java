@@ -16,10 +16,12 @@
  */
 package org.apache.calcite.adapter.pig;
 
+import org.apache.calcite.avatica.ConnectionPropertiesImpl;
 import org.apache.calcite.model.ModelHandler;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.TableFactory;
+import org.apache.calcite.util.Util;
 
 import java.io.File;
 import java.util.List;
@@ -31,6 +33,13 @@ import java.util.Map;
  * <p>Allows a Pig table to be included in a model.json file.</p>
  */
 public class PigTableFactory implements TableFactory<PigTable> {
+  static {
+    // Work around
+    //   [CALCITE-1694] Clash in protobuf versions between Avatica and Hadoop
+    // by loading Avatica protobuf before Hadoop kicks in.
+    Util.discard(ConnectionPropertiesImpl.class);
+  }
+
   // public constructor, per factory contract
   public PigTableFactory() {
   }
