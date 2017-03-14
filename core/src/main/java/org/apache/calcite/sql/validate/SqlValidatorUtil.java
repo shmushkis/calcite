@@ -180,7 +180,9 @@ public class SqlValidatorUtil {
   }
 
   /**
-   * Gets the bit-set to the column ordinals in the source for columns that intersect in the target.
+   * Gets the bit-set to the column ordinals in the source for columns that
+   * intersect in the target.
+   *
    * @param sourceRowType The source upon which to ordinate the bit set.
    * @param indexToField  The map of ordinals to target fields.
    */
@@ -196,23 +198,14 @@ public class SqlValidatorUtil {
     return source.intersect(target);
   }
 
-  /**
-   * Gets a map from field names to indexes.
-   */
-  public static Map<String, Integer> mapNameToIndex(List<RelDataTypeField> fields) {
-    List<String> names = Lists.transform(
-        fields,
-        new RelDataTypeField.ToFieldName());
-    List<Integer> indexes = Lists.transform(
-        fields,
-        new RelDataTypeField.ToFieldIndex());
+  /** Returns a map from field names to indexes. */
+  static Map<String, Integer> mapNameToIndex(List<RelDataTypeField> fields) {
     ImmutableMap.Builder<String, Integer> output = ImmutableMap.builder();
-    for (Pair<String, Integer> nameIndex : Pair.zip(names, indexes)) {
-      output.put(nameIndex);
+    for (RelDataTypeField field : fields) {
+      output.put(field.getName(), field.getIndex());
     }
     return output.build();
   }
-
 
   @Deprecated // to be removed before 2.0
   public static RelDataTypeField lookupField(boolean caseSensitive,
