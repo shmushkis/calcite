@@ -134,6 +134,7 @@ public abstract class Aggregate extends SingleRel {
       List<AggregateCall> aggCalls) {
     super(cluster, traits, child);
     this.indicator = indicator;
+    Preconditions.checkArgument(!indicator); // TODO: allow but discourage
     this.aggCalls = ImmutableList.copyOf(aggCalls);
     this.groupSet = Preconditions.checkNotNull(groupSet);
     if (groupSets == null) {
@@ -346,6 +347,9 @@ public abstract class Aggregate extends SingleRel {
       final RelDataTypeField field = fieldList.get(groupKey);
       containedNames.add(field.getName());
       builder.add(field);
+      if (!allContain(groupSets, groupKey)) {
+        builder.nullable(true);
+      }
     }
     if (indicator) {
       for (int groupKey : groupList) {
@@ -378,6 +382,16 @@ public abstract class Aggregate extends SingleRel {
       builder.add(name, aggCall.e.type);
     }
     return builder.build();
+  }
+
+  private static boolean allContain(List<ImmutableBitSet> groupSets,
+      int groupKey) {
+    for (ImmutableBitSet groupSet : groupSets) {
+      if (!groupSet.get(groupKey)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public boolean isValid(Litmus litmus, Context context) {

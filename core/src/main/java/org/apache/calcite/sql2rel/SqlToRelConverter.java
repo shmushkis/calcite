@@ -2717,15 +2717,14 @@ public class SqlToRelConverter {
 
       // Generate NULL values for rolled-up not-null fields.
       final Aggregate aggregate = (Aggregate) bb.root;
-      if (aggregate.getGroupType() != Aggregate.Group.SIMPLE) {
-        assert aggregate.indicator;
+      if (aggregate.getGroupType() != Aggregate.Group.SIMPLE && false) { // TODO
         List<Pair<RexNode, String>> projects2 = Lists.newArrayList();
         int converted = 0;
         final int groupCount = aggregate.getGroupSet().cardinality();
         for (RelDataTypeField field : aggregate.getRowType().getFieldList()) {
           final int i = field.getIndex();
           final RexNode rex;
-          if (i < groupCount && r.isNullable(i)) {
+          if (i < groupCount && r.isNullable(i) && false) {
             ++converted;
 
             rex = rexBuilder.makeCall(SqlStdOperatorTable.CASE,
@@ -4885,6 +4884,7 @@ public class SqlToRelConverter {
       // assert call.getOperator().isAggregator();
       assert bb.agg == this;
 
+      if (false) // TODO:
       switch (call.getKind()) {
       case GROUPING:
       case GROUP_ID:
@@ -4929,7 +4929,7 @@ public class SqlToRelConverter {
       return aggMapping.get(call);
     }
 
-    private int effectiveArgCount(SqlCall call) {
+    private int effectiveArgCount(SqlCall call) { // TODO: remove
       switch (call.getKind()) {
       case GROUPING:
         return call.operandCount();
@@ -4941,7 +4941,7 @@ public class SqlToRelConverter {
     }
 
     private RexNode bitValue(RexNode previous, RelDataType type, int x,
-        int shift) {
+        int shift) { // TODO: remove method
       final AggregatingSelectScope.Resolved r =
           aggregatingSelectScope.resolved.get();
       RexNode node = rexBuilder.makeCall(SqlStdOperatorTable.CASE,

@@ -681,7 +681,19 @@ public class RelBuilder {
    * <p>This method of creating a group key does not allow you to group on new
    * expressions, only column projections, but is efficient, especially when you
    * are coming from an existing {@link Aggregate}. */
+  public GroupKey groupKey(ImmutableBitSet groupSet,
+      ImmutableList<ImmutableBitSet> groupSets) {
+    return groupKey_(groupSet, false, groupSets);
+  }
+
+  /** @deprecated Use {@link #groupKey(ImmutableBitSet, ImmutableList)}. */
+  @Deprecated // to be removed before 2.0
   public GroupKey groupKey(ImmutableBitSet groupSet, boolean indicator,
+      ImmutableList<ImmutableBitSet> groupSets) {
+    return groupKey_(groupSet, indicator, groupSets);
+  }
+
+  private GroupKey groupKey_(ImmutableBitSet groupSet, boolean indicator,
       ImmutableList<ImmutableBitSet> groupSets) {
     if (groupSet.length() > peek().getRowType().getFieldCount()) {
       throw new IllegalArgumentException("out of bounds: " + groupSet);
@@ -1705,6 +1717,7 @@ public class RelBuilder {
     GroupKeyImpl(ImmutableList<RexNode> nodes, boolean indicator,
         ImmutableList<ImmutableList<RexNode>> nodeLists, String alias) {
       this.nodes = Preconditions.checkNotNull(nodes);
+      assert !indicator;
       this.indicator = indicator;
       this.nodeLists = nodeLists;
       this.alias = alias;

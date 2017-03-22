@@ -450,13 +450,13 @@ public final class AggregateExpandDistinctAggregatesRule extends RelOptRule {
 
     final RelBuilder relBuilder = call.builder();
     relBuilder.push(aggregate.getInput());
-    final boolean indicator = groupSets.size() > 1;
+    final boolean indicator = false;
     relBuilder.aggregate(
         relBuilder.groupKey(fullGroupSet, indicator, groupSets),
         distinctAggCalls);
     final RelNode distinct = relBuilder.peek();
     final int groupCount = fullGroupSet.cardinality();
-    final int indicatorCount = indicator ? groupCount : 0;
+    final int indicatorCount = indicator ? groupCount : 0; // TODO:
 
     final RelOptCluster cluster = aggregate.getCluster();
     final RexBuilder rexBuilder = cluster.getRexBuilder();

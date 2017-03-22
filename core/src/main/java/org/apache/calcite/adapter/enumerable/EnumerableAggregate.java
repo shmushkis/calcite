@@ -46,6 +46,7 @@ import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import java.lang.reflect.Type;
@@ -178,7 +179,7 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
         inputPhysType.project(groupSet.asList(), getGroupType() != Group.SIMPLE,
             JavaRowFormat.LIST);
     final int groupCount = getGroupCount();
-    final int indicatorCount = getIndicatorCount();
+    final int indicatorCount = getIndicatorCount(); // TODO: remove; always 0
 
     final List<AggImpState> aggs = new ArrayList<>(aggCalls.size());
     for (Ord<AggregateCall> call : Ord.zip(aggCalls)) {
@@ -219,11 +220,25 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
               return EnumUtils.fieldTypes(typeFactory,
                   parameterRelTypes());
             }
+
+            public List<ImmutableBitSet> groupSets() {
+              return groupSets;
+            }
+
+            public List<? extends RelDataType> keyRelTypes() {
+              return EnumUtils.fieldRowTypes(inputRowType, null,
+                  groupSet.asList());
+            }
+
+            public List<? extends Type> keyTypes() {
+              return EnumUtils.fieldTypes(typeFactory, keyRelTypes());
+            }
           };
       List<Type> state =
           agg.implementor.getStateType(agg.context);
 
       if (state.isEmpty()) {
+        agg.state = ImmutableList.of();
         continue;
       }
 
@@ -246,7 +261,7 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
       agg.state = decls;
       initExpressions.addAll(decls);
       agg.implementor.implementReset(agg.context,
-          new AggResultContextImpl(initBlock, decls));
+          new AggResultContextImpl(initBlock, agg.call, decls, null, null));
     }
 
     final PhysType accPhysType =
@@ -372,14 +387,23 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
       final Type keyType = keyPhysType.getJavaRowType();
       key_ = Expressions.parameter(keyType, "key");
       for (int j = 0; j < groupCount + indicatorCount; j++) {
-        results.add(
-            keyPhysType.fieldReference(key_, j));
+        final Expression ref = keyPhysType.fieldReference(key_, j);
+        if (getGroupType() == Group.SIMPLE) {
+          results.add(ref);
+        } else {
+          results.add(
+              Expressions.condition(
+                  keyPhysType.fieldReference(key_, groupCount + j),
+                  Expressions.constant(null),
+                  Expressions.box(ref)));
+        }
       }
     }
     for (final AggImpState agg : aggs) {
       results.add(
           agg.implementor.implementResult(agg.context,
-              new AggResultContextImpl(resultBlock, agg.state)));
+              new AggResultContextImpl(resultBlock, agg.call, agg.state, key_,
+                  keyPhysType)));
     }
     resultBlock.add(physType.record(results));
     if (getGroupType() != Group.SIMPLE) {

@@ -258,7 +258,7 @@ public class AggregatingSelectScope
       this.groupExprList = ImmutableList.copyOf(groupExprList);
       this.groupSet = ImmutableBitSet.range(groupExprList.size());
       this.groupSets = ImmutableList.copyOf(groupSets);
-      this.indicator = !this.groupSets.equals(ImmutableList.of(groupSet));
+      this.indicator = false; // TODO:
       this.groupExprProjection = ImmutableMap.copyOf(groupExprProjection);
     }
 
