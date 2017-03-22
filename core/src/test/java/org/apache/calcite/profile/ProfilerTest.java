@@ -27,8 +27,10 @@ import org.apache.calcite.test.Matchers;
 import org.apache.calcite.util.JsonBuilder;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -122,6 +124,8 @@ public class ProfilerTest {
         "{type:unique,columns:[JOB,HIREDATE]}");
   }
 
+  /** As {@link #testProfileScott()}, but prints only the most surprising
+   * distributions. */
   @Test public void testProfileScott2() throws Exception {
     final String sql = "select * from \"scott\".emp\n"
         + "join \"scott\".dept using (deptno)";
@@ -177,6 +181,63 @@ public class ProfilerTest {
             "{type:distribution,columns:[COMM,DEPTNO],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}");
   }
 
+  /** As {@link #testProfileScott2()}, but uses the better profiler. */
+  @Test public void testProfileScott3() throws Exception {
+    final String sql = "select * from \"scott\".emp\n"
+        + "join \"scott\".dept using (deptno)";
+    final List<String> columns =
+        ImmutableList.<String>builder().addAll(Fluid.DEFAULT_COLUMNS)
+            .add("expectedCardinality", "surprise")
+            .build();
+    final Ordering<Profiler.Statistic> ordering =
+        new Ordering<Profiler.Statistic>() {
+          public int compare(Profiler.Statistic left,
+              Profiler.Statistic right) {
+            int c = left.getClass().getSimpleName()
+                .compareTo(right.getClass().getSimpleName());
+            if (c != 0) {
+              return c;
+            }
+            if (left instanceof Profiler.Distribution
+                && right instanceof Profiler.Distribution) {
+              c = Double.compare(((Profiler.Distribution) left).surprise(),
+                  ((Profiler.Distribution) right).surprise());
+            }
+            return c;
+          }
+        };
+    final Predicate<Profiler.Statistic> predicate =
+        new PredicateImpl<Profiler.Statistic>() {
+          public boolean test(Profiler.Statistic statistic) {
+            return statistic instanceof Profiler.Distribution
+                && ((Profiler.Distribution) statistic).surprise() > 0.3D;
+          }
+        };
+    sql(sql)
+        .factory(Fluid.BETTER_FACTORY)
+        .where(predicate)
+        .sort(ordering.reverse())
+        .limit(30)
+        .project(columns)
+        .unordered(
+            "{type:distribution,columns:[DNAME],values:[ACCOUNTING,RESEARCH,SALES],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+            "{type:distribution,columns:[DEPTNO0],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+            "{type:distribution,columns:[DEPTNO],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+            "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:4.0,nullCount:10,expectedCardinality:14.0,surprise:0.5555555555555556}",
+            "{type:distribution,columns:[HIREDATE,COMM],cardinality:4.0,expectedCardinality:12.377762384970014,surprise:0.5115327837860406}",
+            "{type:distribution,columns:[SAL,COMM],cardinality:4.0,expectedCardinality:12.253467117178234,surprise:0.5077973245754547}",
+            "{type:distribution,columns:[JOB],values:[ANALYST,CLERK,MANAGER,PRESIDENT,SALESMAN],cardinality:5.0,expectedCardinality:14.0,surprise:0.47368421052631576}",
+            "{type:distribution,columns:[MGR,COMM],cardinality:4.0,expectedCardinality:10.773541853578294,surprise:0.4584913977102706}",
+            "{type:distribution,columns:[JOB,COMM],cardinality:4.0,expectedCardinality:10.246500417689411,surprise:0.43845858523496317}",
+            "{type:distribution,columns:[DEPTNO0,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+            "{type:distribution,columns:[DEPTNO,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+            "{type:distribution,columns:[DEPTNO,DEPTNO0],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+            "{type:distribution,columns:[MGR],values:[7566,7698,7782,7788,7839,7902],cardinality:6.0,nullCount:1,expectedCardinality:14.0,surprise:0.4}",
+            "{type:distribution,columns:[COMM,DNAME],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}",
+            "{type:distribution,columns:[COMM,DEPTNO0],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}",
+            "{type:distribution,columns:[COMM,DEPTNO],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}");
+  }
+
   @Test public void testProfileZeroRows() throws Exception {
     final String sql = "select * from \"scott\".dept where false";
     sql(sql).unordered(
@@ -201,12 +262,27 @@ public class ProfilerTest {
   }
 
   private static Fluid sql(String sql) {
-    return new Fluid(sql, Predicates.<Profiler.Statistic>alwaysTrue(), null, -1,
+    return new Fluid(sql, Fluid.SIMPLE_FACTORY,
+        Predicates.<Profiler.Statistic>alwaysTrue(), null, -1,
         Fluid.DEFAULT_COLUMNS);
   }
 
   /** Fluid interface for writing profiler test cases. */
   private static class Fluid {
+    static final Supplier<Profiler> SIMPLE_FACTORY =
+        new Supplier<Profiler>() {
+          public Profiler get() {
+            return new SimpleProfiler();
+          }
+        };
+
+    static final Supplier<Profiler> BETTER_FACTORY =
+        new Supplier<Profiler>() {
+          public Profiler get() {
+            return new ProfilerImpl();
+          }
+        };
+
     private final String sql;
     private final List<String> columns;
 
@@ -216,31 +292,38 @@ public class ProfilerTest {
     private final Comparator<Profiler.Statistic> comparator;
     private final int limit;
     private final Predicate<Profiler.Statistic> predicate;
+    private final Supplier<Profiler> factory;
 
-    Fluid(String sql, Predicate<Profiler.Statistic> predicate,
+    Fluid(String sql, Supplier<Profiler> factory,
+        Predicate<Profiler.Statistic> predicate,
         Comparator<Profiler.Statistic> comparator, int limit,
         List<String> columns) {
-      this.sql = sql;
+      this.sql = Preconditions.checkNotNull(sql);
+      this.factory = Preconditions.checkNotNull(factory);
       this.columns = ImmutableList.copyOf(columns);
-      this.predicate = predicate;
-      this.comparator = comparator;
+      this.predicate = Preconditions.checkNotNull(predicate);
+      this.comparator = comparator; // null means sort on JSON representation
       this.limit = limit;
     }
 
+    Fluid factory(Supplier<Profiler> factory) {
+      return new Fluid(sql, factory, predicate, comparator, limit, columns);
+    }
+
     Fluid project(List<String> columns) {
-      return new Fluid(sql, predicate, comparator, limit, columns);
+      return new Fluid(sql, factory, predicate, comparator, limit, columns);
     }
 
     Fluid sort(Ordering<Profiler.Statistic> comparator) {
-      return new Fluid(sql, predicate, comparator, limit, columns);
+      return new Fluid(sql, factory, predicate, comparator, limit, columns);
     }
 
     Fluid limit(int limit) {
-      return new Fluid(sql, predicate, comparator, limit, columns);
+      return new Fluid(sql, factory, predicate, comparator, limit, columns);
     }
 
     Fluid where(Predicate<Profiler.Statistic> predicate) {
-      return new Fluid(sql, predicate, comparator, limit, columns);
+      return new Fluid(sql, factory, predicate, comparator, limit, columns);
     }
 
     Fluid unordered(String... lines) throws Exception {
@@ -259,7 +342,7 @@ public class ProfilerTest {
                 for (int i = 1; i < columnCount; i++) {
                   columns.add(new Profiler.Column(i - 1, m.getColumnLabel(i)));
                 }
-                final Profiler p = new SimpleProfiler();
+                final Profiler p = factory.get();
                 final Enumerable<List<Comparable>> rows = getRows(s);
                 final List<Profiler.Statistic> statistics0 =
                     p.profile(rows, columns);
