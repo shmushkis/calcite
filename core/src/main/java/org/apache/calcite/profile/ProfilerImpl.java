@@ -24,6 +24,7 @@ import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.PartiallyOrderedSet;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 
@@ -95,7 +96,13 @@ public class ProfilerImpl implements Profiler {
   static class Run {
     private final List<Column> columns;
     final List<Space> spaces = new ArrayList<>();
+    /** List of spaces that have one column. */
     final List<Space> singletonSpaces;
+    /** Combinations of columns that we have computed but whose successors have
+     * not yet been computed. We may add some of those successors to
+     * {@link #spaceQueue}. */
+    final Deque<Space> doneQueue = new ArrayDeque<>();
+    /** Combinations of columns that we will compute next pass. */
     final Deque<ImmutableBitSet> spaceQueue = new ArrayDeque<>();
     final List<Statistic> statistics = new ArrayList<>();
     final PartiallyOrderedSet.Ordering<Space> ordering =
@@ -114,6 +121,7 @@ public class ProfilerImpl implements Profiler {
             return columns.get(input);
           }
         };
+    private int combinationsPerPass;
 
     /**
      * Creates a Run.
@@ -123,6 +131,8 @@ public class ProfilerImpl implements Profiler {
      *   columns) to compute each pass
      */
     Run(final List<Column> columns, int combinationsPerPass) {
+      this.combinationsPerPass = combinationsPerPass;
+      Preconditions.checkArgument(combinationsPerPass > 2); // 1000 typical
       for (Ord<Column> column : Ord.zip(columns)) {
         if (column.e.ordinal != column.i) {
           throw new IllegalArgumentException();
@@ -137,10 +147,7 @@ public class ProfilerImpl implements Profiler {
         for (ImmutableBitSet ordinals
             : ImmutableBitSet.range(columns.size()).powerSet()) {
           final Space space = new Space(ordinals, toColumns(ordinals));
-          spaces.add(space);
-          if (ordinals.cardinality() == 1) {
-            singletonSpaces.set(ordinals.nth(0), space);
-          }
+          spaceQueue.add(ordinals);
         }
       } else {
         // We will need to take multiple passes.
@@ -151,25 +158,62 @@ public class ProfilerImpl implements Profiler {
     }
 
     List<Statistic> profile(Iterable<List<Comparable>> rows) {
-      while (!spaceQueue.isEmpty()) {
+      int pass = 0;
+      for (;;) {
         spaces.clear();
-        for (;;) {
-          final ImmutableBitSet ordinals = spaceQueue.poll();
-          if (ordinals == null) {
-            break;
-          }
-          final Space space = new Space(ordinals, toColumns(ordinals));
-          spaces.add(space);
-          if (ordinals.cardinality() == 1) {
-            singletonSpaces.set(ordinals.nth(0), space);
-          }
+        if (!nextBatch()) {
+          break;
         }
-        pass(rows);
+        pass(pass++, rows);
+      }
+
+      for (Space s : singletonSpaces) {
+        for (ImmutableBitSet dependent : s.dependents) {
+          statistics.add(
+              new FunctionalDependency(toColumns(dependent),
+                  Iterables.getOnlyElement(s.columns)));
+        }
       }
       return statistics;
     }
 
-    void pass(Iterable<List<Comparable>> rows) {
+    /** Populates {@link #spaces} with the next batch. Returns false if done. */
+    boolean nextBatch() {
+      loop:
+      for (;;) {
+        if (spaces.size() > combinationsPerPass) {
+          // We have enough for the next pass.
+          return true;
+        }
+        final ImmutableBitSet ordinals = spaceQueue.poll();
+        if (ordinals == null) {
+          for (;;) {
+            final Space doneOrdinals = doneQueue.poll();
+            if (doneOrdinals == null) {
+              return false;
+            }
+            for (Column column : columns) {
+              if (!doneOrdinals.columnOrdinals.get(column.ordinal)) {
+                final ImmutableBitSet nextOrdinals =
+                    doneOrdinals.columnOrdinals.set(column.ordinal);
+                // TODO: filter if not interesting
+                spaceQueue.add(nextOrdinals);
+              }
+            }
+            if (!spaceQueue.isEmpty()) {
+              continue loop;
+            }
+          }
+        }
+        final Space space = new Space(ordinals, toColumns(ordinals));
+        spaces.add(space);
+        if (ordinals.cardinality() == 1) {
+          singletonSpaces.set(ordinals.nth(0), space);
+        }
+      }
+    }
+
+    void pass(int pass, Iterable<List<Comparable>> rows) {
       final List<Comparable> values = new ArrayList<>();
       int rowCount = 0;
       for (final List<Comparable> row : rows) {
@@ -292,17 +336,11 @@ public class ProfilerImpl implements Profiler {
                 expectedCardinality);
         statistics.add(distribution);
         distributions.put(space.columnOrdinals, distribution);
-
       }
 
-      for (Space s : singletonSpaces) {
-        for (ImmutableBitSet dependent : s.dependents) {
-          statistics.add(
-              new FunctionalDependency(toColumns(dependent),
-                  Iterables.getOnlyElement(s.columns)));
-        }
+      if (pass == 0) {
+        statistics.add(new RowCount(rowCount));
       }
-      statistics.add(new RowCount(rowCount));
     }
 
     private ImmutableSortedSet<Column> toColumns(Iterable<Integer> ordinals) {
