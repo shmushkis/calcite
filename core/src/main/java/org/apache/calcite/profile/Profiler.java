@@ -140,6 +140,7 @@ public interface Profiler {
     final NavigableSet<Comparable> values;
     final double cardinality;
     final int nullCount;
+    final double expectedCardinality;
 
     /** Creates a Distribution.
      *
@@ -147,14 +148,15 @@ public interface Profiler {
      * @param values Values of columns, or null if there are too many
      * @param cardinality Number of distinct values
      * @param nullCount Number of rows where this column had a null value;
-     *  -1 if there is not 1 column
+     * @param expectedCardinality Expected cardinality
      */
     public Distribution(SortedSet<Column> columns, SortedSet<Comparable> values,
-        double cardinality, int nullCount) {
+        double cardinality, int nullCount, double expectedCardinality) {
       this.columns = ImmutableSortedSet.copyOf(columns);
       this.values = values == null ? null : ImmutableSortedSet.copyOf(values);
       this.cardinality = cardinality;
       this.nullCount = nullCount;
+      this.expectedCardinality = expectedCardinality;
     }
 
     public Object toMap(JsonBuilder jsonBuilder) {
@@ -175,7 +177,13 @@ public interface Profiler {
       if (nullCount > 0) {
         map.put("nullCount", nullCount);
       }
+      map.put("expectedCardinality", expectedCardinality);
+      map.put("surprise", surprise());
       return map;
+    }
+
+    double surprise() {
+      return SimpleProfiler.surprise(expectedCardinality, cardinality);
     }
   }
 }

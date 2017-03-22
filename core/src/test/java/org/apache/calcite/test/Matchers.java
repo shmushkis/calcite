@@ -22,8 +22,10 @@ import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
+import org.hamcrest.BaseMatcher;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Description;
+import org.hamcrest.Factory;
 import org.hamcrest.Matcher;
 
 import java.sql.ResultSet;
@@ -110,6 +112,50 @@ public class Matchers {
     return Iterables.transform(items, Functions.toStringFunction());
   }
 
+  /**
+   * Creates a matcher that matches when the examined object is within
+   * {@code epsilon} of the specified <code>operand</code>.
+   */
+  @Factory
+  public static <T extends Number> Matcher<T> within(T value, double epsilon) {
+    return new IsWithin<T>(value, epsilon);
+  }
+
+  /**
+   * Is the value equal to another value, as tested by the
+   * {@link java.lang.Object#equals} invokedMethod?
+   */
+  public static class IsWithin<T extends Number> extends BaseMatcher<T> {
+    private final T expectedValue;
+    private final double epsilon;
+
+    public IsWithin(T expectedValue, double epsilon) {
+      this.expectedValue = expectedValue;
+      this.epsilon = epsilon;
+    }
+
+    public boolean matches(Object actualValue) {
+      return areEqual(actualValue, expectedValue, epsilon);
+    }
+
+    public void describeTo(Description description) {
+      description.appendValue(expectedValue + " +/-" + epsilon);
+    }
+
+    private static boolean areEqual(Object actual, Number expected,
+        double epsilon) {
+      if (actual == null) {
+        return expected == null;
+      }
+      if (actual.equals(expected)) {
+        return true;
+      }
+      final double a = ((Number) actual).doubleValue();
+      final double min = expected.doubleValue() - epsilon;
+      final double max = expected.doubleValue() + epsilon;
+      return min <= a && a <= max;
+    }
+  }
 }
 
 // End Matchers.java

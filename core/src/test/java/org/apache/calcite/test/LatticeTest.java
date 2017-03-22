@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.test;
 
+import org.apache.calcite.materialize.Lattice;
 import org.apache.calcite.materialize.Lattices;
 import org.apache.calcite.materialize.MaterializationService;
 import org.apache.calcite.plan.RelOptUtil;
@@ -29,6 +30,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
+import org.hamcrest.core.Is;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -40,6 +42,8 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.apache.calcite.test.Matchers.within;
 
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -740,6 +744,22 @@ public class LatticeTest {
         .executeQuery("select * from \"adhoc\".\"m{27, 31}\"");
     System.out.println(CalciteAssert.toString(resultSet));
     connection.close();
+  }
+
+  @Test public void testColumnCount() {
+    assertThat(Lattice.getRowCount(10, Arrays.asList(2D, 3D)),
+        within(5.03D, 0.01D));
+    assertThat(Lattice.getRowCount(10, Arrays.asList(9D, 8D)),
+        within(9.4D, 0.01D));
+    assertThat(Lattice.getRowCount(100, Arrays.asList(9D, 8D)),
+        within(54.2D, 0.1D));
+    assertThat(Lattice.getRowCount(1000, Arrays.asList(9D, 8D)),
+        within(72D, 0.01D));
+    assertThat(Lattice.getRowCount(1000, Arrays.asList(1D, 1D)), Is.is(1D));
+    assertThat(Lattice.getRowCount(1, Arrays.asList(3D, 5D)),
+        within(1D, 0.01D));
+    assertThat(Lattice.getRowCount(1, Arrays.asList(3D, 5D, 13D, 4831D)),
+        within(1D, 0.01D));
   }
 }
 

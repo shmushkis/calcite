@@ -17,6 +17,7 @@
 package org.apache.calcite.profile;
 
 import org.apache.calcite.linq4j.Ord;
+import org.apache.calcite.materialize.Lattice;
 import org.apache.calcite.rel.metadata.NullSentinel;
 import org.apache.calcite.runtime.FlatLists;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -27,10 +28,13 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -50,6 +54,38 @@ public class SimpleProfiler implements Profiler {
   public List<Statistic> profile(Iterable<List<Comparable>> rows,
       final List<Column> columns) {
     return new Run(columns).profile(rows);
+  }
+
+  /** Returns a measure of how much an actual value differs from expected.
+   * The formula is {@code abs(expected - actual) / (expected + actual)}.
+   *
+   * <p>Examples:<ul>
+   *   <li>surprise(e, a) is always between 0 and 1;
+   *   <li>surprise(e, a) is 0 if e = a;
+   *   <li>surprise(e, 0) is 1 if e &gt; 0;
+   *   <li>surprise(0, a) is 1 if a &gt; 0;
+   *   <li>surprise(5, 0) is 100%;
+   *   <li>surprise(5, 3) is 25%;
+   *   <li>surprise(5, 4) is 11%;
+   *   <li>surprise(5, 5) is 0%;
+   *   <li>surprise(5, 6) is 9%;
+   *   <li>surprise(5, 16) is 52%;
+   *   <li>surprise(5, 100) is 90%;
+   * </ul>
+   *
+   * @param expected Expected value
+   * @param actual Actual value
+   * @return Measure of how much expected deviates from actual
+   */
+  public static double surprise(double expected, double actual) {
+    if (expected == actual) {
+      return 0d;
+    }
+    final double sum = expected + actual;
+    if (sum <= 0d) {
+      return 1d;
+    }
+    return Math.abs(expected - actual) / sum;
   }
 
   /** A run of the profiler. */
@@ -115,6 +151,7 @@ public class SimpleProfiler implements Profiler {
       }
 
       // Populate unique keys
+      final Map<ImmutableBitSet, Distribution> distributions = new HashMap<>();
       for (Space space : spaces) {
         keyResults.add(space);
         if (!keyResults.getChildren(space).isEmpty()) {
@@ -188,9 +225,35 @@ public class SimpleProfiler implements Profiler {
           nullCount = -1;
           valueSet = null;
         }
-        statistics.add(
-            new Distribution(space.columns, valueSet, space.cardinality(),
-                nullCount));
+        double expectedCardinality;
+        final double cardinality = space.cardinality();
+        switch (space.columns.size()) {
+        case 0:
+          expectedCardinality = 1d;
+          break;
+        case 1:
+          expectedCardinality = rowCount;
+          break;
+        default:
+          expectedCardinality = rowCount;
+          for (Column column : space.columns) {
+            final Distribution d1 =
+                distributions.get(ImmutableBitSet.of(column.ordinal));
+            final double c1 = d1.cardinality;
+            final Distribution d2 =
+                distributions.get(space.columnOrdinals.clear(column.ordinal));
+            final double c2 = d2.cardinality;
+            final double d =
+                Lattice.getRowCount(rowCount, Arrays.asList(c1, c2));
+            expectedCardinality = Math.min(expectedCardinality, d);
+          }
+        }
+        final Distribution distribution =
+            new Distribution(space.columns, valueSet, cardinality, nullCount,
+                expectedCardinality);
+        statistics.add(distribution);
+        distributions.put(space.columnOrdinals, distribution);
+
       }
 
       for (Space s : singletonSpaces) {

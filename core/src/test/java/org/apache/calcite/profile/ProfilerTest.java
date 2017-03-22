@@ -21,12 +21,18 @@ import org.apache.calcite.linq4j.AbstractEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.rel.metadata.NullSentinel;
+import org.apache.calcite.runtime.PredicateImpl;
 import org.apache.calcite.test.CalciteAssert;
 import org.apache.calcite.test.Matchers;
 import org.apache.calcite.util.JsonBuilder;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 
 import org.hamcrest.Matcher;
 import org.junit.Assert;
@@ -38,7 +44,9 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Basic implementation of {@link Profiler}.
@@ -47,7 +55,7 @@ public class ProfilerTest {
   @Test public void testProfileScott() throws Exception {
     final String sql = "select * from \"scott\".emp\n"
         + "join \"scott\".dept using (deptno)";
-    checkProfile(sql,
+    sql(sql).unordered(
         "{type:distribution,columns:[COMM,DEPTNO0],cardinality:4.0}",
         "{type:distribution,columns:[COMM,DEPTNO],cardinality:4.0}",
         "{type:distribution,columns:[COMM,DNAME],cardinality:4.0}",
@@ -114,115 +122,244 @@ public class ProfilerTest {
         "{type:unique,columns:[JOB,HIREDATE]}");
   }
 
+  @Test public void testProfileScott2() throws Exception {
+    final String sql = "select * from \"scott\".emp\n"
+        + "join \"scott\".dept using (deptno)";
+    final List<String> columns =
+        ImmutableList.<String>builder().addAll(Fluid.DEFAULT_COLUMNS)
+            .add("expectedCardinality", "surprise")
+            .build();
+    final Ordering<Profiler.Statistic> ordering =
+        new Ordering<Profiler.Statistic>() {
+          public int compare(Profiler.Statistic left,
+              Profiler.Statistic right) {
+            int c = left.getClass().getSimpleName()
+                .compareTo(right.getClass().getSimpleName());
+            if (c != 0) {
+              return c;
+            }
+            if (left instanceof Profiler.Distribution
+                && right instanceof Profiler.Distribution) {
+              c = Double.compare(((Profiler.Distribution) left).surprise(),
+                  ((Profiler.Distribution) right).surprise());
+            }
+            return c;
+          }
+        };
+    final Predicate<Profiler.Statistic> predicate =
+        new PredicateImpl<Profiler.Statistic>() {
+          public boolean test(Profiler.Statistic statistic) {
+            return statistic instanceof Profiler.Distribution
+                && ((Profiler.Distribution) statistic).surprise() > 0.3D;
+          }
+        };
+    sql(sql)
+        .where(predicate)
+        .sort(ordering.reverse())
+        .limit(30)
+        .project(columns)
+        .unordered(
+            "{type:distribution,columns:[DNAME],values:[ACCOUNTING,RESEARCH,SALES],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+            "{type:distribution,columns:[DEPTNO0],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+            "{type:distribution,columns:[DEPTNO],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+            "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:4.0,nullCount:10,expectedCardinality:14.0,surprise:0.5555555555555556}",
+            "{type:distribution,columns:[HIREDATE,COMM],cardinality:4.0,expectedCardinality:12.377762384970014,surprise:0.5115327837860406}",
+            "{type:distribution,columns:[SAL,COMM],cardinality:4.0,expectedCardinality:12.253467117178234,surprise:0.5077973245754547}",
+            "{type:distribution,columns:[JOB],values:[ANALYST,CLERK,MANAGER,PRESIDENT,SALESMAN],cardinality:5.0,expectedCardinality:14.0,surprise:0.47368421052631576}",
+            "{type:distribution,columns:[MGR,COMM],cardinality:4.0,expectedCardinality:10.773541853578294,surprise:0.4584913977102706}",
+            "{type:distribution,columns:[JOB,COMM],cardinality:4.0,expectedCardinality:10.246500417689411,surprise:0.43845858523496317}",
+            "{type:distribution,columns:[DEPTNO0,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+            "{type:distribution,columns:[DEPTNO,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+            "{type:distribution,columns:[DEPTNO,DEPTNO0],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+            "{type:distribution,columns:[MGR],values:[7566,7698,7782,7788,7839,7902],cardinality:6.0,nullCount:1,expectedCardinality:14.0,surprise:0.4}",
+            "{type:distribution,columns:[COMM,DNAME],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}",
+            "{type:distribution,columns:[COMM,DEPTNO0],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}",
+            "{type:distribution,columns:[COMM,DEPTNO],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}");
+  }
+
   @Test public void testProfileZeroRows() throws Exception {
     final String sql = "select * from \"scott\".dept where false";
-    checkProfile(sql,
+    sql(sql).unordered(
         "{type:rowCount,rowCount:0}",
         "{type:unique,columns:[]}");
   }
 
   @Test public void testProfileOneRow() throws Exception {
     final String sql = "select * from \"scott\".dept where deptno = 10";
-    checkProfile(sql,
+    sql(sql).unordered(
         "{type:rowCount,rowCount:1}",
         "{type:unique,columns:[]}");
   }
 
   @Test public void testProfileTwoRows() throws Exception {
     final String sql = "select * from \"scott\".dept where deptno in (10, 20)";
-    checkProfile(sql,
+    sql(sql).unordered(
         "{type:distribution,columns:[],cardinality:1.0}",
         "{type:rowCount,rowCount:2}",
         "{type:unique,columns:[DEPTNO]}",
         "{type:unique,columns:[DNAME]}");
   }
 
-  private void checkProfile(String sql, String... lines) throws Exception {
-    checkProfile(sql, Matchers.equalsUnordered(lines));
+  private static Fluid sql(String sql) {
+    return new Fluid(sql, Predicates.<Profiler.Statistic>alwaysTrue(), null, -1,
+        Fluid.DEFAULT_COLUMNS);
   }
 
-  private void checkProfile(final String sql,
-      final Matcher<Iterable<String>> matcher) throws Exception {
-    CalciteAssert.that(CalciteAssert.Config.SCOTT)
-        .doWithConnection(new Function<CalciteConnection, Void>() {
-          public Void apply(CalciteConnection c) {
-            try (PreparedStatement s = c.prepareStatement(sql)) {
-              final ResultSetMetaData m = s.getMetaData();
-              final List<Profiler.Column> columns = new ArrayList<>();
-              final int columnCount = m.getColumnCount();
-              for (int i = 1; i < columnCount; i++) {
-                columns.add(new Profiler.Column(i - 1, m.getColumnLabel(i)));
+  /** Fluid interface for writing profiler test cases. */
+  private static class Fluid {
+    private final String sql;
+    private final List<String> columns;
+
+    static final List<String> DEFAULT_COLUMNS =
+        ImmutableList.of("type", "distribution", "columns", "cardinality",
+            "values", "nullCount", "dependentColumn", "rowCount");
+    private final Comparator<Profiler.Statistic> comparator;
+    private final int limit;
+    private final Predicate<Profiler.Statistic> predicate;
+
+    Fluid(String sql, Predicate<Profiler.Statistic> predicate,
+        Comparator<Profiler.Statistic> comparator, int limit,
+        List<String> columns) {
+      this.sql = sql;
+      this.columns = ImmutableList.copyOf(columns);
+      this.predicate = predicate;
+      this.comparator = comparator;
+      this.limit = limit;
+    }
+
+    Fluid project(List<String> columns) {
+      return new Fluid(sql, predicate, comparator, limit, columns);
+    }
+
+    Fluid sort(Ordering<Profiler.Statistic> comparator) {
+      return new Fluid(sql, predicate, comparator, limit, columns);
+    }
+
+    Fluid limit(int limit) {
+      return new Fluid(sql, predicate, comparator, limit, columns);
+    }
+
+    Fluid where(Predicate<Profiler.Statistic> predicate) {
+      return new Fluid(sql, predicate, comparator, limit, columns);
+    }
+
+    Fluid unordered(String... lines) throws Exception {
+      return check(Matchers.equalsUnordered(lines));
+    }
+
+    public Fluid check(final Matcher<Iterable<String>> matcher)
+        throws Exception {
+      CalciteAssert.that(CalciteAssert.Config.SCOTT)
+          .doWithConnection(new Function<CalciteConnection, Void>() {
+            public Void apply(CalciteConnection c) {
+              try (PreparedStatement s = c.prepareStatement(sql)) {
+                final ResultSetMetaData m = s.getMetaData();
+                final List<Profiler.Column> columns = new ArrayList<>();
+                final int columnCount = m.getColumnCount();
+                for (int i = 1; i < columnCount; i++) {
+                  columns.add(new Profiler.Column(i - 1, m.getColumnLabel(i)));
+                }
+                final Profiler p = new SimpleProfiler();
+                final Enumerable<List<Comparable>> rows = getRows(s);
+                final List<Profiler.Statistic> statistics0 =
+                    p.profile(rows, columns);
+                final List<Profiler.Statistic> statistics =
+                    Lists.newArrayList(
+                        Iterables.filter(statistics0, predicate));
+
+                // If no comparator specified, use the function that converts to
+                // JSON strings
+                final Function<Profiler.Statistic, String> toJson =
+                    toJsonFunction();
+                Comparator<Profiler.Statistic> comp = comparator != null
+                    ? comparator
+                    : Ordering.natural().onResultOf(toJson);
+                Collections.sort(statistics, comp);
+                if (limit >= 0 && limit < statistics.size()) {
+                  statistics.subList(limit, statistics.size()).clear();
+                }
+
+                final List<String> strings =
+                    Lists.transform(statistics, toJson);
+                Assert.assertThat(strings, matcher);
+              } catch (SQLException e) {
+                throw new RuntimeException(e);
               }
-              final Profiler p = new SimpleProfiler();
-              final Enumerable<List<Comparable>> rows = getRows(s);
-              final List<Profiler.Statistic> statistics =
-                  p.profile(rows, columns);
-              final List<String> strings = new ArrayList<>();
-              final JsonBuilder jb = new JsonBuilder();
-              for (Profiler.Statistic statistic : statistics) {
-                final String json = jb.toJsonString(statistic.toMap(jb));
-                strings.add(json.replaceAll("\n", "").replaceAll(" ", "")
-                    .replaceAll("\"", ""));
-              }
-              Collections.sort(strings);
-              Assert.assertThat(strings, matcher);
-            } catch (SQLException e) {
-              throw new RuntimeException(e);
+              return null;
             }
-            return null;
+          });
+      return this;
+    }
+
+    /** Returns a function that converts a statistic to a JSON string. */
+    Function<Profiler.Statistic, String> toJsonFunction() {
+      return new Function<Profiler.Statistic, String>() {
+        final JsonBuilder jb = new JsonBuilder();
+
+        public String apply(Profiler.Statistic statistic) {
+          Object map = statistic.toMap(jb);
+          if (map instanceof Map) {
+            @SuppressWarnings("unchecked")
+            final Map<String, Object> map1 = (Map) map;
+            map1.keySet().retainAll(Fluid.this.columns);
           }
-        });
-  }
-
-  private Enumerable<List<Comparable>> getRows(final PreparedStatement s) {
-    return new AbstractEnumerable<List<Comparable>>() {
-      public Enumerator<List<Comparable>> enumerator() {
-        try {
-          final ResultSet r = s.executeQuery();
-          return getListEnumerator(r, r.getMetaData().getColumnCount());
-        } catch (SQLException e) {
-          throw new RuntimeException(e);
+          final String json = jb.toJsonString(map);
+          return json.replaceAll("\n", "").replaceAll(" ", "")
+              .replaceAll("\"", "");
         }
-      }
-    };
-  }
+      };
+    }
 
-  private Enumerator<List<Comparable>> getListEnumerator(
-      final ResultSet r, final int columnCount) {
-    return new Enumerator<List<Comparable>>() {
-      final Comparable[] values = new Comparable[columnCount];
-
-      public List<Comparable> current() {
-        for (int i = 0; i < columnCount; i++) {
+    private Enumerable<List<Comparable>> getRows(final PreparedStatement s) {
+      return new AbstractEnumerable<List<Comparable>>() {
+        public Enumerator<List<Comparable>> enumerator() {
           try {
-            final Comparable value = (Comparable) r.getObject(i + 1);
-            values[i] = NullSentinel.mask(value);
+            final ResultSet r = s.executeQuery();
+            return getListEnumerator(r, r.getMetaData().getColumnCount());
           } catch (SQLException e) {
             throw new RuntimeException(e);
           }
         }
-        return ImmutableList.copyOf(values);
-      }
+      };
+    }
 
-      public boolean moveNext() {
-        try {
-          return r.next();
-        } catch (SQLException e) {
-          throw new RuntimeException(e);
+    private Enumerator<List<Comparable>> getListEnumerator(
+        final ResultSet r, final int columnCount) {
+      return new Enumerator<List<Comparable>>() {
+        final Comparable[] values = new Comparable[columnCount];
+
+        public List<Comparable> current() {
+          for (int i = 0; i < columnCount; i++) {
+            try {
+              final Comparable value = (Comparable) r.getObject(i + 1);
+              values[i] = NullSentinel.mask(value);
+            } catch (SQLException e) {
+              throw new RuntimeException(e);
+            }
+          }
+          return ImmutableList.copyOf(values);
         }
-      }
 
-      public void reset() {
-      }
-
-      public void close() {
-        try {
-          r.close();
-        } catch (SQLException e) {
-          throw new RuntimeException(e);
+        public boolean moveNext() {
+          try {
+            return r.next();
+          } catch (SQLException e) {
+            throw new RuntimeException(e);
+          }
         }
-      }
-    };
+
+        public void reset() {
+        }
+
+        public void close() {
+          try {
+            r.close();
+          } catch (SQLException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      };
+    }
   }
 }
 

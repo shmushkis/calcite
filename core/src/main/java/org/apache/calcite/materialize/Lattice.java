@@ -60,7 +60,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
-import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -381,30 +380,44 @@ public class Lattice {
   /** Returns an estimate of the number of rows in the tile with the given
    * dimensions. */
   public double getRowCount(List<Column> columns) {
+    return getRowCount(getFactRowCount(),
+        Lists.transform(columns, new Function<Column, Double>() {
+          public Double apply(Column column) {
+            final int cardinality = statisticProvider.cardinality(Lattice.this,
+                column);
+            if (cardinality <= 1) {
+              return 1d;
+            }
+            return (double) cardinality;
+          }
+        }));
+  }
+
+  /** Returns an estimate of the number of rows in the tile with the given
+   * dimensions. */
+  public static double getRowCount(double factCount,
+      List<Double> columnCounts) {
     // The expected number of distinct values when choosing p values
     // with replacement from n integers is n . (1 - ((n - 1) / n) ^ p).
     //
     // If we have several uniformly distributed attributes A1 ... Am
     // with N1 ... Nm distinct values, they behave as one uniformly
     // distributed attribute with N1 * ... * Nm distinct values.
-    BigInteger n = BigInteger.ONE;
-    for (Column column : columns) {
-      final int cardinality = statisticProvider.cardinality(this, column);
-      if (cardinality > 1) {
-        n = n.multiply(BigInteger.valueOf(cardinality));
+    double n = 1d;
+    for (Double columnCount : columnCounts) {
+      if (columnCount > 1d) {
+        n *= columnCount;
       }
     }
-    final double nn = n.doubleValue();
-    final double f = getFactRowCount();
-    final double a = (nn - 1d) / nn;
+    final double a = (n - 1d) / n;
     if (a == 1d) {
       // A under-flows if nn is large.
-      return f;
+      return factCount;
     }
-    final double v = nn * (1d - Math.pow(a, f));
+    final double v = n * (1d - Math.pow(a, factCount));
     // Cap at fact-row-count, because numerical artifacts can cause it
     // to go a few % over.
-    return Math.min(v, f);
+    return Math.min(v, factCount);
   }
 
   /** Source relation of a lattice.
