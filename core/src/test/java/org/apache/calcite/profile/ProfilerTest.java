@@ -25,6 +25,7 @@ import org.apache.calcite.runtime.PredicateImpl;
 import org.apache.calcite.test.CalciteAssert;
 import org.apache.calcite.test.Matchers;
 import org.apache.calcite.util.JsonBuilder;
+import org.apache.calcite.util.Pair;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -54,6 +55,29 @@ import java.util.Map;
  * Basic implementation of {@link Profiler}.
  */
 public class ProfilerTest {
+  @Test public void testProfileZeroRows() throws Exception {
+    final String sql = "select * from \"scott\".dept where false";
+    sql(sql).unordered(
+        "{type:rowCount,rowCount:0}",
+        "{type:unique,columns:[]}");
+  }
+
+  @Test public void testProfileOneRow() throws Exception {
+    final String sql = "select * from \"scott\".dept where deptno = 10";
+    sql(sql).unordered(
+        "{type:rowCount,rowCount:1}",
+        "{type:unique,columns:[]}");
+  }
+
+  @Test public void testProfileTwoRows() throws Exception {
+    final String sql = "select * from \"scott\".dept where deptno in (10, 20)";
+    sql(sql).unordered(
+        "{type:distribution,columns:[],cardinality:1.0}",
+        "{type:rowCount,rowCount:2}",
+        "{type:unique,columns:[DEPTNO]}",
+        "{type:unique,columns:[DNAME]}");
+  }
+
   @Test public void testProfileScott() throws Exception {
     final String sql = "select * from \"scott\".emp\n"
         + "join \"scott\".dept using (deptno)";
@@ -127,62 +151,30 @@ public class ProfilerTest {
   /** As {@link #testProfileScott()}, but prints only the most surprising
    * distributions. */
   @Test public void testProfileScott2() throws Exception {
-    final String sql = "select * from \"scott\".emp\n"
-        + "join \"scott\".dept using (deptno)";
-    final List<String> columns =
-        ImmutableList.<String>builder().addAll(Fluid.DEFAULT_COLUMNS)
-            .add("expectedCardinality", "surprise")
-            .build();
-    final Ordering<Profiler.Statistic> ordering =
-        new Ordering<Profiler.Statistic>() {
-          public int compare(Profiler.Statistic left,
-              Profiler.Statistic right) {
-            int c = left.getClass().getSimpleName()
-                .compareTo(right.getClass().getSimpleName());
-            if (c != 0) {
-              return c;
-            }
-            if (left instanceof Profiler.Distribution
-                && right instanceof Profiler.Distribution) {
-              c = Double.compare(((Profiler.Distribution) left).surprise(),
-                  ((Profiler.Distribution) right).surprise());
-            }
-            return c;
-          }
-        };
-    final Predicate<Profiler.Statistic> predicate =
-        new PredicateImpl<Profiler.Statistic>() {
-          public boolean test(Profiler.Statistic statistic) {
-            return statistic instanceof Profiler.Distribution
-                && ((Profiler.Distribution) statistic).surprise() > 0.3D;
-          }
-        };
-    sql(sql)
-        .where(predicate)
-        .sort(ordering.reverse())
-        .limit(30)
-        .project(columns)
-        .unordered(
-            "{type:distribution,columns:[DNAME],values:[ACCOUNTING,RESEARCH,SALES],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
-            "{type:distribution,columns:[DEPTNO0],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
-            "{type:distribution,columns:[DEPTNO],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
-            "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:4.0,nullCount:10,expectedCardinality:14.0,surprise:0.5555555555555556}",
-            "{type:distribution,columns:[HIREDATE,COMM],cardinality:4.0,expectedCardinality:12.377762384970014,surprise:0.5115327837860406}",
-            "{type:distribution,columns:[SAL,COMM],cardinality:4.0,expectedCardinality:12.253467117178234,surprise:0.5077973245754547}",
-            "{type:distribution,columns:[JOB],values:[ANALYST,CLERK,MANAGER,PRESIDENT,SALESMAN],cardinality:5.0,expectedCardinality:14.0,surprise:0.47368421052631576}",
-            "{type:distribution,columns:[MGR,COMM],cardinality:4.0,expectedCardinality:10.773541853578294,surprise:0.4584913977102706}",
-            "{type:distribution,columns:[JOB,COMM],cardinality:4.0,expectedCardinality:10.246500417689411,surprise:0.43845858523496317}",
-            "{type:distribution,columns:[DEPTNO0,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
-            "{type:distribution,columns:[DEPTNO,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
-            "{type:distribution,columns:[DEPTNO,DEPTNO0],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
-            "{type:distribution,columns:[MGR],values:[7566,7698,7782,7788,7839,7902],cardinality:6.0,nullCount:1,expectedCardinality:14.0,surprise:0.4}",
-            "{type:distribution,columns:[COMM,DNAME],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}",
-            "{type:distribution,columns:[COMM,DEPTNO0],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}",
-            "{type:distribution,columns:[COMM,DEPTNO],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}");
+    check(fluid().factory(Fluid.SIMPLE_FACTORY));
   }
 
-  /** As {@link #testProfileScott2()}, but uses the better profiler. */
+  /** As {@link #testProfileScott2()}, but uses the breadth-first profiler. */
   @Test public void testProfileScott3() throws Exception {
+    check(fluid().factory(Fluid.BETTER_FACTORY));
+  }
+
+  /** As {@link #testProfileScott3()}, but uses the breadth-first profiler. */
+  @Test public void testProfileScott4() throws Exception {
+    final Supplier<Profiler> factory = new Supplier<Profiler>() {
+      public Profiler get() {
+        return new ProfilerImpl(10,
+            new PredicateImpl<Pair<ProfilerImpl.Space, Profiler.Column>>() {
+              public boolean test(Pair<ProfilerImpl.Space, Profiler.Column> p) {
+                return false;
+              }
+            });
+      }
+    };
+    check(fluid().factory(factory));
+  }
+
+  private Fluid fluid() throws Exception {
     final String sql = "select * from \"scott\".emp\n"
         + "join \"scott\".dept using (deptno)";
     final List<String> columns =
@@ -195,10 +187,8 @@ public class ProfilerTest {
               Profiler.Statistic right) {
             int c = left.getClass().getSimpleName()
                 .compareTo(right.getClass().getSimpleName());
-            if (c != 0) {
-              return c;
-            }
-            if (left instanceof Profiler.Distribution
+            if (c == 0
+                && left instanceof Profiler.Distribution
                 && right instanceof Profiler.Distribution) {
               c = Double.compare(((Profiler.Distribution) left).surprise(),
                   ((Profiler.Distribution) right).surprise());
@@ -213,52 +203,31 @@ public class ProfilerTest {
                 && ((Profiler.Distribution) statistic).surprise() > 0.3D;
           }
         };
-    sql(sql)
-        .factory(Fluid.BETTER_FACTORY)
+    return sql(sql)
         .where(predicate)
         .sort(ordering.reverse())
         .limit(30)
-        .project(columns)
-        .unordered(
-            "{type:distribution,columns:[DNAME],values:[ACCOUNTING,RESEARCH,SALES],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
-            "{type:distribution,columns:[DEPTNO0],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
-            "{type:distribution,columns:[DEPTNO],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
-            "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:4.0,nullCount:10,expectedCardinality:14.0,surprise:0.5555555555555556}",
-            "{type:distribution,columns:[HIREDATE,COMM],cardinality:4.0,expectedCardinality:12.377762384970014,surprise:0.5115327837860406}",
-            "{type:distribution,columns:[SAL,COMM],cardinality:4.0,expectedCardinality:12.253467117178234,surprise:0.5077973245754547}",
-            "{type:distribution,columns:[JOB],values:[ANALYST,CLERK,MANAGER,PRESIDENT,SALESMAN],cardinality:5.0,expectedCardinality:14.0,surprise:0.47368421052631576}",
-            "{type:distribution,columns:[MGR,COMM],cardinality:4.0,expectedCardinality:10.773541853578294,surprise:0.4584913977102706}",
-            "{type:distribution,columns:[JOB,COMM],cardinality:4.0,expectedCardinality:10.246500417689411,surprise:0.43845858523496317}",
-            "{type:distribution,columns:[DEPTNO0,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
-            "{type:distribution,columns:[DEPTNO,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
-            "{type:distribution,columns:[DEPTNO,DEPTNO0],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
-            "{type:distribution,columns:[MGR],values:[7566,7698,7782,7788,7839,7902],cardinality:6.0,nullCount:1,expectedCardinality:14.0,surprise:0.4}",
-            "{type:distribution,columns:[COMM,DNAME],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}",
-            "{type:distribution,columns:[COMM,DEPTNO0],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}",
-            "{type:distribution,columns:[COMM,DEPTNO],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}");
+        .project(columns);
   }
 
-  @Test public void testProfileZeroRows() throws Exception {
-    final String sql = "select * from \"scott\".dept where false";
-    sql(sql).unordered(
-        "{type:rowCount,rowCount:0}",
-        "{type:unique,columns:[]}");
-  }
-
-  @Test public void testProfileOneRow() throws Exception {
-    final String sql = "select * from \"scott\".dept where deptno = 10";
-    sql(sql).unordered(
-        "{type:rowCount,rowCount:1}",
-        "{type:unique,columns:[]}");
-  }
-
-  @Test public void testProfileTwoRows() throws Exception {
-    final String sql = "select * from \"scott\".dept where deptno in (10, 20)";
-    sql(sql).unordered(
-        "{type:distribution,columns:[],cardinality:1.0}",
-        "{type:rowCount,rowCount:2}",
-        "{type:unique,columns:[DEPTNO]}",
-        "{type:unique,columns:[DNAME]}");
+  private void check(Fluid fluid) throws Exception {
+    fluid.unordered(
+        "{type:distribution,columns:[DNAME],values:[ACCOUNTING,RESEARCH,SALES],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+        "{type:distribution,columns:[DEPTNO0],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+        "{type:distribution,columns:[DEPTNO],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+        "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:4.0,nullCount:10,expectedCardinality:14.0,surprise:0.5555555555555556}",
+        "{type:distribution,columns:[HIREDATE,COMM],cardinality:4.0,expectedCardinality:12.377762384970014,surprise:0.5115327837860406}",
+        "{type:distribution,columns:[SAL,COMM],cardinality:4.0,expectedCardinality:12.253467117178234,surprise:0.5077973245754547}",
+        "{type:distribution,columns:[JOB],values:[ANALYST,CLERK,MANAGER,PRESIDENT,SALESMAN],cardinality:5.0,expectedCardinality:14.0,surprise:0.47368421052631576}",
+        "{type:distribution,columns:[MGR,COMM],cardinality:4.0,expectedCardinality:10.773541853578294,surprise:0.4584913977102706}",
+        "{type:distribution,columns:[JOB,COMM],cardinality:4.0,expectedCardinality:10.246500417689411,surprise:0.43845858523496317}",
+        "{type:distribution,columns:[DEPTNO0,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[DEPTNO,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[DEPTNO,DEPTNO0],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[MGR],values:[7566,7698,7782,7788,7839,7902],cardinality:6.0,nullCount:1,expectedCardinality:14.0,surprise:0.4}",
+        "{type:distribution,columns:[COMM,DNAME],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}",
+        "{type:distribution,columns:[COMM,DEPTNO0],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}",
+        "{type:distribution,columns:[COMM,DEPTNO],cardinality:4.0,expectedCardinality:8.450710750857453,surprise:0.35746640010498537}");
   }
 
   private static Fluid sql(String sql) {
@@ -279,7 +248,9 @@ public class ProfilerTest {
     static final Supplier<Profiler> BETTER_FACTORY =
         new Supplier<Profiler>() {
           public Profiler get() {
-            return new ProfilerImpl();
+            final Predicate<Pair<ProfilerImpl.Space, Profiler.Column>>
+                predicate = Predicates.alwaysTrue();
+            return new ProfilerImpl(600, predicate);
           }
         };
 

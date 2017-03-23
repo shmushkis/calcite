@@ -21,10 +21,13 @@ import org.apache.calcite.materialize.Lattice;
 import org.apache.calcite.rel.metadata.NullSentinel;
 import org.apache.calcite.runtime.FlatLists;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.PartiallyOrderedSet;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 
@@ -55,47 +58,39 @@ public class ProfilerImpl implements Profiler {
         }
       };
 
-  public List<Statistic> profile(Iterable<List<Comparable>> rows,
-      final List<Column> columns) {
-    return new Run(columns, 100).profile(rows);
+  /** The number of combinations to consider per pass.
+   * The number is determined by memory, but a value of 1,000 is typical.
+   * You need 2KB memory per sketch, and one sketch for each combination. */
+  private final int combinationsPerPass;
+
+
+  /** Whether a successor is considered interesting enough to analyze. */
+   private final Predicate<Pair<Space, Column>> predicate;
+
+  /**
+   * Creates a {@code ProfilerImpl}.
+   *
+   * @param combinationsPerPass Maximum number of columns (or combinations of
+   *   columns) to compute each pass
+   * @param predicate Whether a successor is considered interesting enough to
+   *   analyze
+   */
+  public ProfilerImpl(int combinationsPerPass,
+      Predicate<Pair<Space, Column>> predicate) {
+    Preconditions.checkArgument(combinationsPerPass > 2);
+    this.combinationsPerPass = combinationsPerPass;
+    this.predicate = predicate;
   }
 
-  /** Returns a measure of how much an actual value differs from expected.
-   * The formula is {@code abs(expected - actual) / (expected + actual)}.
-   *
-   * <p>Examples:<ul>
-   *   <li>surprise(e, a) is always between 0 and 1;
-   *   <li>surprise(e, a) is 0 if e = a;
-   *   <li>surprise(e, 0) is 1 if e &gt; 0;
-   *   <li>surprise(0, a) is 1 if a &gt; 0;
-   *   <li>surprise(5, 0) is 100%;
-   *   <li>surprise(5, 3) is 25%;
-   *   <li>surprise(5, 4) is 11%;
-   *   <li>surprise(5, 5) is 0%;
-   *   <li>surprise(5, 6) is 9%;
-   *   <li>surprise(5, 16) is 52%;
-   *   <li>surprise(5, 100) is 90%;
-   * </ul>
-   *
-   * @param expected Expected value
-   * @param actual Actual value
-   * @return Measure of how much expected deviates from actual
-   */
-  public static double surprise(double expected, double actual) {
-    if (expected == actual) {
-      return 0d;
-    }
-    final double sum = expected + actual;
-    if (sum <= 0d) {
-      return 1d;
-    }
-    return Math.abs(expected - actual) / sum;
+  public List<Statistic> profile(Iterable<List<Comparable>> rows,
+      final List<Column> columns) {
+    return new Run(columns).profile(rows);
   }
 
   /** A run of the profiler. */
-  static class Run {
+  class Run {
     private final List<Column> columns;
-    final List<Space> spaces = new ArrayList<>();
+    final Map<ImmutableBitSet, Distribution> distributions = new HashMap<>();
     /** List of spaces that have one column. */
     final List<Space> singletonSpaces;
     /** Combinations of columns that we have computed but whose successors have
@@ -121,32 +116,26 @@ public class ProfilerImpl implements Profiler {
             return columns.get(input);
           }
         };
-    private int combinationsPerPass;
 
     /**
      * Creates a Run.
      *
      * @param columns List of columns
-     * @param combinationsPerPass Maximum number of columns (or combinations of
-     *   columns) to compute each pass
      */
-    Run(final List<Column> columns, int combinationsPerPass) {
-      this.combinationsPerPass = combinationsPerPass;
-      Preconditions.checkArgument(combinationsPerPass > 2); // 1000 typical
+    Run(final List<Column> columns) {
+      this.columns = ImmutableList.copyOf(columns);
       for (Ord<Column> column : Ord.zip(columns)) {
         if (column.e.ordinal != column.i) {
           throw new IllegalArgumentException();
         }
       }
-      this.columns = columns;
       this.singletonSpaces =
           new ArrayList<>(Collections.nCopies(columns.size(), (Space) null));
-      if (combinationsPerPass < Math.pow(2D, columns.size())) {
+      if (combinationsPerPass > Math.pow(2D, columns.size())) {
         // There are not many columns. We can compute all combinations in the
         // first pass.
         for (ImmutableBitSet ordinals
             : ImmutableBitSet.range(columns.size()).powerSet()) {
-          final Space space = new Space(ordinals, toColumns(ordinals));
           spaceQueue.add(ordinals);
         }
       } else {
@@ -160,11 +149,12 @@ public class ProfilerImpl implements Profiler {
     List<Statistic> profile(Iterable<List<Comparable>> rows) {
       int pass = 0;
       for (;;) {
-        spaces.clear();
-        if (!nextBatch()) {
+        final List<Space> spaces = nextBatch();
+        if (spaces.isEmpty()) {
           break;
         }
-        pass(pass++, rows);
+        pass(pass++, spaces, rows);
+        doneQueue.addAll(spaces);
       }
 
       for (Space s : singletonSpaces) {
@@ -177,27 +167,30 @@ public class ProfilerImpl implements Profiler {
       return statistics;
     }
 
-    /** Populates {@link #spaces} with the next batch. Returns false if done. */
-    boolean nextBatch() {
-      loop:
+    /** Populates {@code spaces} with the next batch.
+     * Returns an empty list if done. */
+    List<Space> nextBatch() {
+      final List<Space> spaces = new ArrayList<>();
+    loop:
       for (;;) {
-        if (spaces.size() > combinationsPerPass) {
+        if (spaces.size() >= combinationsPerPass) {
           // We have enough for the next pass.
-          return true;
+          return spaces;
         }
         final ImmutableBitSet ordinals = spaceQueue.poll();
         if (ordinals == null) {
           for (;;) {
-            final Space doneOrdinals = doneQueue.poll();
-            if (doneOrdinals == null) {
-              return false;
+            final Space doneSpace = doneQueue.poll();
+            if (doneSpace == null) {
+              return spaces;
             }
             for (Column column : columns) {
-              if (!doneOrdinals.columnOrdinals.get(column.ordinal)) {
-                final ImmutableBitSet nextOrdinals =
-                    doneOrdinals.columnOrdinals.set(column.ordinal);
-                // TODO: filter if not interesting
-                spaceQueue.add(nextOrdinals);
+              if (!doneSpace.columnOrdinals.get(column.ordinal)) {
+                if (isInterestingSuccessor(doneSpace, column)) {
+                  final ImmutableBitSet nextOrdinals =
+                      doneSpace.columnOrdinals.set(column.ordinal);
+                  spaceQueue.add(nextOrdinals);
+                }
               }
             }
             if (!spaceQueue.isEmpty()) {
@@ -213,7 +206,12 @@ public class ProfilerImpl implements Profiler {
       }
     }
 
-    void pass(int pass, Iterable<List<Comparable>> rows) {
+    boolean isInterestingSuccessor(Space space, Column column) {
+      return predicate.apply(Pair.of(space, column));
+    }
+
+    void pass(int pass, List<Space> spaces, Iterable<List<Comparable>> rows) {
+      System.out.println("pass: " + pass);
       final List<Comparable> values = new ArrayList<>();
       int rowCount = 0;
       for (final List<Comparable> row : rows) {
@@ -234,7 +232,6 @@ public class ProfilerImpl implements Profiler {
       }
 
       // Populate unique keys
-      final Map<ImmutableBitSet, Distribution> distributions = new HashMap<>();
       for (Space space : spaces) {
         keyResults.add(space);
         if (!keyResults.getChildren(space).isEmpty()) {
