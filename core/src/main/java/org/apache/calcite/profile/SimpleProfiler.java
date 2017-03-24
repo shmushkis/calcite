@@ -97,7 +97,7 @@ public class SimpleProfiler implements Profiler {
     final PartiallyOrderedSet.Ordering<Space> ordering =
         new PartiallyOrderedSet.Ordering<Space>() {
           public boolean lessThan(Space e1, Space e2) {
-            return e2.columns.containsAll(e1.columns);
+            return e2.columnOrdinals.contains(e1.columnOrdinals);
           }
         };
     final PartiallyOrderedSet<Space> results =
@@ -286,6 +286,16 @@ public class SimpleProfiler implements Profiler {
     Space(ImmutableBitSet columnOrdinals, Iterable<Column> columns) {
       this.columnOrdinals = columnOrdinals;
       this.columns = ImmutableSortedSet.copyOf(columns);
+    }
+
+    @Override public int hashCode() {
+      return columnOrdinals.hashCode();
+    }
+
+    @Override public boolean equals(Object o) {
+      return o == this
+          || o instanceof Space
+          && columnOrdinals.equals(((Space) o).columnOrdinals);
     }
 
     public int compareTo(@Nonnull Space o) {

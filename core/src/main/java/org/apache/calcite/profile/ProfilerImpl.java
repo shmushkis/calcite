@@ -63,9 +63,8 @@ public class ProfilerImpl implements Profiler {
    * You need 2KB memory per sketch, and one sketch for each combination. */
   private final int combinationsPerPass;
 
-
   /** Whether a successor is considered interesting enough to analyze. */
-   private final Predicate<Pair<Space, Column>> predicate;
+  private final Predicate<Pair<Space, Column>> predicate;
 
   /**
    * Creates a {@code ProfilerImpl}.
@@ -103,13 +102,15 @@ public class ProfilerImpl implements Profiler {
     final PartiallyOrderedSet.Ordering<Space> ordering =
         new PartiallyOrderedSet.Ordering<Space>() {
           public boolean lessThan(Space e1, Space e2) {
-            return e2.columns.containsAll(e1.columns);
+            return e2.columnOrdinals.contains(e1.columnOrdinals);
           }
         };
     final PartiallyOrderedSet<Space> results =
         new PartiallyOrderedSet<>(ordering);
     final PartiallyOrderedSet<Space> keyResults =
         new PartiallyOrderedSet<>(ordering);
+    private final List<ImmutableBitSet> keyOrdinalLists =
+        new ArrayList<>();
     final Function<Integer, Column> get =
         new Function<Integer, Column>() {
           public Column apply(Integer input) {
@@ -154,7 +155,6 @@ public class ProfilerImpl implements Profiler {
           break;
         }
         pass(pass++, spaces, rows);
-        doneQueue.addAll(spaces);
       }
 
       for (Space s : singletonSpaces) {
@@ -177,11 +177,22 @@ public class ProfilerImpl implements Profiler {
           // We have enough for the next pass.
           return spaces;
         }
+        // First, see if there is a space we did have room for last pass.
         final ImmutableBitSet ordinals = spaceQueue.poll();
-        if (ordinals == null) {
+        if (ordinals != null) {
+          final Space space = new Space(this, ordinals, toColumns(ordinals));
+          spaces.add(space);
+          doneQueue.add(space);
+          if (ordinals.cardinality() == 1) {
+            singletonSpaces.set(ordinals.nth(0), space);
+          }
+        } else {
+          // Next, take a space that was done last time, generate its
+          // successors, and add the interesting ones to the space queue.
           for (;;) {
             final Space doneSpace = doneQueue.poll();
             if (doneSpace == null) {
+              // There are no more done spaces. We're done.
               return spaces;
             }
             for (Column column : columns) {
@@ -193,25 +204,35 @@ public class ProfilerImpl implements Profiler {
                 }
               }
             }
+            // We've converted at a space into at least one interesting
+            // successor.
             if (!spaceQueue.isEmpty()) {
               continue loop;
             }
           }
         }
-        final Space space = new Space(ordinals, toColumns(ordinals));
-        spaces.add(space);
-        if (ordinals.cardinality() == 1) {
-          singletonSpaces.set(ordinals.nth(0), space);
-        }
       }
     }
 
     boolean isInterestingSuccessor(Space space, Column column) {
-      return predicate.apply(Pair.of(space, column));
+      return space.columnOrdinals.cardinality() == 0
+          || !containsKey(space.columnOrdinals.set(column.ordinal))
+          && predicate.apply(Pair.of(space, column));
+    }
+
+    private boolean containsKey(ImmutableBitSet ordinals) {
+      for (ImmutableBitSet keyOrdinals : keyOrdinalLists) {
+        if (ordinals.contains(keyOrdinals)) {
+          return true;
+        }
+      }
+      return false;
     }
 
     void pass(int pass, List<Space> spaces, Iterable<List<Comparable>> rows) {
-      System.out.println("pass: " + pass);
+      System.out.println("pass: " + pass
+          + ", spaces.size: " + spaces.size()
+          + ", distributions.size: " + distributions.size());
       final List<Comparable> values = new ArrayList<>();
       int rowCount = 0;
       for (final List<Comparable> row : rows) {
@@ -236,16 +257,10 @@ public class ProfilerImpl implements Profiler {
         keyResults.add(space);
         if (!keyResults.getChildren(space).isEmpty()) {
           // If [x, y] is a key,
-          // then [x, y, z] is a key but not intersecting,
+          // then [x, y, z] is a non-minimal key (therefore not interesting),
           // and [x, y] => [a] is a functional dependency but not interesting,
           // and [x, y, z] is not an interesting distribution.
           keyResults.remove(space);
-          continue;
-        }
-        if (space.values.size() == rowCount) {
-          // We have discovered a new key. It is not a super-set of a key.
-          statistics.add(new Unique(space.columns));
-          space.unique = true;
           continue;
         }
         keyResults.remove(space);
@@ -333,6 +348,13 @@ public class ProfilerImpl implements Profiler {
                 expectedCardinality);
         statistics.add(distribution);
         distributions.put(space.columnOrdinals, distribution);
+
+        if (space.values.size() == rowCount) {
+          // We have discovered a new key. It is not a super-set of a key.
+          statistics.add(new Unique(space.columns));
+          keyOrdinalLists.add(space.columnOrdinals);
+          space.unique = true;
+        }
       }
 
       if (pass == 0) {
@@ -347,6 +369,7 @@ public class ProfilerImpl implements Profiler {
 
   /** Work space for a particular combination of columns. */
   static class Space implements Comparable<Space> {
+    private final Run run;
     final ImmutableBitSet columnOrdinals;
     final ImmutableSortedSet<Column> columns;
     int nullCount;
@@ -356,9 +379,20 @@ public class ProfilerImpl implements Profiler {
     final BitSet dependencies = new BitSet();
     final Set<ImmutableBitSet> dependents = new HashSet<>();
 
-    Space(ImmutableBitSet columnOrdinals, Iterable<Column> columns) {
+    Space(Run run, ImmutableBitSet columnOrdinals, Iterable<Column> columns) {
+      this.run = run;
       this.columnOrdinals = columnOrdinals;
       this.columns = ImmutableSortedSet.copyOf(columns);
+    }
+
+    @Override public int hashCode() {
+      return columnOrdinals.hashCode();
+    }
+
+    @Override public boolean equals(Object o) {
+      return o == this
+          || o instanceof Space
+          && columnOrdinals.equals(((Space) o).columnOrdinals);
     }
 
     public int compareTo(@Nonnull Space o) {
@@ -369,6 +403,12 @@ public class ProfilerImpl implements Profiler {
 
     public double cardinality() {
       return values.size();
+    }
+
+    /** Returns the distribution created from this space, or null if no
+     * distribution has been registered yet. */
+    public Distribution distribution() {
+      return run.distributions.get(columnOrdinals);
     }
   }
 }
