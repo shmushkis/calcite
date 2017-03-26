@@ -104,6 +104,8 @@ public class SimpleProfiler implements Profiler {
         new PartiallyOrderedSet<>(ordering);
     final PartiallyOrderedSet<Space> keyResults =
         new PartiallyOrderedSet<>(ordering);
+    private final List<ImmutableBitSet> keyOrdinalLists =
+        new ArrayList<>();
     final Function<Integer, Column> get =
         new Function<Integer, Column>() {
           public Column apply(Integer input) {
@@ -162,14 +164,15 @@ public class SimpleProfiler implements Profiler {
           keyResults.remove(space);
           continue;
         }
-        if (space.values.size() == rowCount) {
-          // We have discovered a new key. It is not a super-set of a key.
+        if (space.values.size() == rowCount
+            && !containsKey(space.columnOrdinals, false)) {
+          // We have discovered a new key.
+          // It is not an existing key or a super-set of a key.
           statistics.add(new Unique(space.columns));
           space.unique = true;
-          continue;
+          keyOrdinalLists.add(space.columnOrdinals);
         }
         keyResults.remove(space);
-        results.add(space);
 
         int nonMinimal = 0;
       dependents:
@@ -212,9 +215,7 @@ public class SimpleProfiler implements Profiler {
             }
           }
         }
-        if (nonMinimal > 0) {
-          continue;
-        }
+
         int nullCount;
         final SortedSet<Comparable> valueSet;
         if (space.columns.size() == 1) {
@@ -248,23 +249,53 @@ public class SimpleProfiler implements Profiler {
             expectedCardinality = Math.min(expectedCardinality, d);
           }
         }
+        final boolean minimal = nonMinimal == 0
+            && !space.unique
+            && !containsKey(space.columnOrdinals, true);
         final Distribution distribution =
             new Distribution(space.columns, valueSet, cardinality, nullCount,
-                expectedCardinality);
+                expectedCardinality, minimal);
         statistics.add(distribution);
         distributions.put(space.columnOrdinals, distribution);
 
+        if (distribution.minimal) {
+          results.add(space);
+        }
       }
 
       for (Space s : singletonSpaces) {
         for (ImmutableBitSet dependent : s.dependents) {
-          statistics.add(
-              new FunctionalDependency(toColumns(dependent),
-                  Iterables.getOnlyElement(s.columns)));
+          if (!containsKey(dependent, false)
+              && !hasNull(dependent)) {
+            statistics.add(
+                new FunctionalDependency(toColumns(dependent),
+                    Iterables.getOnlyElement(s.columns)));
+          }
         }
       }
       statistics.add(new RowCount(rowCount));
       return statistics;
+    }
+
+    /** Returns whether a set of column ordinals
+     * matches or contains a unique key.
+     * If {@code strict}, it must contain a unique key. */
+    private boolean containsKey(ImmutableBitSet ordinals, boolean strict) {
+      for (ImmutableBitSet keyOrdinals : keyOrdinalLists) {
+        if (ordinals.contains(keyOrdinals)) {
+          return !(strict && keyOrdinals.equals(ordinals));
+        }
+      }
+      return false;
+    }
+
+    private boolean hasNull(ImmutableBitSet columnOrdinals) {
+      for (Integer columnOrdinal : columnOrdinals) {
+        if (singletonSpaces.get(columnOrdinal).nullCount > 0) {
+          return true;
+        }
+      }
+      return false;
     }
 
     private ImmutableSortedSet<Column> toColumns(Iterable<Integer> ordinals) {

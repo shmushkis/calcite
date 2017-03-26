@@ -343,9 +343,12 @@ public class ProfilerImpl implements Profiler {
             expectedCardinality = Math.min(expectedCardinality, d);
           }
         }
+        final boolean minimal = nonMinimal == 0
+            && !space.unique
+            && !containsKey(space.columnOrdinals);
         final Distribution distribution =
             new Distribution(space.columns, valueSet, cardinality, nullCount,
-                expectedCardinality);
+                expectedCardinality, minimal);
         statistics.add(distribution);
         distributions.put(space.columnOrdinals, distribution);
 

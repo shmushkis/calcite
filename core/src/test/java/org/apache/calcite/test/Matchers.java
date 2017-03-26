@@ -93,10 +93,13 @@ public class Matchers {
     Collections.sort(expectedList);
     final String description = Util.lines(expectedList);
     return new CustomTypeSafeMatcher<Iterable<E>>(description) {
-      @Override protected void describeMismatchSafely(Iterable<E> items,
+      @Override protected void describeMismatchSafely(Iterable<E> actuals,
           Description description) {
+        final List<String> actualList =
+            Lists.newArrayList(toStringList(actuals));
+        Collections.sort(actualList);
         description.appendText("was ")
-            .appendValue(Util.lines(toStringList(items)));
+            .appendValue(Util.lines(actualList));
       }
 
       protected boolean matchesSafely(Iterable<E> actuals) {

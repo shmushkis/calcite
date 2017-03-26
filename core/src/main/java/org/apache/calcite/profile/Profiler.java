@@ -141,6 +141,7 @@ public interface Profiler {
     final double cardinality;
     final int nullCount;
     final double expectedCardinality;
+    final boolean minimal;
 
     /** Creates a Distribution.
      *
@@ -149,14 +150,18 @@ public interface Profiler {
      * @param cardinality Number of distinct values
      * @param nullCount Number of rows where this column had a null value;
      * @param expectedCardinality Expected cardinality
+     * @param minimal Whether the distribution is not implied by a unique
+     *   or functional dependency
      */
     public Distribution(SortedSet<Column> columns, SortedSet<Comparable> values,
-        double cardinality, int nullCount, double expectedCardinality) {
+        double cardinality, int nullCount, double expectedCardinality,
+        boolean minimal) {
       this.columns = ImmutableSortedSet.copyOf(columns);
       this.values = values == null ? null : ImmutableSortedSet.copyOf(values);
       this.cardinality = cardinality;
       this.nullCount = nullCount;
       this.expectedCardinality = expectedCardinality;
+      this.minimal = minimal;
     }
 
     public Object toMap(JsonBuilder jsonBuilder) {

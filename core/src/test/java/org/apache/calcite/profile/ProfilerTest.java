@@ -58,6 +58,10 @@ public class ProfilerTest {
   @Test public void testProfileZeroRows() throws Exception {
     final String sql = "select * from \"scott\".dept where false";
     sql(sql).unordered(
+        "{type:distribution,columns:[DEPTNO,DNAME],cardinality:0.0}",
+        "{type:distribution,columns:[DEPTNO],values:[],cardinality:0.0}",
+        "{type:distribution,columns:[DNAME],values:[],cardinality:0.0}",
+        "{type:distribution,columns:[],cardinality:0.0}",
         "{type:rowCount,rowCount:0}",
         "{type:unique,columns:[]}");
   }
@@ -65,6 +69,10 @@ public class ProfilerTest {
   @Test public void testProfileOneRow() throws Exception {
     final String sql = "select * from \"scott\".dept where deptno = 10";
     sql(sql).unordered(
+        "{type:distribution,columns:[DEPTNO,DNAME],cardinality:1.0}",
+        "{type:distribution,columns:[DEPTNO],values:[10],cardinality:1.0}",
+        "{type:distribution,columns:[DNAME],values:[ACCOUNTING],cardinality:1.0}",
+        "{type:distribution,columns:[],cardinality:1.0}",
         "{type:rowCount,rowCount:1}",
         "{type:unique,columns:[]}");
   }
@@ -72,6 +80,9 @@ public class ProfilerTest {
   @Test public void testProfileTwoRows() throws Exception {
     final String sql = "select * from \"scott\".dept where deptno in (10, 20)";
     sql(sql).unordered(
+        "{type:distribution,columns:[DEPTNO,DNAME],cardinality:2.0}",
+        "{type:distribution,columns:[DEPTNO],values:[10,20],cardinality:2.0}",
+        "{type:distribution,columns:[DNAME],values:[ACCOUNTING,RESEARCH],cardinality:2.0}",
         "{type:distribution,columns:[],cardinality:1.0}",
         "{type:rowCount,rowCount:2}",
         "{type:unique,columns:[DEPTNO]}",
@@ -81,7 +92,14 @@ public class ProfilerTest {
   @Test public void testProfileScott() throws Exception {
     final String sql = "select * from \"scott\".emp\n"
         + "join \"scott\".dept using (deptno)";
-    sql(sql).unordered(
+    sql(sql)
+        .where(new PredicateImpl<Profiler.Statistic>() {
+          public boolean test(Profiler.Statistic statistic) {
+            return !(statistic instanceof Profiler.Distribution)
+                || ((Profiler.Distribution) statistic).cardinality < 14
+                && ((Profiler.Distribution) statistic).minimal;
+          }
+        }).unordered(
         "{type:distribution,columns:[COMM,DEPTNO0],cardinality:4.0}",
         "{type:distribution,columns:[COMM,DEPTNO],cardinality:4.0}",
         "{type:distribution,columns:[COMM,DNAME],cardinality:4.0}",
@@ -117,13 +135,6 @@ public class ProfilerTest {
         "{type:distribution,columns:[SAL,DNAME],cardinality:12.0}",
         "{type:distribution,columns:[SAL],values:[800.00,950.00,1100.00,1250.00,1300.00,1500.00,1600.00,2450.00,2850.00,2975.00,3000.00,5000.00],cardinality:12.0}",
         "{type:distribution,columns:[],cardinality:1.0}",
-        "{type:fd,columns:[COMM],dependentColumn:DEPTNO0}",
-        "{type:fd,columns:[COMM],dependentColumn:DEPTNO}",
-        "{type:fd,columns:[COMM],dependentColumn:DNAME}",
-        "{type:fd,columns:[COMM],dependentColumn:HIREDATE}",
-        "{type:fd,columns:[COMM],dependentColumn:JOB}",
-        "{type:fd,columns:[COMM],dependentColumn:MGR}",
-        "{type:fd,columns:[COMM],dependentColumn:SAL}",
         "{type:fd,columns:[DEPTNO0],dependentColumn:DEPTNO}",
         "{type:fd,columns:[DEPTNO0],dependentColumn:DNAME}",
         "{type:fd,columns:[DEPTNO],dependentColumn:DEPTNO0}",
@@ -151,12 +162,48 @@ public class ProfilerTest {
   /** As {@link #testProfileScott()}, but prints only the most surprising
    * distributions. */
   @Test public void testProfileScott2() throws Exception {
-    check(fluid().factory(Fluid.SIMPLE_FACTORY));
+    fluid().factory(Fluid.SIMPLE_FACTORY).unordered(
+        "{type:distribution,columns:[DNAME],values:[ACCOUNTING,RESEARCH,SALES],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+        "{type:distribution,columns:[DEPTNO0],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+        "{type:distribution,columns:[DEPTNO],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+        "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:4.0,nullCount:10,expectedCardinality:14.0,surprise:0.5555555555555556}",
+        "{type:distribution,columns:[HIREDATE,COMM],cardinality:4.0,expectedCardinality:12.377762384970014,surprise:0.5115327837860406}",
+        "{type:distribution,columns:[SAL,COMM],cardinality:4.0,expectedCardinality:12.253467117178234,surprise:0.5077973245754547}",
+        "{type:distribution,columns:[JOB],values:[ANALYST,CLERK,MANAGER,PRESIDENT,SALESMAN],cardinality:5.0,expectedCardinality:14.0,surprise:0.47368421052631576}",
+        "{type:distribution,columns:[MGR,COMM],cardinality:4.0,expectedCardinality:10.773541853578294,surprise:0.4584913977102706}",
+        "{type:distribution,columns:[JOB,COMM],cardinality:4.0,expectedCardinality:10.246500417689411,surprise:0.43845858523496317}",
+        "{type:distribution,columns:[DEPTNO0,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[DEPTNO,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[DEPTNO,DEPTNO0],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[MGR],values:[7566,7698,7782,7788,7839,7902],cardinality:6.0,nullCount:1,expectedCardinality:14.0,surprise:0.4}",
+        "{type:distribution,columns:[SAL],values:[800.00,950.00,1100.00,1250.00,1300.00,1500.00,1600.00,2450.00,2850.00,2975.00,3000.00,5000.00],cardinality:12.0,expectedCardinality:14.0,surprise:0.07692307692307693}",
+        "{type:distribution,columns:[HIREDATE],values:[1980-12-17,1981-01-05,1981-02-04,1981-02-20,1981-02-22,1981-06-09,1981-09-08,1981-09-28,1981-11-17,1981-12-03,1982-01-23,1987-04-19,1987-05-23],cardinality:13.0,expectedCardinality:14.0,surprise:0.037037037037037035}",
+        "{type:distribution,columns:[],cardinality:1.0,expectedCardinality:1.0,surprise:0.0}");
   }
 
-  /** As {@link #testProfileScott2()}, but uses the breadth-first profiler. */
+  /** As {@link #testProfileScott2()}, but uses the breadth-first profiler.
+   * Results should be the same, but are slightly different (extra EMPNO
+   * and ENAME distributions). */
   @Test public void testProfileScott3() throws Exception {
-    check(fluid().factory(Fluid.BETTER_FACTORY));
+    fluid().factory(Fluid.BETTER_FACTORY).unordered(
+        "{type:distribution,columns:[DNAME],values:[ACCOUNTING,RESEARCH,SALES],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+        "{type:distribution,columns:[DEPTNO0],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+        "{type:distribution,columns:[DEPTNO],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+        "{type:distribution,columns:[EMPNO],values:[7369,7499,7521,7566,7654,7698,7782,7788,7839,7844,7876,7900,7902,7934],cardinality:14.0,expectedCardinality:14.0,surprise:0.0}",
+        "{type:distribution,columns:[ENAME],values:[ADAMS,ALLEN,BLAKE,CLARK,FORD,JAMES,JONES,KING,MARTIN,MILLER,SCOTT,SMITH,TURNER,WARD],cardinality:14.0,expectedCardinality:14.0,surprise:0.0}",
+        "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:4.0,nullCount:10,expectedCardinality:14.0,surprise:0.5555555555555556}",
+        "{type:distribution,columns:[HIREDATE,COMM],cardinality:4.0,expectedCardinality:12.377762384970014,surprise:0.5115327837860406}",
+        "{type:distribution,columns:[SAL,COMM],cardinality:4.0,expectedCardinality:12.253467117178234,surprise:0.5077973245754547}",
+        "{type:distribution,columns:[JOB],values:[ANALYST,CLERK,MANAGER,PRESIDENT,SALESMAN],cardinality:5.0,expectedCardinality:14.0,surprise:0.47368421052631576}",
+        "{type:distribution,columns:[MGR,COMM],cardinality:4.0,expectedCardinality:10.773541853578294,surprise:0.4584913977102706}",
+        "{type:distribution,columns:[JOB,COMM],cardinality:4.0,expectedCardinality:10.246500417689411,surprise:0.43845858523496317}",
+        "{type:distribution,columns:[DEPTNO0,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[DEPTNO,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[DEPTNO,DEPTNO0],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[MGR],values:[7566,7698,7782,7788,7839,7902],cardinality:6.0,nullCount:1,expectedCardinality:14.0,surprise:0.4}",
+        "{type:distribution,columns:[SAL],values:[800.00,950.00,1100.00,1250.00,1300.00,1500.00,1600.00,2450.00,2850.00,2975.00,3000.00,5000.00],cardinality:12.0,expectedCardinality:14.0,surprise:0.07692307692307693}",
+        "{type:distribution,columns:[HIREDATE],values:[1980-12-17,1981-01-05,1981-02-04,1981-02-20,1981-02-22,1981-06-09,1981-09-08,1981-09-28,1981-11-17,1981-12-03,1982-01-23,1987-04-19,1987-05-23],cardinality:13.0,expectedCardinality:14.0,surprise:0.037037037037037035}",
+        "{type:distribution,columns:[],cardinality:1.0,expectedCardinality:1.0,surprise:0.0}");
   }
 
   /** As {@link #testProfileScott3()}, but uses the breadth-first profiler
@@ -176,10 +223,15 @@ public class ProfilerTest {
     fluid().factory(factory).unordered(
         "{type:distribution,columns:[DEPTNO],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
         "{type:distribution,columns:[DEPTNO0],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+        "{type:distribution,columns:[EMPNO],values:[7369,7499,7521,7566,7654,7698,7782,7788,7839,7844,7876,7900,7902,7934],cardinality:14.0,expectedCardinality:14.0,surprise:0.0}",
+        "{type:distribution,columns:[ENAME],values:[ADAMS,ALLEN,BLAKE,CLARK,FORD,JAMES,JONES,KING,MARTIN,MILLER,SCOTT,SMITH,TURNER,WARD],cardinality:14.0,expectedCardinality:14.0,surprise:0.0}",
         "{type:distribution,columns:[DNAME],values:[ACCOUNTING,RESEARCH,SALES],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
         "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:4.0,nullCount:10,expectedCardinality:14.0,surprise:0.5555555555555556}",
         "{type:distribution,columns:[JOB],values:[ANALYST,CLERK,MANAGER,PRESIDENT,SALESMAN],cardinality:5.0,expectedCardinality:14.0,surprise:0.47368421052631576}",
-        "{type:distribution,columns:[MGR],values:[7566,7698,7782,7788,7839,7902],cardinality:6.0,nullCount:1,expectedCardinality:14.0,surprise:0.4}");
+        "{type:distribution,columns:[HIREDATE],values:[1980-12-17,1981-01-05,1981-02-04,1981-02-20,1981-02-22,1981-06-09,1981-09-08,1981-09-28,1981-11-17,1981-12-03,1982-01-23,1987-04-19,1987-05-23],cardinality:13.0,expectedCardinality:14.0,surprise:0.037037037037037035}",
+        "{type:distribution,columns:[SAL],values:[800.00,950.00,1100.00,1250.00,1300.00,1500.00,1600.00,2450.00,2850.00,2975.00,3000.00,5000.00],cardinality:12.0,expectedCardinality:14.0,surprise:0.07692307692307693}",
+        "{type:distribution,columns:[MGR],values:[7566,7698,7782,7788,7839,7902],cardinality:6.0,nullCount:1,expectedCardinality:14.0,surprise:0.4}",
+        "{type:distribution,columns:[],cardinality:1.0,expectedCardinality:1.0,surprise:0.0}");
   }
 
   /** As {@link #testProfileScott3()}, but uses the breadth-first profiler
@@ -209,7 +261,19 @@ public class ProfilerTest {
         "{type:distribution,columns:[DNAME],values:[ACCOUNTING,RESEARCH,SALES],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
         "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:4.0,nullCount:10,expectedCardinality:14.0,surprise:0.5555555555555556}",
         "{type:distribution,columns:[JOB],values:[ANALYST,CLERK,MANAGER,PRESIDENT,SALESMAN],cardinality:5.0,expectedCardinality:14.0,surprise:0.47368421052631576}",
-        "{type:distribution,columns:[MGR],values:[7566,7698,7782,7788,7839,7902],cardinality:6.0,nullCount:1,expectedCardinality:14.0,surprise:0.4}");
+        "{type:distribution,columns:[MGR],values:[7566,7698,7782,7788,7839,7902],cardinality:6.0,nullCount:1,expectedCardinality:14.0,surprise:0.4}",
+        "{type:distribution,columns:[DEPTNO,DEPTNO0],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[DEPTNO,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[DEPTNO0,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[EMPNO],values:[7369,7499,7521,7566,7654,7698,7782,7788,7839,7844,7876,7900,7902,7934],cardinality:14.0,expectedCardinality:14.0,surprise:0.0}",
+        "{type:distribution,columns:[ENAME],values:[ADAMS,ALLEN,BLAKE,CLARK,FORD,JAMES,JONES,KING,MARTIN,MILLER,SCOTT,SMITH,TURNER,WARD],cardinality:14.0,expectedCardinality:14.0,surprise:0.0}",
+        "{type:distribution,columns:[HIREDATE,COMM],cardinality:4.0,expectedCardinality:12.377762384970014,surprise:0.5115327837860406}",
+        "{type:distribution,columns:[HIREDATE],values:[1980-12-17,1981-01-05,1981-02-04,1981-02-20,1981-02-22,1981-06-09,1981-09-08,1981-09-28,1981-11-17,1981-12-03,1982-01-23,1987-04-19,1987-05-23],cardinality:13.0,expectedCardinality:14.0,surprise:0.037037037037037035}",
+        "{type:distribution,columns:[JOB,COMM],cardinality:4.0,expectedCardinality:10.246500417689411,surprise:0.43845858523496317}",
+        "{type:distribution,columns:[MGR,COMM],cardinality:4.0,expectedCardinality:10.773541853578294,surprise:0.4584913977102706}",
+        "{type:distribution,columns:[SAL,COMM],cardinality:4.0,expectedCardinality:12.253467117178234,surprise:0.5077973245754547}",
+        "{type:distribution,columns:[SAL],values:[800.00,950.00,1100.00,1250.00,1300.00,1500.00,1600.00,2450.00,2850.00,2975.00,3000.00,5000.00],cardinality:12.0,expectedCardinality:14.0,surprise:0.07692307692307693}",
+        "{type:distribution,columns:[],cardinality:1.0,expectedCardinality:1.0,surprise:0.0}");
   }
 
   private Fluid fluid() throws Exception {
@@ -247,7 +311,8 @@ public class ProfilerTest {
             // constituent columns).
             return statistic instanceof Profiler.Distribution
                 && (((Profiler.Distribution) statistic).columns.size() < 2
-                    || ((Profiler.Distribution) statistic).surprise() > 0.4D);
+                    || ((Profiler.Distribution) statistic).surprise() > 0.4D)
+                && ((Profiler.Distribution) statistic).minimal;
           }
         };
     return sql(sql)
@@ -255,26 +320,6 @@ public class ProfilerTest {
         .sort(ordering.reverse())
         .limit(30)
         .project(columns);
-  }
-
-  private void check(Fluid fluid) throws Exception {
-    fluid.unordered(
-        "{type:distribution,columns:[DNAME],values:[ACCOUNTING,RESEARCH,SALES],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
-        "{type:distribution,columns:[DEPTNO0],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
-        "{type:distribution,columns:[DEPTNO],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
-        "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:4.0,nullCount:10,expectedCardinality:14.0,surprise:0.5555555555555556}",
-        "{type:distribution,columns:[HIREDATE,COMM],cardinality:4.0,expectedCardinality:12.377762384970014,surprise:0.5115327837860406}",
-        "{type:distribution,columns:[SAL,COMM],cardinality:4.0,expectedCardinality:12.253467117178234,surprise:0.5077973245754547}",
-        "{type:distribution,columns:[JOB],values:[ANALYST,CLERK,MANAGER,PRESIDENT,SALESMAN],cardinality:5.0,expectedCardinality:14.0,surprise:0.47368421052631576}",
-        "{type:distribution,columns:[MGR,COMM],cardinality:4.0,expectedCardinality:10.773541853578294,surprise:0.4584913977102706}",
-        "{type:distribution,columns:[JOB,COMM],cardinality:4.0,expectedCardinality:10.246500417689411,surprise:0.43845858523496317}",
-        "{type:distribution,columns:[DEPTNO0,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
-        "{type:distribution,columns:[DEPTNO,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
-        "{type:distribution,columns:[DEPTNO,DEPTNO0],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
-        "{type:distribution,columns:[MGR],values:[7566,7698,7782,7788,7839,7902],cardinality:6.0,nullCount:1,expectedCardinality:14.0,surprise:0.4}",
-        "{type:distribution,columns:[SAL],values:[800.00,950.00,1100.00,1250.00,1300.00,1500.00,1600.00,2450.00,2850.00,2975.00,3000.00,5000.00],cardinality:12.0,expectedCardinality:14.0,surprise:0.07692307692307693}",
-        "{type:distribution,columns:[HIREDATE],values:[1980-12-17,1981-01-05,1981-02-04,1981-02-20,1981-02-22,1981-06-09,1981-09-08,1981-09-28,1981-11-17,1981-12-03,1982-01-23,1987-04-19,1987-05-23],cardinality:13.0,expectedCardinality:14.0,surprise:0.037037037037037035}",
-        "{type:distribution,columns:[],cardinality:1.0,expectedCardinality:1.0,surprise:0.0}");
   }
 
   private static Fluid sql(String sql) {
