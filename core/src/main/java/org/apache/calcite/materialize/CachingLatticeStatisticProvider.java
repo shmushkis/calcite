@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.materialize;
 
-import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
 import com.google.common.cache.CacheBuilder;
@@ -28,33 +27,34 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import javax.annotation.Nonnull;
 
 /**
  * Implementation of {@link LatticeStatisticProvider} that caches single-column
  * statistics and computes multi-column statistics from these.
  */
 class CachingLatticeStatisticProvider implements LatticeStatisticProvider {
-  private final LoadingCache<Pair<Lattice, Lattice.Column>, Double> cache;
+  private final Lattice lattice;
+  private final LoadingCache<Lattice.Column, Double> cache;
 
   /** Creates a CachingStatisticProvider. */
-  public CachingLatticeStatisticProvider(
+  CachingLatticeStatisticProvider(final Lattice lattice,
       final LatticeStatisticProvider provider) {
-    cache = CacheBuilder.<Pair<Lattice, Lattice.Column>>newBuilder()
+    this.lattice = lattice;
+    cache = CacheBuilder.<Lattice.Column>newBuilder()
         .build(
-            new CacheLoader<Pair<Lattice, Lattice.Column>, Double>() {
-              public Double load(Pair<Lattice, Lattice.Column> key)
-                  throws Exception {
-                return provider.cardinality(key.left,
-                    ImmutableList.of(key.right));
+            new CacheLoader<Lattice.Column, Double>() {
+              public Double load(@Nonnull Lattice.Column key) throws Exception {
+                return provider.cardinality(ImmutableList.of(key));
               }
             });
   }
 
-  public double cardinality(Lattice lattice, List<Lattice.Column> columns) {
+  public double cardinality(List<Lattice.Column> columns) {
     final List<Double> counts = new ArrayList<>();
     for (Lattice.Column column : columns) {
       try {
-        counts.add(cache.get(Pair.of(lattice, column)));
+        counts.add(cache.get(column));
       } catch (UncheckedExecutionException | ExecutionException e) {
         Util.throwIfUnchecked(e.getCause());
         throw new RuntimeException(e.getCause());

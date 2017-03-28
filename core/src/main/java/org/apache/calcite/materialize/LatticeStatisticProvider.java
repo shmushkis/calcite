@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.materialize;
 
+import com.google.common.base.Function;
+
 import java.util.List;
 
 /**
@@ -24,7 +26,12 @@ import java.util.List;
 public interface LatticeStatisticProvider {
   /** Returns an estimate of the number of distinct values in a column
    * or list of columns. */
-  double cardinality(Lattice lattice, List<Lattice.Column> columns);
+  double cardinality(List<Lattice.Column> columns);
+
+  /** Creates a {@link LatticeStatisticProvider} for a given
+   * {@link org.apache.calcite.materialize.Lattice}. */
+  interface Factory extends Function<Lattice, LatticeStatisticProvider> {
+  }
 }
 
 // End LatticeStatisticProvider.java

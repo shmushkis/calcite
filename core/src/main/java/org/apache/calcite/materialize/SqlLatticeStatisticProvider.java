@@ -20,6 +20,7 @@ import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.util.ImmutableBitSet;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
@@ -31,13 +32,29 @@ import java.util.List;
  * executing "SELECT COUNT(DISTINCT ...) ..." SQL queries.
  */
 class SqlLatticeStatisticProvider implements LatticeStatisticProvider {
-  static final SqlLatticeStatisticProvider INSTANCE =
-      new SqlLatticeStatisticProvider();
+  static final Factory FACTORY =
+      new LatticeStatisticProvider.Factory() {
+        public LatticeStatisticProvider apply(Lattice lattice) {
+          return new SqlLatticeStatisticProvider(lattice);
+        }
+      };
 
-  /** Creates an SqlLatticeStatisticProvider. */
-  private SqlLatticeStatisticProvider() {}
+  static final Factory CACHED_FACTORY =
+      new LatticeStatisticProvider.Factory() {
+        public LatticeStatisticProvider apply(Lattice lattice) {
+          LatticeStatisticProvider provider = FACTORY.apply(lattice);
+          return new CachingLatticeStatisticProvider(lattice, provider);
+        }
+      };
 
-  public double cardinality(Lattice lattice, List<Lattice.Column> columns) {
+  private final Lattice lattice;
+
+  /** Creates a SqlLatticeStatisticProvider. */
+  private SqlLatticeStatisticProvider(Lattice lattice) {
+    this.lattice = Preconditions.checkNotNull(lattice);
+  }
+
+  public double cardinality(List<Lattice.Column> columns) {
     final List<Double> counts = new ArrayList<>();
     for (Lattice.Column column : columns) {
       counts.add(cardinality(lattice, column));

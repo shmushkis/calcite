@@ -16,8 +16,12 @@
  */
 package org.apache.calcite.profile;
 
+import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.JsonBuilder;
+import org.apache.calcite.util.Util;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
 
 import java.util.List;
@@ -30,8 +34,7 @@ import javax.annotation.Nonnull;
  * Analyzes data sets.
  */
 public interface Profiler {
-  List<Statistic> profile(Iterable<List<Comparable>> rows,
-      List<Column> columns);
+  Profile profile(Iterable<List<Comparable>> rows, List<Column> columns);
 
   /** Column. */
   class Column implements Comparable<Column> {
@@ -189,6 +192,66 @@ public interface Profiler {
 
     double surprise() {
       return SimpleProfiler.surprise(expectedCardinality, cardinality);
+    }
+  }
+
+  /** The result of profiling, contains various statistics about the
+   * data in a table. */
+  class Profile {
+    public final RowCount rowCount;
+    public final List<FunctionalDependency> functionalDependencyList;
+    public final List<Distribution> distributionList;
+    public final List<Unique> uniqueList;
+
+    private final Map<ImmutableBitSet, Distribution> distributionMap;
+
+    public Profile(RowCount rowCount,
+        Iterable<FunctionalDependency> functionalDependencyList,
+        Iterable<Distribution> distributionList,
+        Iterable<Unique> uniqueList) {
+      this.rowCount = rowCount;
+      this.functionalDependencyList =
+          ImmutableList.copyOf(functionalDependencyList);
+      this.distributionList = ImmutableList.copyOf(distributionList);
+      this.uniqueList = ImmutableList.copyOf(uniqueList);
+
+      final ImmutableMap.Builder<ImmutableBitSet, Distribution> m =
+          ImmutableMap.builder();
+      for (Distribution distribution : distributionList) {
+        m.put(toOrdinals(distribution.columns), distribution);
+      }
+      distributionMap = m.build();
+    }
+
+    private ImmutableBitSet toOrdinals(Iterable<Column> columns) {
+      final ImmutableBitSet.Builder builder = ImmutableBitSet.builder();
+      for (Column column : columns) {
+        builder.set(column.ordinal);
+      }
+      return builder.build();
+    }
+
+    public List<Statistic> statistics() {
+      return ImmutableList.<Statistic>builder()
+          .add(rowCount)
+          .addAll(functionalDependencyList)
+          .addAll(distributionList)
+          .addAll(uniqueList)
+          .build();
+    }
+
+    public double cardinality(ImmutableBitSet columnOrdinals) {
+      for (;;) {
+        final Distribution distribution = distributionMap.get(columnOrdinals);
+        if (distribution != null) {
+          return distribution.cardinality;
+        }
+        // Clear the last bit and iterate.
+        // We should multiply the result by the cardinality of the column we
+        // eliminated. Or better, combine all of our nearest ancestors.
+        final List<Integer> list = columnOrdinals.asList();
+        columnOrdinals = columnOrdinals.clear(Util.last(list));
+      }
     }
   }
 }

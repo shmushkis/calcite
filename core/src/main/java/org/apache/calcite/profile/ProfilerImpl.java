@@ -27,6 +27,7 @@ import org.apache.calcite.util.PartiallyOrderedSet;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
@@ -66,6 +67,10 @@ public class ProfilerImpl implements Profiler {
   /** Whether a successor is considered interesting enough to analyze. */
   private final Predicate<Pair<Space, Column>> predicate;
 
+  public static Builder builder() {
+    return new Builder();
+  }
+
   /**
    * Creates a {@code ProfilerImpl}.
    *
@@ -81,7 +86,7 @@ public class ProfilerImpl implements Profiler {
     this.predicate = predicate;
   }
 
-  public List<Statistic> profile(Iterable<List<Comparable>> rows,
+  public Profile profile(Iterable<List<Comparable>> rows,
       final List<Column> columns) {
     return new Run(columns).profile(rows);
   }
@@ -147,7 +152,7 @@ public class ProfilerImpl implements Profiler {
       }
     }
 
-    List<Statistic> profile(Iterable<List<Comparable>> rows) {
+    Profile profile(Iterable<List<Comparable>> rows) {
       int pass = 0;
       for (;;) {
         final List<Space> spaces = nextBatch();
@@ -164,7 +169,12 @@ public class ProfilerImpl implements Profiler {
                   Iterables.getOnlyElement(s.columns)));
         }
       }
-      return statistics;
+      return new Profile(
+          Iterables.getOnlyElement(
+              Iterables.filter(statistics, RowCount.class)),
+          Iterables.filter(statistics, FunctionalDependency.class),
+          Iterables.filter(statistics, Distribution.class),
+          Iterables.filter(statistics, Unique.class));
     }
 
     /** Populates {@code spaces} with the next batch.
@@ -412,6 +422,16 @@ public class ProfilerImpl implements Profiler {
      * distribution has been registered yet. */
     public Distribution distribution() {
       return run.distributions.get(columnOrdinals);
+    }
+  }
+
+  /** Builds a {@link org.apache.calcite.profile.ProfilerImpl}. */
+  public static class Builder {
+    int combinationsPerPass = 100;
+    Predicate<Pair<Space, Column>> predicate = Predicates.alwaysTrue();
+
+    public ProfilerImpl build() {
+      return new ProfilerImpl(combinationsPerPass, predicate);
     }
   }
 }

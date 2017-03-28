@@ -89,8 +89,7 @@ public class FoodMartLatticeStatisticProvider
     return column.alias.length();
   }
 
-  @Override public double cardinality(Lattice lattice,
-      List<Lattice.Column> columns) {
+  @Override public double cardinality(List<Lattice.Column> columns) {
     final List<Double> cardinalities = new ArrayList<>();
     for (Lattice.Column column : columns) {
       cardinalities.add((double) cardinality(column));

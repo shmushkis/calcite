@@ -51,7 +51,7 @@ public class SimpleProfiler implements Profiler {
         }
       };
 
-  public List<Statistic> profile(Iterable<List<Comparable>> rows,
+  public Profile profile(Iterable<List<Comparable>> rows,
       final List<Column> columns) {
     return new Run(columns).profile(rows);
   }
@@ -132,7 +132,7 @@ public class SimpleProfiler implements Profiler {
       }
     }
 
-    List<Statistic> profile(Iterable<List<Comparable>> rows) {
+    Profile profile(Iterable<List<Comparable>> rows) {
       final List<Comparable> values = new ArrayList<>();
       int rowCount = 0;
       for (final List<Comparable> row : rows) {
@@ -273,8 +273,10 @@ public class SimpleProfiler implements Profiler {
           }
         }
       }
-      statistics.add(new RowCount(rowCount));
-      return statistics;
+      return new Profile(new RowCount(rowCount),
+          Iterables.filter(statistics, FunctionalDependency.class),
+          Iterables.filter(statistics, Distribution.class),
+          Iterables.filter(statistics, Unique.class));
     }
 
     /** Returns whether a set of column ordinals

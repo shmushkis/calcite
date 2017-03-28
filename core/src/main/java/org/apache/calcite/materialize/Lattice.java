@@ -380,7 +380,7 @@ public class Lattice {
   /** Returns an estimate of the number of rows in the tile with the given
    * dimensions. */
   public double getRowCount(List<Column> columns) {
-    return statisticProvider.cardinality(this, columns);
+    return statisticProvider.cardinality(columns);
   }
 
   /** Returns an estimate of the number of rows in the tile with the given
@@ -693,9 +693,10 @@ public class Lattice {
 
     /** Builds a lattice. */
     public Lattice build() {
-      LatticeStatisticProvider statisticProvider =
+      LatticeStatisticProvider.Factory statisticProvider =
           this.statisticProvider != null
-              ? AvaticaUtils.instantiatePlugin(LatticeStatisticProvider.class,
+              ? AvaticaUtils.instantiatePlugin(
+                  LatticeStatisticProvider.Factory.class,
                   this.statisticProvider)
               : Lattices.CACHED_SQL;
       Preconditions.checkArgument(rootSchema.isRoot(), "must be root schema");

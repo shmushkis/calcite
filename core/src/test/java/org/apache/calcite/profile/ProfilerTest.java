@@ -407,11 +407,10 @@ public class ProfilerTest {
                 }
                 final Profiler p = factory.get();
                 final Enumerable<List<Comparable>> rows = getRows(s);
-                final List<Profiler.Statistic> statistics0 =
-                    p.profile(rows, columns);
+                final Profiler.Profile profile = p.profile(rows, columns);
                 final List<Profiler.Statistic> statistics =
-                    Lists.newArrayList(
-                        Iterables.filter(statistics0, predicate));
+                    ImmutableList.copyOf(
+                        Iterables.filter(profile.statistics(), predicate));
 
                 // If no comparator specified, use the function that converts to
                 // JSON strings

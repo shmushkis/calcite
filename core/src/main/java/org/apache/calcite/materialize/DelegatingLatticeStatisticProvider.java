@@ -35,8 +35,8 @@ public class DelegatingLatticeStatisticProvider
     this.provider = provider;
   }
 
-  public double cardinality(Lattice lattice, List<Lattice.Column> columns) {
-    return provider.cardinality(lattice, columns);
+  public double cardinality(List<Lattice.Column> columns) {
+    return provider.cardinality(columns);
   }
 }
 
