@@ -23,6 +23,9 @@ import org.apache.calcite.util.ImmutableBitSet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Implementation of {@link LatticeStatisticProvider} that gets statistics by
  * executing "SELECT COUNT(DISTINCT ...) ..." SQL queries.
@@ -34,14 +37,22 @@ class SqlLatticeStatisticProvider implements LatticeStatisticProvider {
   /** Creates an SqlLatticeStatisticProvider. */
   private SqlLatticeStatisticProvider() {}
 
-  @Override public int cardinality(Lattice lattice, Lattice.Column column) {
+  public double cardinality(Lattice lattice, List<Lattice.Column> columns) {
+    final List<Double> counts = new ArrayList<>();
+    for (Lattice.Column column : columns) {
+      counts.add(cardinality(lattice, column));
+    }
+    return (int) Lattice.getRowCount(lattice.getFactRowCount(), counts);
+  }
+
+  private double cardinality(Lattice lattice, Lattice.Column column) {
     final String sql = lattice.countSql(ImmutableBitSet.of(column.ordinal));
     final Table table =
         new MaterializationService.DefaultTableFactory()
             .createTable(lattice.rootSchema, sql, ImmutableList.<String>of());
     final Object[] values =
         Iterables.getOnlyElement(((ScannableTable) table).scan(null));
-    return ((Number) values[0]).intValue();
+    return ((Number) values[0]).doubleValue();
   }
 }
 

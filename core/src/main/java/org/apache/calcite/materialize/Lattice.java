@@ -380,17 +380,7 @@ public class Lattice {
   /** Returns an estimate of the number of rows in the tile with the given
    * dimensions. */
   public double getRowCount(List<Column> columns) {
-    return getRowCount(getFactRowCount(),
-        Lists.transform(columns, new Function<Column, Double>() {
-          public Double apply(Column column) {
-            final int cardinality = statisticProvider.cardinality(Lattice.this,
-                column);
-            if (cardinality <= 1) {
-              return 1d;
-            }
-            return (double) cardinality;
-          }
-        }));
+    return statisticProvider.cardinality(this, columns);
   }
 
   /** Returns an estimate of the number of rows in the tile with the given
