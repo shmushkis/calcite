@@ -20,6 +20,7 @@ import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.materialize.Lattice;
 import org.apache.calcite.rel.metadata.NullSentinel;
 import org.apache.calcite.runtime.FlatLists;
+import org.apache.calcite.runtime.PredicateImpl;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.PartiallyOrderedSet;
@@ -103,7 +104,8 @@ public class ProfilerImpl implements Profiler {
     final Deque<Space> doneQueue = new ArrayDeque<>();
     /** Combinations of columns that we will compute next pass. */
     final Deque<ImmutableBitSet> spaceQueue = new ArrayDeque<>();
-    final List<Statistic> statistics = new ArrayList<>();
+    final List<Unique> uniques = new ArrayList<>();
+    final List<FunctionalDependency> functionalDependencies = new ArrayList<>();
     final PartiallyOrderedSet.Ordering<Space> ordering =
         new PartiallyOrderedSet.Ordering<Space>() {
           public boolean lessThan(Space e1, Space e2) {
@@ -111,8 +113,6 @@ public class ProfilerImpl implements Profiler {
           }
         };
     final PartiallyOrderedSet<Space> results =
-        new PartiallyOrderedSet<>(ordering);
-    final PartiallyOrderedSet<Space> keyResults =
         new PartiallyOrderedSet<>(ordering);
     private final List<ImmutableBitSet> keyOrdinalLists =
         new ArrayList<>();
@@ -122,6 +122,7 @@ public class ProfilerImpl implements Profiler {
             return columns.get(input);
           }
         };
+    private int rowCount;
 
     /**
      * Creates a Run.
@@ -155,7 +156,7 @@ public class ProfilerImpl implements Profiler {
     Profile profile(Iterable<List<Comparable>> rows) {
       int pass = 0;
       for (;;) {
-        final List<Space> spaces = nextBatch();
+        final List<Space> spaces = nextBatch(pass);
         if (spaces.isEmpty()) {
           break;
         }
@@ -164,22 +165,18 @@ public class ProfilerImpl implements Profiler {
 
       for (Space s : singletonSpaces) {
         for (ImmutableBitSet dependent : s.dependents) {
-          statistics.add(
+          functionalDependencies.add(
               new FunctionalDependency(toColumns(dependent),
                   Iterables.getOnlyElement(s.columns)));
         }
       }
-      return new Profile(
-          Iterables.getOnlyElement(
-              Iterables.filter(statistics, RowCount.class)),
-          Iterables.filter(statistics, FunctionalDependency.class),
-          Iterables.filter(statistics, Distribution.class),
-          Iterables.filter(statistics, Unique.class));
+      return new Profile(columns, new RowCount(rowCount),
+          functionalDependencies, distributions.values(), uniques);
     }
 
     /** Populates {@code spaces} with the next batch.
      * Returns an empty list if done. */
-    List<Space> nextBatch() {
+    List<Space> nextBatch(int pass) {
       final List<Space> spaces = new ArrayList<>();
     loop:
       for (;;) {
@@ -192,7 +189,6 @@ public class ProfilerImpl implements Profiler {
         if (ordinals != null) {
           final Space space = new Space(this, ordinals, toColumns(ordinals));
           spaces.add(space);
-          doneQueue.add(space);
           if (ordinals.cardinality() == 1) {
             singletonSpaces.set(ordinals.nth(0), space);
           }
@@ -207,7 +203,11 @@ public class ProfilerImpl implements Profiler {
             }
             for (Column column : columns) {
               if (!doneSpace.columnOrdinals.get(column.ordinal)) {
-                if (isInterestingSuccessor(doneSpace, column)) {
+                if (pass == 0
+                    || doneSpace.columnOrdinals.cardinality() == 0
+                    || !containsKey(
+                        doneSpace.columnOrdinals.set(column.ordinal))
+                    && predicate.apply(Pair.of(doneSpace, column))) {
                   final ImmutableBitSet nextOrdinals =
                       doneSpace.columnOrdinals.set(column.ordinal);
                   spaceQueue.add(nextOrdinals);
@@ -222,12 +222,6 @@ public class ProfilerImpl implements Profiler {
           }
         }
       }
-    }
-
-    boolean isInterestingSuccessor(Space space, Column column) {
-      return space.columnOrdinals.cardinality() == 0
-          || !containsKey(space.columnOrdinals.set(column.ordinal))
-          && predicate.apply(Pair.of(space, column));
     }
 
     private boolean containsKey(ImmutableBitSet ordinals) {
@@ -262,18 +256,12 @@ public class ProfilerImpl implements Profiler {
         }
       }
 
-      // Populate unique keys
+      // Populate unique keys.
+      // If [x, y] is a key,
+      // then [x, y, z] is a non-minimal key (therefore not interesting),
+      // and [x, y] => [a] is a functional dependency but not interesting,
+      // and [x, y, z] is not an interesting distribution.
       for (Space space : spaces) {
-        keyResults.add(space);
-        if (!keyResults.getChildren(space).isEmpty()) {
-          // If [x, y] is a key,
-          // then [x, y, z] is a non-minimal key (therefore not interesting),
-          // and [x, y] => [a] is a functional dependency but not interesting,
-          // and [x, y, z] is not an interesting distribution.
-          keyResults.remove(space);
-          continue;
-        }
-        keyResults.remove(space);
         results.add(space);
 
         int nonMinimal = 0;
@@ -331,7 +319,6 @@ public class ProfilerImpl implements Profiler {
           valueSet = null;
         }
         double expectedCardinality;
-        final double cardinality = space.cardinality();
         switch (space.columns.size()) {
         case 0:
           expectedCardinality = 1d;
@@ -353,26 +340,33 @@ public class ProfilerImpl implements Profiler {
             expectedCardinality = Math.min(expectedCardinality, d);
           }
         }
+
         final boolean minimal = nonMinimal == 0
             && !space.unique
             && !containsKey(space.columnOrdinals);
         final Distribution distribution =
-            new Distribution(space.columns, valueSet, cardinality, nullCount,
-                expectedCardinality, minimal);
-        statistics.add(distribution);
-        distributions.put(space.columnOrdinals, distribution);
+            new Distribution(space.columns, valueSet, space.cardinality(),
+                nullCount, expectedCardinality, minimal);
+        if (minimal && isInteresting(distribution)) {
+          distributions.put(space.columnOrdinals, distribution);
+          doneQueue.add(space);
+        }
 
         if (space.values.size() == rowCount) {
           // We have discovered a new key. It is not a super-set of a key.
-          statistics.add(new Unique(space.columns));
+          uniques.add(new Unique(space.columns));
           keyOrdinalLists.add(space.columnOrdinals);
           space.unique = true;
         }
       }
 
       if (pass == 0) {
-        statistics.add(new RowCount(rowCount));
+        this.rowCount = rowCount;
       }
+    }
+
+    private boolean isInteresting(Distribution distribution) {
+      return true;
     }
 
     private ImmutableSortedSet<Column> toColumns(Iterable<Integer> ordinals) {
@@ -414,8 +408,9 @@ public class ProfilerImpl implements Profiler {
               : -1;
     }
 
+    /** Number of distinct values. Null is counted as a value, if present. */
     public double cardinality() {
-      return values.size();
+      return values.size() + (nullCount > 0 ? 1 : 0);
     }
 
     /** Returns the distribution created from this space, or null if no
@@ -432,6 +427,22 @@ public class ProfilerImpl implements Profiler {
 
     public ProfilerImpl build() {
       return new ProfilerImpl(combinationsPerPass, predicate);
+    }
+
+    public Builder withPassSize(int passSize) {
+      this.combinationsPerPass = passSize;
+      return this;
+    }
+
+    public Builder withMinimumSurprise(double v) {
+      predicate =
+          new PredicateImpl<Pair<Space, Column>>() {
+            public boolean test(Pair<Space, Column> spaceColumnPair) {
+              final Space space = spaceColumnPair.left;
+              return false;
+            }
+          };
+      return this;
     }
   }
 }

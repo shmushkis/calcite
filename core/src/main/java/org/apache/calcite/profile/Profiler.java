@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.profile;
 
+import org.apache.calcite.materialize.Lattice;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.JsonBuilder;
 import org.apache.calcite.util.Util;
@@ -24,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -204,11 +206,11 @@ public interface Profiler {
     public final List<Unique> uniqueList;
 
     private final Map<ImmutableBitSet, Distribution> distributionMap;
+    private final List<Distribution> singletonDistributionList;
 
-    public Profile(RowCount rowCount,
+    Profile(List<Column> columns, RowCount rowCount,
         Iterable<FunctionalDependency> functionalDependencyList,
-        Iterable<Distribution> distributionList,
-        Iterable<Unique> uniqueList) {
+        Iterable<Distribution> distributionList, Iterable<Unique> uniqueList) {
       this.rowCount = rowCount;
       this.functionalDependencyList =
           ImmutableList.copyOf(functionalDependencyList);
@@ -221,6 +223,12 @@ public interface Profiler {
         m.put(toOrdinals(distribution.columns), distribution);
       }
       distributionMap = m.build();
+
+      final ImmutableList.Builder<Distribution> b = ImmutableList.builder();
+      for (int i = 0; i < columns.size(); i++) {
+        b.add(distributionMap.get(ImmutableBitSet.of(i)));
+      }
+      singletonDistributionList = b.build();
     }
 
     private ImmutableBitSet toOrdinals(Iterable<Column> columns) {
@@ -241,14 +249,24 @@ public interface Profiler {
     }
 
     public double cardinality(ImmutableBitSet columnOrdinals) {
+      final ImmutableBitSet originalOrdinals = columnOrdinals;
       for (;;) {
         final Distribution distribution = distributionMap.get(columnOrdinals);
         if (distribution != null) {
-          return distribution.cardinality;
+          if (columnOrdinals == originalOrdinals) {
+            return distribution.cardinality;
+          } else {
+            final List<Double> cardinalityList = new ArrayList<>();
+            cardinalityList.add(distribution.cardinality);
+            for (int ordinal : originalOrdinals.except(columnOrdinals)) {
+              final Distribution d = singletonDistributionList.get(ordinal);
+              cardinalityList.add(d.cardinality);
+            }
+            return Lattice.getRowCount(rowCount.rowCount, cardinalityList);
+          }
         }
         // Clear the last bit and iterate.
-        // We should multiply the result by the cardinality of the column we
-        // eliminated. Or better, combine all of our nearest ancestors.
+        // Better would be to combine all of our nearest ancestors.
         final List<Integer> list = columnOrdinals.asList();
         columnOrdinals = columnOrdinals.clear(Util.last(list));
       }

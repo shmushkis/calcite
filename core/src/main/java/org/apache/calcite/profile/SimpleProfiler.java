@@ -273,7 +273,7 @@ public class SimpleProfiler implements Profiler {
           }
         }
       }
-      return new Profile(new RowCount(rowCount),
+      return new Profile(columns, new RowCount(rowCount),
           Iterables.filter(statistics, FunctionalDependency.class),
           Iterables.filter(statistics, Distribution.class),
           Iterables.filter(statistics, Unique.class));
@@ -337,8 +337,9 @@ public class SimpleProfiler implements Profiler {
               : -1;
     }
 
+    /** Number of distinct values. Null is counted as a value, if present. */
     public double cardinality() {
-      return values.size();
+      return values.size() + (nullCount > 0 ? 1 : 0);
     }
   }
 }

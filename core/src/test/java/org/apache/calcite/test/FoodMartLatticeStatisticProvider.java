@@ -35,10 +35,15 @@ import java.util.Map;
  */
 public class FoodMartLatticeStatisticProvider
     extends DelegatingLatticeStatisticProvider {
-  public static final FoodMartLatticeStatisticProvider INSTANCE =
-      new FoodMartLatticeStatisticProvider(Lattices.CACHED_SQL);
+  public static final FoodMartLatticeStatisticProvider.Factory FACTORY =
+      new Factory() {
+        public LatticeStatisticProvider apply(Lattice lattice) {
+          return new FoodMartLatticeStatisticProvider(lattice,
+              Lattices.CACHED_SQL.apply(lattice));
+        }
+      };
 
-  public static final Map<String, Integer> CARDINALITY_MAP =
+  private static final Map<String, Integer> CARDINALITY_MAP =
       ImmutableMap.<String, Integer>builder()
           .put("brand_name", 111)
           .put("cases_per_pallet", 10)
@@ -77,8 +82,12 @@ public class FoodMartLatticeStatisticProvider
           .put("week_of_year", 52)
           .build();
 
-  private FoodMartLatticeStatisticProvider(LatticeStatisticProvider provider) {
+  private final Lattice lattice;
+
+  private FoodMartLatticeStatisticProvider(Lattice lattice,
+      LatticeStatisticProvider provider) {
     super(provider);
+    this.lattice = lattice;
   }
 
   private int cardinality(Lattice.Column column) {
@@ -90,11 +99,11 @@ public class FoodMartLatticeStatisticProvider
   }
 
   @Override public double cardinality(List<Lattice.Column> columns) {
-    final List<Double> cardinalities = new ArrayList<>();
+    final List<Double> cardinalityList = new ArrayList<>();
     for (Lattice.Column column : columns) {
-      cardinalities.add((double) cardinality(column));
+      cardinalityList.add((double) cardinality(column));
     }
-    return (int) Lattice.getRowCount(lattice.getFactRowCount(), cardinalities);
+    return Lattice.getRowCount(lattice.getFactRowCount(), cardinalityList);
   }
 }
 
