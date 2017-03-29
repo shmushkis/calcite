@@ -44,11 +44,11 @@ class TableNamespace extends AbstractNamespace {
   public final ImmutableList<RelDataTypeField> extendedFields;
 
   /** Creates a TableNamespace. */
-  TableNamespace(SqlValidatorImpl validator, SqlValidatorTable table,
-      ImmutableList<RelDataTypeField> fields) {
+  private TableNamespace(SqlValidatorImpl validator, SqlValidatorTable table,
+      List<RelDataTypeField> fields) {
     super(validator, null);
     this.table = Preconditions.checkNotNull(table);
-    this.extendedFields = fields;
+    this.extendedFields = ImmutableList.copyOf(fields);
   }
 
   public TableNamespace(SqlValidatorImpl validator, SqlValidatorTable table) {
@@ -86,13 +86,17 @@ class TableNamespace extends AbstractNamespace {
    * <p>Extended fields are "hidden" or undeclared fields that may nevertheless
    * be present if you ask for them. Phoenix uses them, for instance, to access
    * rarely used fields in the underlying HBase table. */
-  public TableNamespace extend(SqlNodeList extendList,
-      RelDataTypeFactory typeFactory) {
+  public TableNamespace extend(SqlNodeList extendList) {
     final List<SqlNode> identifierList = Util.quotientList(extendList.getList(), 2, 0);
     SqlValidatorUtil.checkIdentifierListForDuplicates(
         identifierList, validator.getValidationErrorFunction());
-    final List<RelDataTypeField> extendedFields =
-        SqlValidatorUtil.getExtendedColumns(validator.getTypeFactory(), getTable(), extendList);
+    final ImmutableList.Builder<RelDataTypeField> builder =
+        ImmutableList.builder();
+    builder.addAll(this.extendedFields);
+    builder.addAll(
+        SqlValidatorUtil.getExtendedColumns(validator.getTypeFactory(),
+            getTable(), extendList));
+    final List<RelDataTypeField> extendedFields = builder.build();
     final Table schemaTable = table.unwrap(Table.class);
     if (schemaTable != null
         && table instanceof RelOptTable
@@ -100,16 +104,13 @@ class TableNamespace extends AbstractNamespace {
           || schemaTable instanceof ModifiableViewTable)) {
       checkExtendedColumnTypes(extendList);
       final RelOptTable relOptTable =
-          ((RelOptTable) table).extend(ImmutableList.copyOf(
-              Iterables.concat(this.extendedFields, extendedFields)),
-              typeFactory);
-      final SqlValidatorTable validatorTable = relOptTable.unwrap(SqlValidatorTable.class);
+          ((RelOptTable) table).extend(extendedFields);
+      final SqlValidatorTable validatorTable =
+          relOptTable.unwrap(SqlValidatorTable.class);
       return new TableNamespace(
           validator, validatorTable, ImmutableList.<RelDataTypeField>of());
     }
-    return new TableNamespace(validator, table,
-        ImmutableList.copyOf(
-            Iterables.concat(this.extendedFields, extendedFields)));
+    return new TableNamespace(validator, table, extendedFields);
   }
 
   /**

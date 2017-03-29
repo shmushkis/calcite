@@ -199,8 +199,7 @@ public class IdentifierNamespace extends AbstractNamespace {
         throw new RuntimeException("cannot convert");
       }
       resolvedNamespace =
-          ((TableNamespace) resolvedNamespace).extend(extendList,
-              validator.getTypeFactory());
+          ((TableNamespace) resolvedNamespace).extend(extendList);
       rowType = resolvedNamespace.getRowType();
     }
 

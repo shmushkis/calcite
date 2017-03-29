@@ -17,9 +17,8 @@
 package org.apache.calcite.sql.validate;
 
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlAccessType;
+import org.apache.calcite.sql2rel.InitializerContext;
 
 import java.util.List;
 
@@ -29,17 +28,6 @@ import java.util.List;
  * @see SqlValidatorCatalogReader
  */
 public interface SqlValidatorTable {
-
-  /**
-   * Holds a RexBuilder. Insulates SqlValidator implementations from Rex dependencies.
-   */
-  class RexBuilderHolder {
-    public final RexBuilder rexBuilder;
-
-    RexBuilderHolder(RelDataTypeFactory typeFactory) {
-      this.rexBuilder = new RexBuilder(typeFactory);
-    }
-  }
 
   //~ Methods ----------------------------------------------------------------
 
@@ -63,7 +51,7 @@ public interface SqlValidatorTable {
    * Returns whether the ordinal column has a default value.
    */
   boolean columnHasDefaultValue(RelDataType rowType, int ordinal,
-      RexBuilderHolder rexBuilderHolder);
+      InitializerContext initializerContext);
 
   /**
    * Finds an interface implemented by this table.

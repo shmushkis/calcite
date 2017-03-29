@@ -31,13 +31,13 @@ import org.apache.calcite.schema.Path;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.Wrapper;
 import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql2rel.InitializerContext;
 import org.apache.calcite.sql2rel.InitializerExpressionFactory;
 import org.apache.calcite.sql2rel.NullInitializerExpressionFactory;
 import org.apache.calcite.util.ImmutableIntList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
 import java.lang.reflect.Type;
@@ -96,21 +96,37 @@ public class ModifiableViewTable extends ViewTable
   }
 
   /**
-   * Extends the underlying table and returns a new view with updated row-type and column-mapping.
+   * Extends the underlying table and returns a new view with updated row-type
+   * and column-mapping.
+   *
+   * <p>The type factory is used to perform some scratch calculations, viz the
+   * type mapping, but the "real" row-type will be assigned later, when the
+   * table has been bound to the statement's type factory. The is important,
+   * because adding types to type factories that do not belong to a statement
+   * could potentially leak memory.
+   *
+   * @param extendedColumns Extended fields
+   * @param typeFactory Type factory
    */
   public final ModifiableViewTable extend(
       List<RelDataTypeField> extendedColumns, RelDataTypeFactory typeFactory) {
     final ExtensibleTable underlying = unwrap(ExtensibleTable.class);
     assert underlying != null;
 
-    final List<RelDataTypeField> baseColumns = getRowType(typeFactory).getFieldList();
-    final List<RelDataTypeField> allColumns =
-        ImmutableList.copyOf(Iterables.concat(baseColumns, extendedColumns));
+    final RelDataTypeFactory.FieldInfoBuilder builder = typeFactory.builder();
+    final RelDataType rowType = getRowType(typeFactory);
+    for (RelDataTypeField column : rowType.getFieldList()) {
+      builder.add(column);
+    }
+    for (RelDataTypeField column : extendedColumns) {
+      builder.add(column);
+    }
 
     // The characteristics of the new view.
-    final RelDataType newRowType = typeFactory.createStructType(allColumns);
+    final RelDataType newRowType = builder.build();
     final ImmutableIntList newColumnMapping =
-        getNewColumnMapping(underlying, getColumnMapping(), extendedColumns, typeFactory);
+        getNewColumnMapping(underlying, getColumnMapping(), extendedColumns,
+            typeFactory);
 
     // Extend the underlying table with only the fields that
     // duplicate column names in neither the view nor the base table.
@@ -123,7 +139,8 @@ public class ModifiableViewTable extends ViewTable
             underlyingColumns.size(), columnsOfExtendedBaseTable.size());
     final Table extendedTable = underlying.extend(extendColumnsOfBaseTable);
 
-    return extend(extendedTable, newRowType, newColumnMapping);
+    return extend(extendedTable, RelDataTypeImpl.proto(newRowType),
+        newColumnMapping);
   }
 
   /**
@@ -152,11 +169,11 @@ public class ModifiableViewTable extends ViewTable
     return ImmutableIntList.copyOf(newMapping.build());
   }
 
-  protected ModifiableViewTable extend(
-      Table extendedTable, RelDataType newRowType, ImmutableIntList newColumnMapping) {
-    return new ModifiableViewTable(getElementType(), RelDataTypeImpl.proto(newRowType),
-        getViewSql(), getSchemaPath(), getViewPath(), extendedTable, getTablePath(), constraint,
-        newColumnMapping);
+  protected ModifiableViewTable extend(Table extendedTable,
+      RelProtoDataType protoRowType, ImmutableIntList newColumnMapping) {
+    return new ModifiableViewTable(getElementType(), protoRowType, getViewSql(),
+        getSchemaPath(), getViewPath(), extendedTable, getTablePath(),
+        constraint, newColumnMapping);
   }
 
   /**
@@ -180,10 +197,11 @@ public class ModifiableViewTable extends ViewTable
       return false;
     }
 
-    @Override public RexNode newColumnDefaultValue(RelOptTable table, int iColumn,
-        RexBuilder rexBuilder) {
+    @Override public RexNode newColumnDefaultValue(RelOptTable table,
+        int iColumn, InitializerContext context) {
       final ModifiableViewTable viewTable = table.unwrap(ModifiableViewTable.class);
       assert iColumn < viewTable.columnMapping.size();
+      final RexBuilder rexBuilder = context.getRexBuilder();
       final RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
       final RelDataType viewType = viewTable.getRowType(typeFactory);
       final RelDataType iType = viewType.getFieldList().get(iColumn).getType();
@@ -202,17 +220,19 @@ public class ModifiableViewTable extends ViewTable
             ((Wrapper) schemaTable).unwrap(InitializerExpressionFactory.class);
         if (initializerExpressionFactory != null) {
           final RexNode tableConstraint =
-              initializerExpressionFactory.newColumnDefaultValue(table, iColumn, rexBuilder);
+              initializerExpressionFactory.newColumnDefaultValue(table, iColumn,
+                  context);
           return rexBuilder.ensureType(iType, tableConstraint, true);
         }
       }
 
       // Otherwise Sql type of NULL.
-      return super.newColumnDefaultValue(table, iColumn, rexBuilder);
+      return super.newColumnDefaultValue(table, iColumn, context);
     }
 
-    @Override public RexNode newAttributeInitializer(RelDataType type, SqlFunction constructor,
-        int iAttribute, List<RexNode> constructorArgs, RexBuilder rexBuilder) {
+    @Override public RexNode newAttributeInitializer(RelDataType type,
+        SqlFunction constructor, int iAttribute, List<RexNode> constructorArgs,
+        InitializerContext context) {
       throw new UnsupportedOperationException("Not implemented - unknown requirements");
     }
   }

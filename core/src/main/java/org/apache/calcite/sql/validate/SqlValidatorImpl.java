@@ -88,6 +88,7 @@ import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.util.SqlVisitor;
+import org.apache.calcite.sql2rel.InitializerContext;
 import org.apache.calcite.util.BitString;
 import org.apache.calcite.util.Bug;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -4019,8 +4020,12 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
           RESOURCE.unmatchInsertColumn(targetFieldCount, sourceFieldCount));
     }
     // Ensure that non-nullable fields are targeted.
-    final SqlValidatorTable.RexBuilderHolder rexBuilder =
-        new SqlValidatorTable.RexBuilderHolder(typeFactory);
+    final InitializerContext rexBuilder =
+        new InitializerContext() {
+          public RexBuilder getRexBuilder() {
+            return new RexBuilder(typeFactory);
+          }
+        };
     for (final RelDataTypeField field : table.getRowType().getFieldList()) {
       if (!field.getType().isNullable()) {
         final RelDataTypeField targetField =

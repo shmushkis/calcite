@@ -35,7 +35,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexExecutorImpl;
 import org.apache.calcite.runtime.Bindable;
@@ -56,6 +55,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
+import org.apache.calcite.sql2rel.InitializerContext;
 import org.apache.calcite.sql2rel.InitializerExpressionFactory;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.Program;
@@ -407,14 +407,14 @@ public abstract class Prepare {
   public abstract static class AbstractPreparingTable
       implements PreparingTable {
     public boolean columnHasDefaultValue(RelDataType rowType, int ordinal,
-            RexBuilderHolder rexBuilderHolder) {
+        InitializerContext initializerContext) {
       final Table table = this.unwrap(Table.class);
       if (table != null && table instanceof Wrapper) {
         final InitializerExpressionFactory initializerExpressionFactory =
             ((Wrapper) table).unwrap(InitializerExpressionFactory.class);
         if (initializerExpressionFactory != null) {
           return !initializerExpressionFactory
-              .newColumnDefaultValue(this, ordinal, rexBuilderHolder.rexBuilder)
+              .newColumnDefaultValue(this, ordinal, initializerContext)
               .getType().getSqlTypeName().equals(SqlTypeName.NULL);
         }
       }
@@ -424,13 +424,7 @@ public abstract class Prepare {
       return !rowType.getFieldList().get(ordinal).getType().isNullable();
     }
 
-    /**
-     * Extends the table to produce a table that includes the columns of the base
-     * table plus the extended columns that do not have the same name as a column
-     * in the base table.
-     */
-    public final RelOptTable extend(List<RelDataTypeField> extendedFields,
-            RelDataTypeFactory typeFactory) {
+    public final RelOptTable extend(List<RelDataTypeField> extendedFields) {
       final Table table = unwrap(Table.class);
 
       // Get the set of extended columns that do not have the same name as a column
@@ -449,7 +443,8 @@ public abstract class Prepare {
         final ModifiableViewTable modifiableViewTable =
                 (ModifiableViewTable) table;
         final ModifiableViewTable extendedView =
-            modifiableViewTable.extend(dedupedExtendedFields, typeFactory);
+            modifiableViewTable.extend(dedupedExtendedFields,
+                getRelOptSchema().getTypeFactory());
         return extend(extendedView);
       }
       throw new RuntimeException("Cannot extend " + table);

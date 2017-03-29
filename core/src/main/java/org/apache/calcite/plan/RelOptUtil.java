@@ -103,7 +103,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -2006,21 +2005,17 @@ public abstract class RelOptUtil {
   }
 
   /**
-   * Return the set of columns with unique names, with prior columns taking
+   * Returns the set of columns with unique names, with prior columns taking
    * precedence over columns that appear later in the list.
    */
   public static List<RelDataTypeField> deduplicateColumns(
       List<RelDataTypeField> baseColumns, List<RelDataTypeField> extendedColumns) {
-    final Iterable<RelDataTypeField> allFields =
-        Iterables.unmodifiableIterable(Iterables.concat(baseColumns, extendedColumns));
-    final HashSet<String> dedupedFieldNames =
-        Sets.newHashSetWithExpectedSize(baseColumns.size() + extendedColumns.size());
+    final Set<String> dedupedFieldNames = new HashSet<>();
     final ImmutableList.Builder<RelDataTypeField> dedupedFields =
         ImmutableList.builder();
-    for (RelDataTypeField field : allFields) {
-      if (!dedupedFieldNames.contains(field.getName())) {
-        dedupedFieldNames.add(field.getName());
-        dedupedFields.add(field);
+    for (RelDataTypeField f : Iterables.concat(baseColumns, extendedColumns)) {
+      if (dedupedFieldNames.add(f.getName())) {
+        dedupedFields.add(f);
       }
     }
     return dedupedFields.build();

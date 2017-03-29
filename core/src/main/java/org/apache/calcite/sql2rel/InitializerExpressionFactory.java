@@ -18,7 +18,6 @@ package org.apache.calcite.sql2rel;
 
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 
@@ -44,12 +43,14 @@ public interface InitializerExpressionFactory {
    *
    * @param table   the table containing the column
    * @param iColumn the 0-based offset of the column in the table
+   * @param context Context for creating the expression
+   *
    * @return default value expression
    */
   RexNode newColumnDefaultValue(
       RelOptTable table,
       int iColumn,
-      RexBuilder rexBuilder);
+      InitializerContext context);
 
   /**
    * Creates an expression which evaluates to the initializer expression for a
@@ -59,6 +60,8 @@ public interface InitializerExpressionFactory {
    * @param constructor     the constructor invoked to initialize the type
    * @param iAttribute      the 0-based offset of the attribute in the type
    * @param constructorArgs arguments passed to the constructor invocation
+   * @param context Context for creating the expression
+   *
    * @return default value expression
    */
   RexNode newAttributeInitializer(
@@ -66,7 +69,7 @@ public interface InitializerExpressionFactory {
       SqlFunction constructor,
       int iAttribute,
       List<RexNode> constructorArgs,
-      RexBuilder rexBuilder);
+      InitializerContext context);
 }
 
 // End InitializerExpressionFactory.java

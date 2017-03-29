@@ -23,7 +23,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Wrapper;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -105,8 +104,13 @@ public interface RelOptTable extends Wrapper {
    */
   Expression getExpression(Class clazz);
 
-  /** Returns a table with the given extra fields. */
-  RelOptTable extend(List<RelDataTypeField> extendedFields, RelDataTypeFactory typeFactory);
+  /** Returns a table with the given extra fields.
+   *
+   * <p>The extended table includes the fields of this base table plus the
+   * extended fields that do not have the same name as a field in the base
+   * table.
+   */
+  RelOptTable extend(List<RelDataTypeField> extendedFields);
 
   /** Can expand a view into relational expressions. */
   interface ViewExpander {

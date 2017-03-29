@@ -81,6 +81,7 @@ import org.apache.calcite.sql.validate.SqlMonotonicity;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.calcite.sql.validate.SqlNameMatchers;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
+import org.apache.calcite.sql2rel.InitializerContext;
 import org.apache.calcite.sql2rel.InitializerExpressionFactory;
 import org.apache.calcite.sql2rel.NullInitializerExpressionFactory;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -200,8 +201,9 @@ public class MockCatalogReader extends CalciteCatalogReader {
     // Register "EMPDEFAULTS" table with default values for some columns.
     final InitializerExpressionFactory empInitializerExpressionFactory =
         new NullInitializerExpressionFactory() {
-          @Override public RexNode newColumnDefaultValue(RelOptTable table, int iColumn,
-              RexBuilder rexBuilder) {
+          @Override public RexNode newColumnDefaultValue(RelOptTable table,
+              int iColumn, InitializerContext context) {
+            final RexBuilder rexBuilder = context.getRexBuilder();
             switch (iColumn) {
             case 0:
               return rexBuilder.makeExactLiteral(new BigDecimal(123),
@@ -999,7 +1001,7 @@ public class MockCatalogReader extends CalciteCatalogReader {
         return new MockModifiableViewTable(elementType,
             RelDataTypeImpl.proto(parsed.rowType), viewSql, schemaPath, viewPath,
             parsed.table, Schemas.path(schema.root(), parsed.tablePath),
-            parsed.constraint, parsed.columnMapping, parsed.typeFactory);
+            parsed.constraint, parsed.columnMapping);
       }
     }
 
@@ -1008,23 +1010,21 @@ public class MockCatalogReader extends CalciteCatalogReader {
      */
     private static class MockModifiableViewTable extends ModifiableViewTable {
       private final RexNode constraint;
-      private final RelDataTypeFactory typeFactory;
 
       MockModifiableViewTable(Type elementType, RelProtoDataType rowType,
           String viewSql, List<String> schemaPath, List<String> viewPath,
           Table table, Path tablePath, RexNode constraint,
-          ImmutableIntList columnMapping, RelDataTypeFactory typeFactory) {
+          ImmutableIntList columnMapping) {
         super(elementType, rowType, viewSql, schemaPath, viewPath, table,
             tablePath, constraint, columnMapping);
         this.constraint = constraint;
-        this.typeFactory = typeFactory;
       }
 
-      @Override public ModifiableViewTable extend(
-          Table extendedTable, RelDataType newRowType, ImmutableIntList newColumnMapping) {
-        return new MockModifiableViewTable(getElementType(), RelDataTypeImpl.proto(newRowType),
-            getViewSql(), getSchemaPath(), getViewPath(), extendedTable, getTablePath(), constraint,
-            newColumnMapping, typeFactory);
+      @Override public ModifiableViewTable extend(Table extendedTable,
+          RelProtoDataType protoRowType, ImmutableIntList newColumnMapping) {
+        return new MockModifiableViewTable(getElementType(), protoRowType,
+            getViewSql(), getSchemaPath(), getViewPath(), extendedTable,
+            getTablePath(), constraint, newColumnMapping);
       }
     }
   }
@@ -1545,9 +1545,9 @@ public class MockCatalogReader extends CalciteCatalogReader {
             RelDataTypeComparability.NONE);
   }
 
-  /** To check whether {@link #newColumnDefaultValue} is called. */
-  public static class CountingFactory
-      extends NullInitializerExpressionFactory {
+  /** To check whether
+   * {@link InitializerExpressionFactory#newColumnDefaultValue} is called. */
+  public static class CountingFactory extends NullInitializerExpressionFactory {
     static final ThreadLocal<AtomicInteger> THREAD_CALL_COUNT =
         new ThreadLocal<AtomicInteger>() {
           protected AtomicInteger initialValue() {
@@ -1560,17 +1560,17 @@ public class MockCatalogReader extends CalciteCatalogReader {
     }
 
     @Override public RexNode newColumnDefaultValue(RelOptTable table,
-        int iColumn, RexBuilder rexBuilder) {
+        int iColumn, InitializerContext context) {
       THREAD_CALL_COUNT.get().incrementAndGet();
-      return super.newColumnDefaultValue(table, iColumn, rexBuilder);
+      return super.newColumnDefaultValue(table, iColumn, context);
     }
 
     @Override public RexNode newAttributeInitializer(RelDataType type,
         SqlFunction constructor, int iAttribute,
-        List<RexNode> constructorArgs, RexBuilder rexBuilder) {
+        List<RexNode> constructorArgs, InitializerContext context) {
       THREAD_CALL_COUNT.get().incrementAndGet();
       return super.newAttributeInitializer(type, constructor, iAttribute,
-         constructorArgs, rexBuilder);
+         constructorArgs, context);
     }
   }
 }

@@ -18,7 +18,6 @@ package org.apache.calcite.sql2rel;
 
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 
@@ -36,13 +35,15 @@ public class NullInitializerExpressionFactory implements InitializerExpressionFa
     return false;
   }
 
-  public RexNode newColumnDefaultValue(RelOptTable table, int iColumn, RexBuilder rexBuilder) {
-    return rexBuilder.constantNull();
+  public RexNode newColumnDefaultValue(RelOptTable table, int iColumn,
+      InitializerContext context) {
+    return context.getRexBuilder().constantNull();
   }
 
-  public RexNode newAttributeInitializer(RelDataType type, SqlFunction constructor, int iAttribute,
-      List<RexNode> constructorArgs, RexBuilder rexBuilder) {
-    return rexBuilder.constantNull();
+  public RexNode newAttributeInitializer(RelDataType type,
+      SqlFunction constructor, int iAttribute, List<RexNode> constructorArgs,
+      InitializerContext context) {
+    return context.getRexBuilder().constantNull();
   }
 }
 

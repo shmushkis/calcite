@@ -1988,15 +1988,19 @@ void ColumnType(List<SqlNode> list) :
 {
     SqlIdentifier name;
     SqlDataTypeSpec type;
+    boolean nullable = true;
 }
 {
     name = SimpleIdentifier()
     type = DataType()
-    { type = type.withNullable(true); }
-    [ <NOT> <NULL> { type = type.withNullable(false); } ]
+    [
+        <NOT> <NULL> {
+            nullable = false;
+        }
+    ]
     {
         list.add(name);
-        list.add(type);
+        list.add(type.withNullable(nullable));
     }
 }
 
