@@ -119,8 +119,8 @@ public class LatticeTest {
       + "  } ]\n"
       + "}\n";
 
-  private CalciteAssert.AssertThat modelWithLattice(String name, String sql,
-      String... extras) {
+  private static CalciteAssert.AssertThat modelWithLattice(String name,
+      String sql, String... extras) {
     final StringBuilder buf = new StringBuilder("{ name: '")
         .append(name)
         .append("', sql: ")
@@ -132,7 +132,8 @@ public class LatticeTest {
     return modelWithLattices(buf.toString());
   }
 
-  private CalciteAssert.AssertThat modelWithLattices(String... lattices) {
+  private static CalciteAssert.AssertThat modelWithLattices(
+      String... lattices) {
     final Class<JdbcTest.EmpDeptTableFactory> clazz =
         JdbcTest.EmpDeptTableFactory.class;
     return CalciteAssert.model(""
@@ -165,8 +166,8 @@ public class LatticeTest {
   @Test public void testLatticeSql() throws Exception {
     modelWithLattice("EMPLOYEES", "select * from \"foodmart\".\"days\"")
         .doWithConnection(new Function<CalciteConnection, Void>() {
-          public Void apply(CalciteConnection input) {
-            final SchemaPlus schema = input.getRootSchema();
+          public Void apply(CalciteConnection c) {
+            final SchemaPlus schema = c.getRootSchema();
             final SchemaPlus adhoc = schema.getSubSchema("adhoc");
             assertThat(adhoc.getTableNames().contains("EMPLOYEES"), is(true));
             final Map.Entry<String, CalciteSchema.LatticeEntry> entry =
@@ -443,12 +444,39 @@ public class LatticeTest {
         explain);
   }
 
+  @Test public void testFoodmartProfile() throws Exception {
+    foodmartLatticeModel(Lattices.class.getCanonicalName() + "#PROFILER")
+        .doWithConnection(new Function<CalciteConnection, Void>() {
+          public Void apply(CalciteConnection c) {
+            final SchemaPlus schema = c.getRootSchema();
+            final SchemaPlus adhoc = schema.getSubSchema("adhoc");
+            final Map.Entry<String, CalciteSchema.LatticeEntry> entry =
+                adhoc.unwrap(CalciteSchema.class).getLatticeMap().firstEntry();
+            final Lattice lattice = entry.getValue().getLattice();
+            return null;
+          }
+        });
+  }
+
   private void checkTileAlgorithm(String statisticProvider,
       String expectedExplain) {
     MaterializationService.setThreadLocal();
     MaterializationService.instance().clear();
-    foodmartModel(
-        " auto: false,\n"
+    foodmartLatticeModel(statisticProvider)
+        .query("select distinct t.\"the_year\", t.\"quarter\"\n"
+            + "from \"foodmart\".\"sales_fact_1997\" as s\n"
+            + "join \"foodmart\".\"time_by_day\" as t using (\"time_id\")\n")
+        .enableMaterializations(true)
+        .explainContains(expectedExplain)
+        .returnsUnordered("the_year=1997; quarter=Q1",
+            "the_year=1997; quarter=Q2",
+            "the_year=1997; quarter=Q3",
+            "the_year=1997; quarter=Q4");
+  }
+
+  private static CalciteAssert.AssertThat foodmartLatticeModel(
+      String statisticProvider) {
+    return foodmartModel(" auto: false,\n"
         + "  algorithm: true,\n"
         + "  algorithmMaxMillis: -1,\n"
         + "  rowCountEstimate: 87000,\n"
@@ -467,16 +495,7 @@ public class LatticeTest {
         + "  tiles: [ {\n"
         + "    dimensions: [ 'the_year', ['t', 'quarter'] ],\n"
         + "    measures: [ ]\n"
-        + "  } ]\n")
-        .query("select distinct t.\"the_year\", t.\"quarter\"\n"
-            + "from \"foodmart\".\"sales_fact_1997\" as s\n"
-            + "join \"foodmart\".\"time_by_day\" as t using (\"time_id\")\n")
-        .enableMaterializations(true)
-        .explainContains(expectedExplain)
-        .returnsUnordered("the_year=1997; quarter=Q1",
-            "the_year=1997; quarter=Q2",
-            "the_year=1997; quarter=Q3",
-            "the_year=1997; quarter=Q4");
+        + "  } ]\n");
   }
 
   /** Tests a query that is created within {@link #testTileAlgorithm()}. */
@@ -756,7 +775,7 @@ public class LatticeTest {
         .returns("EXPR$0=1\n");
   }
 
-  private CalciteAssert.AssertThat foodmartModel(String... extras) {
+  private static CalciteAssert.AssertThat foodmartModel(String... extras) {
     return modelWithLattice("star",
         "select 1 from \"foodmart\".\"sales_fact_1997\" as \"s\"\n"
             + "join \"foodmart\".\"product\" as \"p\" using (\"product_id\")\n"
