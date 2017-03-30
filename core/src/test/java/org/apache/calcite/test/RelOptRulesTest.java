@@ -516,9 +516,9 @@ public class RelOptRulesTest extends RelOptTestBase {
             .addRuleInstance(SortCollapseRule.INSTANCE)
             .build();
     final String sql = "select * from (\n"
-                       + "select distinct deptno from emp\n"
-                       + "order by deptno)\n"
-                       + "limit 1";
+        + "  select distinct deptno from emp\n"
+        + "  order by deptno)\n"
+        + "limit 1";
     sql(sql)
         .withPre(preProgram)
         .with(program)
@@ -535,10 +535,10 @@ public class RelOptRulesTest extends RelOptTestBase {
             .addRuleInstance(SortCollapseRule.INSTANCE)
             .build();
     final String sql = "select * from (\n"
-                       + "select distinct deptno from emp\n"
-                       + "order by deptno\n"
-                       + "limit 3 offset 1)\n"
-                       + "limit 3 offset 1";
+        + "  select distinct deptno from emp\n"
+        + "  order by deptno\n"
+        + "  limit 3 offset 1)\n"
+        + "limit 3 offset 1";
     sql(sql)
         .withPre(preProgram)
         .with(program)
