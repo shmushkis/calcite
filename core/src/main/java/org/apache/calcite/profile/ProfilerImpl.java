@@ -130,6 +130,7 @@ public class ProfilerImpl implements Profiler {
             return e2.columnOrdinals.contains(e1.columnOrdinals);
           }
         };
+    final Set<ImmutableBitSet> resultSet = new HashSet<>();
     final PartiallyOrderedSet<Space> results =
         new PartiallyOrderedSet<>(ordering);
     private final List<ImmutableBitSet> keyOrdinalLists =
@@ -280,7 +281,11 @@ public class ProfilerImpl implements Profiler {
       // and [x, y] => [a] is a functional dependency but not interesting,
       // and [x, y, z] is not an interesting distribution.
       for (Space space : spaces) {
-        results.add(space);
+        if (false)
+        System.out.println("  foo(pos, new int[] " + space.columnOrdinals + ");");
+        if (resultSet.add(space.columnOrdinals)) {
+          results.add(space);
+        }
 
         int nonMinimal = 0;
       dependents:
@@ -385,6 +390,7 @@ public class ProfilerImpl implements Profiler {
     }
 
     private boolean isInteresting(Space space) {
+      if (false)
       System.out.println(space.columns
           + ", cardinality: " + space.cardinality()
           + ", expected: " + space.expectedCardinality
