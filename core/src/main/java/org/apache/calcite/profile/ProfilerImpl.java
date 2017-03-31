@@ -38,11 +38,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -101,7 +104,22 @@ public class ProfilerImpl implements Profiler {
     /** Combinations of columns that we have computed but whose successors have
      * not yet been computed. We may add some of those successors to
      * {@link #spaceQueue}. */
-    final Deque<Space> doneQueue = new ArrayDeque<>();
+    final Queue<Space> doneQueue =
+        new PriorityQueue<>(100,
+          new Comparator<Space>() {
+            public int compare(Space s0, Space s1) {
+              // The space with 0 columns is more interesting than
+              // any space with 1 column, and so forth.
+              // For spaces with 2 or more columns we compare "surprise":
+              // how many fewer values did it have than expected?
+              int c = Integer.compare(s0.columns.size(), s1.columns.size());
+              if (c == 0) {
+                c = Double.compare(s0.surprise(), s1.surprise());
+              }
+              return c;
+            }
+          });
+
     /** Combinations of columns that we will compute next pass. */
     final Deque<ImmutableBitSet> spaceQueue = new ArrayDeque<>();
     final List<Unique> uniques = new ArrayList<>();
@@ -344,10 +362,11 @@ public class ProfilerImpl implements Profiler {
         final boolean minimal = nonMinimal == 0
             && !space.unique
             && !containsKey(space.columnOrdinals);
+        space.expectedCardinality = expectedCardinality;
         final Distribution distribution =
             new Distribution(space.columns, valueSet, space.cardinality(),
                 nullCount, expectedCardinality, minimal);
-        if (minimal && isInteresting(distribution)) {
+        if (minimal && isInteresting(space)) {
           distributions.put(space.columnOrdinals, distribution);
           doneQueue.add(space);
         }
@@ -365,8 +384,13 @@ public class ProfilerImpl implements Profiler {
       }
     }
 
-    private boolean isInteresting(Distribution distribution) {
-      return true;
+    private boolean isInteresting(Space space) {
+      System.out.println(space.columns
+          + ", cardinality: " + space.cardinality()
+          + ", expected: " + space.expectedCardinality
+          + ", surprise: " + space.surprise());
+      return space.columns.size() < 2
+          || space.surprise() > 0.3D;
     }
 
     private ImmutableSortedSet<Column> toColumns(Iterable<Integer> ordinals) {
@@ -385,6 +409,7 @@ public class ProfilerImpl implements Profiler {
     boolean unique;
     final BitSet dependencies = new BitSet();
     final Set<ImmutableBitSet> dependents = new HashSet<>();
+    double expectedCardinality;
 
     Space(Run run, ImmutableBitSet columnOrdinals, Iterable<Column> columns) {
       this.run = run;
@@ -417,6 +442,10 @@ public class ProfilerImpl implements Profiler {
      * distribution has been registered yet. */
     public Distribution distribution() {
       return run.distributions.get(columnOrdinals);
+    }
+
+    public double surprise() {
+      return SimpleProfiler.surprise(expectedCardinality, cardinality());
     }
   }
 

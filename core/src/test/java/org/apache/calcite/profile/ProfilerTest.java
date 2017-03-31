@@ -158,7 +158,7 @@ public class ProfilerTest {
   /** As {@link #testProfileScott()}, but prints only the most surprising
    * distributions. */
   @Test public void testProfileScott2() throws Exception {
-    fluid().factory(Fluid.SIMPLE_FACTORY).unordered(
+    scott().factory(Fluid.SIMPLE_FACTORY).unordered(
         "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:5.0,nullCount:10,expectedCardinality:14.0,surprise:0.47368421052631576}",
         "{type:distribution,columns:[DEPTNO,DEPTNO0],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
         "{type:distribution,columns:[DEPTNO,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
@@ -180,7 +180,7 @@ public class ProfilerTest {
    * Results should be the same, but are slightly different (extra EMPNO
    * and ENAME distributions). */
   @Test public void testProfileScott3() throws Exception {
-    fluid().factory(Fluid.BETTER_FACTORY).unordered(
+    scott().factory(Fluid.BETTER_FACTORY).unordered(
         "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:5.0,nullCount:10,expectedCardinality:14.0,surprise:0.47368421052631576}",
         "{type:distribution,columns:[DEPTNO,DEPTNO0],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
         "{type:distribution,columns:[DEPTNO,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
@@ -204,17 +204,7 @@ public class ProfilerTest {
    * and deems everything uninteresting. Only first-level combinations (those
    * consisting of a single column) are computed. */
   @Test public void testProfileScott4() throws Exception {
-    final Supplier<Profiler> factory = new Supplier<Profiler>() {
-      public Profiler get() {
-        return new ProfilerImpl(10,
-            new PredicateImpl<Pair<ProfilerImpl.Space, Profiler.Column>>() {
-              public boolean test(Pair<ProfilerImpl.Space, Profiler.Column> p) {
-                return false;
-              }
-            });
-      }
-    };
-    fluid().factory(factory).unordered(
+    scott().factory(Fluid.INCURIOUS_PROFILER_FACTORY).unordered(
         "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:5.0,nullCount:10,expectedCardinality:14.0,surprise:0.47368421052631576}",
         "{type:distribution,columns:[DEPTNO0],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
         "{type:distribution,columns:[DEPTNO],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
@@ -232,24 +222,30 @@ public class ProfilerTest {
    * and deems everything uninteresting. Only first-level combinations (those
    * consisting of a single column) are computed. */
   @Test public void testProfileScott5() throws Exception {
-    final Supplier<Profiler> factory = new Supplier<Profiler>() {
-      public Profiler get() {
-        return new ProfilerImpl(100,
-            new PredicateImpl<Pair<ProfilerImpl.Space, Profiler.Column>>() {
-              public boolean test(Pair<ProfilerImpl.Space, Profiler.Column> p) {
-                final Profiler.Distribution distribution =
-                    p.left.distribution();
-                if (distribution == null) {
-                  // We don't have a distribution yet, because this space has
-                  // not yet been evaluated. Let's do it anyway.
-                  return true;
-                }
-                return distribution.surprise() >= 0.3D;
-              }
-            });
-      }
-    };
-    fluid().factory(factory).unordered(
+    scott().factory(Fluid.PROFILER_FACTORY).unordered(
+        "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:5.0,nullCount:10,expectedCardinality:14.0,surprise:0.47368421052631576}",
+        "{type:distribution,columns:[DEPTNO,DEPTNO0],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[DEPTNO,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[DEPTNO0,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
+        "{type:distribution,columns:[DEPTNO0],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+        "{type:distribution,columns:[DEPTNO],values:[10,20,30],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+        "{type:distribution,columns:[DNAME],values:[ACCOUNTING,RESEARCH,SALES],cardinality:3.0,expectedCardinality:14.0,surprise:0.6470588235294118}",
+        "{type:distribution,columns:[EMPNO],values:[7369,7499,7521,7566,7654,7698,7782,7788,7839,7844,7876,7900,7902,7934],cardinality:14.0,expectedCardinality:14.0,surprise:0.0}",
+        "{type:distribution,columns:[ENAME],values:[ADAMS,ALLEN,BLAKE,CLARK,FORD,JAMES,JONES,KING,MARTIN,MILLER,SCOTT,SMITH,TURNER,WARD],cardinality:14.0,expectedCardinality:14.0,surprise:0.0}",
+        "{type:distribution,columns:[HIREDATE,COMM],cardinality:5.0,expectedCardinality:12.682618485430247,surprise:0.4344728973121492}",
+        "{type:distribution,columns:[HIREDATE],values:[1980-12-17,1981-01-05,1981-02-04,1981-02-20,1981-02-22,1981-06-09,1981-09-08,1981-09-28,1981-11-17,1981-12-03,1982-01-23,1987-04-19,1987-05-23],cardinality:13.0,expectedCardinality:14.0,surprise:0.037037037037037035}",
+        "{type:distribution,columns:[JOB],values:[ANALYST,CLERK,MANAGER,PRESIDENT,SALESMAN],cardinality:5.0,expectedCardinality:14.0,surprise:0.47368421052631576}",
+        "{type:distribution,columns:[MGR,COMM],cardinality:5.0,expectedCardinality:11.675074674157162,surprise:0.400302535646339}",
+        "{type:distribution,columns:[MGR],values:[7566,7698,7782,7788,7839,7902],cardinality:7.0,nullCount:1,expectedCardinality:14.0,surprise:0.3333333333333333}",
+        "{type:distribution,columns:[SAL,COMM],cardinality:5.0,expectedCardinality:12.579960871109892,surprise:0.43117052004174}",
+        "{type:distribution,columns:[SAL],values:[800.00,950.00,1100.00,1250.00,1300.00,1500.00,1600.00,2450.00,2850.00,2975.00,3000.00,5000.00],cardinality:12.0,expectedCardinality:14.0,surprise:0.07692307692307693}",
+        "{type:distribution,columns:[],cardinality:1.0,expectedCardinality:1.0,surprise:0.0}");
+  }
+  /** As {@link #testProfileScott3()}, but uses the breadth-first profiler
+   * and deems everything uninteresting. Only first-level combinations (those
+   * consisting of a single column) are computed. */
+  @Test public void testProfileFoodmart() throws Exception {
+    foodmart().factory(Fluid.PROFILER_FACTORY).unordered(
         "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:5.0,nullCount:10,expectedCardinality:14.0,surprise:0.47368421052631576}",
         "{type:distribution,columns:[DEPTNO,DEPTNO0],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
         "{type:distribution,columns:[DEPTNO,DNAME],cardinality:3.0,expectedCardinality:7.269756624410332,surprise:0.41576025416819384}",
@@ -269,54 +265,33 @@ public class ProfilerTest {
         "{type:distribution,columns:[],cardinality:1.0,expectedCardinality:1.0,surprise:0.0}");
   }
 
-  private Fluid fluid() throws Exception {
+  private Fluid scott() throws Exception {
     final String sql = "select * from \"scott\".emp\n"
         + "join \"scott\".dept using (deptno)";
-    final List<String> columns =
-        ImmutableList.<String>builder().addAll(Fluid.DEFAULT_COLUMNS)
-            .add("expectedCardinality", "surprise")
-            .build();
-    final Ordering<Profiler.Statistic> ordering =
-        new Ordering<Profiler.Statistic>() {
-          public int compare(Profiler.Statistic left,
-              Profiler.Statistic right) {
-            int c = left.getClass().getSimpleName()
-                .compareTo(right.getClass().getSimpleName());
-            if (c == 0
-                && left instanceof Profiler.Distribution
-                && right instanceof Profiler.Distribution) {
-              final Profiler.Distribution d0 = (Profiler.Distribution) left;
-              final Profiler.Distribution d1 = (Profiler.Distribution) right;
-              c = Double.compare(d0.surprise(), d1.surprise());
-              if (c == 0) {
-                c = d0.columns.toString().compareTo(d1.columns.toString());
-              }
-            }
-            return c;
-          }
-        };
-    final Predicate<Profiler.Statistic> predicate =
-        new PredicateImpl<Profiler.Statistic>() {
-          public boolean test(Profiler.Statistic statistic) {
-            // Include distributions of zero columns (the grand total)
-            // and singleton columns, plus "surprising" distributions
-            // (with significantly higher NDVs than predicted from their
-            // constituent columns).
-            return statistic instanceof Profiler.Distribution
-                && (((Profiler.Distribution) statistic).columns.size() < 2
-                    || ((Profiler.Distribution) statistic).surprise() > 0.4D)
-                && ((Profiler.Distribution) statistic).minimal;
-          }
-        };
     return sql(sql)
-        .where(predicate)
-        .sort(ordering.reverse())
+        .where(Fluid.STATISTIC_PREDICATE)
+        .sort(Fluid.ORDERING.reverse())
         .limit(30)
-        .project(columns);
+        .project(Fluid.EXTENDED_COLUMNS);
+  }
+
+  private Fluid foodmart() throws Exception {
+    final String sql = "select \"s\".*, \"p\".*, \"t\".*, \"pc\".*\n"
+        + "from \"foodmart\".\"sales_fact_1997\" as \"s\"\n"
+        + "join \"foodmart\".\"product\" as \"p\" using (\"product_id\")\n"
+        + "join \"foodmart\".\"time_by_day\" as \"t\" using (\"time_id\")\n"
+        + "join \"foodmart\".\"product_class\" as \"pc\"\n"
+        + "  on \"p\".\"product_class_id\" = \"pc\".\"product_class_id\"\n";
+    return sql(sql)
+        .config(CalciteAssert.Config.JDBC_FOODMART)
+        .where(Fluid.STATISTIC_PREDICATE)
+        .sort(Fluid.ORDERING.reverse())
+        .limit(30)
+        .project(Fluid.EXTENDED_COLUMNS);
   }
 
   private static Fluid sql(String sql) {
-    return new Fluid(sql, Fluid.SIMPLE_FACTORY,
+    return new Fluid(CalciteAssert.Config.SCOTT, sql, Fluid.SIMPLE_FACTORY,
         Predicates.<Profiler.Statistic>alwaysTrue(), null, -1,
         Fluid.DEFAULT_COLUMNS);
   }
@@ -339,18 +314,87 @@ public class ProfilerTest {
           }
         };
 
-    private final String sql;
-    private final List<String> columns;
+    static final Ordering<Profiler.Statistic> ORDERING =
+        new Ordering<Profiler.Statistic>() {
+          public int compare(Profiler.Statistic left,
+              Profiler.Statistic right) {
+            int c = left.getClass().getSimpleName()
+                .compareTo(right.getClass().getSimpleName());
+            if (c == 0
+                && left instanceof Profiler.Distribution
+                && right instanceof Profiler.Distribution) {
+              final Profiler.Distribution d0 = (Profiler.Distribution) left;
+              final Profiler.Distribution d1 = (Profiler.Distribution) right;
+              c = Double.compare(d0.surprise(), d1.surprise());
+              if (c == 0) {
+                c = d0.columns.toString().compareTo(d1.columns.toString());
+              }
+            }
+            return c;
+          }
+        };
+
+    static final Predicate<Profiler.Statistic> STATISTIC_PREDICATE =
+        new PredicateImpl<Profiler.Statistic>() {
+          public boolean test(Profiler.Statistic statistic) {
+            // Include distributions of zero columns (the grand total)
+            // and singleton columns, plus "surprising" distributions
+            // (with significantly higher NDVs than predicted from their
+            // constituent columns).
+            return statistic instanceof Profiler.Distribution
+                && (((Profiler.Distribution) statistic).columns.size() < 2
+                || ((Profiler.Distribution) statistic).surprise() > 0.4D)
+                && ((Profiler.Distribution) statistic).minimal;
+          }
+        };
 
     static final List<String> DEFAULT_COLUMNS =
         ImmutableList.of("type", "distribution", "columns", "cardinality",
             "values", "nullCount", "dependentColumn", "rowCount");
+
+    static final List<String> EXTENDED_COLUMNS =
+        ImmutableList.<String>builder().addAll(DEFAULT_COLUMNS)
+            .add("expectedCardinality", "surprise")
+            .build();
+
+    private static final Supplier<Profiler> PROFILER_FACTORY =
+        new Supplier<Profiler>() {
+          public Profiler get() {
+            return new ProfilerImpl(100,
+                new PredicateImpl<Pair<ProfilerImpl.Space, Profiler.Column>>() {
+                  public boolean test(
+                      Pair<ProfilerImpl.Space, Profiler.Column> p) {
+                    final Profiler.Distribution distribution =
+                        p.left.distribution();
+                    if (distribution == null) {
+                      // We don't have a distribution yet, because this space
+                      // has not yet been evaluated. Let's do it anyway.
+                      return true;
+                    }
+                    return distribution.surprise() >= 0.3D;
+                  }
+                });
+          }
+        };
+
+    private static final Supplier<Profiler> INCURIOUS_PROFILER_FACTORY =
+        new Supplier<Profiler>() {
+          public Profiler get() {
+            final Predicate<Pair<ProfilerImpl.Space, Profiler.Column>> p =
+                Predicates.alwaysFalse();
+            return new ProfilerImpl(10, p);
+          }
+        };
+
+    private final String sql;
+    private final List<String> columns;
     private final Comparator<Profiler.Statistic> comparator;
     private final int limit;
     private final Predicate<Profiler.Statistic> predicate;
     private final Supplier<Profiler> factory;
+    private final CalciteAssert.Config config;
 
-    Fluid(String sql, Supplier<Profiler> factory,
+    Fluid(CalciteAssert.Config config, String sql, Supplier<Profiler> factory,
         Predicate<Profiler.Statistic> predicate,
         Comparator<Profiler.Statistic> comparator, int limit,
         List<String> columns) {
@@ -360,26 +404,37 @@ public class ProfilerTest {
       this.predicate = Preconditions.checkNotNull(predicate);
       this.comparator = comparator; // null means sort on JSON representation
       this.limit = limit;
+      this.config = config;
+    }
+
+    Fluid config(CalciteAssert.Config config) {
+      return new Fluid(config, sql, factory, predicate, comparator, limit,
+          columns);
     }
 
     Fluid factory(Supplier<Profiler> factory) {
-      return new Fluid(sql, factory, predicate, comparator, limit, columns);
+      return new Fluid(config, sql, factory, predicate, comparator, limit,
+          columns);
     }
 
     Fluid project(List<String> columns) {
-      return new Fluid(sql, factory, predicate, comparator, limit, columns);
+      return new Fluid(config, sql, factory, predicate, comparator, limit,
+          columns);
     }
 
     Fluid sort(Ordering<Profiler.Statistic> comparator) {
-      return new Fluid(sql, factory, predicate, comparator, limit, columns);
+      return new Fluid(config, sql, factory, predicate, comparator, limit,
+          columns);
     }
 
     Fluid limit(int limit) {
-      return new Fluid(sql, factory, predicate, comparator, limit, columns);
+      return new Fluid(config, sql, factory, predicate, comparator, limit,
+          columns);
     }
 
     Fluid where(Predicate<Profiler.Statistic> predicate) {
-      return new Fluid(sql, factory, predicate, comparator, limit, columns);
+      return new Fluid(config, sql, factory, predicate, comparator, limit,
+          columns);
     }
 
     Fluid unordered(String... lines) throws Exception {
@@ -388,7 +443,7 @@ public class ProfilerTest {
 
     public Fluid check(final Matcher<Iterable<String>> matcher)
         throws Exception {
-      CalciteAssert.that(CalciteAssert.Config.SCOTT)
+      CalciteAssert.that(config)
           .doWithConnection(new Function<CalciteConnection, Void>() {
             public Void apply(CalciteConnection c) {
               try (PreparedStatement s = c.prepareStatement(sql)) {
