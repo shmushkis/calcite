@@ -19,6 +19,7 @@ package org.apache.calcite.materialize;
 import org.apache.calcite.avatica.AvaticaUtils;
 import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.linq4j.tree.Primitive;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.prepare.CalcitePrepareImpl;
 import org.apache.calcite.rel.RelNode;
@@ -403,6 +404,12 @@ public class Lattice {
    * dimensions. */
   public double getRowCount(List<Column> columns) {
     return statisticProvider.cardinality(columns);
+  }
+
+  /** Returns an estimate of the number of rows in the tile with the given
+   * dimensions. */
+  public static double getRowCount(double factCount, double... columnCounts) {
+    return getRowCount(factCount, Primitive.asList(columnCounts));
   }
 
   /** Returns an estimate of the number of rows in the tile with the given

@@ -241,6 +241,7 @@ public class ProfilerTest {
         "{type:distribution,columns:[SAL],values:[800.00,950.00,1100.00,1250.00,1300.00,1500.00,1600.00,2450.00,2850.00,2975.00,3000.00,5000.00],cardinality:12.0,expectedCardinality:14.0,surprise:0.07692307692307693}",
         "{type:distribution,columns:[],cardinality:1.0,expectedCardinality:1.0,surprise:0.0}");
   }
+
   /** As {@link #testProfileScott3()}, but uses the breadth-first profiler
    * and deems everything uninteresting. Only first-level combinations (those
    * consisting of a single column) are computed. */

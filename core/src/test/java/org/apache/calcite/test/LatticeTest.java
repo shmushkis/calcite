@@ -444,20 +444,6 @@ public class LatticeTest {
         explain);
   }
 
-  @Test public void testFoodmartProfile() throws Exception {
-    foodmartLatticeModel(Lattices.class.getCanonicalName() + "#PROFILER")
-        .doWithConnection(new Function<CalciteConnection, Void>() {
-          public Void apply(CalciteConnection c) {
-            final SchemaPlus schema = c.getRootSchema();
-            final SchemaPlus adhoc = schema.getSubSchema("adhoc");
-            final Map.Entry<String, CalciteSchema.LatticeEntry> entry =
-                adhoc.unwrap(CalciteSchema.class).getLatticeMap().firstEntry();
-            final Lattice lattice = entry.getValue().getLattice();
-            return null;
-          }
-        });
-  }
-
   private void checkTileAlgorithm(String statisticProvider,
       String expectedExplain) {
     MaterializationService.setThreadLocal();
@@ -815,19 +801,13 @@ public class LatticeTest {
 
   /** Unit test for {@link Lattice#getRowCount(double, List)}. */
   @Test public void testColumnCount() {
-    assertThat(Lattice.getRowCount(10, Arrays.asList(2D, 3D)),
-        within(5.03D, 0.01D));
-    assertThat(Lattice.getRowCount(10, Arrays.asList(9D, 8D)),
-        within(9.4D, 0.01D));
-    assertThat(Lattice.getRowCount(100, Arrays.asList(9D, 8D)),
-        within(54.2D, 0.1D));
-    assertThat(Lattice.getRowCount(1000, Arrays.asList(9D, 8D)),
-        within(72D, 0.01D));
-    assertThat(Lattice.getRowCount(1000, Arrays.asList(1D, 1D)), is(1D));
-    assertThat(Lattice.getRowCount(1, Arrays.asList(3D, 5D)),
-        within(1D, 0.01D));
-    assertThat(Lattice.getRowCount(1, Arrays.asList(3D, 5D, 13D, 4831D)),
-        within(1D, 0.01D));
+    assertThat(Lattice.getRowCount(10, 2, 3), within(5.03D, 0.01D));
+    assertThat(Lattice.getRowCount(10, 9, 8), within(9.4D, 0.01D));
+    assertThat(Lattice.getRowCount(100, 9, 8), within(54.2D, 0.1D));
+    assertThat(Lattice.getRowCount(1000, 9, 8), within(72D, 0.01D));
+    assertThat(Lattice.getRowCount(1000, 1, 1), is(1D));
+    assertThat(Lattice.getRowCount(1, 3, 5), within(1D, 0.01D));
+    assertThat(Lattice.getRowCount(1, 3, 5, 13, 4831), within(1D, 0.01D));
   }
 }
 

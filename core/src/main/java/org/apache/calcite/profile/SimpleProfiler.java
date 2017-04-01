@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
@@ -240,12 +239,10 @@ public class SimpleProfiler implements Profiler {
           for (Column column : space.columns) {
             final Distribution d1 =
                 distributions.get(ImmutableBitSet.of(column.ordinal));
-            final double c1 = d1.cardinality;
             final Distribution d2 =
                 distributions.get(space.columnOrdinals.clear(column.ordinal));
-            final double c2 = d2.cardinality;
             final double d =
-                Lattice.getRowCount(rowCount, Arrays.asList(c1, c2));
+                Lattice.getRowCount(rowCount, d1.cardinality, d2.cardinality);
             expectedCardinality = Math.min(expectedCardinality, d);
           }
         }

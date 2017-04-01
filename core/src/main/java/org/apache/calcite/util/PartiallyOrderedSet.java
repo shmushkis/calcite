@@ -73,7 +73,7 @@ public class PartiallyOrderedSet<E> extends AbstractSet<E> {
 
   /** Whether to check internal consistency all the time.
    * False unless you specify "-Dcalcite.debug" on the command line. */
-  private static final boolean DEBUG = Util.getBooleanProperty("calcite.debug");
+  private static final boolean DEBUG = Util.getBooleanProperty("calcite.debug.x");
 
   /**
    * Creates a partially-ordered set.

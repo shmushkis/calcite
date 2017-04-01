@@ -17,7 +17,9 @@
 package org.apache.calcite.profile;
 
 import org.apache.calcite.linq4j.Ord;
+import org.apache.calcite.linq4j.tree.Primitive;
 import org.apache.calcite.materialize.Lattice;
+import org.apache.calcite.prepare.CalcitePrepareImpl;
 import org.apache.calcite.rel.metadata.NullSentinel;
 import org.apache.calcite.runtime.FlatLists;
 import org.apache.calcite.runtime.PredicateImpl;
@@ -35,7 +37,6 @@ import com.google.common.collect.Iterables;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.Comparator;
@@ -49,7 +50,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import javax.annotation.Nonnull;
 
 /**
  * Implementation of {@link Profiler} that only investigates "interesting"
@@ -130,6 +130,9 @@ public class ProfilerImpl implements Profiler {
             return e2.columnOrdinals.contains(e1.columnOrdinals);
           }
         };
+    /** Column ordinals that have ever been placed on {@link #spaceQueue}.
+     * Ensures that we do not calculate the same combination more than once,
+     * even though we generate a column set from multiple parents. */
     final Set<ImmutableBitSet> resultSet = new HashSet<>();
     final PartiallyOrderedSet<Space> results =
         new PartiallyOrderedSet<>(ordering);
@@ -229,7 +232,9 @@ public class ProfilerImpl implements Profiler {
                     && predicate.apply(Pair.of(doneSpace, column))) {
                   final ImmutableBitSet nextOrdinals =
                       doneSpace.columnOrdinals.set(column.ordinal);
-                  spaceQueue.add(nextOrdinals);
+                  if (resultSet.add(nextOrdinals)) {
+                    spaceQueue.add(nextOrdinals);
+                  }
                 }
               }
             }
@@ -256,22 +261,16 @@ public class ProfilerImpl implements Profiler {
       System.out.println("pass: " + pass
           + ", spaces.size: " + spaces.size()
           + ", distributions.size: " + distributions.size());
-      final List<Comparable> values = new ArrayList<>();
+
+      for (Space space : spaces) {
+        space.collector = Collector.create(space);
+      }
+
       int rowCount = 0;
       for (final List<Comparable> row : rows) {
         ++rowCount;
-      joint:
         for (Space space : spaces) {
-          values.clear();
-          for (Column column : space.columns) {
-            final Comparable value = row.get(column.ordinal);
-            values.add(value);
-            if (value == NullSentinel.INSTANCE) {
-              space.nullCount++;
-              continue joint;
-            }
-          }
-          space.values.add(FlatLists.ofComparable(values));
+          space.collector.add(row);
         }
       }
 
@@ -281,16 +280,14 @@ public class ProfilerImpl implements Profiler {
       // and [x, y] => [a] is a functional dependency but not interesting,
       // and [x, y, z] is not an interesting distribution.
       for (Space space : spaces) {
-        if (false)
-        System.out.println("  foo(pos, new int[] " + space.columnOrdinals + ");");
-        if (resultSet.add(space.columnOrdinals)) {
-          results.add(space);
-        }
+        space.collector.finish();
+        space.collector = null;
+        results.add(space);
 
         int nonMinimal = 0;
       dependents:
         for (Space s : results.getDescendants(space)) {
-          if (s.cardinality() == space.cardinality()) {
+          if (s.cardinality == space.cardinality) {
             // We have discovered a sub-set that has the same cardinality.
             // The column(s) that are not in common are functionally
             // dependent.
@@ -331,16 +328,6 @@ public class ProfilerImpl implements Profiler {
         if (nonMinimal > 0) {
           continue;
         }
-        int nullCount;
-        final SortedSet<Comparable> valueSet;
-        if (space.columns.size() == 1) {
-          nullCount = space.nullCount;
-          valueSet = ImmutableSortedSet.copyOf(
-              Iterables.transform(space.values, ONLY));
-        } else {
-          nullCount = -1;
-          valueSet = null;
-        }
         double expectedCardinality;
         switch (space.columns.size()) {
         case 0:
@@ -354,12 +341,13 @@ public class ProfilerImpl implements Profiler {
           for (Column column : space.columns) {
             final Distribution d1 =
                 distributions.get(ImmutableBitSet.of(column.ordinal));
-            final double c1 = d1.cardinality;
             final Distribution d2 =
                 distributions.get(space.columnOrdinals.clear(column.ordinal));
-            final double c2 = d2.cardinality;
+            if (d1 == null || d2 == null) {
+              continue;
+            }
             final double d =
-                Lattice.getRowCount(rowCount, Arrays.asList(c1, c2));
+                Lattice.getRowCount(rowCount, d1.cardinality, d2.cardinality);
             expectedCardinality = Math.min(expectedCardinality, d);
           }
         }
@@ -369,14 +357,14 @@ public class ProfilerImpl implements Profiler {
             && !containsKey(space.columnOrdinals);
         space.expectedCardinality = expectedCardinality;
         final Distribution distribution =
-            new Distribution(space.columns, valueSet, space.cardinality(),
-                nullCount, expectedCardinality, minimal);
+            new Distribution(space.columns, space.valueSet, space.cardinality,
+                space.nullCount, expectedCardinality, minimal);
         if (minimal && isInteresting(space)) {
           distributions.put(space.columnOrdinals, distribution);
           doneQueue.add(space);
         }
 
-        if (space.values.size() == rowCount) {
+        if (space.cardinality == rowCount) {
           // We have discovered a new key. It is not a super-set of a key.
           uniques.add(new Unique(space.columns));
           keyOrdinalLists.add(space.columnOrdinals);
@@ -390,11 +378,12 @@ public class ProfilerImpl implements Profiler {
     }
 
     private boolean isInteresting(Space space) {
-      if (false)
-      System.out.println(space.columns
-          + ", cardinality: " + space.cardinality()
-          + ", expected: " + space.expectedCardinality
-          + ", surprise: " + space.surprise());
+      if (CalcitePrepareImpl.DEBUG) {
+        System.out.println(space.columns
+            + ", cardinality: " + space.cardinality
+            + ", expected: " + space.expectedCardinality
+            + ", surprise: " + space.surprise());
+      }
       return space.columns.size() < 2
           || space.surprise() > 0.3D;
     }
@@ -405,17 +394,22 @@ public class ProfilerImpl implements Profiler {
   }
 
   /** Work space for a particular combination of columns. */
-  static class Space implements Comparable<Space> {
+  static class Space {
     private final Run run;
     final ImmutableBitSet columnOrdinals;
     final ImmutableSortedSet<Column> columns;
-    int nullCount;
-    final SortedSet<FlatLists.ComparableList<Comparable>> values =
-        new TreeSet<>();
     boolean unique;
     final BitSet dependencies = new BitSet();
     final Set<ImmutableBitSet> dependents = new HashSet<>();
     double expectedCardinality;
+    Collector collector;
+    /** Assigned by {@link Collector#finish()}. */
+    int nullCount;
+    /** Number of distinct values. Null is counted as a value, if present.
+     * Assigned by {@link Collector#finish()}. */
+    int cardinality;
+    /** Assigned by {@link Collector#finish()}. */
+    SortedSet<Comparable> valueSet;
 
     Space(Run run, ImmutableBitSet columnOrdinals, Iterable<Column> columns) {
       this.run = run;
@@ -433,17 +427,6 @@ public class ProfilerImpl implements Profiler {
           && columnOrdinals.equals(((Space) o).columnOrdinals);
     }
 
-    public int compareTo(@Nonnull Space o) {
-      return columnOrdinals.equals(o.columnOrdinals) ? 0
-          : columnOrdinals.contains(o.columnOrdinals) ? 1
-              : -1;
-    }
-
-    /** Number of distinct values. Null is counted as a value, if present. */
-    public double cardinality() {
-      return values.size() + (nullCount > 0 ? 1 : 0);
-    }
-
     /** Returns the distribution created from this space, or null if no
      * distribution has been registered yet. */
     public Distribution distribution() {
@@ -451,7 +434,7 @@ public class ProfilerImpl implements Profiler {
     }
 
     public double surprise() {
-      return SimpleProfiler.surprise(expectedCardinality, cardinality());
+      return SimpleProfiler.surprise(expectedCardinality, cardinality);
     }
   }
 
@@ -480,6 +463,89 @@ public class ProfilerImpl implements Profiler {
       return this;
     }
   }
+
+  /** Collects values of a column or columns. */
+  abstract static class Collector {
+    protected final Space space;
+
+    Collector(Space space) {
+      this.space = space;
+    }
+
+    abstract void add(List<Comparable> row);
+    abstract void finish();
+
+    /** Creates an initial collector of the appropriate kind. */
+    public static Collector create(Space space) {
+      final List<Integer> columnOrdinalList = space.columnOrdinals.asList();
+      if (columnOrdinalList.size() == 1) {
+        return new SingletonCollector(space, columnOrdinalList.get(0));
+      } else {
+        return new CompositeCollector(space, columnOrdinalList);
+      }
+    }
+  }
+
+  /** Collector that collects values of a single column. */
+  static class SingletonCollector extends Collector {
+    final SortedSet<Comparable> values = new TreeSet<>();
+    final int columnOrdinal;
+    int nullCount = 0;
+
+    SingletonCollector(Space space, int columnOrdinal) {
+      super(space);
+      this.columnOrdinal = columnOrdinal;
+    }
+
+    public void add(List<Comparable> row) {
+      final Comparable v = row.get(columnOrdinal);
+      if (v == NullSentinel.INSTANCE) {
+        nullCount++;
+      } else {
+        values.add(v);
+      }
+    }
+
+    public void finish() {
+      space.nullCount = nullCount;
+      space.cardinality = values.size() + (nullCount > 0 ? 1 : 0);
+      space.valueSet = values.size() < 20 ? values : null;
+    }
+  }
+
+  /** Collector that collects two or more column values in a tree set. */
+  static class CompositeCollector extends Collector {
+    final SortedSet<FlatLists.ComparableList> values = new TreeSet<>();
+    final int[] columnOrdinals;
+    final Comparable[] columnValues;
+    int nullCount = 0;
+
+    CompositeCollector(Space space, List<Integer> columnOrdinals) {
+      super(space);
+      this.columnOrdinals = (int[]) Primitive.INT.toArray(columnOrdinals);
+      this.columnValues = new Comparable[columnOrdinals.size()];
+    }
+
+    public void add(List<Comparable> row) {
+      for (int i = 0, length = columnOrdinals.length; i < length; i++) {
+        final Comparable value = row.get(columnOrdinals[i]);
+        if (value == NullSentinel.INSTANCE) {
+          nullCount++;
+          return;
+        }
+        columnValues[i] = value;
+      }
+      ((Set) values).add(FlatLists.copyOf(columnValues));
+    }
+
+    public void finish() {
+      space.nullCount = -1;
+      space.cardinality = values.size() + (nullCount > 0 ? 1 : 0);
+      space.valueSet = null;
+    }
+
+  }
+
 }
 
 // End ProfilerImpl.java
