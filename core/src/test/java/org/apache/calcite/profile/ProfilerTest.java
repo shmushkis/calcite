@@ -242,9 +242,8 @@ public class ProfilerTest {
         "{type:distribution,columns:[],cardinality:1.0,expectedCardinality:1.0,surprise:0.0}");
   }
 
-  /** As {@link #testProfileScott3()}, but uses the breadth-first profiler
-   * and deems everything uninteresting. Only first-level combinations (those
-   * consisting of a single column) are computed. */
+  /** Profiles a star-join query on the Foodmart schema using the breadth-first
+   * profiler. */
   @Test public void testProfileFoodmart() throws Exception {
     foodmart().factory(Fluid.PROFILER_FACTORY).unordered(
         "{type:distribution,columns:[COMM],values:[0.00,300.00,500.00,1400.00],cardinality:5.0,nullCount:10,expectedCardinality:14.0,surprise:0.47368421052631576}",
