@@ -383,11 +383,11 @@ public class RelToSqlConverter extends SqlImplementor
     final SqlLiteral strictStart = SqlLiteral.createBoolean(e.isStrictStart(), POS);
     final SqlLiteral strictEnd = SqlLiteral.createBoolean(e.isStrictEnd(), POS);
 
-    final SqlNodeList measuresList = new SqlNodeList(POS);
+    final SqlNodeList measureList = new SqlNodeList(POS);
     for (Map.Entry<String, RexNode> entry : e.getMeasures().entrySet()) {
       final String alias = entry.getKey();
       final SqlNode sqlNode = context.toSql(null, entry.getValue());
-      measuresList.add(as(sqlNode, alias));
+      measureList.add(as(sqlNode, alias));
     }
 
     final SqlNodeList patternDefList = new SqlNodeList(POS);
@@ -398,7 +398,7 @@ public class RelToSqlConverter extends SqlImplementor
     }
 
     final SqlNode matchRecognize = new SqlMatchRecognize(POS, tableRef,
-      pattern, strictStart, strictEnd, patternDefList, measuresList);
+      pattern, strictStart, strictEnd, patternDefList, measureList);
     return result(matchRecognize, Expressions.list(Clause.FROM), e, null);
   }
 

@@ -23,6 +23,9 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.util.ImmutableNullableList;
 
+import com.google.common.base.Preconditions;
+
+import javax.annotation.Nonnull;
 import java.util.List;
 
 /**
@@ -50,16 +53,13 @@ public class SqlMatchRecognize extends SqlCall {
       SqlLiteral strictStart, SqlLiteral strictEnd, SqlNodeList patternDefList,
       SqlNodeList measureList) {
     super(pos);
-    this.tableRef = tableRef;
-    this.pattern = pattern;
+    this.tableRef = Preconditions.checkNotNull(tableRef);
+    this.pattern = Preconditions.checkNotNull(pattern);
     this.strictStart = strictStart;
     this.strictEnd = strictEnd;
-    this.patternDefList = patternDefList;
-    this.measureList = measureList;
-
-    assert tableRef != null;
-    assert pattern != null;
-    assert patternDefList != null && patternDefList.size() > 0;
+    this.patternDefList = Preconditions.checkNotNull(patternDefList);
+    Preconditions.checkArgument(patternDefList.size() > 0);
+    this.measureList = Preconditions.checkNotNull(measureList);
   }
 
   // ~ Methods
@@ -89,7 +89,7 @@ public class SqlMatchRecognize extends SqlCall {
   @Override public void setOperand(int i, SqlNode operand) {
     switch (i) {
     case OPERAND_TABLE_REF:
-      tableRef = operand;
+      tableRef = Preconditions.checkNotNull(operand);
       break;
     case OPERAND_PATTERN:
       pattern = operand;
@@ -101,17 +101,18 @@ public class SqlMatchRecognize extends SqlCall {
       strictEnd = (SqlLiteral) operand;
       break;
     case OPERAND_PATTERN_DEFINES:
-      patternDefList = (SqlNodeList) operand;
+      patternDefList = Preconditions.checkNotNull((SqlNodeList) operand);
+      Preconditions.checkArgument(patternDefList.size() > 0);
       break;
     case OPERAND_MEASURES:
-      measureList = (SqlNodeList) operand;
+      measureList = Preconditions.checkNotNull((SqlNodeList) operand);
       break;
     default:
       throw new AssertionError(i);
     }
   }
 
-  public SqlNode getTableRef() {
+  public @Nonnull SqlNode getTableRef() {
     return tableRef;
   }
 
@@ -127,11 +128,11 @@ public class SqlMatchRecognize extends SqlCall {
     return strictEnd;
   }
 
-  public SqlNodeList getPatternDefList() {
+  public @Nonnull SqlNodeList getPatternDefList() {
     return patternDefList;
   }
 
-  public SqlNodeList getMeasureList() {
+  public @Nonnull SqlNodeList getMeasureList() {
     return measureList;
   }
 
@@ -157,12 +158,9 @@ public class SqlMatchRecognize extends SqlCall {
       assert functionQualifier == null;
       assert operands.length == 6;
 
-      return new SqlMatchRecognize(pos,
-        operands[0], operands[1],
-        (SqlLiteral) operands[2],
-        (SqlLiteral) operands[3],
-        (SqlNodeList) operands[4],
-        (SqlNodeList) operands[5]);
+      return new SqlMatchRecognize(pos, operands[0], operands[1],
+          (SqlLiteral) operands[2], (SqlLiteral) operands[3],
+          (SqlNodeList) operands[4], (SqlNodeList) operands[5]);
     }
 
     @Override public <R> void acceptCall(

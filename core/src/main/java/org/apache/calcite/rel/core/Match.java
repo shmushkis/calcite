@@ -78,14 +78,9 @@ public abstract class Match extends SingleRel {
    * @param measures Measure definitions
    * @param rowType Row type
    */
-  protected Match(RelOptCluster cluster,
-      RelTraitSet traitSet,
-      RelNode input,
-      RexNode pattern,
-      boolean strictStart,
-      boolean strictEnd,
-      Map<String, RexNode> patternDefinitions,
-      Map<String, RexNode> measures,
+  protected Match(RelOptCluster cluster, RelTraitSet traitSet,
+      RelNode input, RexNode pattern, boolean strictStart, boolean strictEnd,
+      Map<String, RexNode> patternDefinitions, Map<String, RexNode> measures,
       RelDataType rowType) {
     super(cluster, traitSet, input);
     this.pattern = Preconditions.checkNotNull(pattern);

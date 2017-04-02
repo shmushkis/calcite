@@ -4484,7 +4484,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
   }
 
   @Override public void validateMatchRecognize(SqlCall call) {
-    SqlMatchRecognize matchRecognize = (SqlMatchRecognize) call;
+    final SqlMatchRecognize matchRecognize = (SqlMatchRecognize) call;
     final MatchRecognizeScope scope =
         (MatchRecognizeScope) getMatchRecognizeScope(matchRecognize);
 
@@ -4499,9 +4499,10 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
 
     validateDefinitions(matchRecognize, scope);
 
-    List<Map.Entry<String, RelDataType>> fields = validateMeasure(matchRecognize, scope);
+    List<Map.Entry<String, RelDataType>> fields =
+        validateMeasure(matchRecognize, scope);
     final RelDataType rowType = typeFactory.createStructType(fields);
-    if (matchRecognize.getMeasureList() == null || matchRecognize.getMeasureList().size() == 0) {
+    if (matchRecognize.getMeasureList().size() == 0) {
       ns.setType(getNamespace(matchRecognize.getTableRef()).getRowType());
     } else {
       ns.setType(rowType);
