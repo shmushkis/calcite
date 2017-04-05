@@ -26,6 +26,7 @@ import org.apache.calcite.runtime.PredicateImpl;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.PartiallyOrderedSet;
+import org.apache.calcite.util.Util;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -56,13 +57,6 @@ import java.util.TreeSet;
  * combinations of columns.
  */
 public class ProfilerImpl implements Profiler {
-  private static final Function<List<Comparable>, Comparable> ONLY =
-      new Function<List<Comparable>, Comparable>() {
-        public Comparable apply(List<Comparable> input) {
-          return Iterables.getOnlyElement(input);
-        }
-      };
-
   /** The number of combinations to consider per pass.
    * The number is determined by memory, but a value of 1,000 is typical.
    * You need 2KB memory per sketch, and one sketch for each combination. */
@@ -83,7 +77,7 @@ public class ProfilerImpl implements Profiler {
    * @param predicate Whether a successor is considered interesting enough to
    *   analyze
    */
-  public ProfilerImpl(int combinationsPerPass,
+  ProfilerImpl(int combinationsPerPass,
       Predicate<Pair<Space, Column>> predicate) {
     Preconditions.checkArgument(combinationsPerPass > 2);
     this.combinationsPerPass = combinationsPerPass;
@@ -98,6 +92,9 @@ public class ProfilerImpl implements Profiler {
   /** A run of the profiler. */
   class Run {
     private final List<Column> columns;
+    final PartiallyOrderedSet<ImmutableBitSet> keyPoset =
+        new PartiallyOrderedSet<>(
+            PartiallyOrderedSet.BIT_SET_INCLUSION_ORDERING);
     final Map<ImmutableBitSet, Distribution> distributions = new HashMap<>();
     /** List of spaces that have one column. */
     final List<Space> singletonSpaces;
@@ -124,18 +121,16 @@ public class ProfilerImpl implements Profiler {
     final Deque<ImmutableBitSet> spaceQueue = new ArrayDeque<>();
     final List<Unique> uniques = new ArrayList<>();
     final List<FunctionalDependency> functionalDependencies = new ArrayList<>();
-    final PartiallyOrderedSet.Ordering<Space> ordering =
-        new PartiallyOrderedSet.Ordering<Space>() {
-          public boolean lessThan(Space e1, Space e2) {
-            return e2.columnOrdinals.contains(e1.columnOrdinals);
-          }
-        };
     /** Column ordinals that have ever been placed on {@link #spaceQueue}.
      * Ensures that we do not calculate the same combination more than once,
      * even though we generate a column set from multiple parents. */
     final Set<ImmutableBitSet> resultSet = new HashSet<>();
-    final PartiallyOrderedSet<Space> results =
-        new PartiallyOrderedSet<>(ordering);
+    final PartiallyOrderedSet<Space> results = new PartiallyOrderedSet<>(
+        new PartiallyOrderedSet.Ordering<Space>() {
+          public boolean lessThan(Space e1, Space e2) {
+            return e2.columnOrdinals.contains(e1.columnOrdinals);
+          }
+        });
     private final List<ImmutableBitSet> keyOrdinalLists =
         new ArrayList<>();
     final Function<Integer, Column> get =
@@ -328,29 +323,12 @@ public class ProfilerImpl implements Profiler {
         if (nonMinimal > 0) {
           continue;
         }
-        double expectedCardinality;
-        switch (space.columns.size()) {
-        case 0:
-          expectedCardinality = 1d;
-          break;
-        case 1:
-          expectedCardinality = rowCount;
-          break;
-        default:
-          expectedCardinality = rowCount;
-          for (Column column : space.columns) {
-            final Distribution d1 =
-                distributions.get(ImmutableBitSet.of(column.ordinal));
-            final Distribution d2 =
-                distributions.get(space.columnOrdinals.clear(column.ordinal));
-            if (d1 == null || d2 == null) {
-              continue;
-            }
-            final double d =
-                Lattice.getRowCount(rowCount, d1.cardinality, d2.cardinality);
-            expectedCardinality = Math.min(expectedCardinality, d);
-          }
+        final String s = space.columns.toString();
+        if (s.equals("[product_name, quarter]")) {
+          Util.discard(0);
         }
+        double expectedCardinality =
+            expectedCardinality(rowCount, space.columnOrdinals);
 
         final boolean minimal = nonMinimal == 0
             && !space.unique
@@ -361,6 +339,7 @@ public class ProfilerImpl implements Profiler {
                 space.nullCount, expectedCardinality, minimal);
         if (minimal && isInteresting(space)) {
           distributions.put(space.columnOrdinals, distribution);
+          keyPoset.add(space.columnOrdinals);
           doneQueue.add(space);
         }
 
@@ -377,15 +356,50 @@ public class ProfilerImpl implements Profiler {
       }
     }
 
+    /** Estimates the cardinality of a collection of columns represented by
+     * {@code columnOrdinals}, drawing on existing distributions. */
+    private double cardinality(double rowCount, ImmutableBitSet columns) {
+      final Distribution distribution = distributions.get(columns);
+      if (distribution != null) {
+        return distribution.cardinality;
+      } else {
+        return expectedCardinality(rowCount, columns);
+      }
+    }
+
+    /** Estimates the cardinality of a collection of columns represented by
+     * {@code columnOrdinals}, drawing on existing distributions. Does not
+     * look in the distribution map for this column set. */
+    private double expectedCardinality(double rowCount,
+        ImmutableBitSet columns) {
+      switch (columns.cardinality()) {
+      case 0:
+        return 1d;
+      case 1:
+        return rowCount;
+      default:
+        double c = rowCount;
+        for (ImmutableBitSet bitSet : keyPoset.getParents(columns, true)) {
+          final Distribution d1 = distributions.get(bitSet);
+          final double c2 = cardinality(rowCount, columns.except(bitSet));
+          final double d = Lattice.getRowCount(rowCount, d1.cardinality, c2);
+          c = Math.min(c, d);
+        }
+        return c;
+      }
+    }
+
+
     private boolean isInteresting(Space space) {
-      if (CalcitePrepareImpl.DEBUG) {
+      final boolean b = space.columns.size() < 2
+          || space.surprise() > 0.3D;
+      if (CalcitePrepareImpl.DEBUG && b) {
         System.out.println(space.columns
             + ", cardinality: " + space.cardinality
             + ", expected: " + space.expectedCardinality
             + ", surprise: " + space.surprise());
       }
-      return space.columns.size() < 2
-          || space.surprise() > 0.3D;
+      return b;
     }
 
     private ImmutableSortedSet<Column> toColumns(Iterable<Integer> ordinals) {
@@ -535,6 +549,7 @@ public class ProfilerImpl implements Profiler {
         }
         columnValues[i] = value;
       }
+      //noinspection unchecked
       ((Set) values).add(FlatLists.copyOf(columnValues));
     }
 

@@ -152,17 +152,12 @@ public class SimpleProfiler implements Profiler {
       }
 
       // Populate unique keys
+      // If [x, y] is a key,
+      // then [x, y, z] is a key but not intersecting,
+      // and [x, y] => [a] is a functional dependency but not interesting,
+      // and [x, y, z] is not an interesting distribution.
       final Map<ImmutableBitSet, Distribution> distributions = new HashMap<>();
       for (Space space : spaces) {
-        keyResults.add(space);
-        if (!keyResults.getChildren(space).isEmpty()) {
-          // If [x, y] is a key,
-          // then [x, y, z] is a key but not intersecting,
-          // and [x, y] => [a] is a functional dependency but not interesting,
-          // and [x, y, z] is not an interesting distribution.
-          keyResults.remove(space);
-          continue;
-        }
         if (space.values.size() == rowCount
             && !containsKey(space.columnOrdinals, false)) {
           // We have discovered a new key.
@@ -171,7 +166,6 @@ public class SimpleProfiler implements Profiler {
           space.unique = true;
           keyOrdinalLists.add(space.columnOrdinals);
         }
-        keyResults.remove(space);
 
         int nonMinimal = 0;
       dependents:

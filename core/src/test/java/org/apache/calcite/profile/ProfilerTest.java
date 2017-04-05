@@ -360,7 +360,7 @@ public class ProfilerTest {
     private static final Supplier<Profiler> PROFILER_FACTORY =
         new Supplier<Profiler>() {
           public Profiler get() {
-            return new ProfilerImpl(100,
+            return new ProfilerImpl(300,
                 new PredicateImpl<Pair<ProfilerImpl.Space, Profiler.Column>>() {
                   public boolean test(
                       Pair<ProfilerImpl.Space, Profiler.Column> p) {
