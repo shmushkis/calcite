@@ -16,7 +16,10 @@
  */
 package org.apache.calcite.util;
 
-import java.util.AbstractList;
+import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+
 import java.util.AbstractSet;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -61,6 +64,18 @@ import java.util.Set;
  * @param <E> Element type
  */
 public class PartiallyOrderedSet<E> extends AbstractSet<E> {
+  /** Ordering that orders bit sets by inclusion.
+   *
+   * <p>For example, the children of 14 (1110) are 12 (1100), 10 (1010) and
+   * 6 (0110).
+   */
+  public static final Ordering<ImmutableBitSet> BIT_SET_INCLUSION_ORDERING =
+      new Ordering<ImmutableBitSet>() {
+        public boolean lessThan(ImmutableBitSet e1, ImmutableBitSet e2) {
+          return e1.contains(e2);
+        }
+      };
+
   private final Map<E, Node<E>> map;
   private final Ordering<E> ordering;
 
@@ -530,7 +545,7 @@ public class PartiallyOrderedSet<E> extends AbstractSet<E> {
    * Returns the values in this partially-ordered set that are less-than
    * a given value and there are no intervening values.
    *
-   * <p>If the value is not in this set, returns the empty list.</p>
+   * <p>If the value is not in this set, returns null.
    *
    * @see #getDescendants
    *
@@ -539,15 +554,33 @@ public class PartiallyOrderedSet<E> extends AbstractSet<E> {
    *   value
    */
   public List<E> getChildren(E e) {
+    return getChildren(e, false);
+  }
+
+  /**
+   * Returns the values in this partially-ordered set that are less-than
+   * a given value and there are no intervening values.
+   *
+   * <p>If the value is not in this set, returns null if {@code hypothetical}
+   * is false.
+   *
+   * @see #getDescendants
+   *
+   * @param e Value
+   * @param hypothetical Whether to generate a list if value is not in the set
+   * @return List of values in this set that are directly less than the given
+   *   value
+   */
+  public List<E> getChildren(E e, boolean hypothetical) {
     final Node<E> node = map.get(e);
     if (node == null) {
-      return null;
-    } else if (node.childList.get(0).e == null) {
-      // child list contains bottom element, so officially there are no
-      // children
-      return Collections.emptyList();
+      if (hypothetical) {
+        return strip(findChildren(e));
+      } else {
+        return null;
+      }
     } else {
-      return new StripList<>(node.childList);
+      return strip(node.childList);
     }
   }
 
@@ -555,7 +588,7 @@ public class PartiallyOrderedSet<E> extends AbstractSet<E> {
    * Returns the values in this partially-ordered set that are greater-than
    * a given value and there are no intervening values.
    *
-   * <p>If the value is not in this set, returns the empty list.</p>
+   * <p>If the value is not in this set, returns null.
    *
    * @see #getAncestors
    *
@@ -564,32 +597,42 @@ public class PartiallyOrderedSet<E> extends AbstractSet<E> {
    *   given value
    */
   public List<E> getParents(E e) {
+    return getParents(e, false);
+  }
+
+  /**
+   * Returns the values in this partially-ordered set that are greater-than
+   * a given value and there are no intervening values.
+   *
+   * <p>If the value is not in this set, returns {@code null} if
+   * {@code hypothetical} is false.
+   *
+   * @see #getAncestors
+   *
+   * @param e Value
+   * @param hypothetical Whether to generate a list if value is not in the set
+   * @return List of values in this set that are directly greater than the
+   *   given value
+   */
+  public List<E> getParents(E e, boolean hypothetical) {
     final Node<E> node = map.get(e);
     if (node == null) {
-      return null;
-    } else if (node.parentList.get(0).e == null) {
-      // parent list contains top element, so officially there are no
-      // parents
-      return Collections.emptyList();
+      if (hypothetical) {
+        return ImmutableList.copyOf(strip(findParents(e)));
+      } else {
+        return null;
+      }
     } else {
-      return new StripList<>(node.parentList);
+      return strip(node.parentList);
     }
   }
 
   public List<E> getNonChildren() {
-    if (topNode.childList.size() == 1
-        && topNode.childList.get(0).e == null) {
-      return Collections.emptyList();
-    }
-    return new StripList<>(topNode.childList);
+    return strip(topNode.childList);
   }
 
   public List<E> getNonParents() {
-    if (bottomNode.parentList.size() == 1
-        && bottomNode.parentList.get(0).e == null) {
-      return Collections.emptyList();
-    }
-    return new StripList<>(bottomNode.parentList);
+    return strip(bottomNode.parentList);
   }
 
   @Override public void clear() {
@@ -612,6 +655,56 @@ public class PartiallyOrderedSet<E> extends AbstractSet<E> {
    */
   public List<E> getDescendants(E e) {
     return descendants(e, true);
+  }
+
+  /** Returns a list, backed by a list of {@link Node}s, that strips away the
+   * node and returns the element inside.
+   *
+   * @param <E> Element type
+   */
+  public static <E> List<E> strip(List<Node<E>> list) {
+    if (list.size() == 1
+        && list.get(0).e == null) {
+      // If parent list contains top element, a node whose element is null,
+      // officially there are no parents.
+      // Similarly child list and bottom element.
+      return ImmutableList.of();
+    }
+    return Lists.transform(list,
+      new Function<Node<E>, E>() {
+        public E apply(Node<E> node) {
+          return node.e;
+        }
+      });
+  }
+
+  /** Converts an iterable of nodes into the list of the elements inside.
+   * If there is one node whose element is null, it represents a list
+   * containing either the top or bottom element, so we return the empty list.
+   *
+   * @param <E> Element type
+   */
+  private static <E> ImmutableList<E> strip(Iterable<Node<E>> iterable) {
+    final Iterator<Node<E>> iterator = iterable.iterator();
+    if (!iterator.hasNext()) {
+      return ImmutableList.of();
+    }
+    Node<E> node = iterator.next();
+    if (!iterator.hasNext()) {
+      if (node.e == null) {
+        return ImmutableList.of();
+      } else {
+        return ImmutableList.of(node.e);
+      }
+    }
+    final ImmutableList.Builder<E> builder = ImmutableList.builder();
+    for (;;) {
+      builder.add(node.e);
+      if (!iterator.hasNext()) {
+        return builder.build();
+      }
+      node = iterator.next();
+    }
   }
 
   /**
@@ -728,26 +821,6 @@ public class PartiallyOrderedSet<E> extends AbstractSet<E> {
     boolean lessThan(E e1, E e2);
   }
 
-  /** List, backed by a list of {@link Node}s, that strips away the
-   * node and returns the element inside.
-   *
-   * @param <E> Element type
-   */
-  private static class StripList<E> extends AbstractList<E> {
-    private final List<Node<E>> list;
-
-    public StripList(List<Node<E>> list) {
-      this.list = list;
-    }
-
-    @Override public E get(int index) {
-      return list.get(index).e;
-    }
-
-    @Override public int size() {
-      return list.size();
-    }
-  }
 }
 
 // End PartiallyOrderedSet.java

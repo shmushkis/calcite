@@ -28,7 +28,9 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -133,6 +135,13 @@ public class PartiallyOrderedSetTest {
 
     // "bcd" is child of "abcd" and parent of ""
     final String bcd = "'bcd'";
+    assertEquals("['abcd']", poset.getParents(bcd, true).toString());
+    assertThat(poset.getParents(bcd, false), nullValue());
+    assertThat(poset.getParents(bcd), nullValue());
+    assertEquals("['']", poset.getChildren(bcd, true).toString());
+    assertThat(poset.getChildren(bcd, false), nullValue());
+    assertThat(poset.getChildren(bcd), nullValue());
+
     poset.add(bcd);
     printValidate(poset);
     assertTrue(poset.isValid(false));
