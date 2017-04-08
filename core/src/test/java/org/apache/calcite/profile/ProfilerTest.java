@@ -24,6 +24,7 @@ import org.apache.calcite.rel.metadata.NullSentinel;
 import org.apache.calcite.runtime.PredicateImpl;
 import org.apache.calcite.test.CalciteAssert;
 import org.apache.calcite.test.Matchers;
+import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.JsonBuilder;
 import org.apache.calcite.util.Pair;
 
@@ -32,9 +33,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 
 import org.hamcrest.Matcher;
@@ -46,9 +49,12 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * Basic implementation of {@link Profiler}.
@@ -310,7 +316,7 @@ public class ProfilerTest {
           public Profiler get() {
             final Predicate<Pair<ProfilerImpl.Space, Profiler.Column>>
                 predicate = Predicates.alwaysTrue();
-            return new ProfilerImpl(600, predicate);
+            return new ProfilerImpl(600, 200, predicate);
           }
         };
 
@@ -360,7 +366,7 @@ public class ProfilerTest {
     private static final Supplier<Profiler> PROFILER_FACTORY =
         new Supplier<Profiler>() {
           public Profiler get() {
-            return new ProfilerImpl(300,
+            return new ProfilerImpl(300, 200,
                 new PredicateImpl<Pair<ProfilerImpl.Space, Profiler.Column>>() {
                   public boolean test(
                       Pair<ProfilerImpl.Space, Profiler.Column> p) {
@@ -382,7 +388,7 @@ public class ProfilerTest {
           public Profiler get() {
             final Predicate<Pair<ProfilerImpl.Space, Profiler.Column>> p =
                 Predicates.alwaysFalse();
-            return new ProfilerImpl(10, p);
+            return new ProfilerImpl(10, 200, p);
           }
         };
 
@@ -450,12 +456,26 @@ public class ProfilerTest {
                 final ResultSetMetaData m = s.getMetaData();
                 final List<Profiler.Column> columns = new ArrayList<>();
                 final int columnCount = m.getColumnCount();
-                for (int i = 1; i < columnCount; i++) {
-                  columns.add(new Profiler.Column(i - 1, m.getColumnLabel(i)));
+                for (int i = 0; i < columnCount; i++) {
+                  columns.add(new Profiler.Column(i, m.getColumnLabel(i + 1)));
+                }
+
+                // Create an initial group for each table in the query.
+                // Columns in the same table will tend to have the same
+                // cardinality as the table, and as the table's primary key.
+                final Multimap<String, Integer> groups = HashMultimap.create();
+                for (int i = 0; i < m.getColumnCount(); i++) {
+                  groups.put(m.getTableName(i + 1), i);
+                }
+                final SortedSet<ImmutableBitSet> initialGroups =
+                    new TreeSet<>();
+                for (Collection<Integer> integers : groups.asMap().values()) {
+                  initialGroups.add(ImmutableBitSet.of(integers));
                 }
                 final Profiler p = factory.get();
                 final Enumerable<List<Comparable>> rows = getRows(s);
-                final Profiler.Profile profile = p.profile(rows, columns);
+                final Profiler.Profile profile =
+                    p.profile(rows, columns, initialGroups);
                 final List<Profiler.Statistic> statistics =
                     ImmutableList.copyOf(
                         Iterables.filter(profile.statistics(), predicate));

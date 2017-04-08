@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.materialize;
 
+import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.function.Function1;
 import org.apache.calcite.profile.Profiler;
 import org.apache.calcite.profile.ProfilerImpl;
@@ -80,9 +81,11 @@ class ProfilerLatticeStatisticProvider implements LatticeStatisticProvider {
               new MaterializationService.DefaultTableFactory()
                   .createTable(lattice.rootSchema, sql,
                       ImmutableList.<String>of());
-          return profiler.profile(
-              ((ScannableTable) table).scan(null).select(TO_LIST),
-              columns);
+          final ImmutableList<ImmutableBitSet> initialGroups =
+              ImmutableList.of();
+          final Enumerable<List<Comparable>> rows =
+              ((ScannableTable) table).scan(null).select(TO_LIST);
+          return profiler.profile(rows, columns, initialGroups);
         }
       });
 

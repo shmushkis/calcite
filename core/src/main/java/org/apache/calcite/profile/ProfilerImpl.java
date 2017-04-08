@@ -38,7 +38,9 @@ import com.google.common.collect.Iterables;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
@@ -62,6 +64,11 @@ public class ProfilerImpl implements Profiler {
    * You need 2KB memory per sketch, and one sketch for each combination. */
   private final int combinationsPerPass;
 
+  /** The minimum number of combinations considered "interesting". After that,
+   * a combination is only considered "interesting" if its surprise is greater
+   * than the median surprise. */
+  private final int interestingCount;
+
   /** Whether a successor is considered interesting enough to analyze. */
   private final Predicate<Pair<Space, Column>> predicate;
 
@@ -74,19 +81,22 @@ public class ProfilerImpl implements Profiler {
    *
    * @param combinationsPerPass Maximum number of columns (or combinations of
    *   columns) to compute each pass
+   * @param interestingCount Minimum number of combinations considered
+   *   interesting
    * @param predicate Whether a successor is considered interesting enough to
    *   analyze
    */
   ProfilerImpl(int combinationsPerPass,
-      Predicate<Pair<Space, Column>> predicate) {
+      int interestingCount, Predicate<Pair<Space, Column>> predicate) {
     Preconditions.checkArgument(combinationsPerPass > 2);
     this.combinationsPerPass = combinationsPerPass;
+    this.interestingCount = interestingCount;
     this.predicate = predicate;
   }
 
   public Profile profile(Iterable<List<Comparable>> rows,
-      final List<Column> columns) {
-    return new Run(columns).profile(rows);
+      final List<Column> columns, Collection<ImmutableBitSet> initialGroups) {
+    return new Run(columns, initialGroups).profile(rows);
   }
 
   /** A run of the profiler. */
@@ -116,6 +126,7 @@ public class ProfilerImpl implements Profiler {
               return c;
             }
           });
+    final SurpriseQueue surprises;
 
     /** Combinations of columns that we will compute next pass. */
     final Deque<ImmutableBitSet> spaceQueue = new ArrayDeque<>();
@@ -145,8 +156,11 @@ public class ProfilerImpl implements Profiler {
      * Creates a Run.
      *
      * @param columns List of columns
+     *
+     * @param initialGroups List of combinations of columns that should be
+     *                     profiled early, because they may be interesting
      */
-    Run(final List<Column> columns) {
+    Run(final List<Column> columns, Collection<ImmutableBitSet> initialGroups) {
       this.columns = ImmutableList.copyOf(columns);
       for (Ord<Column> column : Ord.zip(columns)) {
         if (column.e.ordinal != column.i) {
@@ -167,7 +181,20 @@ public class ProfilerImpl implements Profiler {
         // Pass 0, just put the empty combination on the queue.
         // Next pass, we will do its successors, the singleton combinations.
         spaceQueue.add(ImmutableBitSet.of());
+        spaceQueue.addAll(initialGroups);
+        if (columns.size() < combinationsPerPass) {
+          // There are not very many columns. Compute the singleton
+          // groups in pass 0.
+          for (Column column : columns) {
+            spaceQueue.add(ImmutableBitSet.of(column.ordinal));
+          }
+        }
       }
+      // The surprise queue must have enough room for all singleton groups
+      // plus all initial groups.
+      surprises = new SurpriseQueue(
+          Math.max(interestingCount, 0)
+              + 1 + columns.size() + initialGroups.size());
     }
 
     Profile profile(Iterable<List<Comparable>> rows) {
@@ -323,10 +350,8 @@ public class ProfilerImpl implements Profiler {
         if (nonMinimal > 0) {
           continue;
         }
-        final String s = space.columns.toString();
-        if (s.equals("[product_name, quarter]")) {
-          Util.discard(0);
-        }
+        final String s = space.columns.toString(); // for debug
+        Util.discard(s);
         double expectedCardinality =
             expectedCardinality(rowCount, space.columnOrdinals);
 
@@ -337,7 +362,10 @@ public class ProfilerImpl implements Profiler {
         final Distribution distribution =
             new Distribution(space.columns, space.valueSet, space.cardinality,
                 space.nullCount, expectedCardinality, minimal);
-        if (minimal && isInteresting(space)) {
+        final double surprise = distribution.surprise();
+        if (minimal
+            && isInteresting(distribution)
+            && surprises.offer(surprise)) {
           distributions.put(space.columnOrdinals, distribution);
           keyPoset.add(space.columnOrdinals);
           doneQueue.add(space);
@@ -380,24 +408,34 @@ public class ProfilerImpl implements Profiler {
       default:
         double c = rowCount;
         for (ImmutableBitSet bitSet : keyPoset.getParents(columns, true)) {
+          if (bitSet.isEmpty()) {
+            // If the parent is the empty group (i.e. "GROUP BY ()", the grand
+            // total) we cannot improve on the estimate.
+            continue;
+          }
           final Distribution d1 = distributions.get(bitSet);
           final double c2 = cardinality(rowCount, columns.except(bitSet));
           final double d = Lattice.getRowCount(rowCount, d1.cardinality, c2);
           c = Math.min(c, d);
+        }
+        for (ImmutableBitSet bitSet : keyPoset.getChildren(columns, true)) {
+          final Distribution d1 = distributions.get(bitSet);
+          c = Math.min(c, d1.cardinality);
         }
         return c;
       }
     }
 
 
-    private boolean isInteresting(Space space) {
-      final boolean b = space.columns.size() < 2
-          || space.surprise() > 0.3D;
+    private boolean isInteresting(Distribution distribution) {
+      final boolean b = distribution.columns.size() < 2
+          || distribution.surprise() > 0.3D;
       if (CalcitePrepareImpl.DEBUG && b) {
-        System.out.println(space.columns
-            + ", cardinality: " + space.cardinality
-            + ", expected: " + space.expectedCardinality
-            + ", surprise: " + space.surprise());
+        System.out.println(distribution.columnOrdinals()
+            + " " + distribution.columns
+            + ", cardinality: " + distribution.cardinality
+            + ", expected: " + distribution.expectedCardinality
+            + ", surprise: " + distribution.surprise());
       }
       return b;
     }
@@ -447,7 +485,7 @@ public class ProfilerImpl implements Profiler {
       return run.distributions.get(columnOrdinals);
     }
 
-    public double surprise() {
+    double surprise() {
       return SimpleProfiler.surprise(expectedCardinality, cardinality);
     }
   }
@@ -458,7 +496,7 @@ public class ProfilerImpl implements Profiler {
     Predicate<Pair<Space, Column>> predicate = Predicates.alwaysTrue();
 
     public ProfilerImpl build() {
-      return new ProfilerImpl(combinationsPerPass, predicate);
+      return new ProfilerImpl(combinationsPerPass, 200, predicate);
     }
 
     public Builder withPassSize(int passSize) {
@@ -541,11 +579,13 @@ public class ProfilerImpl implements Profiler {
     }
 
     public void add(List<Comparable> row) {
+      int nullCountThisRow = 0;
       for (int i = 0, length = columnOrdinals.length; i < length; i++) {
         final Comparable value = row.get(columnOrdinals[i]);
         if (value == NullSentinel.INSTANCE) {
-          nullCount++;
-          return;
+          if (nullCountThisRow++ == 0) {
+            nullCount++;
+          }
         }
         columnValues[i] = value;
       }
@@ -561,6 +601,60 @@ public class ProfilerImpl implements Profiler {
 
   }
 
+  /** A priority queue of the last N surprise values. Accepts a new value if
+   * the queue is not yet full, or if its value is greater than the median value
+   * over the last N. */
+  static class SurpriseQueue {
+    int occupied = 0;
+    final double[] values;
+
+    SurpriseQueue(int targetSize) {
+      Preconditions.checkArgument(targetSize > 3);
+      this.values = new double[targetSize];
+    }
+
+    boolean isValid() {
+      System.out.println(Arrays.toString(values));
+      assert occupied >= 0;
+      assert occupied <= values.length;
+      for (int i = 1; i < occupied; i++) {
+        assert values[i] >= values[i - 1];
+      }
+      return true;
+    }
+
+    boolean offer(double d) {
+      assert isValid();
+      if (occupied < values.length) {
+        int i = Arrays.binarySearch(values, 0, occupied, d);
+        if (i < 0) {
+          i = -(i + 1);
+        }
+        if (i == occupied) {
+          values[occupied++] = d;
+        } else {
+          System.arraycopy(values, i, values, i + 1, occupied - i);
+          values[i] = d;
+          ++occupied;
+        }
+        return true;
+      } else {
+        int i = Arrays.binarySearch(values, d);
+        if (i < 0) {
+          i = -(i + 1);
+        }
+        if (i <= values.length / 2) {
+          return false;
+        }
+        // Value is greater than the median.
+        // Remove the lowest value, shift all below the value down one,
+        // and insert it into position.
+        System.arraycopy(values, 1, values, 0, i - 1);
+        values[i - 1] = d;
+        return true;
+      }
+    }
+  }
 }
 
 // End ProfilerImpl.java

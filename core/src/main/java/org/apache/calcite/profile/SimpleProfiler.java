@@ -22,6 +22,7 @@ import org.apache.calcite.rel.metadata.NullSentinel;
 import org.apache.calcite.runtime.FlatLists;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.PartiallyOrderedSet;
+import org.apache.calcite.util.Util;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableSortedSet;
@@ -29,6 +30,7 @@ import com.google.common.collect.Iterables;
 
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -51,7 +53,8 @@ public class SimpleProfiler implements Profiler {
       };
 
   public Profile profile(Iterable<List<Comparable>> rows,
-      final List<Column> columns) {
+      final List<Column> columns, Collection<ImmutableBitSet> initialGroups) {
+    Util.discard(initialGroups); // this profiler ignores initial groups
     return new Run(columns).profile(rows);
   }
 

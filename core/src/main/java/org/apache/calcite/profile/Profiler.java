@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -36,7 +37,19 @@ import javax.annotation.Nonnull;
  * Analyzes data sets.
  */
 public interface Profiler {
-  Profile profile(Iterable<List<Comparable>> rows, List<Column> columns);
+  /** Creates a profile of a data set.
+   *
+   * @param rows List of rows. Can be iterated over more than once (maybe not
+   *             cheaply)
+   * @param columns Column definitions
+   *
+   * @param initialGroups List of combinations of columns that should be
+   *                     profiled early, because they may be interesting
+   *
+   * @return A profile describing relationships within the data set
+   */
+  Profile profile(Iterable<List<Comparable>> rows, List<Column> columns,
+      Collection<ImmutableBitSet> initialGroups);
 
   /** Column. */
   class Column implements Comparable<Column> {
@@ -51,6 +64,14 @@ public interface Profiler {
     public Column(int ordinal, String name) {
       this.ordinal = ordinal;
       this.name = name;
+    }
+
+    static ImmutableBitSet toOrdinals(Iterable<Column> columns) {
+      final ImmutableBitSet.Builder builder = ImmutableBitSet.builder();
+      for (Column column : columns) {
+        builder.set(column.ordinal);
+      }
+      return builder.build();
     }
 
     @Override public int hashCode() {
@@ -192,6 +213,10 @@ public interface Profiler {
       return map;
     }
 
+    ImmutableBitSet columnOrdinals() {
+      return Column.toOrdinals(columns);
+    }
+
     double surprise() {
       return SimpleProfiler.surprise(expectedCardinality, cardinality);
     }
@@ -220,7 +245,7 @@ public interface Profiler {
       final ImmutableMap.Builder<ImmutableBitSet, Distribution> m =
           ImmutableMap.builder();
       for (Distribution distribution : distributionList) {
-        m.put(toOrdinals(distribution.columns), distribution);
+        m.put(distribution.columnOrdinals(), distribution);
       }
       distributionMap = m.build();
 
@@ -229,14 +254,6 @@ public interface Profiler {
         b.add(distributionMap.get(ImmutableBitSet.of(i)));
       }
       singletonDistributionList = b.build();
-    }
-
-    private ImmutableBitSet toOrdinals(Iterable<Column> columns) {
-      final ImmutableBitSet.Builder builder = ImmutableBitSet.builder();
-      for (Column column : columns) {
-        builder.set(column.ordinal);
-      }
-      return builder.build();
     }
 
     public List<Statistic> statistics() {
