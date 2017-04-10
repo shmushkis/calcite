@@ -41,7 +41,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 
 import org.hamcrest.Matcher;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.sql.PreparedStatement;
@@ -49,12 +48,16 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
 
 /**
  * Basic implementation of {@link Profiler}.
@@ -269,6 +272,44 @@ public class ProfilerTest {
         "{type:distribution,columns:[SAL,COMM],cardinality:5.0,expectedCardinality:12.579960871109892,surprise:0.43117052004174}",
         "{type:distribution,columns:[SAL],values:[800.00,950.00,1100.00,1250.00,1300.00,1500.00,1600.00,2450.00,2850.00,2975.00,3000.00,5000.00],cardinality:12.0,expectedCardinality:14.0,surprise:0.07692307692307693}",
         "{type:distribution,columns:[],cardinality:1.0,expectedCardinality:1.0,surprise:0.0}");
+  }
+
+  /** Tests
+   * {@link org.apache.calcite.profile.ProfilerImpl.SurpriseQueue}. */
+  @Test public void testSurpriseQueue() {
+    ProfilerImpl.SurpriseQueue q = new ProfilerImpl.SurpriseQueue(4);
+    assertThat(q.offer(1), is(true));
+    assertThat(Arrays.toString(q.values), is("[1.0, 0.0, 0.0, 0.0]"));
+    assertThat(q.isValid(), is(true));
+
+    assertThat(q.offer(2), is(true));
+    assertThat(Arrays.toString(q.values), is("[1.0, 2.0, 0.0, 0.0]"));
+    assertThat(q.isValid(), is(true));
+
+    assertThat(q.offer(4), is(true));
+    assertThat(Arrays.toString(q.values), is("[1.0, 2.0, 4.0, 0.0]"));
+    assertThat(q.isValid(), is(true));
+
+    assertThat(q.offer(5), is(true));
+    assertThat(Arrays.toString(q.values), is("[1.0, 2.0, 4.0, 5.0]"));
+    assertThat(q.isValid(), is(true));
+
+    assertThat(q.offer(3), is(true));
+    assertThat(Arrays.toString(q.values), is("[2.0, 3.0, 4.0, 5.0]"));
+    assertThat(q.isValid(), is(true));
+
+    // Now that the list is full, add a value below the median.
+    // "Offer" returns false, but the value is still added to the array.
+    // Thus the median never decreases.
+    assertThat(q.offer(3), is(false));
+    assertThat(Arrays.toString(q.values), is("[3.0, 3.0, 4.0, 5.0]"));
+    assertThat(q.isValid(), is(true));
+
+    // Add a value that is above the median.
+    // The value "4.0" is aged out.
+    assertThat(q.offer(4.5), is(true)); // above median
+    assertThat(Arrays.toString(q.values), is("[3.0, 3.0, 4.5, 5.0]"));
+    assertThat(q.isValid(), is(true));
   }
 
   private Fluid scott() throws Exception {
@@ -495,7 +536,7 @@ public class ProfilerTest {
 
                 final List<String> strings =
                     Lists.transform(statistics2, toJson);
-                Assert.assertThat(strings, matcher);
+                assertThat(strings, matcher);
               } catch (SQLException e) {
                 throw new RuntimeException(e);
               }

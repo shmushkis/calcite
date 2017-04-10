@@ -607,6 +607,7 @@ public class ProfilerImpl implements Profiler {
   static class SurpriseQueue {
     int occupied = 0;
     final double[] values;
+    final Deque<Double> deque = new ArrayDeque<>();
 
     SurpriseQueue(int targetSize) {
       Preconditions.checkArgument(targetSize > 3);
@@ -618,13 +619,15 @@ public class ProfilerImpl implements Profiler {
       assert occupied >= 0;
       assert occupied <= values.length;
       for (int i = 1; i < occupied; i++) {
-        assert values[i] >= values[i - 1];
+        assert values[i] >= values[i - 1]
+            : values[i] + " >= " + values[i - 1] + " " + i;
       }
       return true;
     }
 
     boolean offer(double d) {
       assert isValid();
+      deque.add(d);
       if (occupied < values.length) {
         int i = Arrays.binarySearch(values, 0, occupied, d);
         if (i < 0) {
@@ -639,19 +642,33 @@ public class ProfilerImpl implements Profiler {
         }
         return true;
       } else {
-        int i = Arrays.binarySearch(values, d);
-        if (i < 0) {
-          i = -(i + 1);
-        }
-        if (i <= values.length / 2) {
-          return false;
+        final Double remove = deque.remove();
+        int i;
+        if (remove < d) {
+          final int j = Arrays.binarySearch(values, remove);
+          assert j >= 0 : remove;
+          i = Arrays.binarySearch(values, j, values.length, d);
+          if (i < 0) {
+            i = -(i + 1);
+          }
+          assert i > j;
+          System.arraycopy(values, j + 1, values, j, i - j);
+          values[i - 1] = d;
+        } else if (remove > d) {
+          final int j = Arrays.binarySearch(values, remove);
+          i = Arrays.binarySearch(values, 0, j, d);
+          if (i < 0) {
+            i = -(i + 1);
+          }
+          System.arraycopy(values, i + 1, values, i, j - i);
+          values[i] = d;
+        } else {
+          assert remove == d;
+          i = Arrays.binarySearch(values, d);
+          assert i >= 0;
         }
         // Value is greater than the median.
-        // Remove the lowest value, shift all below the value down one,
-        // and insert it into position.
-        System.arraycopy(values, 1, values, 0, i - 1);
-        values[i - 1] = d;
-        return true;
+        return i >= values.length / 2;
       }
     }
   }
