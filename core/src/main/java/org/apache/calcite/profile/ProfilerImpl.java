@@ -35,10 +35,10 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Ordering;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
@@ -89,6 +89,7 @@ public class ProfilerImpl implements Profiler {
   ProfilerImpl(int combinationsPerPass,
       int interestingCount, Predicate<Pair<Space, Column>> predicate) {
     Preconditions.checkArgument(combinationsPerPass > 2);
+    Preconditions.checkArgument(interestingCount > 2);
     this.combinationsPerPass = combinationsPerPass;
     this.interestingCount = interestingCount;
     this.predicate = predicate;
@@ -192,9 +193,8 @@ public class ProfilerImpl implements Profiler {
       }
       // The surprise queue must have enough room for all singleton groups
       // plus all initial groups.
-      surprises = new SurpriseQueue(
-          Math.max(interestingCount, 0)
-              + 1 + columns.size() + initialGroups.size());
+      surprises = new SurpriseQueue(1 + columns.size() + initialGroups.size(),
+          interestingCount);
     }
 
     Profile profile(Iterable<List<Comparable>> rows) {
@@ -359,16 +359,23 @@ public class ProfilerImpl implements Profiler {
             && !space.unique
             && !containsKey(space.columnOrdinals);
         space.expectedCardinality = expectedCardinality;
-        final Distribution distribution =
-            new Distribution(space.columns, space.valueSet, space.cardinality,
-                space.nullCount, expectedCardinality, minimal);
-        final double surprise = distribution.surprise();
-        if (minimal
-            && isInteresting(distribution)
-            && surprises.offer(surprise)) {
-          distributions.put(space.columnOrdinals, distribution);
-          keyPoset.add(space.columnOrdinals);
-          doneQueue.add(space);
+        if (minimal) {
+          final Distribution distribution =
+              new Distribution(space.columns, space.valueSet, space.cardinality,
+                  space.nullCount, expectedCardinality, minimal);
+          final double surprise = distribution.surprise();
+          if (CalcitePrepareImpl.DEBUG && surprise > 0.9d) {
+            System.out.println(distribution.columnOrdinals()
+                + " " + distribution.columns
+                + ", cardinality: " + distribution.cardinality
+                + ", expected: " + distribution.expectedCardinality
+                + ", surprise: " + distribution.surprise());
+          }
+          if (surprises.offer(surprise)) {
+            distributions.put(space.columnOrdinals, distribution);
+            keyPoset.add(space.columnOrdinals);
+            doneQueue.add(space);
+          }
         }
 
         if (space.cardinality == rowCount) {
@@ -426,19 +433,6 @@ public class ProfilerImpl implements Profiler {
       }
     }
 
-
-    private boolean isInteresting(Distribution distribution) {
-      final boolean b = distribution.columns.size() < 2
-          || distribution.surprise() > 0.3D;
-      if (CalcitePrepareImpl.DEBUG && b) {
-        System.out.println(distribution.columnOrdinals()
-            + " " + distribution.columns
-            + ", cardinality: " + distribution.cardinality
-            + ", expected: " + distribution.expectedCardinality
-            + ", surprise: " + distribution.surprise());
-      }
-      return b;
-    }
 
     private ImmutableSortedSet<Column> toColumns(Iterable<Integer> ordinals) {
       return ImmutableSortedSet.copyOf(Iterables.transform(ordinals, get));
@@ -605,71 +599,52 @@ public class ProfilerImpl implements Profiler {
    * the queue is not yet full, or if its value is greater than the median value
    * over the last N. */
   static class SurpriseQueue {
-    int occupied = 0;
-    final double[] values;
+    private final int warmUpCount;
+    private final int size;
+    int count = 0;
     final Deque<Double> deque = new ArrayDeque<>();
+    final PriorityQueue<Double> priorityQueue =
+        new PriorityQueue<>(11, Ordering.<Double>natural());
 
-    SurpriseQueue(int targetSize) {
-      Preconditions.checkArgument(targetSize > 3);
-      this.values = new double[targetSize];
+    SurpriseQueue(int warmUpCount, int size) {
+      this.warmUpCount = warmUpCount;
+      this.size = size;
+      Preconditions.checkArgument(warmUpCount > 3);
+      Preconditions.checkArgument(size > 0);
+    }
+
+    @Override public String toString() {
+      return "min: " + priorityQueue.peek()
+          + ", contents: " + deque.toString();
     }
 
     boolean isValid() {
-      System.out.println(Arrays.toString(values));
-      assert occupied >= 0;
-      assert occupied <= values.length;
-      for (int i = 1; i < occupied; i++) {
-        assert values[i] >= values[i - 1]
-            : values[i] + " >= " + values[i - 1] + " " + i;
+      System.out.println(toString());
+      assert deque.size() == priorityQueue.size();
+      if (count > size) {
+        assert deque.size() == size;
       }
       return true;
     }
 
     boolean offer(double d) {
-      assert isValid();
-      deque.add(d);
-      if (occupied < values.length) {
-        int i = Arrays.binarySearch(values, 0, occupied, d);
-        if (i < 0) {
-          i = -(i + 1);
+      boolean b;
+      if (count++ < warmUpCount || d > priorityQueue.peek()) {
+        if (priorityQueue.size() >= size) {
+          priorityQueue.remove(deque.pop());
         }
-        if (i == occupied) {
-          values[occupied++] = d;
-        } else {
-          System.arraycopy(values, i, values, i + 1, occupied - i);
-          values[i] = d;
-          ++occupied;
-        }
-        return true;
+        priorityQueue.add(d);
+        deque.add(d);
+        b = true;
       } else {
-        final Double remove = deque.remove();
-        int i;
-        if (remove < d) {
-          final int j = Arrays.binarySearch(values, remove);
-          assert j >= 0 : remove;
-          i = Arrays.binarySearch(values, j, values.length, d);
-          if (i < 0) {
-            i = -(i + 1);
-          }
-          assert i > j;
-          System.arraycopy(values, j + 1, values, j, i - j);
-          values[i - 1] = d;
-        } else if (remove > d) {
-          final int j = Arrays.binarySearch(values, remove);
-          i = Arrays.binarySearch(values, 0, j, d);
-          if (i < 0) {
-            i = -(i + 1);
-          }
-          System.arraycopy(values, i + 1, values, i, j - i);
-          values[i] = d;
-        } else {
-          assert remove == d;
-          i = Arrays.binarySearch(values, d);
-          assert i >= 0;
-        }
-        // Value is greater than the median.
-        return i >= values.length / 2;
+        b = false;
       }
+      if (CalcitePrepareImpl.DEBUG) {
+        System.out.println("offer " + d
+            + " min " + priorityQueue.peek()
+            + " accepted " + b);
+      }
+      return b;
     }
   }
 }

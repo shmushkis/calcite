@@ -48,7 +48,6 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -277,38 +276,49 @@ public class ProfilerTest {
   /** Tests
    * {@link org.apache.calcite.profile.ProfilerImpl.SurpriseQueue}. */
   @Test public void testSurpriseQueue() {
-    ProfilerImpl.SurpriseQueue q = new ProfilerImpl.SurpriseQueue(4);
-    assertThat(q.offer(1), is(true));
-    assertThat(Arrays.toString(q.values), is("[1.0, 0.0, 0.0, 0.0]"));
-    assertThat(q.isValid(), is(true));
-
+    ProfilerImpl.SurpriseQueue q = new ProfilerImpl.SurpriseQueue(4, 3);
     assertThat(q.offer(2), is(true));
-    assertThat(Arrays.toString(q.values), is("[1.0, 2.0, 0.0, 0.0]"));
+    assertThat(q.toString(), is("min: 2.0, contents: [2.0]"));
     assertThat(q.isValid(), is(true));
 
     assertThat(q.offer(4), is(true));
-    assertThat(Arrays.toString(q.values), is("[1.0, 2.0, 4.0, 0.0]"));
+    assertThat(q.toString(), is("min: 2.0, contents: [2.0, 4.0]"));
+    assertThat(q.isValid(), is(true));
+
+    // Since we're in the warm-up period, a value lower than the minimum is
+    // accepted.
+    assertThat(q.offer(1), is(true));
+    assertThat(q.toString(), is("min: 1.0, contents: [2.0, 4.0, 1.0]"));
     assertThat(q.isValid(), is(true));
 
     assertThat(q.offer(5), is(true));
-    assertThat(Arrays.toString(q.values), is("[1.0, 2.0, 4.0, 5.0]"));
+    assertThat(q.toString(), is("min: 1.0, contents: [4.0, 1.0, 5.0]"));
     assertThat(q.isValid(), is(true));
 
     assertThat(q.offer(3), is(true));
-    assertThat(Arrays.toString(q.values), is("[2.0, 3.0, 4.0, 5.0]"));
+    assertThat(q.toString(), is("min: 1.0, contents: [1.0, 5.0, 3.0]"));
     assertThat(q.isValid(), is(true));
 
-    // Now that the list is full, add a value below the median.
-    // "Offer" returns false, but the value is still added to the array.
+    // Duplicate entry
+    assertThat(q.offer(5), is(true));
+    assertThat(q.toString(), is("min: 3.0, contents: [5.0, 3.0, 5.0]"));
+    assertThat(q.isValid(), is(true));
+
+    // Now that the list is full, a value below the minimum is refused.
+    // "offer" returns false, and the value is not added to the queue.
     // Thus the median never decreases.
-    assertThat(q.offer(3), is(false));
-    assertThat(Arrays.toString(q.values), is("[3.0, 3.0, 4.0, 5.0]"));
+    assertThat(q.offer(2), is(false));
+    assertThat(q.toString(), is("min: 3.0, contents: [5.0, 3.0, 5.0]"));
     assertThat(q.isValid(), is(true));
 
-    // Add a value that is above the median.
-    // The value "4.0" is aged out.
-    assertThat(q.offer(4.5), is(true)); // above median
-    assertThat(Arrays.toString(q.values), is("[3.0, 3.0, 4.5, 5.0]"));
+    // Same applies for a value equal to the minimum.
+    assertThat(q.offer(3), is(false));
+    assertThat(q.toString(), is("min: 3.0, contents: [5.0, 3.0, 5.0]"));
+    assertThat(q.isValid(), is(true));
+
+    // Add a value that is above the minimum.
+    assertThat(q.offer(4.5), is(true));
+    assertThat(q.toString(), is("min: 3.0, contents: [3.0, 5.0, 4.5]"));
     assertThat(q.isValid(), is(true));
   }
 
@@ -407,7 +417,7 @@ public class ProfilerTest {
     private static final Supplier<Profiler> PROFILER_FACTORY =
         new Supplier<Profiler>() {
           public Profiler get() {
-            return new ProfilerImpl(300, 200,
+            return new ProfilerImpl(300, 100,
                 new PredicateImpl<Pair<ProfilerImpl.Space, Profiler.Column>>() {
                   public boolean test(
                       Pair<ProfilerImpl.Space, Profiler.Column> p) {
