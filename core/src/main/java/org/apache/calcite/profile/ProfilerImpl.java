@@ -561,7 +561,7 @@ public class ProfilerImpl implements Profiler {
 
   /** Collector that collects two or more column values in a tree set. */
   static class CompositeCollector extends Collector {
-    final SortedSet<FlatLists.ComparableList> values = new TreeSet<>();
+    final Set<FlatLists.ComparableList> values = new HashSet<>();
     final int[] columnOrdinals;
     final Comparable[] columnValues;
     int nullCount = 0;
