@@ -908,6 +908,76 @@ public class RelOptRulesTest extends RelOptTestBase {
             + "on e.ename = b.ename and e.deptno = 10");
   }
 
+  private static String notStrongExpr = "case when e.sal < 11 then 11 else -1 * e.sal end ";
+  private static String strongExpr = "case when e.sal < 11 then -1 * e.sal else e.sal end ";
+
+  @Test public void testPushProjectPastInnerJoin() {
+    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
+        "select count(*), " + notStrongExpr + "from emp e inner join bonus b "
+            + "on e.ename = b.ename group by " + notStrongExpr);
+  }
+
+  @Test public void testPushProjectPastInnerJoinStrong() {
+    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
+        "select count(*), " + strongExpr + "from emp e inner join bonus b "
+            + "on e.ename = b.ename group by " + strongExpr);
+  }
+
+  @Test public void testPushProjectPastLeftJoin() {
+    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
+        "select count(*), " + notStrongExpr + "from emp e left outer join bonus b "
+            + "on e.ename = b.ename group by case when e.sal < 11 then 11 else -1 * e.sal end");
+  }
+
+  @Test public void testPushProjectPastLeftJoinSwap() {
+    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
+        "select count(*), " + notStrongExpr + "from bonus b left outer join emp e "
+            + "on e.ename = b.ename group by " + notStrongExpr);
+  }
+
+  @Test public void testPushProjectPastLeftJoinSwapStrong() {
+    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
+        "select count(*), " + strongExpr + "from bonus b left outer join emp e "
+            + "on e.ename = b.ename group by " + strongExpr);
+  }
+
+  @Test public void testPushProjectPastRightJoin() {
+    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
+        "select count(*), " + notStrongExpr + "from emp e right outer join bonus b "
+            + "on e.ename = b.ename group by " + notStrongExpr);
+  }
+
+  @Test public void testPushProjectPastRightJoinStrong() {
+    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
+        "select count(*), case when e.sal < 11 then -1 * e.sal else e.sal end "
+            + "from emp e right outer join bonus b "
+            + "on e.ename = b.ename group by case when e.sal < 11 then -1 * e.sal else e.sal end");
+  }
+
+  @Test public void testPushProjectPastRightJoinSwap() {
+    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
+        "select count(*), " + notStrongExpr + "from bonus b right outer join emp e "
+            + "on e.ename = b.ename group by " + notStrongExpr);
+  }
+
+  @Test public void testPushProjectPastRightJoinSwapStrong() {
+    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
+        "select count(*), " + strongExpr + "from bonus b right outer join emp e "
+            + "on e.ename = b.ename group by " + strongExpr);
+  }
+
+  @Test public void testPushProjectPastFullJoin() {
+    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
+        "select count(*), " + notStrongExpr + "from emp e full outer join bonus b "
+            + "on e.ename = b.ename group by " + notStrongExpr);
+  }
+
+  @Test public void testPushProjectPastFullJoinStrong() {
+    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
+        "select count(*), " + strongExpr + "from emp e full outer join bonus b "
+            + "on e.ename = b.ename group by " + strongExpr);
+  }
+
   @Test public void testPushProjectPastSetOp() {
     checkPlanning(ProjectSetOpTransposeRule.INSTANCE,
         "select sal from "

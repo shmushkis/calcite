@@ -42,6 +42,11 @@ public class ProjectJoinTransposeRule extends RelOptRule {
           PushProjector.ExprCondition.FALSE,
           RelFactories.LOGICAL_BUILDER);
 
+  public static final ProjectJoinTransposeRule CASE_INSTANCE =
+      new ProjectJoinTransposeRule(
+          PushProjector.ExprCondition.CASE,
+          RelFactories.LOGICAL_BUILDER);
+
   //~ Instance fields --------------------------------------------------------
 
   /**
