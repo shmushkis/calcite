@@ -36,9 +36,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
+import com.yahoo.sketches.hll.HllSketch;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
@@ -53,6 +56,8 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+
+import static org.apache.calcite.profile.ProfilerImpl.CompositeCollector.OF;
 
 /**
  * Implementation of {@link Profiler} that only investigates "interesting"
@@ -245,6 +250,11 @@ public class ProfilerImpl implements Profiler {
               // There are no more done spaces. We're done.
               return spaces;
             }
+            if (doneSpace.columnOrdinals.cardinality() > 4) {
+              // Do not generate successors for groups with lots of columns,
+              // probably initial groups
+              continue;
+            }
             for (Column column : columns) {
               if (!doneSpace.columnOrdinals.get(column.ordinal)) {
                 if (pass == 0
@@ -285,7 +295,7 @@ public class ProfilerImpl implements Profiler {
           + ", distributions.size: " + distributions.size());
 
       for (Space space : spaces) {
-        space.collector = Collector.create(space);
+        space.collector = Collector.create(space, 1000);
       }
 
       int rowCount = 0;
@@ -304,7 +314,7 @@ public class ProfilerImpl implements Profiler {
       for (Space space : spaces) {
         space.collector.finish();
         space.collector = null;
-        results.add(space);
+//        results.add(space);
 
         int nonMinimal = 0;
       dependents:
@@ -364,7 +374,7 @@ public class ProfilerImpl implements Profiler {
               new Distribution(space.columns, space.valueSet, space.cardinality,
                   space.nullCount, expectedCardinality, minimal);
           final double surprise = distribution.surprise();
-          if (CalcitePrepareImpl.DEBUG && surprise > 0.9d) {
+          if (CalcitePrepareImpl.DEBUG && surprise > 0.1d) {
             System.out.println(distribution.columnOrdinals()
                 + " " + distribution.columns
                 + ", cardinality: " + distribution.cardinality
@@ -522,12 +532,14 @@ public class ProfilerImpl implements Profiler {
     abstract void finish();
 
     /** Creates an initial collector of the appropriate kind. */
-    public static Collector create(Space space) {
+    public static Collector create(Space space, int sketchThreshold) {
       final List<Integer> columnOrdinalList = space.columnOrdinals.asList();
       if (columnOrdinalList.size() == 1) {
-        return new SingletonCollector(space, columnOrdinalList.get(0));
+        return new SingletonCollector(space, columnOrdinalList.get(0),
+            sketchThreshold);
       } else {
-        return new CompositeCollector(space, columnOrdinalList);
+        return new CompositeCollector(space,
+            (int[]) Primitive.INT.toArray(columnOrdinalList), sketchThreshold);
       }
     }
   }
@@ -536,11 +548,13 @@ public class ProfilerImpl implements Profiler {
   static class SingletonCollector extends Collector {
     final SortedSet<Comparable> values = new TreeSet<>();
     final int columnOrdinal;
+    final int sketchThreshold;
     int nullCount = 0;
 
-    SingletonCollector(Space space, int columnOrdinal) {
+    SingletonCollector(Space space, int columnOrdinal, int sketchThreshold) {
       super(space);
       this.columnOrdinal = columnOrdinal;
+      this.sketchThreshold = sketchThreshold;
     }
 
     public void add(List<Comparable> row) {
@@ -548,7 +562,15 @@ public class ProfilerImpl implements Profiler {
       if (v == NullSentinel.INSTANCE) {
         nullCount++;
       } else {
-        values.add(v);
+        if (values.add(v) && values.size() == sketchThreshold) {
+          // Too many values. Switch to a sketch collector.
+          final HllSingletonCollector collector =
+              new HllSingletonCollector(space, columnOrdinal);
+          for (Comparable value : values) {
+            collector.add(value);
+          }
+          space.collector = collector;
+        }
       }
     }
 
@@ -561,18 +583,24 @@ public class ProfilerImpl implements Profiler {
 
   /** Collector that collects two or more column values in a tree set. */
   static class CompositeCollector extends Collector {
+    protected static final ImmutableBitSet OF = ImmutableBitSet.of(2, 13);
     final Set<FlatLists.ComparableList> values = new HashSet<>();
     final int[] columnOrdinals;
     final Comparable[] columnValues;
     int nullCount = 0;
+    private final int sketchThreshold;
 
-    CompositeCollector(Space space, List<Integer> columnOrdinals) {
+    CompositeCollector(Space space, int[] columnOrdinals, int sketchThreshold) {
       super(space);
-      this.columnOrdinals = (int[]) Primitive.INT.toArray(columnOrdinals);
-      this.columnValues = new Comparable[columnOrdinals.size()];
+      this.columnOrdinals = columnOrdinals;
+      this.columnValues = new Comparable[columnOrdinals.length];
+      this.sketchThreshold = sketchThreshold;
     }
 
     public void add(List<Comparable> row) {
+      if (space.columnOrdinals.equals(OF)) {
+        Util.discard(0);
+      }
       int nullCountThisRow = 0;
       for (int i = 0, length = columnOrdinals.length; i < length; i++) {
         final Comparable value = row.get(columnOrdinals[i]);
@@ -584,15 +612,137 @@ public class ProfilerImpl implements Profiler {
         columnValues[i] = value;
       }
       //noinspection unchecked
-      ((Set) values).add(FlatLists.copyOf(columnValues));
+      if (((Set) values).add(FlatLists.copyOf(columnValues))
+          && values.size() == sketchThreshold) {
+        // Too many values. Switch to a sketch collector.
+        final HllCompositeCollector collector =
+            new HllCompositeCollector(space, columnOrdinals);
+        final List<Comparable> list =
+            new ArrayList<>(
+                Collections.nCopies(columnOrdinals[columnOrdinals.length - 1]
+                        + 1,
+                    (Comparable) null));
+        for (FlatLists.ComparableList value : this.values) {
+          for (int i = 0; i < value.size(); i++) {
+            Comparable c = (Comparable) value.get(i);
+            list.set(columnOrdinals[i], c);
+          }
+          collector.add(list);
+        }
+        space.collector = collector;
+      }
     }
 
     public void finish() {
-      space.nullCount = -1;
+      // number of input rows (not distinct values)
+      // that were null or partially null
+      space.nullCount = nullCount;
       space.cardinality = values.size() + (nullCount > 0 ? 1 : 0);
       space.valueSet = null;
     }
 
+  }
+
+  /** Collector that collects two or more column values into a HyperLogLog
+   * sketch. */
+  abstract static class HllCollector extends Collector {
+    final HllSketch sketch;
+    int nullCount = 0;
+
+    static final long[] NULL_BITS = {0x9f77d57e93167a16L};
+
+    HllCollector(Space space) {
+      super(space);
+      this.sketch = HllSketch.builder().build();
+    }
+
+    protected void add(Comparable value) {
+      if (value == NullSentinel.INSTANCE) {
+        sketch.update(NULL_BITS);
+      } else if (value instanceof String) {
+        sketch.update((String) value);
+      } else if (value instanceof Double) {
+        sketch.update((Double) value);
+      } else if (value instanceof Float) {
+        sketch.update((Float) value);
+      } else if (value instanceof Long) {
+        sketch.update((Long) value);
+      } else if (value instanceof Number) {
+        sketch.update(((Number) value).longValue());
+      } else {
+        sketch.update(value.toString());
+      }
+    }
+
+    public void finish() {
+      space.nullCount = nullCount;
+      space.cardinality = (int) sketch.getEstimate();
+      space.valueSet = null;
+    }
+  }
+
+  /** Collector that collects one column value into a HyperLogLog sketch. */
+  static class HllSingletonCollector extends HllCollector {
+    final int columnOrdinal;
+
+    HllSingletonCollector(Space space, int columnOrdinal) {
+      super(space);
+      this.columnOrdinal = columnOrdinal;
+    }
+
+    public void add(List<Comparable> row) {
+      final Comparable value = row.get(columnOrdinal);
+      if (value == NullSentinel.INSTANCE) {
+        nullCount++;
+        sketch.update(NULL_BITS);
+      } else {
+        add(value);
+      }
+    }
+  }
+
+  /** Collector that collects two or more column values into a HyperLogLog
+   * sketch. */
+  static class HllCompositeCollector extends HllCollector {
+    private final int[] columnOrdinals;
+    private final ByteBuffer buf = ByteBuffer.allocate(1024);
+
+    HllCompositeCollector(Space space, int[] columnOrdinals) {
+      super(space);
+      this.columnOrdinals = columnOrdinals;
+    }
+
+    public void add(List<Comparable> row) {
+      if (space.columnOrdinals.equals(OF)) {
+        Util.discard(0);
+      }
+      int nullCountThisRow = 0;
+      buf.clear();
+      for (int columnOrdinal : columnOrdinals) {
+        final Comparable value = row.get(columnOrdinal);
+        if (value == NullSentinel.INSTANCE) {
+          if (nullCountThisRow++ == 0) {
+            nullCount++;
+          }
+          buf.put((byte) 0);
+        } else if (value instanceof String) {
+          buf.put((byte) 1).put(((String) value).getBytes());
+        } else if (value instanceof Double) {
+          buf.put((byte) 2).putDouble((Double) value);
+        } else if (value instanceof Float) {
+          buf.put((byte) 3).putFloat((Float) value);
+        } else if (value instanceof Long) {
+          buf.put((byte) 4).putLong((Long) value);
+        } else if (value instanceof Integer) {
+          buf.put((byte) 5).putInt((Integer) value);
+        } else if (value instanceof Boolean) {
+          buf.put((Boolean) value ? (byte) 6 : (byte) 7);
+        } else {
+          buf.put((byte) 8).put(value.toString().getBytes());
+        }
+      }
+      sketch.update(Arrays.copyOf(buf.array(), buf.position()));
+    }
   }
 
   /** A priority queue of the last N surprise values. Accepts a new value if

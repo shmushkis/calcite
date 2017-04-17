@@ -17,6 +17,7 @@
 package org.apache.calcite.util;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -77,6 +78,8 @@ public class PartiallyOrderedSet<E> extends AbstractSet<E> {
       };
 
   private final Map<E, Node<E>> map;
+  private final Function<E, Iterable<E>> parentFunction;
+  private final Function<E, Iterable<E>> childFunction;
   private final Ordering<E> ordering;
 
   /**
@@ -88,7 +91,7 @@ public class PartiallyOrderedSet<E> extends AbstractSet<E> {
 
   /** Whether to check internal consistency all the time.
    * False unless you specify "-Dcalcite.debug" on the command line. */
-  private static final boolean DEBUG = Util.getBooleanProperty("calcite.debug.x");
+  private static final boolean DEBUG = Util.getBooleanProperty("calcite.debug");
 
   /**
    * Creates a partially-ordered set.
@@ -96,7 +99,19 @@ public class PartiallyOrderedSet<E> extends AbstractSet<E> {
    * @param ordering Ordering relation
    */
   public PartiallyOrderedSet(Ordering<E> ordering) {
-    this(ordering, new HashMap<E, Node<E>>());
+    this(ordering, new HashMap<E, Node<E>>(), null, null);
+  }
+
+  /**
+   * Creates a partially-ordered set with a parent-generating function.
+   *
+   * @param ordering Ordering relation
+   * @param parentFunction Function to compute parents of a node; may be null
+   */
+  public PartiallyOrderedSet(Ordering<E> ordering,
+      Function<E, Iterable<E>> childFunction,
+      Function<E, Iterable<E>> parentFunction) {
+    this(ordering, new HashMap<E, Node<E>>(), childFunction, parentFunction);
   }
 
   /**
@@ -107,7 +122,8 @@ public class PartiallyOrderedSet<E> extends AbstractSet<E> {
    * @param collection Initial contents of partially-ordered set
    */
   public PartiallyOrderedSet(Ordering<E> ordering, Collection<E> collection) {
-    this(ordering, new HashMap<E, Node<E>>(collection.size() * 3 / 2));
+    this(ordering, new HashMap<E, Node<E>>(collection.size() * 3 / 2), null,
+        null);
     addAll(collection);
   }
 
@@ -116,10 +132,15 @@ public class PartiallyOrderedSet<E> extends AbstractSet<E> {
    *
    * @param ordering Ordering relation
    * @param map Map from values to nodes
+   * @param parentFunction Function to compute parents of a node; may be null
    */
-  private PartiallyOrderedSet(Ordering<E> ordering, Map<E, Node<E>> map) {
+  private PartiallyOrderedSet(Ordering<E> ordering, Map<E, Node<E>> map,
+      Function<E, Iterable<E>> childFunction,
+      Function<E, Iterable<E>> parentFunction) {
     this.ordering = ordering;
     this.map = map;
+    this.childFunction = childFunction;
+    this.parentFunction = parentFunction;
     this.topNode = new TopBottomNode<>(true);
     this.bottomNode = new TopBottomNode<>(false);
     this.topNode.childList.add(bottomNode);
@@ -618,12 +639,31 @@ public class PartiallyOrderedSet<E> extends AbstractSet<E> {
     final Node<E> node = map.get(e);
     if (node == null) {
       if (hypothetical) {
-        return ImmutableList.copyOf(strip(findParents(e)));
+        if (parentFunction != null) {
+          final List<E> list = new ArrayList<>();
+          closure(parentFunction, e, list, new HashSet<E>());
+          return list;
+        } else {
+          return ImmutableList.copyOf(strip(findParents(e)));
+        }
       } else {
         return null;
       }
     } else {
       return strip(node.parentList);
+    }
+  }
+
+  private void closure(Function<E, Iterable<E>> generator, E e, List<E> list,
+      Set<E> set) {
+    for (E p : Preconditions.checkNotNull(generator.apply(e))) {
+      if (set.add(e)) {
+        if (map.containsKey(p)) {
+          list.add(p);
+        } else {
+          closure(generator, p, list, set);
+        }
+      }
     }
   }
 
