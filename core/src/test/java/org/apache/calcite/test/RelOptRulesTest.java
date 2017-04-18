@@ -908,74 +908,91 @@ public class RelOptRulesTest extends RelOptTestBase {
             + "on e.ename = b.ename and e.deptno = 10");
   }
 
-  private static String notStrongExpr = "case when e.sal < 11 then 11 else -1 * e.sal end ";
-  private static String strongExpr = "case when e.sal < 11 then -1 * e.sal else e.sal end ";
+  private static final String NOT_STRONG_EXPR =
+      "case when e.sal < 11 then 11 else -1 * e.sal end ";
+  private static final String STRONG_EXPR =
+      "case when e.sal < 11 then -1 * e.sal else e.sal end ";
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-1753">[CALCITE-1753]
+   * PushProjector should only preserve expressions if the expression is strong
+   * when pushing into the nullable-side of outer join</a>. */
   @Test public void testPushProjectPastInnerJoin() {
-    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
-        "select count(*), " + notStrongExpr + "from emp e inner join bonus b "
-            + "on e.ename = b.ename group by " + notStrongExpr);
+    final String sql = "select count(*), " + NOT_STRONG_EXPR + "\n"
+        + "from emp e inner join bonus b on e.ename = b.ename\n"
+        + "group by " + NOT_STRONG_EXPR;
+    sql(sql).withRule(ProjectJoinTransposeRule.CASE_INSTANCE).check();
   }
 
   @Test public void testPushProjectPastInnerJoinStrong() {
-    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
-        "select count(*), " + strongExpr + "from emp e inner join bonus b "
-            + "on e.ename = b.ename group by " + strongExpr);
+    final String sql = "select count(*), " + STRONG_EXPR + "\n"
+        + "from emp e inner join bonus b on e.ename = b.ename\n"
+        + "group by " + STRONG_EXPR;
+    sql(sql).withRule(ProjectJoinTransposeRule.CASE_INSTANCE).check();
   }
 
   @Test public void testPushProjectPastLeftJoin() {
-    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
-        "select count(*), " + notStrongExpr + "from emp e left outer join bonus b "
-            + "on e.ename = b.ename group by case when e.sal < 11 then 11 else -1 * e.sal end");
+    final String sql = "select count(*), " + NOT_STRONG_EXPR + "\n"
+        + "from emp e left outer join bonus b on e.ename = b.ename\n"
+        + "group by case when e.sal < 11 then 11 else -1 * e.sal end";
+    sql(sql).withRule(ProjectJoinTransposeRule.CASE_INSTANCE).check();
   }
 
   @Test public void testPushProjectPastLeftJoinSwap() {
-    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
-        "select count(*), " + notStrongExpr + "from bonus b left outer join emp e "
-            + "on e.ename = b.ename group by " + notStrongExpr);
+    final String sql = "select count(*), " + NOT_STRONG_EXPR + "\n"
+        + "from bonus b left outer join emp e on e.ename = b.ename\n"
+        + "group by " + NOT_STRONG_EXPR;
+    sql(sql).withRule(ProjectJoinTransposeRule.CASE_INSTANCE).check();
   }
 
   @Test public void testPushProjectPastLeftJoinSwapStrong() {
-    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
-        "select count(*), " + strongExpr + "from bonus b left outer join emp e "
-            + "on e.ename = b.ename group by " + strongExpr);
+    final String sql = "select count(*), " + STRONG_EXPR + "\n"
+        + "from bonus b left outer join emp e on e.ename = b.ename\n"
+        + "group by " + STRONG_EXPR;
+    sql(sql).withRule(ProjectJoinTransposeRule.CASE_INSTANCE).check();
   }
 
   @Test public void testPushProjectPastRightJoin() {
-    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
-        "select count(*), " + notStrongExpr + "from emp e right outer join bonus b "
-            + "on e.ename = b.ename group by " + notStrongExpr);
+    final String sql = "select count(*), " + NOT_STRONG_EXPR + "\n"
+        + "from emp e right outer join bonus b on e.ename = b.ename\n"
+        + "group by " + NOT_STRONG_EXPR;
+    sql(sql).withRule(ProjectJoinTransposeRule.CASE_INSTANCE).check();
   }
 
   @Test public void testPushProjectPastRightJoinStrong() {
-    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
-        "select count(*), case when e.sal < 11 then -1 * e.sal else e.sal end "
-            + "from emp e right outer join bonus b "
-            + "on e.ename = b.ename group by case when e.sal < 11 then -1 * e.sal else e.sal end");
+    final String sql = "select count(*),\n"
+        + " case when e.sal < 11 then -1 * e.sal else e.sal end\n"
+        + "from emp e right outer join bonus b on e.ename = b.ename\n"
+        + "group by case when e.sal < 11 then -1 * e.sal else e.sal end";
+    sql(sql).withRule(ProjectJoinTransposeRule.CASE_INSTANCE).check();
   }
 
   @Test public void testPushProjectPastRightJoinSwap() {
-    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
-        "select count(*), " + notStrongExpr + "from bonus b right outer join emp e "
-            + "on e.ename = b.ename group by " + notStrongExpr);
+    final String sql = "select count(*), " + NOT_STRONG_EXPR + "\n"
+        + "from bonus b right outer join emp e on e.ename = b.ename\n"
+        + "group by " + NOT_STRONG_EXPR;
+    sql(sql).withRule(ProjectJoinTransposeRule.CASE_INSTANCE).check();
   }
 
   @Test public void testPushProjectPastRightJoinSwapStrong() {
-    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
-        "select count(*), " + strongExpr + "from bonus b right outer join emp e "
-            + "on e.ename = b.ename group by " + strongExpr);
+    final String sql = "select count(*), " + STRONG_EXPR + "\n"
+        + "from bonus b right outer join emp e on e.ename = b.ename\n"
+        + "group by " + STRONG_EXPR;
+    sql(sql).withRule(ProjectJoinTransposeRule.CASE_INSTANCE).check();
   }
 
   @Test public void testPushProjectPastFullJoin() {
-    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
-        "select count(*), " + notStrongExpr + "from emp e full outer join bonus b "
-            + "on e.ename = b.ename group by " + notStrongExpr);
+    final String sql = "select count(*), " + NOT_STRONG_EXPR + "\n"
+        + "from emp e full outer join bonus b on e.ename = b.ename\n"
+        + "group by " + NOT_STRONG_EXPR;
+    sql(sql).withRule(ProjectJoinTransposeRule.CASE_INSTANCE).check();
   }
 
   @Test public void testPushProjectPastFullJoinStrong() {
-    checkPlanning(ProjectJoinTransposeRule.CASE_INSTANCE,
-        "select count(*), " + strongExpr + "from emp e full outer join bonus b "
-            + "on e.ename = b.ename group by " + strongExpr);
+    final String sql = "select count(*), " + STRONG_EXPR + "\n"
+        + "from emp e full outer join bonus b on e.ename = b.ename\n"
+        + "group by " + STRONG_EXPR;
+    sql(sql).withRule(ProjectJoinTransposeRule.CASE_INSTANCE).check();
   }
 
   @Test public void testPushProjectPastSetOp() {
