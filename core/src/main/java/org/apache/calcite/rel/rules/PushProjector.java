@@ -31,6 +31,7 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexVisitorImpl;
+import org.apache.calcite.runtime.PredicateImpl;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilder;
@@ -39,6 +40,7 @@ import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -802,7 +804,7 @@ public class PushProjector {
    *
    * @see org.apache.calcite.rel.rules.PushProjector.OperatorExprCondition
    */
-  public interface ExprCondition {
+  public interface ExprCondition extends Predicate<RexNode> {
     /**
      * Evaluates a condition for a given expression.
      *
@@ -815,14 +817,21 @@ public class PushProjector {
      * Constant condition that replies {@code false} for all expressions.
      */
     ExprCondition FALSE =
-        new ExprCondition() {
+        new ExprConditionImpl() {
           @Override public boolean test(RexNode expr) {
             return false;
           }
         };
 
+    ExprCondition TRUE =
+        new ExprConditionImpl() {
+          @Override public boolean test(RexNode expr) {
+            return true;
+          }
+        };
+
     ExprCondition CASE =
-        new ExprCondition() {
+        new ExprConditionImpl() {
           @Override public boolean test(RexNode expr) {
             if (expr instanceof RexCall
                 && ((RexCall) expr).getOperator() == SqlStdOperatorTable.CASE) {
@@ -833,11 +842,17 @@ public class PushProjector {
         };
   }
 
+  /** Implementation of {@link ExprCondition}. */
+  public abstract static class ExprConditionImpl
+      extends PredicateImpl<RexNode>
+      implements ExprCondition {
+  }
+
   /**
    * An expression condition that evaluates to true if the expression is
    * a call to one of a set of operators.
    */
-  public static class OperatorExprCondition implements ExprCondition {
+  public static class OperatorExprCondition extends ExprConditionImpl {
     private final Set<SqlOperator> operatorSet;
 
     /**
