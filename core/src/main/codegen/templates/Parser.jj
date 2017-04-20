@@ -3120,11 +3120,11 @@ List<Object> Expression2(ExprContext exprContext) :
  */
 SqlNode Expression3(ExprContext exprContext) :
 {
-    SqlNode e;
-    SqlNodeList list;
-    SqlNodeList list1;
-    SqlNodeList list2;
-    SqlPrefixOperator op;
+    final SqlNode e;
+    final SqlNodeList list;
+    final SqlNodeList list1;
+    final SqlNodeList list2;
+    final SqlOperator op;
     boolean rowSeen = false;
     SqlParserPos pos;
     SqlParserPos prefixRowOpPos;
@@ -3169,8 +3169,9 @@ SqlNode Expression3(ExprContext exprContext) :
         }
     }
     [
+        LOOKAHEAD(2)
         (
-            <OVERLAPS>
+            op = periodOperator()
             list2 = ParenthesizedQueryOrCommaList(exprContext)
             {
                 if (list1.size() != 2 || list2.size() != 2) {
@@ -3182,7 +3183,7 @@ SqlNode Expression3(ExprContext exprContext) :
                 for (SqlNode node : list2) {
                     list1.add(node);
                 }
-                return SqlStdOperatorTable.OVERLAPS.createCall(
+                return op.createCall(
                     list1.getParserPosition().plus(list2.getParserPosition()),
                     list1.toArray());
             }
@@ -3220,6 +3221,23 @@ SqlNode Expression3(ExprContext exprContext) :
             return SqlStdOperatorTable.ROW.createCall(pos, list1.toArray());
         }
     }
+}
+
+SqlOperator periodOperator() :
+{
+}
+{
+     <OVERLAPS> { return SqlStdOperatorTable.OVERLAPS; }
+|
+     <IMMEDIATELY> <PRECEDES> { return SqlStdOperatorTable.IMMEDIATELY_PRECEDES; }
+|
+     <PRECEDES> { return SqlStdOperatorTable.PRECEDES; }
+|
+     <IMMEDIATELY> <SUCCEEDS> { return SqlStdOperatorTable.IMMEDIATELY_SUCCEEDS; }
+|
+     <SUCCEEDS> { return SqlStdOperatorTable.SUCCEEDS; }
+|
+     <EQUALS> { return SqlStdOperatorTable.PERIOD_EQUALS; }
 }
 
 /**
@@ -5707,6 +5725,7 @@ SqlPostfixOperator PostfixRowOperator() :
     | < HOUR: "HOUR" >
     | < IDENTITY: "IDENTITY" >
     | < IMMEDIATE: "IMMEDIATE" >
+    | < IMMEDIATELY: "IMMEDIATELY" >
     | < IMPLEMENTATION: "IMPLEMENTATION" >
     | < IMPORT: "IMPORT" >
     | < IN: "IN" >
@@ -6237,6 +6256,7 @@ String CommonNonReservedKeyWord() :
         | <GRANTED>
         | <HIERARCHY>
         | <IMMEDIATE>
+        | <IMMEDIATELY>
         | <IMPLEMENTATION>
         | <INCLUDING>
         | <INCREMENT>

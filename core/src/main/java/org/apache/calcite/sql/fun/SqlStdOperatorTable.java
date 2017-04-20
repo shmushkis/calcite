@@ -1050,6 +1050,21 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlOverlapsOperator OVERLAPS =
       new SqlOverlapsOperator();
 
+  public static final SqlOverlapsOperator PRECEDES =
+      new SqlOverlapsOperator();
+
+  public static final SqlOverlapsOperator IMMEDIATELY_PRECEDES =
+      new SqlOverlapsOperator();
+
+  public static final SqlOverlapsOperator SUCCEEDS =
+      new SqlOverlapsOperator();
+
+  public static final SqlOverlapsOperator IMMEDIATELY_SUCCEEDS =
+      new SqlOverlapsOperator();
+
+  public static final SqlOverlapsOperator PERIOD_EQUALS =
+      new SqlOverlapsOperator();
+
   public static final SqlSpecialOperator VALUES =
       new SqlValuesOperator();
 

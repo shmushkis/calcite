@@ -1011,28 +1011,26 @@ public class SqlParserTest {
   }
 
   @Test public void testOverlaps() {
-    checkExp(
-        "(x,xx) overlaps (y,yy)",
+    checkPeriod(new Checker("overlaps"));
+  }
+
+  void checkPeriod(Checker checker) {
+    checker.checkExp("(x,xx) overlaps (y,yy)",
         "((`X`, `XX`) OVERLAPS (`Y`, `YY`))");
 
-    checkExp(
-        "(x,xx) overlaps (y,yy) or false",
+    checker.checkExp("(x,xx) overlaps (y,yy) or false",
         "(((`X`, `XX`) OVERLAPS (`Y`, `YY`)) OR FALSE)");
 
-    checkExp(
-        "true and not (x,xx) overlaps (y,yy) or false",
+    checker.checkExp("true and not (x,xx) overlaps (y,yy) or false",
         "((TRUE AND (NOT ((`X`, `XX`) OVERLAPS (`Y`, `YY`)))) OR FALSE)");
 
-    checkExpFails(
-        "^(x,xx,xxx) overlaps (y,yy)^ or false",
+    checker.checkExpFails("^(x,xx,xxx) overlaps (y,yy)^ or false",
         "(?s).*Illegal overlaps expression.*");
 
-    checkExpFails(
-        "true or ^(x,xx,xxx) overlaps (y,yy,yyy)^ or false",
+    checker.checkExpFails("true or ^(x,xx,xxx) overlaps (y,yy,yyy)^ or false",
         "(?s).*Illegal overlaps expression.*");
 
-    checkExpFails(
-        "^(x,xx) overlaps (y,yy,yyy)^ or false",
+    checker.checkExpFails("^(x,xx) overlaps (y,yy,yyy)^ or false",
         "(?s).*Illegal overlaps expression.*");
   }
 
@@ -7968,6 +7966,25 @@ public class SqlParserTest {
     public Sql node(Matcher<SqlNode> matcher) {
       getTester().checkNode(sql, matcher);
       return this;
+    }
+  }
+
+  /** Runs tests on period operators such as OVERLAPS, IMMEDIATELY PRECEDES. */
+  private class Checker {
+    final String op;
+
+    Checker(String op) {
+      this.op = op;
+    }
+
+    public void checkExp(String sql, String expected) {
+      SqlParserTest.this.checkExp(sql.replace("$op", op),
+          expected.replace("$op", op.toUpperCase(Locale.ROOT)));
+    }
+
+    public void checkExpFails(String sql, String expected) {
+      SqlParserTest.this.checkExpFails(sql.replace("$op", op),
+          expected.replace("$op", op.toUpperCase(Locale.ROOT)));
     }
   }
 }

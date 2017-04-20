@@ -332,9 +332,34 @@ public enum SqlKind {
   DOT,
 
   /**
-   * The "OVERLAPS" operator.
+   * The "OVERLAPS" operator for periods.
    */
   OVERLAPS,
+
+  /**
+   * The "PRECEDES" operator for periods.
+   */
+  PRECEDES,
+
+  /**
+   * The "IMMEDIATELY PRECEDES" operator for periods.
+   */
+  IMMEDIATELY_PRECEDES,
+
+  /**
+   * The "SUCCEEDS" operator for periods.
+   */
+  SUCCEEDS,
+
+  /**
+   * The "IMMEDIATELY SUCCEEDS" operator for periods.
+   */
+  IMMEDIATELY_SUCCEEDS,
+
+  /**
+   * The "EQUALS" operator for periods.
+   */
+  PERIOD_EQUALS,
 
   /**
    * The "LIKE" operator.
