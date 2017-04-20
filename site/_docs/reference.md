@@ -1546,3 +1546,129 @@ The following clauses are not implemented:
 * `ON ROW PER MATCH`, `ALL ROWS PER MATCH`
 * `AFTER MATCH`
 * `SUBSET`
+
+<style>
+.container {
+  width: 600px;
+  height: 30px;
+}
+.gray {
+  width: 60px;
+  height: 40px;
+  background: gray;
+  float: left;
+}
+.r00 {
+  width: 0px;
+  height: 5px;
+  background: white;
+  margin-left: 10px;
+}
+.r15 {
+  width: 40px;
+  height: 5px;
+  background: white;
+  margin-top: 10px;
+  margin-left: 10px;
+}
+.r13 {
+  width: 20px;
+  height: 5px;
+  background: white;
+  margin-top: 10px;
+  margin-left: 10px;
+}
+.r12 {
+  width: 10px;
+  height: 5px;
+  background: white;
+  margin-top: 10px;
+  margin-left: 10px;
+}
+.r24 {
+  width: 20px;
+  height: 5px;
+  background: white;
+  margin-top: 10px;
+  margin-left: 20px;
+}
+.r35 {
+  width: 20px;
+  height: 5px;
+  background: white;
+  margin-top: 10px;
+  margin-left: 30px;
+}
+</style>
+
+<table>
+  <tr>
+    <td>CONTAINS</td>
+    <td>
+      <div class="container">
+        <div class="gray"><div class="r15"></div><div class="r24"></div></div>
+        <div class="gray"><div class="r15"></div><div class="r13"></div></div>
+        <div class="gray"><div class="r15"></div><div class="r35"></div></div>
+        <div class="gray"><div class="r15"></div><div class="r15"></div></div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>OVERLAPS</td>
+    <td>
+      <div class="container">
+        <div class="gray"><div class="r15"></div><div class="r24"></div></div>
+        <div class="gray"><div class="r15"></div><div class="r13"></div></div>
+        <div class="gray"><div class="r15"></div><div class="r35"></div></div>
+        <div class="gray"><div class="r15"></div><div class="r15"></div></div>
+        <div class="gray"><div class="r24"></div><div class="r15"></div></div>
+        <div class="gray"><div class="r13"></div><div class="r15"></div></div>
+        <div class="gray"><div class="r35"></div><div class="r15"></div></div>
+        <div class="gray"><div class="r24"></div><div class="r13"></div></div>
+        <div class="gray"><div class="r13"></div><div class="r24"></div></div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>EQUALS</td>
+    <td>
+      <div class="container">
+        <div class="gray"><div class="r15"></div><div class="r15"></div></div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>PRECEDES</td>
+    <td>
+      <div class="container">
+        <div class="gray"><div class="r12"></div><div class="r35"></div></div>
+        <div class="gray"><div class="r13"></div><div class="r35"></div></div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>SUCCEEDS</td>
+    <td>
+      <div class="container">
+        <div class="gray"><div class="r35"></div><div class="r12"></div></div>
+        <div class="gray"><div class="r35"></div><div class="r13"></div></div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>IMMEDIATELY PRECEDES</td>
+    <td>
+      <div class="container">
+        <div class="gray"><div class="r13"></div><div class="r35"></div></div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>IMMEDIATELY SUCCEEDS</td>
+    <td>
+      <div class="container">
+        <div class="gray"><div class="r35"></div><div class="r13"></div></div>
+      </div>
+    </td>
+  </tr>
+</table>
