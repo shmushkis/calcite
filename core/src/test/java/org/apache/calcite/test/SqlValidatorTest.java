@@ -6727,8 +6727,11 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
   }
 
   @Test public void testOverlaps() {
-    checkExpType(
-        "(date '1-2-3', date '1-2-3') overlaps (date '1-2-3', date '1-2-3')",
+    checkExpType("(date '1-2-3', date '1-2-3')\n"
+            + " overlaps (date '1-2-3', date '1-2-3')",
+        "BOOLEAN NOT NULL");
+    checkExpType("period (date '1-2-3', date '1-2-3')\n"
+            + " overlaps period (date '1-2-3', date '1-2-3')",
         "BOOLEAN NOT NULL");
     checkExp(
         "(date '1-2-3', date '1-2-3') overlaps (date '1-2-3', interval '1' year)");
@@ -6739,13 +6742,97 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
 
     checkWholeExpFails(
         "(timestamp '1-2-3 4:5:6', timestamp '1-2-3 4:5:6' ) overlaps (time '4:5:6', interval '1 2:3:4.5' day to second)",
-        "(?s).*Cannot apply 'OVERLAPS' to arguments of type '.<TIMESTAMP.0.>, <TIMESTAMP.0.>. OVERLAPS .<TIME.0.>, <INTERVAL DAY TO SECOND>.*");
+        "(?s).*Cannot apply 'OVERLAPS' to arguments of type .*");
     checkWholeExpFails(
         "(time '4:5:6', timestamp '1-2-3 4:5:6' ) overlaps (time '4:5:6', interval '1 2:3:4.5' day to second)",
-        "(?s).*Cannot apply 'OVERLAPS' to arguments of type '.<TIME.0.>, <TIMESTAMP.0.>. OVERLAPS .<TIME.0.>, <INTERVAL DAY TO SECOND>.'.*");
+        "(?s).*Cannot apply 'OVERLAPS' to arguments of type .*");
     checkWholeExpFails(
         "(time '4:5:6', time '4:5:6' ) overlaps (time '4:5:6', date '1-2-3')",
-        "(?s).*Cannot apply 'OVERLAPS' to arguments of type '.<TIME.0.>, <TIME.0.>. OVERLAPS .<TIME.0.>, <DATE>.'.*");
+        "(?s).*Cannot apply 'OVERLAPS' to arguments of type .*");
+    checkWholeExpFails("1 overlaps 2",
+        "(?s).*Cannot apply 'OVERLAPS' to arguments of type "
+            + "'<INTEGER> OVERLAPS <INTEGER>'\\. Supported form.*");
+
+    checkExpType("true\n"
+            + " or (date '1-2-3', date '1-2-3')\n"
+            + "   overlaps (date '1-2-3', date '1-2-3')\n"
+            + "or false",
+        "BOOLEAN NOT NULL");
+    // row with 3 arguments as left argument to overlaps
+    checkExpFails("true\n"
+            + " or ^(date '1-2-3', date '1-2-3', date '1-2-3')\n"
+            + "   overlaps (date '1-2-3', date '1-2-3')^\n"
+            + " or false",
+        "(?s).*Cannot apply 'OVERLAPS' to arguments of type .*");
+    // row with 3 arguments as right argument to overlaps
+    checkExpFails("true\n"
+            + " or ^(date '1-2-3', date '1-2-3')\n"
+            + "   overlaps (date '1-2-3', date '1-2-3', date '1-2-3')^\n"
+            + " or false",
+        "(?s).*Cannot apply 'OVERLAPS' to arguments of type .*");
+    checkExpFails("^period (date '1-2-3', date '1-2-3')\n"
+            + "   overlaps (date '1-2-3', date '1-2-3', date '1-2-3')^",
+        "(?s).*Cannot apply 'OVERLAPS' to arguments of type .*");
+    checkExpFails("true\n"
+            + " or ^(1, 2) overlaps (2, 3)^\n"
+            + " or false",
+        "(?s).*Cannot apply 'OVERLAPS' to arguments of type .*");
+  }
+
+  @Test public void testContains() {
+    checkExpType("(date '1-2-3', date '1-2-3')\n"
+            + " contains (date '1-2-3', date '1-2-3')",
+        "BOOLEAN NOT NULL");
+    checkExpType("period (date '1-2-3', date '1-2-3')\n"
+            + " contains period (date '1-2-3', date '1-2-3')",
+        "BOOLEAN NOT NULL");
+    checkExp("(date '1-2-3', date '1-2-3')\n"
+        + "  contains (date '1-2-3', interval '1' year)");
+    checkExp("(time '1:2:3', interval '1' second)\n"
+        + " contains (time '23:59:59', time '1:2:3')");
+    checkExp("(timestamp '1-2-3 4:5:6', timestamp '1-2-3 4:5:6')\n"
+        + " contains (timestamp '1-2-3 4:5:6', interval '1 2:3:4.5' day to second)");
+
+    // period contains point
+    checkExp("(date '1-2-3', date '1-2-3')\n"
+        + "  contains date '1-2-3'");
+    // point contains period
+    checkWholeExpFails("date '1-2-3' contains (date '1-2-3', date '1-2-3')",
+        "(?s).*Cannot apply 'CONTAINS' to arguments of type .*");
+    // point contains point
+    checkWholeExpFails("date '1-2-3' contains date '1-2-3'",
+        "(?s).*Cannot apply 'CONTAINS' to arguments of type .*");
+
+    checkWholeExpFails(
+        "(timestamp '1-2-3 4:5:6', timestamp '1-2-3 4:5:6' ) contains (time '4:5:6', interval '1 2:3:4.5' day to second)",
+        "(?s).*Cannot apply 'CONTAINS' to arguments of type '.<TIMESTAMP.0.>, <TIMESTAMP.0.>. CONTAINS .<TIME.0.>, <INTERVAL DAY TO SECOND>.*");
+    checkWholeExpFails(
+        "(time '4:5:6', timestamp '1-2-3 4:5:6' ) contains (time '4:5:6', interval '1 2:3:4.5' day to second)",
+        "(?s).*Cannot apply 'CONTAINS' to arguments of type '.<TIME.0.>, <TIMESTAMP.0.>. CONTAINS .<TIME.0.>, <INTERVAL DAY TO SECOND>.'.*");
+    checkWholeExpFails(
+        "(time '4:5:6', time '4:5:6' ) contains (time '4:5:6', date '1-2-3')",
+        "(?s).*Cannot apply 'CONTAINS' to arguments of type '.<TIME.0.>, <TIME.0.>. CONTAINS .<TIME.0.>, <DATE>.'.*");
+    checkWholeExpFails("(1) contains (2)",
+        "(?s).*Cannot apply 'CONTAINS' to arguments of type '.<TIME.0.>, <TIME.0.>. CONTAINS .<TIME.0.>, <DATE>.'.*");
+
+    checkExpType("true\n"
+            + " or (date '1-2-3', date '1-2-3')\n"
+            + "   contains (date '1-2-3', date '1-2-3'))\n"
+            + " or false",
+        "BOOLEAN NOT NULL");
+    // row with 3 arguments
+    checkExpFails("true\n"
+            + " or (date '1-2-3', date '1-2-3', date '1-2-3')\n"
+            + "   contains (date '1-2-3', date '1-2-3'))\n"
+            + " or false",
+        "(?s).*Encountered \",\" at .*");
+    checkExpFails("true\n"
+            + " or (1, 2) contains (2, 3)\n"
+            + " or false",
+        "(?s).*Encountered \",\" at .*");
+
+    checkExpFails("$p(x,xx) $op $p(y,yy^,^yyy) or false",
+        "(?s).*Encountered \",\" at .*");
   }
 
   @Test public void testExtract() {

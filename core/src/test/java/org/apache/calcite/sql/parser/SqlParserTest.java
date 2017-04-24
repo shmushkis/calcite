@@ -1010,28 +1010,46 @@ public class SqlParserTest {
             + "FROM `SALES`.`DEPTS`) AS `T`");
   }
 
-  @Test public void testOverlaps() {
-    checkPeriod(new Checker("overlaps"));
+  @Test public void testPeriod() {
+    // We don't have a PERIOD constructor currently;
+    // ROW constructor is sufficient for now.
+    checkExp("period (date '1969-01-05', interval '2-3' year to month)",
+        "(ROW(DATE '1969-01-05', INTERVAL '2-3' YEAR TO MONTH))");
   }
 
-  void checkPeriod(Checker checker) {
-    checker.checkExp("(x,xx) overlaps (y,yy)",
-        "((`X`, `XX`) OVERLAPS (`Y`, `YY`))");
+  @Test public void testOverlaps() {
+    final String[] ops = {
+      "overlaps", "equals", "precedes", "succeeds",
+      "immediately precedes", "immediately succeeds"
+    };
+    final String[] periods = {"period ", ""};
+    for (String period : periods) {
+      for (String op : ops) {
+        checkPeriodPredicate(new Checker(op, period));
+      }
+    }
+  }
 
-    checker.checkExp("(x,xx) overlaps (y,yy) or false",
-        "(((`X`, `XX`) OVERLAPS (`Y`, `YY`)) OR FALSE)");
+  void checkPeriodPredicate(Checker checker) {
+    checker.checkExp("$p(x,xx) $op $p(y,yy)",
+        "(PERIOD (`X`, `XX`) $op PERIOD (`Y`, `YY`))");
 
-    checker.checkExp("true and not (x,xx) overlaps (y,yy) or false",
-        "((TRUE AND (NOT ((`X`, `XX`) OVERLAPS (`Y`, `YY`)))) OR FALSE)");
+    checker.checkExp(
+        "$p(x,xx) $op $p(y,yy) or false",
+        "((PERIOD (`X`, `XX`) $op PERIOD (`Y`, `YY`)) OR FALSE)");
 
-    checker.checkExpFails("^(x,xx,xxx) overlaps (y,yy)^ or false",
-        "(?s).*Illegal overlaps expression.*");
+    checker.checkExp(
+        "true and not $p(x,xx) $op $p(y,yy) or false",
+        "((TRUE AND (NOT (PERIOD (`X`, `XX`) $op PERIOD (`Y`, `YY`)))) OR FALSE)");
 
-    checker.checkExpFails("true or ^(x,xx,xxx) overlaps (y,yy,yyy)^ or false",
-        "(?s).*Illegal overlaps expression.*");
-
-    checker.checkExpFails("^(x,xx) overlaps (y,yy,yyy)^ or false",
-        "(?s).*Illegal overlaps expression.*");
+    if (checker.period.isEmpty()) {
+      checker.checkExp("$p(x,xx,xxx) $op $p(y,yy) or false",
+          "((PERIOD (`X`, `XX`) $op PERIOD (`Y`, `YY`)) OR FALSE)");
+    } else {
+      // 3-argument rows are valid in the parser, rejected by the validator
+      checker.checkExpFails("$p(x,xx^,^xxx) $op $p(y,yy) or false",
+          "(?s).*Encountered \",\" at .*");
+    }
   }
 
   @Test public void testIsDistinctFrom() {
@@ -7972,19 +7990,23 @@ public class SqlParserTest {
   /** Runs tests on period operators such as OVERLAPS, IMMEDIATELY PRECEDES. */
   private class Checker {
     final String op;
+    final String period;
 
-    Checker(String op) {
+    Checker(String op, String period) {
       this.op = op;
+      this.period = period;
     }
 
     public void checkExp(String sql, String expected) {
-      SqlParserTest.this.checkExp(sql.replace("$op", op),
+      SqlParserTest.this.checkExp(
+          sql.replace("$op", op).replace("$p", period),
           expected.replace("$op", op.toUpperCase(Locale.ROOT)));
     }
 
     public void checkExpFails(String sql, String expected) {
-      SqlParserTest.this.checkExpFails(sql.replace("$op", op),
-          expected.replace("$op", op.toUpperCase(Locale.ROOT)));
+      SqlParserTest.this.checkExpFails(
+          sql.replace("$op", op).replace("$p", period),
+          expected.replace("$op", op));
     }
   }
 }
