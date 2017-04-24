@@ -2497,9 +2497,9 @@ SqlMatchRecognize MatchRecognizeOpt(SqlNode tableRef) :
     SqlNodeList measureList = SqlNodeList.EMPTY;
     SqlNode pattern;
     SqlNodeList patternDefList;
-    SqlNode skipTo = null;
-    SqlParserPos pos = null;
-    SqlNode var = null;
+    final SqlNode skipTo;
+    final SqlParserPos pos;
+    final SqlNode var;
     SqlLiteral isStrictStarts = SqlLiteral.createBoolean(false, getPos());
     SqlLiteral isStrictEnds = SqlLiteral.createBoolean(false, getPos());
 }
@@ -2516,26 +2516,26 @@ SqlMatchRecognize MatchRecognizeOpt(SqlNode tableRef) :
                 <TO>
                 (
                     LOOKAHEAD(2)
-                    <NEXT> <ROW>
-                    {
-                        skipTo = SqlMatchRecognize.SkipToOption.SKIP_TO_NEXT_ROW.symbol(pos.plus(getPos()));
+                    <NEXT> <ROW> {
+                        skipTo = SqlMatchRecognize.SkipToOption.SKIP_TO_NEXT_ROW.symbol(
+                            pos.plus(getPos()));
                     }
-                    |
-                    <FIRST> var = SimpleIdentifier()
-                    {
-                        skipTo = SqlMatchRecognize.SKIP_TO_FIRST.createCall(pos.plus(var.getParserPosition()), var);
+                |
+                    <FIRST> var = SimpleIdentifier() {
+                        skipTo = SqlMatchRecognize.SKIP_TO_FIRST.createCall(
+                            pos.plus(var.getParserPosition()), var);
                     }
-                    |
-                    [<LAST>] var = SimpleIdentifier()
-                    {
-                        skipTo = SqlMatchRecognize.SKIP_TO_LAST.createCall(pos.plus(var.getParserPosition()), var);
+                |
+                    [ <LAST> ] var = SimpleIdentifier() {
+                        skipTo = SqlMatchRecognize.SKIP_TO_LAST.createCall(
+                            pos.plus(var.getParserPosition()), var);
                     }
                 )
             )
-            |
-            <PAST> <LAST> <ROW>
-            {
-                 skipTo = SqlMatchRecognize.SkipToOption.SKIP_PAST_LAST_ROW.symbol(pos.plus(getPos()));
+        |
+            <PAST> <LAST> <ROW> {
+                 skipTo = SqlMatchRecognize.SkipToOption.SKIP_PAST_LAST_ROW.symbol(
+                     pos.plus(getPos()));
             }
         )
     ]

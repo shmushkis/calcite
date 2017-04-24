@@ -1452,7 +1452,7 @@ matchRecognize:
       [ PARTITION BY expression [, expression ]* ]
       [ ORDER BY orderItem [, orderItem ]* ]
       [ MEASURES measureColumn [, measureColumn ]* ]
-      [ ON ROW PER MATCH | ALL ROWS PER MATCH ]
+      [ ONE ROW PER MATCH | ALL ROWS PER MATCH ]
       [ AFTER MATCH
             ( SKIP TO NEXT ROW
             | SKIP PAST LAST ROW

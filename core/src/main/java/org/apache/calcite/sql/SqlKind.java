@@ -470,12 +470,14 @@ public enum SqlKind {
   MATCH_NUMBER,
 
   /**
-   * The "SKIP TO FIRST" qualifier of restarting point in a match_recognize clause
+   * The "SKIP TO FIRST" qualifier of restarting point in a MATCH_RECOGNIZE
+   * clause.
    */
   SKIP_TO_FIRST,
 
   /**
-   * The "SKIP TO LAST" qualifier of restarting point in a match_recognize clause
+   * The "SKIP TO LAST" qualifier of restarting point in a MATCH_RECOGNIZE
+   * clause.
    */
   SKIP_TO_LAST,
 

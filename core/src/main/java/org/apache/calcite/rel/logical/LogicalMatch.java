@@ -43,15 +43,15 @@ public class LogicalMatch extends Match {
    * @param strictEnd Whether it is a strict end pattern
    * @param patternDefinitions Pattern definitions
    * @param measures Measure definitions
-   * @param afterMatchSkipTo after match definitions
+   * @param after After match definitions
    * @param rowType Row type
    */
   public LogicalMatch(RelOptCluster cluster, RelTraitSet traitSet,
       RelNode input, RexNode pattern, boolean strictStart, boolean strictEnd,
       Map<String, RexNode> patternDefinitions, Map<String, RexNode> measures,
-      RexNode afterMatchSkipTo, RelDataType rowType) {
+      RexNode after, RelDataType rowType) {
     super(cluster, traitSet, input, pattern, strictStart, strictEnd,
-        patternDefinitions, measures, afterMatchSkipTo, rowType);
+        patternDefinitions, measures, after, rowType);
   }
 
   /**
@@ -60,11 +60,11 @@ public class LogicalMatch extends Match {
   public static LogicalMatch create(RelNode input, RexNode pattern,
       boolean strictStart, boolean strictEnd,
       Map<String, RexNode> patternDefinitions, Map<String, RexNode> measures,
-      RexNode afterMatchSkipTo, RelDataType rowType) {
+      RexNode after, RelDataType rowType) {
     final RelOptCluster cluster = input.getCluster();
     final RelTraitSet traitSet = cluster.traitSetOf(Convention.NONE);
     return new LogicalMatch(cluster, traitSet, input, pattern,
-        strictStart, strictEnd, patternDefinitions, measures, afterMatchSkipTo, rowType);
+        strictStart, strictEnd, patternDefinitions, measures, after, rowType);
   }
 
   //~ Methods ------------------------------------------------------
@@ -72,11 +72,11 @@ public class LogicalMatch extends Match {
   @Override public Match copy(RelNode input, RexNode pattern,
       boolean strictStart, boolean strictEnd,
       Map<String, RexNode> patternDefinitions, Map<String, RexNode> measures,
-      RexNode afterMatchSkipTo, RelDataType rowType) {
+      RexNode after, RelDataType rowType) {
     final RelTraitSet traitSet = getCluster().traitSetOf(Convention.NONE);
     return new LogicalMatch(getCluster(), traitSet,
         input, pattern, strictStart, strictEnd, patternDefinitions, measures,
-        afterMatchSkipTo, rowType);
+        after, rowType);
   }
 }
 

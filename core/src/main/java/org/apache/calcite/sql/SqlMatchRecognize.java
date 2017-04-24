@@ -29,7 +29,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 /**
- * SqlNode for Match_recognize clause
+ * SqlNode for MATCH_RECOGNIZE clause.
  */
 public class SqlMatchRecognize extends SqlCall {
   public static final int OPERAND_TABLE_REF = 0;
@@ -38,13 +38,16 @@ public class SqlMatchRecognize extends SqlCall {
   public static final int OPERAND_STRICT_END = 3;
   public static final int OPERAND_PATTERN_DEFINES = 4;
   public static final int OPERAND_MEASURES = 5;
-  public static final int OPERAND_SKIPTO = 6;
+  public static final int OPERAND_SKIP_TO = 6;
 
-  public static final SqlPrefixOperator SKIP_TO_FIRST = new SqlPrefixOperator("SKIP TO FIRST",
-    SqlKind.SKIP_TO_FIRST, 20, null, null, null);
+  public static final SqlPrefixOperator SKIP_TO_FIRST =
+      new SqlPrefixOperator("SKIP TO FIRST", SqlKind.SKIP_TO_FIRST, 20, null,
+          null, null);
 
-  public static final SqlPrefixOperator SKIP_TO_LAST = new SqlPrefixOperator("SKIP TO LAST",
-    SqlKind.SKIP_TO_LAST, 20, null, null, null);
+  public static final SqlPrefixOperator SKIP_TO_LAST =
+      new SqlPrefixOperator("SKIP TO LAST", SqlKind.SKIP_TO_LAST, 20, null,
+          null, null);
+
   //~ Instance fields -------------------------------------------
 
   private SqlNode tableRef;
@@ -115,7 +118,7 @@ public class SqlMatchRecognize extends SqlCall {
     case OPERAND_MEASURES:
       measureList = Preconditions.checkNotNull((SqlNodeList) operand);
       break;
-    case OPERAND_SKIPTO:
+    case OPERAND_SKIP_TO:
       skipTo = operand;
       break;
     default:
@@ -152,15 +155,15 @@ public class SqlMatchRecognize extends SqlCall {
   }
 
   /**
-   * SKIP TO options
+   * Options for {@code SKIP TO} clause.
    */
-  public enum SkipToOption {
+  public enum SkipTo {
     SKIP_TO_NEXT_ROW("SKIP TO NEXT ROW"),
     SKIP_PAST_LAST_ROW("SKIP PAST LAST ROW");
 
     private final String sql;
 
-    SkipToOption(String sql) {
+    SkipTo(String sql) {
       this.sql = sql;
     }
 

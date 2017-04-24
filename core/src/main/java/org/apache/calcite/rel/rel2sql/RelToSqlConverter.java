@@ -379,14 +379,14 @@ public class RelToSqlConverter extends SqlImplementor
 
     SqlNode tableRef = x.asQueryOrValues();
 
-    SqlNode skipTo;
-    final RexNode afterMatchSkipTo = e.getAfterMatchSkipTo();
-    if (afterMatchSkipTo instanceof RexLiteral) {
-      SqlMatchRecognize.SkipToOption value = (SqlMatchRecognize.SkipToOption)
-        ((RexLiteral) afterMatchSkipTo).getValue2();
+    final SqlNode skipTo;
+    final RexNode after = e.getAfter();
+    if (after instanceof RexLiteral) {
+      SqlMatchRecognize.SkipTo value = (SqlMatchRecognize.SkipTo)
+        ((RexLiteral) after).getValue2();
       skipTo = SqlLiteral.createSymbol(value, POS);
     } else {
-      RexCall call = (RexCall) afterMatchSkipTo;
+      RexCall call = (RexCall) after;
       String operand = RexLiteral.stringValue(call.getOperands().get(0));
       skipTo = call.getOperator().createCall(POS, new SqlIdentifier(operand, POS));
     }
