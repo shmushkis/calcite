@@ -335,10 +335,9 @@ public abstract class Window extends SingleRel {
      * Ordinal of this aggregate within its partition.
      */
     public final int ordinal;
-   /**
-    * Distinct field of the aggregate call.
-    */
-    public boolean distinct = false;
+
+   /** Whether to eliminate duplicates before applying aggregate function. */
+    public final boolean distinct;
 
     /**
      * Creates a RexWinAggCall.
@@ -347,24 +346,7 @@ public abstract class Window extends SingleRel {
      * @param type     Result type
      * @param operands Operands to call
      * @param ordinal  Ordinal within its partition
-     */
-    public RexWinAggCall(
-        SqlAggFunction aggFun,
-        RelDataType type,
-        List<RexNode> operands,
-        int ordinal) {
-      super(type, aggFun, operands);
-      this.ordinal = ordinal;
-    }
-
-    /**
-     * Creates a RexWinAggCall.
-     *
-     * @param aggFun   Aggregate function
-     * @param type     Result type
-     * @param operands Operands to call
-     * @param ordinal  Ordinal within its partition
-     * @param distinct Aggregate function is applied on distinct elements
+     * @param distinct Eliminate duplicates before applying aggregate function
      */
     public RexWinAggCall(
         SqlAggFunction aggFun,

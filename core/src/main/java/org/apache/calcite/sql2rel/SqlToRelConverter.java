@@ -4974,13 +4974,13 @@ public class SqlToRelConverter {
         ImmutableList<RexFieldCollation> orderKeys,
         RexWindowBound lowerBound, RexWindowBound upperBound,
         SqlWindow window,
-        boolean isDistinct) {
+        boolean distinct) {
       this.partitionKeys = partitionKeys;
       this.orderKeys = orderKeys;
       this.lowerBound = lowerBound;
       this.upperBound = upperBound;
       this.window = window;
-      this.distinct = isDistinct;
+      this.distinct = distinct;
     }
 
     public RexNode visitCall(RexCall call) {

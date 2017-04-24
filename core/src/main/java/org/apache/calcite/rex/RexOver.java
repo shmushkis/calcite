@@ -42,9 +42,8 @@ public class RexOver extends RexCall {
   /**
    * Creates a RexOver.
    *
-   * @deprecated use constructor that explicitly sets the distinct field
-   *
-   * <p>For example, "SUM(x) OVER (ROWS 3 PRECEDING)" is represented as:
+   * <p>For example, "SUM(DISTINCT x) OVER (ROWS 3 PRECEDING)" is represented
+   * as:
    *
    * <ul>
    * <li>type = Integer,
@@ -57,44 +56,18 @@ public class RexOver extends RexCall {
    * @param op       Aggregate operator
    * @param operands Operands list
    * @param window   Window specification
-   */
-  @Deprecated
-  RexOver(
-      RelDataType type,
-      SqlAggFunction op,
-      List<RexNode> operands,
-      RexWindow window) {
-    this(type, op, operands, window, false);
-  }
-
-  /**
-   * Creates a RexOver.
-   *
-   * <p>For example, "SUM(DISTINCT x) OVER (ROWS 3 PRECEDING)" is represented as:
-   *
-   * <ul>
-   * <li>type = Integer,
-   * <li>op = {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#SUM},
-   * <li>operands = { {@link RexFieldAccess}("x") }
-   * <li>window = {@link SqlWindow}(ROWS 3 PRECEDING)
-   * </ul>
-   *
-   * @param type        Result type
-   * @param op          Aggregate operator
-   * @param operands    Operands list
-   * @param window      Window specification
-   * @param isDistinct  Aggregate operator is applied on distinct elements
+   * @param distinct Aggregate operator is applied on distinct elements
    */
   RexOver(
       RelDataType type,
       SqlAggFunction op,
       List<RexNode> operands,
       RexWindow window,
-      boolean isDistinct) {
+      boolean distinct) {
     super(type, op, operands);
     Preconditions.checkArgument(op.isAggregator());
     this.window = Preconditions.checkNotNull(window);
-    this.distinct = isDistinct;
+    this.distinct = distinct;
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -114,8 +87,28 @@ public class RexOver extends RexCall {
     return distinct;
   }
 
-  protected String computeDigest(boolean withType) {
-    return super.computeDigest(withType) + " OVER (" + window + ")";
+  @Override protected String computeDigest(boolean withType) {
+    final StringBuilder sb = new StringBuilder(op.getName());
+    sb.append("(");
+    if (distinct) {
+      sb.append("DISTINCT ");
+    }
+    for (int i = 0; i < operands.size(); i++) {
+      if (i > 0) {
+        sb.append(", ");
+      }
+      RexNode operand = operands.get(i);
+      sb.append(operand.toString());
+    }
+    sb.append(")");
+    if (withType) {
+      sb.append(":");
+      sb.append(type.getFullTypeString());
+    }
+    sb.append(" OVER (")
+        .append(window)
+        .append(")");
+    return sb.toString();
   }
 
   public <R> R accept(RexVisitor<R> visitor) {
