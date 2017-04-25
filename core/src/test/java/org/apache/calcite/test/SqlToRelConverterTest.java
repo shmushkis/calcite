@@ -1505,6 +1505,41 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql2).ok();
   }
 
+  @Test public void testTumbleTable() {
+    final String sql = "select stream"
+        + " tumble_end(rowtime, interval '2' hour) as rowtime, productId\n"
+        + "from orders\n"
+        + "group by tumble(rowtime, interval '2' hour), productId";
+    sql(sql).ok();
+  }
+
+  /** As {@link #testTumbleTable()} but on a table where "rowtime" is at
+   * position 1 not 0. */
+  @Test public void testTumbleTableRowtimeNotFirstColumn() {
+    final String sql = "select stream\n"
+        + "   tumble_end(rowtime, interval '2' hour) as rowtime, orderId\n"
+        + "from shipments\n"
+        + "group by tumble(rowtime, interval '2' hour), orderId";
+    sql(sql).ok();
+  }
+
+  @Test public void testHopTable() {
+    final String sql = "select stream hop_start(rowtime, interval '1' hour,"
+        + " interval '3' hour) as rowtime,\n"
+        + "  count(*) as c\n"
+        + "from orders\n"
+        + "group by hop(rowtime, interval '1' hour, interval '3' hour)";
+    sql(sql).ok();
+  }
+
+  @Test public void testSessionTable() {
+    final String sql = "select stream session_start(rowtime, interval '1' hour)"
+        + " as rowtime,\n" + "  session_end(rowtime, interval '1' hour),\n" + "  count(*) as c\n"
+        + "from orders\n"
+        + "group by session(rowtime, interval '1' hour)";
+    sql(sql).ok();
+  }
+
   @Test public void testInterval() {
     // temporarily disabled per DTbug 1212
     if (!Bug.DT785_FIXED) {
