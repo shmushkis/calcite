@@ -1266,19 +1266,19 @@ See also: UNNEST relational operator converts a collection to a relation.
     </td>
   </tr>
   <tr>
+    <td>period1 IMMEDIATELY PRECEDES period2</td>
+    <td>
+      <div class="container">
+        <div class="gray"><div class="r13"></div><div class="r35"></div></div>
+      </div>
+    </td>
+  </tr>
+  <tr>
     <td>period1 SUCCEEDS period2</td>
     <td>
       <div class="container">
         <div class="gray"><div class="r35"></div><div class="r12"></div></div>
         <div class="gray"><div class="r35"></div><div class="r13"></div></div>
-      </div>
-    </td>
-  </tr>
-  <tr>
-    <td>period1 IMMEDIATELY PRECEDES period2</td>
-    <td>
-      <div class="container">
-        <div class="gray"><div class="r13"></div><div class="r35"></div></div>
       </div>
     </td>
   </tr>
