@@ -746,7 +746,7 @@ SqlNode ParenthesizedExpression(ExprContext exprContext) :
  * <blockquote><pre>
  * <code>WHERE x IN ((select count(*) from t where c=d),5)</pre>
  * </blockquote>
- * 
+ *
  * <p>which is a legal use of a sub-query.  The only way to fix the hole is to
  * be able to remember whether a subexpression was parenthesized or not, which
  * means preserving parentheses in the SqlNode tree.  This is probably
@@ -3898,7 +3898,7 @@ SqlNode PeriodConstructor() :
     <COMMA>
     e1 = Expression(ExprContext.ACCEPT_SUB_QUERY)
     <RPAREN> {
-        return SqlStdOperatorTable.ROW.createCall(pos, e0, e1);
+        return SqlStdOperatorTable.ROW.createCall(pos.plus(getPos()), e0, e1);
     }
 }
 

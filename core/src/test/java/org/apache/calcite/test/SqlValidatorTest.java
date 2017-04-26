@@ -4778,7 +4778,7 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
     checkExpFails("false and ^1 in (date '2012-01-02', date '2012-01-04')^",
         ERR_IN_OPERANDS_INCOMPATIBLE);
     checkExpFails(
-        "1 > 5 ^or (1, 2) in (3, 4)^",
+        "1 > 5 or ^(1, 2) in (3, 4)^",
         ERR_IN_OPERANDS_INCOMPATIBLE);
   }
 
@@ -6754,32 +6754,49 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
             + "'<INTEGER> OVERLAPS <INTEGER>'\\. Supported form.*");
 
     checkExpType("true\n"
-            + " or (date '1-2-3', date '1-2-3')\n"
+            + "or (date '1-2-3', date '1-2-3')\n"
             + "   overlaps (date '1-2-3', date '1-2-3')\n"
             + "or false",
         "BOOLEAN NOT NULL");
     // row with 3 arguments as left argument to overlaps
     checkExpFails("true\n"
-            + " or ^(date '1-2-3', date '1-2-3', date '1-2-3')\n"
+            + "or ^(date '1-2-3', date '1-2-3', date '1-2-3')\n"
             + "   overlaps (date '1-2-3', date '1-2-3')^\n"
-            + " or false",
+            + "or false",
         "(?s).*Cannot apply 'OVERLAPS' to arguments of type .*");
     // row with 3 arguments as right argument to overlaps
     checkExpFails("true\n"
-            + " or ^(date '1-2-3', date '1-2-3')\n"
-            + "   overlaps (date '1-2-3', date '1-2-3', date '1-2-3')^\n"
-            + " or false",
+            + "or ^(date '1-2-3', date '1-2-3')\n"
+            + "  overlaps (date '1-2-3', date '1-2-3', date '1-2-3')^\n"
+            + "or false",
         "(?s).*Cannot apply 'OVERLAPS' to arguments of type .*");
     checkExpFails("^period (date '1-2-3', date '1-2-3')\n"
             + "   overlaps (date '1-2-3', date '1-2-3', date '1-2-3')^",
         "(?s).*Cannot apply 'OVERLAPS' to arguments of type .*");
     checkExpFails("true\n"
-            + " or ^(1, 2) overlaps (2, 3)^\n"
-            + " or false",
+            + "or ^(1, 2) overlaps (2, 3)^\n"
+            + "or false",
         "(?s).*Cannot apply 'OVERLAPS' to arguments of type .*");
+
+    // Other operators with similar syntax
+    String[] ops = {
+      "overlaps", "contains", "equals", "precedes", "succeeds",
+      "immediately precedes", "immediately succeeds"
+    };
+    for (String op : ops) {
+      checkExpType("period (date '1-2-3', date '1-2-3')\n"
+              + " " + op + " period (date '1-2-3', date '1-2-3')",
+          "BOOLEAN NOT NULL");
+      checkExpType("(date '1-2-3', date '1-2-3')\n"
+              + " " + op + " (date '1-2-3', date '1-2-3')",
+          "BOOLEAN NOT NULL");
+    }
   }
 
   @Test public void testContains() {
+    final String cannotApply =
+        "(?s).*Cannot apply 'CONTAINS' to arguments of type .*";
+
     checkExpType("(date '1-2-3', date '1-2-3')\n"
             + " contains (date '1-2-3', date '1-2-3')",
         "BOOLEAN NOT NULL");
@@ -6796,43 +6813,72 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
     // period contains point
     checkExp("(date '1-2-3', date '1-2-3')\n"
         + "  contains date '1-2-3'");
+    // same, with "period" keyword
+    checkExp("period (date '1-2-3', date '1-2-3')\n"
+        + "  contains date '1-2-3'");
     // point contains period
-    checkWholeExpFails("date '1-2-3' contains (date '1-2-3', date '1-2-3')",
-        "(?s).*Cannot apply 'CONTAINS' to arguments of type .*");
+    checkWholeExpFails("date '1-2-3'\n"
+            + "  contains (date '1-2-3', date '1-2-3')",
+        cannotApply);
+    // same, with "period" keyword
+    checkWholeExpFails("date '1-2-3'\n"
+            + "  contains period (date '1-2-3', date '1-2-3')",
+        cannotApply);
     // point contains point
     checkWholeExpFails("date '1-2-3' contains date '1-2-3'",
-        "(?s).*Cannot apply 'CONTAINS' to arguments of type .*");
+        cannotApply);
 
-    checkWholeExpFails(
-        "(timestamp '1-2-3 4:5:6', timestamp '1-2-3 4:5:6' ) contains (time '4:5:6', interval '1 2:3:4.5' day to second)",
-        "(?s).*Cannot apply 'CONTAINS' to arguments of type '.<TIMESTAMP.0.>, <TIMESTAMP.0.>. CONTAINS .<TIME.0.>, <INTERVAL DAY TO SECOND>.*");
-    checkWholeExpFails(
-        "(time '4:5:6', timestamp '1-2-3 4:5:6' ) contains (time '4:5:6', interval '1 2:3:4.5' day to second)",
-        "(?s).*Cannot apply 'CONTAINS' to arguments of type '.<TIME.0.>, <TIMESTAMP.0.>. CONTAINS .<TIME.0.>, <INTERVAL DAY TO SECOND>.'.*");
-    checkWholeExpFails(
-        "(time '4:5:6', time '4:5:6' ) contains (time '4:5:6', date '1-2-3')",
-        "(?s).*Cannot apply 'CONTAINS' to arguments of type '.<TIME.0.>, <TIME.0.>. CONTAINS .<TIME.0.>, <DATE>.'.*");
-    checkWholeExpFails("(1) contains (2)",
-        "(?s).*Cannot apply 'CONTAINS' to arguments of type '.<TIME.0.>, <TIME.0.>. CONTAINS .<TIME.0.>, <DATE>.'.*");
-
-    checkExpType("true\n"
-            + " or (date '1-2-3', date '1-2-3')\n"
-            + "   contains (date '1-2-3', date '1-2-3'))\n"
-            + " or false",
-        "BOOLEAN NOT NULL");
+    checkWholeExpFails("(timestamp '1-2-3 4:5:6', timestamp '1-2-3 4:5:6' )\n"
+            + " contains (time '4:5:6', interval '1 2:3:4.5' day to second)",
+        cannotApply);
+    checkWholeExpFails("(time '4:5:6', timestamp '1-2-3 4:5:6' )\n"
+            + " contains (time '4:5:6', interval '1 2:3:4.5' day to second)",
+        cannotApply);
+    checkWholeExpFails("(time '4:5:6', time '4:5:6' )\n"
+            + "  contains (time '4:5:6', date '1-2-3')",
+        cannotApply);
+    checkWholeExpFails("1 contains 2",
+        cannotApply);
     // row with 3 arguments
     checkExpFails("true\n"
-            + " or (date '1-2-3', date '1-2-3', date '1-2-3')\n"
-            + "   contains (date '1-2-3', date '1-2-3'))\n"
-            + " or false",
-        "(?s).*Encountered \",\" at .*");
-    checkExpFails("true\n"
-            + " or (1, 2) contains (2, 3)\n"
-            + " or false",
-        "(?s).*Encountered \",\" at .*");
+            + "or ^(date '1-2-3', date '1-2-3', date '1-2-3')\n"
+            + "  contains (date '1-2-3', date '1-2-3')^\n"
+            + "or false",
+        cannotApply);
 
-    checkExpFails("$p(x,xx) $op $p(y,yy^,^yyy) or false",
-        "(?s).*Encountered \",\" at .*");
+    checkExpType("true\n"
+            + "or (date '1-2-3', date '1-2-3')\n"
+            + "  contains (date '1-2-3', date '1-2-3')\n"
+            + "or false",
+        "BOOLEAN NOT NULL");
+    // second argument is a point
+    checkExpType("true\n"
+            + "or (date '1-2-3', date '1-2-3')\n"
+            + "  contains date '1-2-3'\n"
+            + "or false",
+        "BOOLEAN NOT NULL");
+    // first argument may be null, so result may be null
+    checkExpType("true\n"
+            + "or (date '1-2-3',\n"
+            + "     case 1 when 2 then date '1-2-3' else null end)\n"
+            + "  contains date '1-2-3'\n"
+            + "or false",
+        "BOOLEAN");
+    // second argument may be null, so result may be null
+    checkExpType("true\n"
+            + "or (date '1-2-3', date '1-2-3')\n"
+            + "  contains case 1 when 1 then date '1-2-3' else null end\n"
+            + "or false",
+        "BOOLEAN");
+    checkExpFails("true\n"
+            + "or ^period (date '1-2-3', date '1-2-3')\n"
+            + "  contains period (date '1-2-3', time '4:5:6')^\n"
+            + "or false",
+        cannotApply);
+    checkExpFails("true\n"
+            + "or ^(1, 2) contains (2, 3)^\n"
+            + "or false",
+        cannotApply);
   }
 
   @Test public void testExtract() {
@@ -8081,11 +8127,17 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
         + "= left\n"
         + "> left\n"
         + ">= left\n"
+        + "CONTAINS left\n"
+        + "EQUALS left\n"
+        + "IMMEDIATELY PRECEDES left\n"
+        + "IMMEDIATELY SUCCEEDS left\n"
         + "IS DISTINCT FROM left\n"
         + "IS NOT DISTINCT FROM left\n"
         + "MEMBER OF left\n"
-        + "OVERLAPS -\n"
+        + "OVERLAPS left\n"
+        + "PRECEDES left\n"
         + "SUBMULTISET OF left\n"
+        + "SUCCEEDS left\n"
         + "\n"
         + "IS A SET post\n"
         + "IS FALSE post\n"
