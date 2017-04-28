@@ -282,47 +282,46 @@ public class DruidDateTimeUtils {
    * @return the granularity, or null if it cannot be inferred
    */
   public static Granularity extractGranularity(RexNode node) {
-    if (node instanceof RexCall) {
-      RexCall call = (RexCall) node;
-      if ((call.getKind() != SqlKind.FLOOR && call.getKind() != SqlKind.EXTRACT)
-          || call.getOperands().size() != 2) {
-        return null;
-      }
-      int flagIndex;
-      if (call.getKind() == SqlKind.EXTRACT) {
-        // EXTRACT
-        flagIndex = 0;
-      } else {
-        // FLOOR
-        flagIndex = 1;
-      }
-      final RexLiteral flag = (RexLiteral) call.operands.get(flagIndex);
-      final TimeUnitRange timeUnit = (TimeUnitRange) flag.getValue();
-      if (timeUnit == null) {
-        return null;
-      }
-      switch (timeUnit) {
-      case YEAR:
-        return Granularity.YEAR;
-      case QUARTER:
-        return Granularity.QUARTER;
-      case MONTH:
-        return Granularity.MONTH;
-      case WEEK:
-        return Granularity.WEEK;
-      case DAY:
-        return Granularity.DAY;
-      case HOUR:
-        return Granularity.HOUR;
-      case MINUTE:
-        return Granularity.MINUTE;
-      case SECOND:
-        return Granularity.SECOND;
-      default:
-        return null;
-      }
+    final int flagIndex;
+    switch (node.getKind()) {
+    case EXTRACT:
+      flagIndex = 0;
+      break;
+    case FLOOR:
+      flagIndex = 1;
+      break;
+    default:
+      return null;
     }
-    return null;
+    final RexCall call = (RexCall) node;
+    if (call.operands.size() != 2) {
+      return null;
+    }
+    final RexLiteral flag = (RexLiteral) call.operands.get(flagIndex);
+    final TimeUnitRange timeUnit = (TimeUnitRange) flag.getValue();
+    if (timeUnit == null) {
+      return null;
+    }
+    switch (timeUnit) {
+    case YEAR:
+      return Granularity.YEAR;
+    case QUARTER:
+      return Granularity.QUARTER;
+    case MONTH:
+      return Granularity.MONTH;
+    case WEEK:
+      return Granularity.WEEK;
+    case DAY:
+      return Granularity.DAY;
+    case HOUR:
+      return Granularity.HOUR;
+    case MINUTE:
+      return Granularity.MINUTE;
+    case SECOND:
+      return Granularity.SECOND;
+    default:
+      return null;
+    }
   }
 
 }

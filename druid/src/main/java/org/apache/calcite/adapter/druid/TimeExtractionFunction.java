@@ -114,8 +114,10 @@ public class TimeExtractionFunction implements ExtractionFunction {
   }
 
   /**
-   * Returns whether the RexCall contains a valid extract unit that we can serialize to druid or not
-   * @param call Extract rexCall
+   * Returns whether the RexCall contains a valid extract unit that we can
+   * serialize to Druid.
+   *
+   * @param call Extract expression
    *
    * @return true if the extract unit is valid
    */
@@ -125,10 +127,7 @@ public class TimeExtractionFunction implements ExtractionFunction {
     }
     final RexLiteral flag = (RexLiteral) call.operands.get(0);
     final TimeUnitRange timeUnit = (TimeUnitRange) flag.getValue();
-    if (timeUnit != null && VALID_TIME_EXTRACT.contains(timeUnit)) {
-      return true;
-    }
-    return false;
+    return timeUnit != null && VALID_TIME_EXTRACT.contains(timeUnit);
   }
 }
 

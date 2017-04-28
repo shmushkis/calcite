@@ -53,7 +53,7 @@ public class TimeExtractionDimensionSpec extends ExtractionDimensionSpec {
   public static TimeExtractionDimensionSpec makeTimeExtract(
       Granularity granularity, String outputName) {
     return new TimeExtractionDimensionSpec(
-      TimeExtractionFunction.createExtractFromGranularity(granularity), outputName);
+        TimeExtractionFunction.createExtractFromGranularity(granularity), outputName);
   }
 
   /**

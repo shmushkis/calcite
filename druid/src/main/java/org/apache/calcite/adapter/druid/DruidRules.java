@@ -467,23 +467,25 @@ public class DruidRules {
             // Already one usage of timestamp column
             return -1;
           }
-          if (call.getKind() == SqlKind.FLOOR) {
+          switch (call.getKind()) {
+          case FLOOR:
             hasFloor = true;
             if (!(call.getOperands().get(0) instanceof RexInputRef)) {
               return -1;
             }
             final RexInputRef ref = (RexInputRef) call.getOperands().get(0);
             if (!(checkTimestampRefOnQuery(ImmutableBitSet.of(ref.getIndex()),
-                query.getTopNode(), query))) {
+                query.getTopNode(),
+                query))) {
               return -1;
             }
             idxTimestamp = i;
-          } else {
-            //Case Extract one or multiple fields from time column
-            if (!TimeExtractionFunction.isValidTimeExtract(call)) {
-              //return -1;
-            }
+            break;
+          case EXTRACT:
             idxTimestamp = RelOptUtil.InputFinder.bits(call).asList().get(0);
+            break;
+          default:
+            throw new AssertionError();
           }
           continue;
         }

@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 
 import java.io.IOException;
 
+import static org.apache.calcite.adapter.druid.DruidQuery.writeField;
 import static org.apache.calcite.adapter.druid.DruidQuery.writeFieldIf;
 
 /**
@@ -36,9 +37,8 @@ public class ExtractionDimensionSpec implements DimensionSpec {
 
   public ExtractionDimensionSpec(String dimension, ExtractionFunction extractionFunction,
       String outputName) {
-    this.dimension = Preconditions.checkNotNull(dimension, "dimension can not be null");
-    this.extractionFunction = Preconditions.checkNotNull(extractionFunction, "Extraction Fn can "
-        + "not be null");
+    this.dimension = Preconditions.checkNotNull(dimension);
+    this.extractionFunction = Preconditions.checkNotNull(extractionFunction);
     this.outputName = outputName;
   }
 
@@ -51,7 +51,7 @@ public class ExtractionDimensionSpec implements DimensionSpec {
     generator.writeStringField("type", "extraction");
     generator.writeStringField("dimension", dimension);
     writeFieldIf(generator, "outputName", outputName);
-    writeFieldIf(generator, "extractionFn", extractionFunction);
+    writeField(generator, "extractionFn", extractionFunction);
     generator.writeEndObject();
   }
 

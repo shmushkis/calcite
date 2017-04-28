@@ -2071,7 +2071,11 @@ public class DruidAdapterIT {
     sql(sql).returnsOrdered("EXPR$0=10\nEXPR$0=11").queryContains(druidChecker(druidQuery));
   }
 
-  @Test public void testTimeExtractThatCanNotBePushed() {
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-1765">[CALCITE-1765]
+   * Druid adapter: Gracefully handle granularity that cannot be pushed to
+   * extraction function</a>. */
+  @Test public void testTimeExtractThatCannotBePushed() {
     final String sql = "SELECT extract(CENTURY from \"timestamp\") from \"foodmart\" where "
         + "\"product_id\" = 1558 group by extract(CENTURY from \"timestamp\")";
     final String plan = "PLAN=EnumerableInterpreter\n"
@@ -2085,4 +2089,5 @@ public class DruidAdapterIT {
         .returnsUnordered("EXPR$0=19");
   }
 }
+
 // End DruidAdapterIT.java

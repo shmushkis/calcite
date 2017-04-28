@@ -552,22 +552,26 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
             final RexCall call = (RexCall) project;
             final Granularity funcGranularity = DruidDateTimeUtils.extractGranularity(call);
             if (funcGranularity != null) {
-              if (call.getKind().equals(SqlKind.EXTRACT)) {
+              final String extractColumnName;
+              switch (call.getKind()) {
+              case EXTRACT:
                 // case extract field from time column
                 finalGranularity = Granularity.ALL;
-                String extractColumnName = SqlValidatorUtil.uniquify(EXTRACT_COLUMN_NAME_PREFIX
-                    + "_" + funcGranularity.value, usedFieldNames, SqlValidatorUtil.EXPR_SUGGESTER);
+                extractColumnName = SqlValidatorUtil.uniquify(EXTRACT_COLUMN_NAME_PREFIX
+                        + "_" + funcGranularity.value, usedFieldNames,
+                    SqlValidatorUtil.EXPR_SUGGESTER);
                 timeExtractionDimensionSpec = TimeExtractionDimensionSpec.makeTimeExtract(
                     funcGranularity, extractColumnName);
                 dimensions.add(timeExtractionDimensionSpec);
                 builder.add(extractColumnName);
-              } else {
+                break;
+              case FLOOR:
                 // case floor time column
                 if (groupSet.cardinality() > 1) {
                   // case we have more than 1 group by key -> then will have druid group by
-                  String extractColumnName = SqlValidatorUtil.uniquify(FLOOR_COLUMN_NAME_PREFIX
-                      + "_" + funcGranularity.value, usedFieldNames, SqlValidatorUtil
-                      .EXPR_SUGGESTER);
+                  extractColumnName = SqlValidatorUtil.uniquify(FLOOR_COLUMN_NAME_PREFIX
+                          + "_" + funcGranularity.value, usedFieldNames,
+                      SqlValidatorUtil.EXPR_SUGGESTER);
                   dimensions.add(
                       TimeExtractionDimensionSpec.makeTimeFloor(funcGranularity,
                           extractColumnName));
@@ -580,6 +584,9 @@ public class DruidQuery extends AbstractRelNode implements BindableRel {
                 }
                 assert timePositionIdx == -1;
                 timePositionIdx = groupKey;
+                break;
+              default:
+                throw new AssertionError();
               }
 
             } else {
