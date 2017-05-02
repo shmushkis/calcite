@@ -19,10 +19,15 @@ package org.apache.calcite.test;
 import org.apache.calcite.adapter.druid.DruidQuery;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionProperty;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.Util;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 
@@ -2099,6 +2104,34 @@ public class DruidAdapterIT {
         + "group by \"product_id\"";
     String druidQuery = "'filter':{'type':'selector','dimension':'product_id','value':''}";
     sql(sql).queryContains(druidChecker(druidQuery));
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-1769">[CALCITE-1769]
+   * Druid adapter: Push down filters involving numeric cast of literals</a>. */
+  @Test public void testPushCastNumeric() {
+    String druidQuery = "'filter':{'type':'bound','dimension':'product_id',"
+        + "'upper':'10','upperStrict':true,'ordering':'lexicographic'}";
+    sql("?")
+        .withRel(new Function<RelBuilder, RelNode>() {
+          public RelNode apply(RelBuilder b) {
+            // select product_id
+            // from foodmart.foodmart
+            // where product_id < cast(10 as varchar)
+            return b.scan("foodmart", "foodmart")
+                .filter(
+                    b.call(SqlStdOperatorTable.LESS_THAN,
+                        b.field("product_id"),
+                        b.getRexBuilder().makeCall(
+                            b.getTypeFactory()
+                                .createSqlType(SqlTypeName.INTEGER),
+                            SqlStdOperatorTable.CAST,
+                            ImmutableList.of(b.literal("10")))))
+                .project(b.field("product_id"))
+                .build();
+          }
+        })
+        .queryContains(druidChecker(druidQuery));
   }
 }
 
