@@ -6883,8 +6883,7 @@ public abstract class SqlOperatorBaseTest {
       case VARCHAR:
         return SqlLiteral.createCharString(value.toString(), SqlParserPos.ZERO);
       case TIMESTAMP:
-        Calendar calendar = Util.calendar();
-        calendar.setTimeInMillis((Long) value);
+        Calendar calendar = Util.calendar((Long) value);
         return SqlLiteral.createTimestamp(calendar, type.getPrecision(),
             SqlParserPos.ZERO);
       default:

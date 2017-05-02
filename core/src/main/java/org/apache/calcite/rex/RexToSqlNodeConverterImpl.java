@@ -21,6 +21,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.util.NlsString;
+import org.apache.calcite.util.TimestampString;
 
 import java.util.Calendar;
 
@@ -83,7 +84,7 @@ public class RexToSqlNodeConverterImpl implements RexToSqlNodeConverter {
     if (SqlTypeFamily.TIMESTAMP.getTypeNames().contains(
         literal.getTypeName())) {
       return SqlLiteral.createTimestamp(
-          (Calendar) literal.getValue(),
+          literal.getValueAs(TimestampString.class),
           0,
           SqlParserPos.ZERO);
     }

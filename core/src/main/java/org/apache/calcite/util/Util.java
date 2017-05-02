@@ -2414,10 +2414,18 @@ public class Util {
     return reader(new FileInputStream(file));
   }
 
-  /** Creates a {@link Calendar} in the GMT time zone and root locale.
+  /** Creates a {@link Calendar} in the UTC time zone and root locale.
    * Does not use the time zone or locale. */
   public static Calendar calendar() {
     return Calendar.getInstance(DateTimeUtils.UTC_ZONE, Locale.ROOT);
+  }
+
+  /** Creates a {@link Calendar} in the UTC time zone and root locale
+   * with a given time. */
+  public static Calendar calendar(long millis) {
+    Calendar calendar = calendar();
+    calendar.setTimeInMillis(millis);
+    return calendar;
   }
 
   //~ Inner Classes ----------------------------------------------------------
