@@ -39,6 +39,7 @@ import com.google.common.collect.Ordering;
 import com.yahoo.sketches.hll.HllSketch;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -726,7 +727,8 @@ public class ProfilerImpl implements Profiler {
           }
           buf.put((byte) 0);
         } else if (value instanceof String) {
-          buf.put((byte) 1).put(((String) value).getBytes());
+          buf.put((byte) 1)
+              .put(((String) value).getBytes(StandardCharsets.UTF_8));
         } else if (value instanceof Double) {
           buf.put((byte) 2).putDouble((Double) value);
         } else if (value instanceof Float) {
@@ -738,7 +740,8 @@ public class ProfilerImpl implements Profiler {
         } else if (value instanceof Boolean) {
           buf.put((Boolean) value ? (byte) 6 : (byte) 7);
         } else {
-          buf.put((byte) 8).put(value.toString().getBytes());
+          buf.put((byte) 8)
+              .put(value.toString().getBytes(StandardCharsets.UTF_8));
         }
       }
       sketch.update(Arrays.copyOf(buf.array(), buf.position()));

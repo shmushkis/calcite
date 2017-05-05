@@ -41,6 +41,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 
 import org.hamcrest.Matcher;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.PreparedStatement;
@@ -288,6 +289,7 @@ public class ProfilerTest {
 
   /** Profiles a star-join query on the Foodmart schema using the breadth-first
    * profiler. */
+  @Ignore
   @Test public void testProfileFoodmart() throws Exception {
     foodmart().factory(Fluid.PROFILER_FACTORY).unordered(
         "{type:distribution,columns:[brand_name],cardinality:111.0,expectedCardinality:86837.0,surprise:0.9974467497814786}",
