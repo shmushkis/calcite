@@ -587,7 +587,7 @@ public class RelBuilderTest {
     RelNode root =
         builder.scan("EMP")
             .aggregate(
-                builder.groupKey(ImmutableBitSet.of(7), true,
+                builder.groupKey(ImmutableBitSet.of(7),
                     ImmutableList.of(ImmutableBitSet.of(7),
                         ImmutableBitSet.of())),
                 builder.aggregateCall(SqlStdOperatorTable.COUNT, false,
@@ -595,7 +595,7 @@ public class RelBuilderTest {
                         builder.field("EMPNO"), builder.literal(100)), "C"))
             .build();
     final String expected = ""
-        + "LogicalAggregate(group=[{7}], groups=[[{7}, {}]], indicator=[true], C=[COUNT() FILTER $8])\n"
+        + "LogicalAggregate(group=[{7}], groups=[[{7}, {}]], C=[COUNT() FILTER $8])\n"
         + "  LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$5], COMM=[$6], DEPTNO=[$7], $f8=[>($0, 100)])\n"
         + "    LogicalTableScan(table=[[scott, EMP]])\n";
     assertThat(str(root), is(expected));
@@ -663,7 +663,7 @@ public class RelBuilderTest {
       RelNode root =
           builder.scan("EMP")
               .aggregate(
-                  builder.groupKey(ImmutableBitSet.of(7), true,
+                  builder.groupKey(ImmutableBitSet.of(7),
                       ImmutableList.of(ImmutableBitSet.of(4),
                           ImmutableBitSet.of())))
               .build();
@@ -679,15 +679,59 @@ public class RelBuilderTest {
     RelNode root =
         builder.scan("EMP")
             .aggregate(
-                builder.groupKey(ImmutableBitSet.of(7, 6), true,
+                builder.groupKey(ImmutableBitSet.of(7, 6),
                     ImmutableList.of(ImmutableBitSet.of(7),
                         ImmutableBitSet.of(6),
                         ImmutableBitSet.of(7))))
             .build();
     final String expected = ""
-        + "LogicalAggregate(group=[{6, 7}], groups=[[{6}, {7}]], indicator=[true])\n"
+        + "LogicalAggregate(group=[{6, 7}], groups=[[{6}, {7}]])\n"
         + "  LogicalTableScan(table=[[scott, EMP]])\n";
     assertThat(str(root), is(expected));
+  }
+
+  @Test public void testAggregateGrouping() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+    RelNode root =
+        builder.scan("EMP")
+            .aggregate(builder.groupKey(6, 7),
+                builder.aggregateCall(SqlStdOperatorTable.GROUPING, false, null,
+                    "g", builder.field("DEPTNO")))
+            .build();
+    final String expected = ""
+        + "LogicalAggregate(group=[{6, 7}], g=[GROUPING($7)])\n"
+        + "  LogicalTableScan(table=[[scott, EMP]])\n";
+    assertThat(str(root), is(expected));
+  }
+
+  @Test public void testAggregateGroupingWithDistinctFails() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+    try {
+      RelNode root =
+          builder.scan("EMP")
+              .aggregate(builder.groupKey(6, 7),
+                  builder.aggregateCall(SqlStdOperatorTable.GROUPING, true, null,
+                      "g", builder.field("DEPTNO")))
+              .build();
+      fail("expected error, got " + root);
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), is("DISTINCT not allowed"));
+    }
+  }
+
+  @Test public void testAggregateGroupingWithFilterFails() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+    try {
+      RelNode root =
+          builder.scan("EMP")
+              .aggregate(builder.groupKey(6, 7),
+                  builder.aggregateCall(SqlStdOperatorTable.GROUPING, false,
+                      builder.literal(true), "g", builder.field("DEPTNO")))
+              .build();
+      fail("expected error, got " + root);
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), is("FILTER not allowed"));
+    }
   }
 
   @Test public void testDistinct() {

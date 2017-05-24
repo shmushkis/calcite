@@ -1076,6 +1076,12 @@ public class RelBuilder {
         final List<Integer> args = registerExpressions(extraNodes, aggCall1.operands);
         final int filterArg = aggCall1.filter == null ? -1
             : registerExpression(extraNodes, aggCall1.filter);
+        if (aggCall1.distinct && !aggCall1.aggFunction.isQuantifierAllowed()) {
+          throw new IllegalArgumentException("DISTINCT not allowed");
+        }
+        if (aggCall1.filter != null && !aggCall1.aggFunction.allowsFilter()) {
+          throw new IllegalArgumentException("FILTER not allowed");
+        }
         aggregateCall =
             AggregateCall.create(aggCall1.aggFunction, aggCall1.distinct, args,
                 filterArg, groupSet.cardinality(), r, null, aggCall1.alias);

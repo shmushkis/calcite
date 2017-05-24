@@ -2158,7 +2158,7 @@ public class RelMetadataTest extends SqlToRelTestBase {
         + "group by grouping sets ((deptno), (ename, deptno))";
     final Map<Class<? extends RelNode>, Integer> expected = new HashMap<>();
     expected.put(TableScan.class, 1);
-    expected.put(Project.class, 3);
+    expected.put(Project.class, 2);
     expected.put(Aggregate.class, 1);
     checkNodeTypeCount(sql, expected);
   }

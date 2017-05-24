@@ -88,6 +88,14 @@ public class SqlAbstractGroupFunction extends SqlAggFunction {
       }
     }
   }
+
+  @Override public boolean isQuantifierAllowed() {
+    return false;
+  }
+
+  @Override public boolean allowsFilter() {
+    return false;
+  }
 }
 
 // End SqlAbstractGroupFunction.java
