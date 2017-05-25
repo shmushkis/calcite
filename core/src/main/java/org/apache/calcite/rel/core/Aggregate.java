@@ -347,7 +347,7 @@ public abstract class Aggregate extends SingleRel {
       final RelDataTypeField field = fieldList.get(groupKey);
       containedNames.add(field.getName());
       builder.add(field);
-      if (!allContain(groupSets, groupKey)) {
+      if (groupSets != null && !allContain(groupSets, groupKey)) {
         builder.nullable(true);
       }
     }

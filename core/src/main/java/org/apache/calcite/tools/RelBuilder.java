@@ -575,9 +575,14 @@ public class RelBuilder {
     return call(SqlStdOperatorTable.NOT, operand);
   }
 
-  /** Creates an =. */
+  /** Creates an {@code =}. */
   public RexNode equals(RexNode operand0, RexNode operand1) {
     return call(SqlStdOperatorTable.EQUALS, operand0, operand1);
+  }
+
+  /** Creates a {@code <>}. */
+  public RexNode notEquals(RexNode operand0, RexNode operand1) {
+    return call(SqlStdOperatorTable.NOT_EQUALS, operand0, operand1);
   }
 
   /** Creates a IS NULL. */

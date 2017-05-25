@@ -2813,7 +2813,7 @@ public class SqlToRelConverter {
         RelOptUtil.createProject(
             bb.root,
             projects,
-            true),
+            false),
         false);
 
     // Tell bb which of group columns are sorted.
