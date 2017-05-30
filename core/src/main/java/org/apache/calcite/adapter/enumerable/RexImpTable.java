@@ -1251,10 +1251,10 @@ public class RexImpTable {
       final int keySize = info.keyTypes().size();
       final List<Integer> keys;
       switch (info.aggregation().kind) {
-      case GROUPING:
+      case GROUP_ID:
         keys = ImmutableIntList.range(0, keySize);
         break;
-      case GROUP_ID:
+      case GROUPING:
         keys = result.call().getArgList();
         break;
       default:
@@ -1277,7 +1277,7 @@ public class RexImpTable {
         }
         return e;
       } else {
-        return Expressions.constant((1L << keySize) - 1);
+        return Expressions.constant((1L << keys.size()) - 1);
       }
     }
   }

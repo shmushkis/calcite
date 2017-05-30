@@ -237,6 +237,7 @@ public class SqlToRelConverter {
   private final SqlNodeToRexConverter exprConverter;
   private int explainParamCount;
   public final SqlToRelConverter.Config config;
+  final RelBuilder relBuilder;
 
   /**
    * Fields used in name resolution for correlated sub-queries.
@@ -317,6 +318,7 @@ public class SqlToRelConverter {
     this.exprConverter = new SqlNodeToRexConverterImpl(convertletTable);
     this.explainParamCount = 0;
     this.config = new ConfigBuilder().withConfig(config).build();
+    this.relBuilder = RelFactories.LOGICAL_BUILDER.create(cluster, null);
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -526,8 +528,6 @@ public class SqlToRelConverter {
    * @return Field trimmer
    */
   protected RelFieldTrimmer newFieldTrimmer() {
-    final RelBuilder relBuilder =
-        RelFactories.LOGICAL_BUILDER.create(cluster, null);
     return new RelFieldTrimmer(validator, relBuilder);
   }
 
@@ -2715,6 +2715,11 @@ public class SqlToRelConverter {
               aggConverter.getAggCalls()),
           false);
 
+//      if (!bb.root.getRowType().getFieldNames().equals(Pair.right(projects))) {
+//        relBuilder.push(bb.root)
+//            .rename(((Aggregate) bb.root).getInput().getRowType().getFieldNames());
+//      }
+
       // Generate NULL values for rolled-up not-null fields.
       final Aggregate aggregate = (Aggregate) bb.root;
       if (aggregate.getGroupType() != Aggregate.Group.SIMPLE && false) { // TODO
@@ -2813,8 +2818,11 @@ public class SqlToRelConverter {
         RelOptUtil.createProject(
             bb.root,
             projects,
-            false),
+            true),
         false);
+//    if (!bb.root.getRowType().getFieldNames().equals(Pair.right(projects))) {
+//      bb.setRoot(RelOptUtil.createRename(bb.root, Pair.right(projects)), false);
+//    }
 
     // Tell bb which of group columns are sorted.
     bb.columnMonotonicities.clear();
@@ -3484,7 +3492,7 @@ public class SqlToRelConverter {
     }
     final Pair<RexNode, Map<String, Integer>> e0 = bb.lookupExp(qualified);
     RexNode e = e0.left;
-    for (String name : qualified.suffixTranslated()) {
+    for (String name : qualified.suffix()) {
       if (e == e0.left && e0.right != null) {
         int i = e0.right.get(name);
         e = rexBuilder.makeFieldAccess(e, i);
@@ -4146,7 +4154,14 @@ public class SqlToRelConverter {
         if (node == null) {
           return null;
         } else {
-          return Pair.of(node, null);
+          final Map<String, Integer> fieldOffsets = new HashMap<>();
+          for (RelDataTypeField f : resolve.rowType().getFieldList()) {
+            if (!fieldOffsets.containsKey(f.getName())) {
+              fieldOffsets.put(f.getName(), f.getIndex());
+            }
+          }
+          final Map<String, Integer> map = ImmutableMap.copyOf(fieldOffsets);
+          return Pair.of(node, map);
         }
       } else {
         // We're referencing a relational expression which has not been
@@ -4171,8 +4186,7 @@ public class SqlToRelConverter {
             builder.addAll(c.getRowType().getFieldList());
             if (i == resolve.path.steps().get(0).i) {
               for (RelDataTypeField field : c.getRowType().getFieldList()) {
-                fields.put(c.translate(field.getName()),
-                    field.getIndex() + offset);
+                fields.put(field.getName(), field.getIndex() + offset);
               }
             }
             ++i;

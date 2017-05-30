@@ -48,7 +48,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -151,7 +150,9 @@ public final class AggregateExpandDistinctAggregatesRule extends RelOptRule {
 
     // If all of the agg expressions are distinct and have the same
     // arguments then we can use a more efficient form.
-    if (nonDistinctCount == 0 && argLists.size() == 1) {
+    if (nonDistinctCount == 0
+        && argLists.size() == 1
+        && aggregate.getGroupSets().size() == 1) {
       final Pair<List<Integer>, Integer> pair =
           Iterables.getOnlyElement(argLists);
       final RelBuilder relBuilder = call.builder();

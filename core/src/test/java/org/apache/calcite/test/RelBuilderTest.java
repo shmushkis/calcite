@@ -487,6 +487,47 @@ public class RelBuilderTest {
     assertThat(str(root), is(expected));
   }
 
+  @Test public void testRename() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+
+    // No rename necessary (null name is ignored)
+    RelNode root =
+        builder.scan("DEPT")
+            .rename(Arrays.asList("DEPTNO", null))
+            .build();
+    final String expected = "LogicalTableScan(table=[[scott, DEPT]])\n";
+    assertThat(str(root), is(expected));
+
+    // No rename necessary (prefix matches)
+    root =
+        builder.scan("DEPT")
+            .rename(ImmutableList.of("DEPTNO"))
+            .build();
+    assertThat(str(root), is(expected));
+
+    // Add project to rename fields
+    root =
+        builder.scan("DEPT")
+            .rename(Arrays.asList("NAME", null, "DEPTNO"))
+            .build();
+    final String expected2 = ""
+        + "LogicalProject(NAME=[$0], DNAME=[$1], DEPTNO=[$2])\n"
+        + "  LogicalTableScan(table=[[scott, DEPT]])\n";
+    assertThat(str(root), is(expected2));
+
+    // Name list too long
+    try {
+      root =
+          builder.scan("DEPT")
+              .rename(ImmutableList.of("NAME", "DEPTNO", "Y", "Z"))
+              .build();
+      fail("expected error, got " + root);
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), is("More names than fields"));
+    }
+    assertThat(str(root), is(expected2));
+  }
+
   @Test public void testPermute() {
     final RelBuilder builder = RelBuilder.create(config().build());
     RelNode root =

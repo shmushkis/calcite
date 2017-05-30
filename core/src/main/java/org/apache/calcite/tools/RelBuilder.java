@@ -966,6 +966,35 @@ public class RelBuilder {
     return project(ImmutableList.copyOf(nodes));
   }
 
+  /** Ensures that the field names match those given.
+   *
+   * <p>If all fields have the same name, adds nothing;
+   * if any fields do not have the same name, adds a {@link Project}.
+   *
+   * <p>Note that the names can be short-lived. Other {@code RelBuilder}
+   * operations make no guarantees about the field names of the rows they
+   * produce.
+   *
+   * @param fieldNames List of desired field names; may contain null values or
+   * have fewer fields than the current row type
+   */
+  public RelBuilder rename(List<String> fieldNames) {
+    final List<String> oldFieldNames = peek().getRowType().getFieldNames();
+    Preconditions.checkArgument(fieldNames.size() <= oldFieldNames.size(),
+        "More names than fields");
+    final List<String> newFieldNames = new ArrayList<>(oldFieldNames);
+    for (int i = 0; i < fieldNames.size(); i++) {
+      final String s = fieldNames.get(i);
+      if (s != null) {
+        newFieldNames.set(i, s);
+      }
+    }
+    if (oldFieldNames.equals(newFieldNames)) {
+      return this;
+    }
+    return project(fields(), newFieldNames, true);
+  }
+
   /** Infers the alias of an expression.
    *
    * <p>If the expression was created by {@link #alias}, replaces the expression
@@ -1009,8 +1038,7 @@ public class RelBuilder {
   /** Creates an {@link org.apache.calcite.rel.core.Aggregate} with a list of
    * calls. */
   public RelBuilder aggregate(GroupKey groupKey, Iterable<AggCall> aggCalls) {
-    final RelDataType inputRowType = peek().getRowType();
-    final List<RexNode> extraNodes = projects(inputRowType);
+    final List<RexNode> extraNodes = new ArrayList<>(fields());
     final GroupKeyImpl groupKey_ = (GroupKeyImpl) groupKey;
     final ImmutableBitSet groupSet =
         ImmutableBitSet.of(registerExpressions(extraNodes, groupKey_.nodes));
@@ -1068,9 +1096,7 @@ public class RelBuilder {
         }
       }
     }
-    if (extraNodes.size() > inputRowType.getFieldCount()) {
-      project(extraNodes);
-    }
+    project(extraNodes);
     final Frame frame = stack.pop();
     final RelNode r = frame.rel;
     final List<AggregateCall> aggregateCalls = new ArrayList<>();
@@ -1145,15 +1171,6 @@ public class RelBuilder {
     }
     stack.push(new Frame(aggregate, fields.build()));
     return this;
-  }
-
-  private List<RexNode> projects(RelDataType inputRowType) {
-    final List<RexNode> exprList = new ArrayList<>();
-    for (RelDataTypeField field : inputRowType.getFieldList()) {
-      final RexBuilder rexBuilder = cluster.getRexBuilder();
-      exprList.add(rexBuilder.makeInputRef(field.getType(), field.getIndex()));
-    }
-    return exprList;
   }
 
   private static int registerExpression(List<RexNode> exprList, RexNode node) {
@@ -1568,9 +1585,8 @@ public class RelBuilder {
   public RelBuilder sortLimit(int offset, int fetch,
       Iterable<? extends RexNode> nodes) {
     final List<RelFieldCollation> fieldCollations = new ArrayList<>();
-    final RelDataType inputRowType = peek().getRowType();
-    final List<RexNode> extraNodes = projects(inputRowType);
-    final List<RexNode> originalExtraNodes = ImmutableList.copyOf(extraNodes);
+    final List<RexNode> originalExtraNodes = fields();
+    final List<RexNode> extraNodes = new ArrayList<>(originalExtraNodes);
     for (RexNode node : nodes) {
       fieldCollations.add(
           collation(node, RelFieldCollation.Direction.ASCENDING, null,

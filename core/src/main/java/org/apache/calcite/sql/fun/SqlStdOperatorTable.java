@@ -194,13 +194,15 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
   public static final SqlInternalOperator GROUPING_SETS =
       new SqlRollupOperator("GROUPING SETS", SqlKind.GROUPING_SETS);
 
-  /** {@code GROUPING} function. Occurs in similar places to an aggregate
+  /** {@code GROUPING(c1 [, c2, ...])} function.
+   *
+   * <p>Occurs in similar places to an aggregate
    * function ({@code SELECT}, {@code HAVING} clause, etc. of an aggregate
    * query), but not technically an aggregate function. */
   public static final SqlGroupingFunction GROUPING =
       new SqlGroupingFunction("GROUPING");
 
-  /** {@code GROUP_ID} function. */
+  /** {@code GROUP_ID()} function. */
   public static final SqlGroupIdFunction GROUP_ID =
       new SqlGroupIdFunction();
 

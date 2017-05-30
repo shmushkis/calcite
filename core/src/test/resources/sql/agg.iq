@@ -489,7 +489,7 @@ select count(*) as c,
   grouping_id(deptno) as gd,
   grouping_id(gender) as gg,
   grouping_id(gender, deptno) as ggd,
-  grouping_id(gender, deptno) as gdg
+  grouping_id(deptno, gender) as gdg
 from emp
 group by deptno, gender;
 +---+---+-----+----+----+-----+-----+
