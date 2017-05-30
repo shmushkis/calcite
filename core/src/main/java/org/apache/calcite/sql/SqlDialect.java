@@ -474,7 +474,7 @@ public class SqlDialect {
         new SimpleDateFormat(
             "'TIMESTAMP' ''yyyy-MM-DD HH:mm:SS''",
             Locale.ROOT);
-    format.setTimeZone(DateTimeUtils.GMT_ZONE);
+    format.setTimeZone(DateTimeUtils.UTC_ZONE);
     return format.format(timestamp);
   }
 
