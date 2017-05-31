@@ -1266,8 +1266,8 @@ public class RexImpTable {
         for (int i : keys) {
           final Expression e2 =
               Expressions.condition(result.keyField(keySize + i),
-                  Expressions.constant(0L),
-                  Expressions.constant(x));
+                  Expressions.constant(x),
+                  Expressions.constant(0L));
           if (i == 0) {
             e = e2;
           } else {
