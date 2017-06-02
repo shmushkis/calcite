@@ -992,7 +992,18 @@ public class RelBuilder {
     if (oldFieldNames.equals(newFieldNames)) {
       return this;
     }
-    return project(fields(), newFieldNames, true);
+    project(fields(), newFieldNames, true);
+
+    // If, after de-duplication, the field names are unchanged, discard the
+    // identity project we just created.
+    if (peek().getRowType().getFieldNames().equals(oldFieldNames)) {
+      final RelNode r = peek();
+      if (r instanceof Project) {
+        stack.pop();
+        push(((Project) r).getInput());
+      }
+    }
+    return this;
   }
 
   /** Infers the alias of an expression.

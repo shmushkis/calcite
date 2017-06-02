@@ -515,6 +515,24 @@ public class RelBuilderTest {
         + "  LogicalTableScan(table=[[scott, DEPT]])\n";
     assertThat(str(root), is(expected2));
 
+    // If our requested list has non-unique names, we might get the same field
+    // names we started with. Don't add a useless project.
+    root =
+        builder.scan("DEPT")
+            .rename(Arrays.asList("DEPTNO", null, "DEPTNO"))
+            .build();
+    final String expected3 = ""
+        + "LogicalProject(DEPTNO=[$0], DNAME=[$1], DEPTNO0=[$2])\n"
+        + "  LogicalTableScan(table=[[scott, DEPT]])\n";
+    assertThat(str(root), is(expected3));
+    root =
+        builder.scan("DEPT")
+            .rename(Arrays.asList("DEPTNO", null, "DEPTNO"))
+            .rename(Arrays.asList("DEPTNO", null, "DEPTNO"))
+            .build();
+    // No extra Project
+    assertThat(str(root), is(expected3));
+
     // Name list too long
     try {
       root =
@@ -525,7 +543,6 @@ public class RelBuilderTest {
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), is("More names than fields"));
     }
-    assertThat(str(root), is(expected2));
   }
 
   @Test public void testPermute() {

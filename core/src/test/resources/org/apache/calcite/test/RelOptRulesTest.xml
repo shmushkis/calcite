@@ -5260,10 +5260,11 @@ LogicalProject(DEPTNO=[$0], DEPTNO0=[$1])
         <Resource name="planAfter">
             <![CDATA[
 LogicalProject(DEPTNO=[$0], DEPTNO0=[$1])
-  LogicalJoin(condition=[=($0, $1)], joinType=[inner])
-    LogicalAggregate(group=[{7}])
-      LogicalTableScan(table=[[CATALOG, SALES, EMP]])
-    LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+  LogicalProject(DEPTNO=[$0], DEPTNO0=[$1])
+    LogicalJoin(condition=[=($0, $1)], joinType=[inner])
+      LogicalAggregate(group=[{7}])
+        LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+      LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
 ]]>
         </Resource>
     </TestCase>
