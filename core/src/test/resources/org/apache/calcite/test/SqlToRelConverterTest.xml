@@ -2495,9 +2495,10 @@ GROUP BY empno, EXPR$2]]>
         </Resource>
         <Resource name="plan">
             <![CDATA[
-LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT()])
-  LogicalProject(EMPNO=[$0], EXPR$2=[$7])
-    LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+LogicalProject(EMPNO=[$0], EXPR$2=[$1], EXPR$20=[$2])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT()])
+    LogicalProject(EMPNO=[$0], EXPR$2=[$7])
+      LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 ]]>
         </Resource>
     </TestCase>
@@ -2617,9 +2618,10 @@ group by hop(rowtime, interval '1' hour, interval '3' hour)]]>
         <Resource name="plan">
             <![CDATA[
 LogicalDelta
-  LogicalAggregate(group=[{0}], C=[COUNT()])
-    LogicalProject($f0=[HOP($0, 3600000, 10800000)])
-      LogicalTableScan(table=[[CATALOG, SALES, ORDERS]])
+  LogicalProject(ROWTIME=[$0], C=[$1])
+    LogicalAggregate(group=[{0}], C=[COUNT()])
+      LogicalProject($f0=[HOP($0, 3600000, 10800000)])
+        LogicalTableScan(table=[[CATALOG, SALES, ORDERS]])
 ]]>
         </Resource>
     </TestCase>

@@ -237,7 +237,7 @@ public class SqlToRelConverter {
   private final SqlNodeToRexConverter exprConverter;
   private int explainParamCount;
   public final SqlToRelConverter.Config config;
-  final RelBuilder relBuilder;
+  private final RelBuilder relBuilder;
 
   /**
    * Fields used in name resolution for correlated sub-queries.
@@ -2654,7 +2654,7 @@ public class SqlToRelConverter {
       aggConverter.addGroupExpr(groupExpr);
     }
 
-    RexNode havingExpr = null;
+    final RexNode havingExpr;
     final List<Pair<RexNode, String>> projects = Lists.newArrayList();
 
     try {
@@ -2759,9 +2759,8 @@ public class SqlToRelConverter {
         SqlNode newHaving = pushDownNotForIn(bb.scope, having);
         replaceSubQueries(bb, newHaving, RelOptUtil.Logic.UNKNOWN_AS_FALSE);
         havingExpr = bb.convertExpression(newHaving);
-        if (havingExpr.isAlwaysTrue()) {
-          havingExpr = null;
-        }
+      } else {
+        havingExpr = relBuilder.literal(true);
       }
 
       // Now convert the other sub-queries in the select list.
@@ -2807,22 +2806,15 @@ public class SqlToRelConverter {
     }
 
     // implement HAVING (we have already checked that it is non-trivial)
+    relBuilder.push(bb.root);
     if (havingExpr != null) {
-      final RelFactories.FilterFactory factory =
-          RelFactories.DEFAULT_FILTER_FACTORY;
-      bb.setRoot(factory.createFilter(bb.root, havingExpr), false);
+      relBuilder.filter(havingExpr);
     }
 
     // implement the SELECT list
-    bb.setRoot(
-        RelOptUtil.createProject(
-            bb.root,
-            projects,
-            true),
-        false);
-//    if (!bb.root.getRowType().getFieldNames().equals(Pair.right(projects))) {
-//      bb.setRoot(RelOptUtil.createRename(bb.root, Pair.right(projects)), false);
-//    }
+    relBuilder.project(Pair.left(projects), Pair.right(projects))
+        .rename(Pair.right(projects));
+    bb.setRoot(relBuilder.build(), false);
 
     // Tell bb which of group columns are sorted.
     bb.columnMonotonicities.clear();
