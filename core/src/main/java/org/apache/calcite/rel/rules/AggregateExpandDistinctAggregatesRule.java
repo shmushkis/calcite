@@ -468,7 +468,7 @@ public final class AggregateExpandDistinctAggregatesRule extends RelOptRule {
     if (!filters.isEmpty()) {
       final List<RexNode> nodes = new ArrayList<>(relBuilder.fields());
       for (int i = z; i < nodes.size(); i++) {
-        nodes.set(i, relBuilder.notEquals(nodes.get(i), relBuilder.literal(0)));
+        nodes.set(i, relBuilder.equals(nodes.get(i), relBuilder.literal(0)));
       }
       relBuilder.project(nodes, relBuilder.peek().getRowType().getFieldNames());
     }

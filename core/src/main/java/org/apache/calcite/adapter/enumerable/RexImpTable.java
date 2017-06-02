@@ -1251,34 +1251,35 @@ public class RexImpTable {
       final int keySize = info.keyTypes().size();
       final List<Integer> keys;
       switch (info.aggregation().kind) {
-      case GROUP_ID:
-        keys = ImmutableIntList.range(0, keySize);
-        break;
-      case GROUPING:
+      case GROUPING: // "GROUPING(e, ...)", also "GROUPING_ID(e, ...)"
         keys = result.call().getArgList();
+        break;
+      case GROUP_ID: // "GROUP_ID()"
+        // We don't implement GROUP_ID properly. In most circumstances, it
+        // returns 0, so we always return 0. Logged
+        // [CALCITE-1824] GROUP_ID returns wrong result
+        keys = ImmutableIntList.of();
         break;
       default:
         throw new AssertionError();
       }
+      Expression e = null;
       if (info.groupSets().size() > 1) {
-        long x = 1;
-        Expression e = Expressions.constant(0, info.returnType());
+        long x = 1L << (keys.size() - 1);
         for (int i : keys) {
           final Expression e2 =
               Expressions.condition(result.keyField(keySize + i),
                   Expressions.constant(x),
                   Expressions.constant(0L));
-          if (i == 0) {
+          if (e == null) {
             e = e2;
           } else {
             e = Expressions.add(e, e2);
           }
-          x <<= 1;
+          x >>= 1;
         }
-        return e;
-      } else {
-        return Expressions.constant((1L << keys.size()) - 1);
       }
+      return e != null ? e : Expressions.constant(0, info.returnType());
     }
   }
 

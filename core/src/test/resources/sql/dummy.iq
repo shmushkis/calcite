@@ -16,23 +16,8 @@
 # limitations under the License.
 #
 !use post
-!set outputformat mysql
-# Duplicate argument to GROUPING_ID.
-select deptno, gender, grouping_id(deptno, gender, deptno), count(*) as c
-from emp
-where deptno = 10
-group by rollup(gender, deptno);
-+--------+--------+--------+---+
-| DEPTNO | GENDER | EXPR$2 | C |
-+--------+--------+--------+---+
-|     10 | F      |      0 | 1 |
-|     10 | M      |      0 | 1 |
-|        | F      |      5 | 1 |
-|        | M      |      5 | 1 |
-|        |        |      7 | 2 |
-+--------+--------+--------+---+
-(5 rows)
-
+values 1;
+EXPR$0
+1
 !ok
-
 # End dummy.iq
