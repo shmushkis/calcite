@@ -467,8 +467,10 @@ public final class AggregateExpandDistinctAggregatesRule extends RelOptRule {
     // values to BOOLEAN.
     if (!filters.isEmpty()) {
       final List<RexNode> nodes = new ArrayList<>(relBuilder.fields());
-      for (int i = z; i < nodes.size(); i++) {
-        nodes.set(i, relBuilder.equals(nodes.get(i), relBuilder.literal(0)));
+      final RexNode nodeZ = nodes.remove(nodes.size() - 1);
+      for (Map.Entry<ImmutableBitSet, Integer> entry : filters.entrySet()) {
+        long v = entry.getKey().cardinality();
+        nodes.add(relBuilder.equals(nodeZ, relBuilder.literal(v)));
       }
       relBuilder.project(nodes, relBuilder.peek().getRowType().getFieldNames());
     }

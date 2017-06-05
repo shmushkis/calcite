@@ -225,6 +225,10 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
               return groupSets;
             }
 
+            public List<Integer> keyOrdinals() {
+              return groupSet.asList();
+            }
+
             public List<? extends RelDataType> keyRelTypes() {
               return EnumUtils.fieldRowTypes(inputRowType, null,
                   groupSet.asList());

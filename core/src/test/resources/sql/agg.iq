@@ -482,6 +482,40 @@ group by deptno;
 
 !ok
 
+!use scott
+
+# GROUPING in SELECT clause of CUBE query
+select deptno, job, count(*) as c, grouping(deptno) as d,
+  grouping(job) j, grouping(deptno, job) as x
+from "scott".emp
+group by cube(deptno, job);
++--------+-----------+----+---+---+---+
+| DEPTNO | JOB       | C  | D | J | X |
++--------+-----------+----+---+---+---+
+|     10 | CLERK     |  1 | 0 | 0 | 0 |
+|     10 | MANAGER   |  1 | 0 | 0 | 0 |
+|     10 | PRESIDENT |  1 | 0 | 0 | 0 |
+|     10 |           |  3 | 0 | 1 | 1 |
+|     20 | ANALYST   |  2 | 0 | 0 | 0 |
+|     20 | CLERK     |  2 | 0 | 0 | 0 |
+|     20 | MANAGER   |  1 | 0 | 0 | 0 |
+|     20 |           |  5 | 0 | 1 | 1 |
+|     30 | CLERK     |  1 | 0 | 0 | 0 |
+|     30 | MANAGER   |  1 | 0 | 0 | 0 |
+|     30 | SALESMAN  |  4 | 0 | 0 | 0 |
+|     30 |           |  6 | 0 | 1 | 1 |
+|        | ANALYST   |  2 | 1 | 0 | 2 |
+|        | CLERK     |  4 | 1 | 0 | 2 |
+|        | MANAGER   |  3 | 1 | 0 | 2 |
+|        | PRESIDENT |  1 | 1 | 0 | 2 |
+|        | SALESMAN  |  4 | 1 | 0 | 2 |
+|        |           | 14 | 1 | 1 | 3 |
++--------+-----------+----+---+---+---+
+(18 rows)
+!ok
+
+!use post
+
 # GROUPING, GROUP_ID, GROUPING_ID in SELECT clause of GROUP BY query
 select count(*) as c,
   grouping(deptno) as g,
@@ -798,6 +832,9 @@ select deptno
 
 # From http://rwijk.blogspot.com/2008/12/groupid.html
 # (replacing "to_char(...)" with "cast(... as varchar)")
+# The current results are incorrect. When
+#   [CALCITE-1824] GROUP_ID returns wrong result
+# is fixed, there will be 4 more rows.
 select deptno
        , job
        , empno
@@ -822,39 +859,38 @@ select deptno
        , job
        , empno;
 
-DEPTNO JOB        EMPNO ENAME      SUMSAL GR_TEXT
------- --------- ------ ---------- ------ ---------------------------------
-    10 CLERK       7934 MILLER       1300 grouped by deptno,job,empno,ename
-    10 CLERK                         1300 grouped by deptno,job
-    10 MANAGER     7782 CLARK        2450 grouped by deptno,job,empno,ename
-    10 MANAGER                       2450 grouped by deptno,job
-    10 PRESIDENT   7839 KING         5000 grouped by deptno,job,empno,ename
-    10 PRESIDENT                     5000 grouped by deptno,job
-    10                               8750 grouped by deptno, grouping set 4
-    10                               8750 grouped by deptno, grouping set 3
-    20 ANALYST     7788 SCOTT        3000 grouped by deptno,job,empno,ename
-    20 ANALYST     7902 FORD         3000 grouped by deptno,job,empno,ename
-    20 ANALYST                       6000 grouped by deptno,job
-    20 CLERK       7369 SMITH         800 grouped by deptno,job,empno,ename
-    20 CLERK       7876 ADAMS        1100 grouped by deptno,job,empno,ename
-    20 CLERK                         1900 grouped by deptno,job
-    20 MANAGER     7566 JONES        2975 grouped by deptno,job,empno,ename
-    20 MANAGER                       2975 grouped by deptno,job
-    20                              10875 grouped by deptno, grouping set 3
-    20                              10875 grouped by deptno, grouping set 4
-    30 CLERK       7900 JAMES         950 grouped by deptno,job,empno,ename
-    30 CLERK                          950 grouped by deptno,job
-    30 MANAGER     7698 BLAKE        2850 grouped by deptno,job,empno,ename
-    30 MANAGER                       2850 grouped by deptno,job
-    30 SALESMAN    7499 ALLEN        1600 grouped by deptno,job,empno,ename
-    30 SALESMAN    7521 WARD         1250 grouped by deptno,job,empno,ename
-    30 SALESMAN    7654 MARTIN       1250 grouped by deptno,job,empno,ename
-    30 SALESMAN    7844 TURNER       1500 grouped by deptno,job,empno,ename
-    30 SALESMAN                      5600 grouped by deptno,job
-    30                               9400 grouped by deptno, grouping set 3
-    30                               9400 grouped by deptno, grouping set 4
-                                    29025 grouped by (), grouping set 5
-                                    29025 grouped by (), grouping set 6
++--------+-----------+-------+--------+----------+-----------------------------------+
+| DEPTNO | JOB       | EMPNO | ENAME  | SUMSAL   | GR_TEXT                           |
++--------+-----------+-------+--------+----------+-----------------------------------+
+|     10 | CLERK     |  7934 | MILLER |  1300.00 | grouped by deptno,job,empno,ename |
+|     10 | CLERK     |       |        |  1300.00 | grouped by deptno,job             |
+|     10 | MANAGER   |  7782 | CLARK  |  2450.00 | grouped by deptno,job,empno,ename |
+|     10 | MANAGER   |       |        |  2450.00 | grouped by deptno,job             |
+|     10 | PRESIDENT |  7839 | KING   |  5000.00 | grouped by deptno,job,empno,ename |
+|     10 | PRESIDENT |       |        |  5000.00 | grouped by deptno,job             |
+|     10 |           |       |        |  8750.00 | grouped by deptno, grouping set 3 |
+|     20 | ANALYST   |  7788 | SCOTT  |  3000.00 | grouped by deptno,job,empno,ename |
+|     20 | ANALYST   |  7902 | FORD   |  3000.00 | grouped by deptno,job,empno,ename |
+|     20 | ANALYST   |       |        |  6000.00 | grouped by deptno,job             |
+|     20 | CLERK     |  7369 | SMITH  |   800.00 | grouped by deptno,job,empno,ename |
+|     20 | CLERK     |  7876 | ADAMS  |  1100.00 | grouped by deptno,job,empno,ename |
+|     20 | CLERK     |       |        |  1900.00 | grouped by deptno,job             |
+|     20 | MANAGER   |  7566 | JONES  |  2975.00 | grouped by deptno,job,empno,ename |
+|     20 | MANAGER   |       |        |  2975.00 | grouped by deptno,job             |
+|     20 |           |       |        | 10875.00 | grouped by deptno, grouping set 3 |
+|     30 | CLERK     |  7900 | JAMES  |   950.00 | grouped by deptno,job,empno,ename |
+|     30 | CLERK     |       |        |   950.00 | grouped by deptno,job             |
+|     30 | MANAGER   |  7698 | BLAKE  |  2850.00 | grouped by deptno,job,empno,ename |
+|     30 | MANAGER   |       |        |  2850.00 | grouped by deptno,job             |
+|     30 | SALESMAN  |  7499 | ALLEN  |  1600.00 | grouped by deptno,job,empno,ename |
+|     30 | SALESMAN  |  7521 | WARD   |  1250.00 | grouped by deptno,job,empno,ename |
+|     30 | SALESMAN  |  7654 | MARTIN |  1250.00 | grouped by deptno,job,empno,ename |
+|     30 | SALESMAN  |  7844 | TURNER |  1500.00 | grouped by deptno,job,empno,ename |
+|     30 | SALESMAN  |       |        |  5600.00 | grouped by deptno,job             |
+|     30 |           |       |        |  9400.00 | grouped by deptno, grouping set 3 |
+|        |           |       |        | 29025.00 | grouped by (), grouping set 5     |
++--------+-----------+-------+--------+----------+-----------------------------------+
+(27 rows)
 
 !ok
 
@@ -1195,6 +1231,7 @@ select deptno,
  sum(sal) as s
 from "scott".emp
 group by deptno;
+!plan
 +--------+----+---+---+----------+
 | DEPTNO | DJ | J | M | S        |
 +--------+----+---+---+----------+

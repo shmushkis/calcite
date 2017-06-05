@@ -795,6 +795,10 @@ public class EnumerableWindow extends Window implements EnumerableRel {
               throw new UnsupportedOperationException();
             }
 
+            public List<Integer> keyOrdinals() {
+              throw new UnsupportedOperationException();
+            }
+
             public List<? extends RelDataType> keyRelTypes() {
               throw new UnsupportedOperationException();
             }

@@ -69,6 +69,9 @@ public interface AggContext {
    */
   List<? extends Type> parameterTypes();
 
+  /** Returns the ordinals of the input fields that make up the key. */
+  List<Integer> keyOrdinals();
+
   /**
    * Returns the types of the group key as
    * {@link org.apache.calcite.rel.type.RelDataType}.

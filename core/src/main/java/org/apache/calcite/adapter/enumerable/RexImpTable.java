@@ -1248,7 +1248,6 @@ public class RexImpTable {
 
     public Expression implementResult(AggContext info,
         AggResultContext result) {
-      final int keySize = info.keyTypes().size();
       final List<Integer> keys;
       switch (info.aggregation().kind) {
       case GROUPING: // "GROUPING(e, ...)", also "GROUPING_ID(e, ...)"
@@ -1265,10 +1264,13 @@ public class RexImpTable {
       }
       Expression e = null;
       if (info.groupSets().size() > 1) {
+        final List<Integer> keyOrdinals = info.keyOrdinals();
         long x = 1L << (keys.size() - 1);
-        for (int i : keys) {
+        for (int k : keys) {
+          final int i = keyOrdinals.indexOf(k);
+          assert i >= 0;
           final Expression e2 =
-              Expressions.condition(result.keyField(keySize + i),
+              Expressions.condition(result.keyField(keyOrdinals.size() + i),
                   Expressions.constant(x),
                   Expressions.constant(0L));
           if (e == null) {
