@@ -469,7 +469,7 @@ public final class AggregateExpandDistinctAggregatesRule extends RelOptRule {
       final List<RexNode> nodes = new ArrayList<>(relBuilder.fields());
       final RexNode nodeZ = nodes.remove(nodes.size() - 1);
       for (Map.Entry<ImmutableBitSet, Integer> entry : filters.entrySet()) {
-        long v = entry.getKey().cardinality();
+        long v = groupValue(fullGroupSet, entry.getKey());
         nodes.add(relBuilder.equals(nodeZ, relBuilder.literal(v)));
       }
       relBuilder.project(nodes, relBuilder.peek().getRowType().getFieldNames());
@@ -507,6 +507,20 @@ public final class AggregateExpandDistinctAggregatesRule extends RelOptRule {
         newCalls);
     relBuilder.convert(aggregate.getRowType(), true);
     call.transformTo(relBuilder.build());
+  }
+
+  private static long groupValue(ImmutableBitSet fullGroupSet,
+      ImmutableBitSet groupSet) {
+    long v = 0;
+    long x = 1L;
+    assert fullGroupSet.contains(groupSet);
+    for (int i : fullGroupSet) {
+      if (!groupSet.get(i)) {
+        v |= x;
+      }
+      x <<= 1;
+    }
+    return v;
   }
 
   private static String indicatorName(ImmutableBitSet bitSet) {
