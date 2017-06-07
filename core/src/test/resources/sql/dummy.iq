@@ -15,21 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-!use scott
-!set outputformat mysql
-# Multiple distinct count
-select deptno,
- count(distinct job) as j, count(distinct mgr) as m
-from "scott".emp
-group by deptno;
-+--------+---+---+
-| DEPTNO | J | M |
-+--------+---+---+
-|     10 | 3 | 2 |
-|     20 | 3 | 4 |
-|     30 | 3 | 2 |
-+--------+---+---+
-(3 rows)
-
+!use post
+values 1;
+EXPR$0
+1
 !ok
 # End dummy.iq

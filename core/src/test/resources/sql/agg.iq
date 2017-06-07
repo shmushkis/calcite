@@ -1232,7 +1232,6 @@ select deptno,
  sum(sal) as s
 from "scott".emp
 group by deptno;
-!plan
 +--------+----+---+---+----------+
 | DEPTNO | DJ | J | M | S        |
 +--------+----+---+---+----------+

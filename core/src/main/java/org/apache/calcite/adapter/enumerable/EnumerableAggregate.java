@@ -105,7 +105,6 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
         builder.append(
             "child",
             result.block);
-    final RelDataType inputRowType = getInput().getRowType();
 
     final PhysType physType =
         PhysTypeImpl.of(
@@ -197,49 +196,8 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
 
     final List<Type> aggStateTypes = new ArrayList<>();
     for (final AggImpState agg : aggs) {
-      agg.context =
-          new AggContext() {
-            public SqlAggFunction aggregation() {
-              return agg.call.getAggregation();
-            }
-
-            public RelDataType returnRelType() {
-              return agg.call.type;
-            }
-
-            public Type returnType() {
-              return EnumUtils.javaClass(typeFactory, returnRelType());
-            }
-
-            public List<? extends RelDataType> parameterRelTypes() {
-              return EnumUtils.fieldRowTypes(inputRowType, null,
-                  agg.call.getArgList());
-            }
-
-            public List<? extends Type> parameterTypes() {
-              return EnumUtils.fieldTypes(typeFactory,
-                  parameterRelTypes());
-            }
-
-            public List<ImmutableBitSet> groupSets() {
-              return groupSets;
-            }
-
-            public List<Integer> keyOrdinals() {
-              return groupSet.asList();
-            }
-
-            public List<? extends RelDataType> keyRelTypes() {
-              return EnumUtils.fieldRowTypes(inputRowType, null,
-                  groupSet.asList());
-            }
-
-            public List<? extends Type> keyTypes() {
-              return EnumUtils.fieldTypes(typeFactory, keyRelTypes());
-            }
-          };
-      List<Type> state =
-          agg.implementor.getStateType(agg.context);
+      agg.context = new AggContextImpl(agg, typeFactory);
+      final List<Type> state = agg.implementor.getStateType(agg.context);
 
       if (state.isEmpty()) {
         agg.state = ImmutableList.of();
@@ -269,8 +227,7 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
     }
 
     final PhysType accPhysType =
-        PhysTypeImpl.of(
-            typeFactory,
+        PhysTypeImpl.of(typeFactory,
             typeFactory.createSyntheticType(aggStateTypes));
 
 
@@ -490,6 +447,56 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
                       .appendIfNotNull(keyPhysType.comparer()))));
     }
     return implementor.result(physType, builder.toBlock());
+  }
+
+  private class AggContextImpl implements AggContext {
+    private final AggImpState agg;
+    private final JavaTypeFactory typeFactory;
+
+    public AggContextImpl(AggImpState agg, JavaTypeFactory typeFactory) {
+      this.agg = agg;
+      this.typeFactory = typeFactory;
+    }
+
+    public SqlAggFunction aggregation() {
+      return agg.call.getAggregation();
+    }
+
+    public RelDataType returnRelType() {
+      return agg.call.type;
+    }
+
+    public Type returnType() {
+      return EnumUtils.javaClass(typeFactory, returnRelType());
+    }
+
+    public List<? extends RelDataType> parameterRelTypes() {
+      return EnumUtils.fieldRowTypes(getInput().getRowType(), null,
+          agg.call.getArgList());
+    }
+
+    public List<? extends Type> parameterTypes() {
+      return EnumUtils.fieldTypes(
+          typeFactory,
+          parameterRelTypes());
+    }
+
+    public List<ImmutableBitSet> groupSets() {
+      return groupSets;
+    }
+
+    public List<Integer> keyOrdinals() {
+      return groupSet.asList();
+    }
+
+    public List<? extends RelDataType> keyRelTypes() {
+      return EnumUtils.fieldRowTypes(getInput().getRowType(), null,
+          groupSet.asList());
+    }
+
+    public List<? extends Type> keyTypes() {
+      return EnumUtils.fieldTypes(typeFactory, keyRelTypes());
+    }
   }
 }
 

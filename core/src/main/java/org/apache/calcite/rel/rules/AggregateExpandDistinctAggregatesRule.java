@@ -162,7 +162,7 @@ public final class AggregateExpandDistinctAggregatesRule extends RelOptRule {
     }
 
     if (useGroupingSets) {
-      rewriteUsingGroupingSets(call, aggregate, argLists);
+      rewriteUsingGroupingSets(call, aggregate);
       return;
     }
 
@@ -421,17 +421,19 @@ public final class AggregateExpandDistinctAggregatesRule extends RelOptRule {
     return relBuilder;
   }
 
-  @SuppressWarnings("DanglingJavadoc")
   private void rewriteUsingGroupingSets(RelOptRuleCall call,
-      Aggregate aggregate, Set<Pair<List<Integer>, Integer>> argLists) {
+      Aggregate aggregate) {
     final Set<ImmutableBitSet> groupSetTreeSet =
         new TreeSet<>(ImmutableBitSet.ORDERING);
-    groupSetTreeSet.add(aggregate.getGroupSet());
-    for (Pair<List<Integer>, Integer> argList : argLists) {
-      groupSetTreeSet.add(
-          ImmutableBitSet.of(argList.left)
-              .setIf(argList.right, argList.right >= 0)
-              .union(aggregate.getGroupSet()));
+    for (AggregateCall aggCall : aggregate.getAggCallList()) {
+      if (!aggCall.isDistinct()) {
+        groupSetTreeSet.add(aggregate.getGroupSet());
+      } else {
+        groupSetTreeSet.add(
+            ImmutableBitSet.of(aggCall.getArgList())
+                .setIf(aggCall.filterArg, aggCall.filterArg >= 0)
+                .union(aggregate.getGroupSet()));
+      }
     }
 
     final ImmutableList<ImmutableBitSet> groupSets =
@@ -470,9 +472,12 @@ public final class AggregateExpandDistinctAggregatesRule extends RelOptRule {
       final RexNode nodeZ = nodes.remove(nodes.size() - 1);
       for (Map.Entry<ImmutableBitSet, Integer> entry : filters.entrySet()) {
         long v = groupValue(fullGroupSet, entry.getKey());
-        nodes.add(relBuilder.equals(nodeZ, relBuilder.literal(v)));
+        nodes.add(
+            relBuilder.alias(
+                relBuilder.equals(nodeZ, relBuilder.literal(v)),
+                "$g_" + v));
       }
-      relBuilder.project(nodes, relBuilder.peek().getRowType().getFieldNames());
+      relBuilder.project(nodes);
     }
 
     int x = groupCount;
@@ -512,13 +517,13 @@ public final class AggregateExpandDistinctAggregatesRule extends RelOptRule {
   private static long groupValue(ImmutableBitSet fullGroupSet,
       ImmutableBitSet groupSet) {
     long v = 0;
-    long x = 1L;
+    long x = 1L << (fullGroupSet.cardinality() - 1);
     assert fullGroupSet.contains(groupSet);
     for (int i : fullGroupSet) {
       if (!groupSet.get(i)) {
         v |= x;
       }
-      x <<= 1;
+      x >>= 1;
     }
     return v;
   }
