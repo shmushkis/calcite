@@ -451,11 +451,11 @@ public final class AggregateExpandDistinctAggregatesRule extends RelOptRule {
 
     final Map<ImmutableBitSet, Integer> filters = new LinkedHashMap<>();
     final int z = groupCount + distinctAggCalls.size();
+    distinctAggCalls.add(
+        AggregateCall.create(SqlStdOperatorTable.GROUPING, false,
+            ImmutableIntList.copyOf(fullGroupSet), -1, groupSets.size(),
+            relBuilder.peek(), null, "$g"));
     for (Ord<ImmutableBitSet> groupSet : Ord.zip(groupSets)) {
-      distinctAggCalls.add(
-          AggregateCall.create(SqlStdOperatorTable.GROUPING, false,
-              ImmutableIntList.copyOf(groupSet.e), -1, groupSets.size(),
-              relBuilder.peek(), null, indicatorName(groupSet.e)));
       filters.put(groupSet.e, z + groupSet.i);
     }
 
@@ -521,14 +521,6 @@ public final class AggregateExpandDistinctAggregatesRule extends RelOptRule {
       x <<= 1;
     }
     return v;
-  }
-
-  private static String indicatorName(ImmutableBitSet bitSet) {
-    final StringBuilder buf = new StringBuilder("$i");
-    for (int key : bitSet) {
-      buf.append(key).append('_');
-    }
-    return buf.substring(0, buf.length() - 1);
   }
 
   private static ImmutableBitSet remap(ImmutableBitSet groupSet,
