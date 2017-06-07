@@ -41,10 +41,11 @@ public class AggResultContextImpl extends AggResetContextImpl
    * @param block Code block that will contain the result calculation statements
    * @param call Aggregate call
    * @param accumulator Accumulator variables that store the intermediate
+   *                    aggregate state
    * @param key Key
    */
-  public AggResultContextImpl(BlockBuilder block,
-      AggregateCall call, List<Expression> accumulator, ParameterExpression key,
+  public AggResultContextImpl(BlockBuilder block, AggregateCall call,
+      List<Expression> accumulator, ParameterExpression key,
       PhysType keyPhysType) {
     super(block, accumulator);
     this.call = call;

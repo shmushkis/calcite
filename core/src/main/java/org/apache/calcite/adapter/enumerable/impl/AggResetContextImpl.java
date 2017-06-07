@@ -33,9 +33,10 @@ public abstract class AggResetContextImpl extends NestedBlockBuilderImpl
   private final List<Expression> accumulator;
 
   /**
-   * Creates aggregate reset context
-   * @param block code block that will contain the added initialization
-   * @param accumulator accumulator variables that store the intermediate
+   * Creates aggregate reset context.
+   *
+   * @param block Code block that will contain the added initialization
+   * @param accumulator Accumulator variables that store the intermediate
    *                    aggregate state
    */
   public AggResetContextImpl(BlockBuilder block, List<Expression> accumulator) {

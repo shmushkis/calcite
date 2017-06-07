@@ -1685,7 +1685,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     if ((node instanceof SqlDynamicParam) || isNullLiteral) {
       if (inferredType.equals(unknownType)) {
         if (isNullLiteral) {
-//          throw newValidationError(node, RESOURCE.nullIllegal());
+          throw newValidationError(node, RESOURCE.nullIllegal());
         } else {
           throw newValidationError(node, RESOURCE.dynamicParamIllegal());
         }

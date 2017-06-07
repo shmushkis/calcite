@@ -46,6 +46,7 @@ import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -67,6 +68,8 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
       List<AggregateCall> aggCalls)
       throws InvalidRelException {
     super(cluster, traitSet, child, indicator, groupSet, groupSets, aggCalls);
+    Preconditions.checkArgument(!indicator,
+        "EnumerableAggregate no longer supports indicator fields");
     assert getConvention() instanceof EnumerableConvention;
 
     for (AggregateCall aggCall : aggCalls) {
@@ -178,7 +181,6 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
         inputPhysType.project(groupSet.asList(), getGroupType() != Group.SIMPLE,
             JavaRowFormat.LIST);
     final int groupCount = getGroupCount();
-    final int indicatorCount = getIndicatorCount(); // TODO: remove; always 0
 
     final List<AggImpState> aggs = new ArrayList<>(aggCalls.size());
     for (Ord<AggregateCall> call : Ord.zip(aggCalls)) {
@@ -347,7 +349,7 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
     } else {
       final Type keyType = keyPhysType.getJavaRowType();
       key_ = Expressions.parameter(keyType, "key");
-      for (int j = 0; j < groupCount + indicatorCount; j++) {
+      for (int j = 0; j < groupCount; j++) {
         final Expression ref = keyPhysType.fieldReference(key_, j);
         if (getGroupType() == Group.SIMPLE) {
           results.add(ref);
@@ -449,11 +451,12 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
     return implementor.result(physType, builder.toBlock());
   }
 
+  /** An implementation of {@link AggContext}. */
   private class AggContextImpl implements AggContext {
     private final AggImpState agg;
     private final JavaTypeFactory typeFactory;
 
-    public AggContextImpl(AggImpState agg, JavaTypeFactory typeFactory) {
+    AggContextImpl(AggImpState agg, JavaTypeFactory typeFactory) {
       this.agg = agg;
       this.typeFactory = typeFactory;
     }

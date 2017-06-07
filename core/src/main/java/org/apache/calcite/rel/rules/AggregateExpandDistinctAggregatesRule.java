@@ -471,7 +471,7 @@ public final class AggregateExpandDistinctAggregatesRule extends RelOptRule {
       final List<RexNode> nodes = new ArrayList<>(relBuilder.fields());
       final RexNode nodeZ = nodes.remove(nodes.size() - 1);
       for (Map.Entry<ImmutableBitSet, Integer> entry : filters.entrySet()) {
-        long v = groupValue(fullGroupSet, entry.getKey());
+        final long v = groupValue(fullGroupSet, entry.getKey());
         nodes.add(
             relBuilder.alias(
                 relBuilder.equals(nodeZ, relBuilder.literal(v)),

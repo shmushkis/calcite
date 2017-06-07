@@ -209,6 +209,7 @@ public class RelFactories {
     public RelNode createAggregate(RelNode input, boolean indicator,
         ImmutableBitSet groupSet, ImmutableList<ImmutableBitSet> groupSets,
         List<AggregateCall> aggCalls) {
+      //noinspection deprecation
       return LogicalAggregate.create(input, indicator,
           groupSet, groupSets, aggCalls);
     }

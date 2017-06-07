@@ -1276,7 +1276,7 @@ public class RelMetadataTest extends SqlToRelTestBase {
 
     // Aggregate
     final LogicalAggregate aggregate =
-        LogicalAggregate.create(join, false, ImmutableBitSet.of(2, 0),
+        LogicalAggregate.create(join, ImmutableBitSet.of(2, 0),
             ImmutableList.<ImmutableBitSet>of(),
             ImmutableList.of(
                 AggregateCall.create(
@@ -2192,8 +2192,10 @@ public class RelMetadataTest extends SqlToRelTestBase {
    *
    * <p>For example:
    *
-   * <pre>List&lt;Integer&gt; ints = Arrays.asList(2, 500, 12);
-   * assertThat(ints, sortsAs("[12, 2, 500]");</pre>
+   * <blockquote><code>
+   * List&lt;Integer&gt; ints = Arrays.asList(2, 500, 12);<br>
+   * assertThat(ints, sortsAs("[12, 2, 500]");
+   * </code></blockquote>
    */
   static <T> Matcher<Iterable<? extends T>> sortsAs(final String value) {
     return new CustomTypeSafeMatcher<Iterable<? extends T>>(value) {
