@@ -75,7 +75,7 @@ public class SortRemoveRedundant extends RelOptRule {
       return;
     }
 
-    // None of the group expressions are constant. Nothing to do.
+    // No active collations. Remove the sort completely
     if (collationsList.isEmpty()) {
       final RelCollation collation = sort.getCollation();
       final RelTraitSet traits = sort.getInput().getTraitSet().replace(collation);
