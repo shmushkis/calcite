@@ -91,6 +91,7 @@ import org.apache.calcite.util.Litmus;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -269,6 +270,7 @@ public class MockCatalogReader extends CalciteCatalogReader {
     bonusTable.addColumn("JOB", f.varchar10Type);
     bonusTable.addColumn("SAL", f.intType);
     bonusTable.addColumn("COMM", f.intType);
+    bonusTable.addMonotonic("JOB", "ENAME");
     registerTable(bonusTable);
 
     // Register "SALGRADE" table.
@@ -681,6 +683,7 @@ public class MockCatalogReader extends CalciteCatalogReader {
     protected StructKind kind = StructKind.FULLY_QUALIFIED;
     protected final ColumnResolver resolver;
     protected final InitializerExpressionFactory initializerFactory;
+    private final List<List<String>> sortKeys = new ArrayList<>();
 
     public MockTable(MockCatalogReader catalogReader, String catalogName,
         String schemaName, String name, boolean stream, double rowCount,
@@ -911,9 +914,13 @@ public class MockCatalogReader extends CalciteCatalogReader {
       columnList.add(Pair.of(name, type));
     }
 
-    public void addMonotonic(String name) {
-      monotonicColumnSet.add(name);
-      assert Pair.left(columnList).contains(name);
+    public void addMonotonic(String... names) {
+      Preconditions.checkArgument(names.length >= 1);
+      monotonicColumnSet.add(names[0]);
+      for (String name : names) {
+        Preconditions.checkArgument(Pair.left(columnList).contains(name));
+      }
+      sortKeys.add(ImmutableList.copyOf(names));
     }
 
     public void setKind(StructKind kind) {

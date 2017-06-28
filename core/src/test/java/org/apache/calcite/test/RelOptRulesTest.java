@@ -84,7 +84,6 @@ import org.apache.calcite.rel.rules.SemiJoinRule;
 import org.apache.calcite.rel.rules.SortJoinTransposeRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
 import org.apache.calcite.rel.rules.SortRemoveEquivalenceRule;
-import org.apache.calcite.rel.rules.SortRemoveRule;
 import org.apache.calcite.rel.rules.SortUnionTransposeRule;
 import org.apache.calcite.rel.rules.SubQueryRemoveRule;
 import org.apache.calcite.rel.rules.TableScanRule;
@@ -2177,13 +2176,18 @@ public class RelOptRulesTest extends RelOptTestBase {
     sql(sql).with(program).check();
   }
 
-  @Test public void testSortRemove() throws Exception {
+  /** Tests planning an ORDER BY query on a sorted table. After adding a
+   * constant key to the ORDER BY expression, it matches the natural order of
+   * the table. BONUS is sorted on (JOB, ENAME). */
+  @Test public void testSortRemoveConstantKeys4() {
     final HepProgram program = new HepProgramBuilder()
-        .addRuleInstance(SortRemoveRule.INSTANCE)
+        .addRuleInstance(AggregateProjectPullUpConstantsRule.INSTANCE2)
         .build();
-    final String sql = "select * from emp\n"
-        + "order by empno, deptno desc";
-    sql(sql).withTester(collationAwareTester()).with(program).check();
+    final String sql = "select *\n"
+        + "from sales.bonus\n"
+        + "where job = 'Clerk'\n"
+        + "order by ename";
+    checkPlanning(new HepPlanner(program), sql);
   }
 
   private void basePushAggThroughUnion() throws Exception {
