@@ -2069,13 +2069,11 @@ LogicalSort(sort0=[$1], dir0=[ASC])
         </Resource>
         <Resource name="planAfter">
             <![CDATA[
-LogicalSort(sort0=[$1], dir0=[ASC])
-  LogicalProject(C=[$2], DEPTNO=[$0])
-    LogicalProject(DEPTNO=[10], SAL=[$0], C=[$1])
-      LogicalAggregate(group=[{1}], C=[COUNT()])
-        LogicalProject(DEPTNO=[$7], SAL=[$5])
-          LogicalFilter(condition=[=($7, 10)])
-            LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+LogicalProject(C=[$2], DEPTNO=[$0])
+  LogicalAggregate(group=[{0, 1}], C=[COUNT()])
+    LogicalProject(DEPTNO=[$7], SAL=[$5])
+      LogicalFilter(condition=[=($7, 10)])
+        LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 ]]>
         </Resource>
     </TestCase>
