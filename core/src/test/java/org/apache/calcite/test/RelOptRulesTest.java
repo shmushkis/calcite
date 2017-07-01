@@ -508,7 +508,7 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkPlanning(program, sql);
   }
 
-  @Test public void testSortConstantRemoval2() {
+  @Test public void testSortConstantRemoval() {
     final HepProgram program = new HepProgramBuilder()
             .addRuleInstance(SortRemoveRedundant.INSTANCE)
             .build();
@@ -516,7 +516,7 @@ public class RelOptRulesTest extends RelOptTestBase {
             + "from sales.emp\n"
             + "where deptno = 10\n"
             + "group by deptno, sal\n"
-            + "order by deptno, sal";
+            + "order by deptno";
     checkPlanning(new HepPlanner(program), sql);
   }
 
