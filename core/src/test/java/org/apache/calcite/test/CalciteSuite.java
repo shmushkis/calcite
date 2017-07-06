@@ -18,6 +18,7 @@ package org.apache.calcite.test;
 
 import org.apache.calcite.adapter.clone.ArrayTableTest;
 import org.apache.calcite.jdbc.CalciteRemoteDriverTest;
+import org.apache.calcite.materialize.LatticeSuggesterTest;
 import org.apache.calcite.plan.RelOptPlanReaderTest;
 import org.apache.calcite.plan.RelOptUtilTest;
 import org.apache.calcite.plan.RelWriterTest;
@@ -154,6 +155,7 @@ import org.junit.runners.Suite;
     LinqFrontJdbcBackTest.class,
     JdbcFrontJdbcBackLinqMiddleTest.class,
     CalciteSqlOperatorTest.class,
+    LatticeSuggesterTest.class,
     LatticeTest.class,
     ReflectiveSchemaTest.class,
     JdbcTest.class,

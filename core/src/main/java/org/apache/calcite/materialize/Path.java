@@ -14,40 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.util.graph;
+package org.apache.calcite.materialize;
 
-import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
-/**
- * Default implementation of Edge.
- */
-public class DefaultEdge {
-  public final Object source;
-  public final Object target;
+import java.util.List;
 
-  public DefaultEdge(Object source, Object target) {
-    this.source = Preconditions.checkNotNull(source);
-    this.target = Preconditions.checkNotNull(target);
+/** A sequence of {@link Step}s from a root node (fact table) to another node
+ * (dimension table), possibly via intermediate dimension tables. */
+class Path {
+  final List<Step> steps;
+  private final int id;
+
+  Path(List<Step> steps, int id) {
+    this.steps = ImmutableList.copyOf(steps);
+    this.id = id;
   }
 
   @Override public int hashCode() {
-    return source.hashCode() * 31 + target.hashCode();
+    return id;
   }
 
   @Override public boolean equals(Object obj) {
     return this == obj
-        || obj instanceof DefaultEdge
-        && ((DefaultEdge) obj).source.equals(source)
-        && ((DefaultEdge) obj).target.equals(target);
-  }
-
-  public static <V> DirectedGraph.EdgeFactory<V, DefaultEdge> factory() {
-    return new DirectedGraph.EdgeFactory<V, DefaultEdge>() {
-      public DefaultEdge createEdge(V v0, V v1) {
-        return new DefaultEdge(v0, v1);
-      }
-    };
+        || obj instanceof Path
+        && id == ((Path) obj).id;
   }
 }
 
-// End DefaultEdge.java
+// End Path.java

@@ -2097,8 +2097,7 @@ public class JdbcTest {
 
   private CalciteAssert.AssertQuery withFoodMartQuery(int id)
       throws IOException {
-    final FoodmartTest.FoodMartQuerySet set =
-        FoodmartTest.FoodMartQuerySet.instance();
+    final FoodMartQuerySet set = FoodMartQuerySet.instance();
     return CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
         .query(set.queries.get(id).sql);
@@ -2116,8 +2115,7 @@ public class JdbcTest {
    */
   @Ignore
   @Test public void testNoCalcBetweenJoins() throws IOException {
-    final FoodmartTest.FoodMartQuerySet set =
-        FoodmartTest.FoodMartQuerySet.instance();
+    final FoodMartQuerySet set = FoodMartQuerySet.instance();
     CalciteAssert.that()
         .with(CalciteAssert.Config.FOODMART_CLONE)
         .query(set.queries.get(16).sql)
@@ -2206,8 +2204,8 @@ public class JdbcTest {
   @Ignore // DO NOT CHECK IN
   @Test public void testFoodmartLattice() throws IOException {
     // 8: select ... from customer, sales, time ... group by ...
-    final FoodmartTest.FoodmartQuery query =
-        FoodmartTest.FoodMartQuerySet.instance().queries.get(8);
+    final FoodMartQuerySet set = FoodMartQuerySet.instance();
+    final FoodMartQuerySet.FoodmartQuery query = set.queries.get(8);
     CalciteAssert.that()
         .with(CalciteAssert.Config.JDBC_FOODMART_WITH_LATTICE)
         .withDefaultSchema("foodmart")

@@ -25,6 +25,7 @@
   docs:
   - adapter
   - stream
+  - materialized_views
   - lattice
 
 - title: Avatica

@@ -1053,6 +1053,13 @@ public class SqlValidatorUtil {
         }
       };
 
+  public static final Suggester ATTEMPT_SUGGESTER =
+      new Suggester() {
+        public String apply(String original, int attempt, int size) {
+          return Util.first(original, "$") + attempt;
+        }
+      };
+
   /** Builds a list of GROUP BY expressions. */
   static class GroupAnalyzer {
     /** Extra expressions, computed from the input as extra GROUP BY
