@@ -94,6 +94,7 @@ import org.apache.calcite.rel.rules.ProjectWindowTransposeRule;
 import org.apache.calcite.rel.rules.ReduceExpressionsRule;
 import org.apache.calcite.rel.rules.SortJoinTransposeRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
+import org.apache.calcite.rel.rules.SortRemoveConstantKeysRule;
 import org.apache.calcite.rel.rules.SortUnionTransposeRule;
 import org.apache.calcite.rel.rules.TableScanRule;
 import org.apache.calcite.rel.rules.ValuesReduceRule;
@@ -236,6 +237,7 @@ public class CalcitePrepareImpl implements CalcitePrepare {
           JoinCommuteRule.INSTANCE,
           JoinPushThroughJoinRule.RIGHT,
           JoinPushThroughJoinRule.LEFT,
+          SortRemoveConstantKeysRule.INSTANCE,
           SortProjectTransposeRule.INSTANCE,
           SortJoinTransposeRule.INSTANCE,
           SortUnionTransposeRule.INSTANCE);

@@ -83,7 +83,7 @@ import org.apache.calcite.rel.rules.SemiJoinRemoveRule;
 import org.apache.calcite.rel.rules.SemiJoinRule;
 import org.apache.calcite.rel.rules.SortJoinTransposeRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
-import org.apache.calcite.rel.rules.SortRemoveRedundant;
+import org.apache.calcite.rel.rules.SortRemoveConstantKeysRule;
 import org.apache.calcite.rel.rules.SortUnionTransposeRule;
 import org.apache.calcite.rel.rules.SubQueryRemoveRule;
 import org.apache.calcite.rel.rules.TableScanRule;
@@ -508,16 +508,46 @@ public class RelOptRulesTest extends RelOptTestBase {
     checkPlanning(program, sql);
   }
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-873">[CALCITE-873]
+   * Prevent sort when ORDER BY not necessary due to equality
+   * constraints</a>. */
   @Test public void testSortConstantRemoval() {
     final HepProgram program = new HepProgramBuilder()
-            .addRuleInstance(SortRemoveRedundant.INSTANCE)
-            .build();
+        .addRuleInstance(SortRemoveConstantKeysRule.INSTANCE)
+        .build();
     final String sql = "select count(*) as c\n"
-            + "from sales.emp\n"
-            + "where deptno = 10\n"
-            + "group by deptno, sal\n"
-            + "order by deptno";
-    checkPlanning(new HepPlanner(program), sql);
+        + "from sales.emp\n"
+        + "where deptno = 10\n"
+        + "group by deptno, sal\n"
+        + "order by deptno";
+    sql(sql).with(program).check();
+  }
+
+  @Test public void testSortConstantRemoval2() {
+    final HepProgram program = new HepProgramBuilder()
+        .addRuleInstance(SortRemoveConstantKeysRule.INSTANCE)
+        .build();
+    final String sql = "select count(*) as c\n"
+        + "from sales.emp\n"
+        + "where deptno = 10\n"
+        + "group by deptno, sal\n"
+        + "order by deptno";
+    sql(sql).with(program).check();
+  }
+
+  // This test has a timeout because it currently hangs the planner;
+  // we cannot commit [CALCITE-873] until test is fixed, with no timeout
+  @Test(timeout = 1_000L) public void testSortConstantRemoval3() {
+    final HepProgram program = new HepProgramBuilder()
+        .addRuleInstance(SortRemoveConstantKeysRule.INSTANCE)
+        .build();
+    final String sql = "select count(*) as c\n"
+        + "from sales.emp\n"
+        + "where deptno = 10\n"
+        + "group by deptno, sal\n"
+        + "order by deptno, sal";
+    sql(sql).with(program).check();
   }
 
   @Test public void testSemiJoinRuleExists() {

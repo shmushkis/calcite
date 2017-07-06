@@ -2087,8 +2087,8 @@ order by deptno]]>
         </Resource>
         <Resource name="planBefore">
             <![CDATA[
-LogicalSort(sort0=[$1], sort1=[$2], dir0=[ASC], dir1=[ASC])
-  LogicalProject(C=[$2], DEPTNO=[$0], SAL=[$1])
+LogicalSort(sort0=[$1], dir0=[ASC])
+  LogicalProject(C=[$2], DEPTNO=[$0])
     LogicalAggregate(group=[{0, 1}], C=[COUNT()])
       LogicalProject(DEPTNO=[$7], SAL=[$5])
         LogicalFilter(condition=[=($7, 10)])
@@ -2097,12 +2097,11 @@ LogicalSort(sort0=[$1], sort1=[$2], dir0=[ASC], dir1=[ASC])
         </Resource>
         <Resource name="planAfter">
             <![CDATA[
-LogicalSort(sort0=[$1], sort1=[$2], dir0=[ASC], dir1=[ASC])
-  LogicalProject(C=[$2], DEPTNO=[$0], SAL=[$1])
-    LogicalAggregate(group=[{0, 1}], C=[COUNT()])
-      LogicalProject(DEPTNO=[$7], SAL=[$5])
-        LogicalFilter(condition=[=($7, 10)])
-          LogicalTableScan(table=[[CATALOG, SALES, EMP]])
+LogicalProject(C=[$2], DEPTNO=[$0])
+  LogicalAggregate(group=[{0, 1}], C=[COUNT()])
+    LogicalProject(DEPTNO=[$7], SAL=[$5])
+      LogicalFilter(condition=[=($7, 10)])
+        LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 ]]>
         </Resource>
     </TestCase>
@@ -6271,6 +6270,25 @@ LogicalProject(EMPNO=[$0], ENAME=[$1], JOB=[$2], MGR=[$3], HIREDATE=[$4], SAL=[$
         LogicalAggregate(group=[{}], m=[MIN($0)], c=[COUNT()], d=[COUNT($0)])
           LogicalProject(DEPTNO=[$0])
             LogicalTableScan(table=[[CATALOG, SALES, DEPT]])
+]]>
+        </Resource>
+    </TestCase>
+    <TestCase name="testSortConstantRemoval3">
+        <Resource name="sql">
+            <![CDATA[select count(*) as c
+from sales.emp
+where deptno = 10
+group by deptno, sal
+order by deptno, sal]]>
+        </Resource>
+        <Resource name="planBefore">
+            <![CDATA[
+LogicalSort(sort0=[$1], sort1=[$2], dir0=[ASC], dir1=[ASC])
+  LogicalProject(C=[$2], DEPTNO=[$0], SAL=[$1])
+    LogicalAggregate(group=[{0, 1}], C=[COUNT()])
+      LogicalProject(DEPTNO=[$7], SAL=[$5])
+        LogicalFilter(condition=[=($7, 10)])
+          LogicalTableScan(table=[[CATALOG, SALES, EMP]])
 ]]>
         </Resource>
     </TestCase>

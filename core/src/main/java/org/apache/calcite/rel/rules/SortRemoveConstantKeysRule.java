@@ -34,65 +34,54 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Planner rule that removes
- * a {@link org.apache.calcite.rel.core.Sort} if its input is already sorted.
+ * Planner rule that removes keys from a
+ * a {@link org.apache.calcite.rel.core.Sort} if they are known to be constant.
  *
  * <p>Requires {@link RelCollationTraitDef}.
  */
-public class SortRemoveRedundant extends RelOptRule {
-  public static final SortRemoveRedundant INSTANCE = new SortRemoveRedundant();
+public class SortRemoveConstantKeysRule extends RelOptRule {
+  public static final SortRemoveConstantKeysRule INSTANCE =
+      new SortRemoveConstantKeysRule();
 
-  private SortRemoveRedundant() {
-    super(
-        operand(Sort.class, any()),
-        "SortRemoveRedundant");
+  private SortRemoveConstantKeysRule() {
+    super(operand(Sort.class, any()),
+        "SortRemoveConstantKeysRule");
   }
 
   @Override public void onMatch(RelOptRuleCall call) {
     final Sort sort = call.rel(0);
     final RelMetadataQuery mq = call.getMetadataQuery();
     final RelOptPredicateList predicates =
-            mq.getPulledUpPredicates(sort.getInput());
+        mq.getPulledUpPredicates(sort.getInput());
     if (predicates == null) {
       return;
     }
 
-    final RexBuilder rexBuilder = sort.getCluster().getRexBuilder();
-    final List<RexNode> inputList = sort.getChildExps();
-
     final List<RelFieldCollation> collationsList = new ArrayList<>();
     for (RexNode currentNode : sort.getChildExps()) {
-      //TODO: Figure if there is a safer way of getting RexInputRef
-      RexInputRef ref = (RexInputRef) currentNode;
+      assert currentNode instanceof RexInputRef;
+      final RexInputRef ref = (RexInputRef) currentNode;
 
-      if (!(predicates.constantMap.containsKey(ref))) {
+      if (!predicates.constantMap.containsKey(ref)) {
         collationsList.add(new RelFieldCollation(ref.getIndex()));
       }
     }
 
-    if (sort.offset != null || sort.fetch != null) {
-      // Don't remove sort if would also remove OFFSET or LIMIT.
-      return;
-    }
-
-    // No active collations. Remove the sort completely
-    if (collationsList.isEmpty()) {
+    // No active collations and no OFFSET or FETCH. Remove the sort completely.
+    if (collationsList.isEmpty() && sort.offset == null && sort.fetch == null) {
       final RelCollation collation = sort.getCollation();
-      final RelTraitSet traits = sort.getInput().getTraitSet().replace(collation);
+      final RelTraitSet traits =
+          sort.getInput().getTraitSet().replace(collation);
 
       call.transformTo(convert(sort.getInput(), traits));
-
       return;
-
     }
 
+    // Transform to a Sort with a constant keys removed.
     final RelCollation newCollation =  RelCollations.of(collationsList);
-
-    final RelTraitSet traits = sort.getInput().getTraitSet().replace(newCollation);
-    Sort result = sort.copy(sort.getTraitSet(), sort.getInput(), newCollation,
-            sort.offset, sort.fetch);
-
-    call.transformTo(result);
+    call.transformTo(
+        sort.copy(sort.getTraitSet().replace(newCollation), sort.getInput(),
+            newCollation, sort.offset, sort.fetch));
   }
 }
 
