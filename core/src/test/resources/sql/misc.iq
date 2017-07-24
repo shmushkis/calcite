@@ -1984,4 +1984,34 @@ select multiset[1,null,2,2-1] as m from (values (1));
 
 !ok
 
+!set outputformat csv
+
+# Describe query
+describe select 1 from (values (1));
+!ok
+
+# Describe query (explicit STATEMENT)
+describe statement select 1 from (values (1));
+!ok
+
+# Describe table
+describe emp;
+!ok
+
+# Describe table (qualified)
+describe scott.emp;
+!ok
+
+# Describe table (explicit TABLE)
+describe table emp;
+!ok
+
+# Describe column
+describe emp empno;
+!ok
+
+# Describe column (explicit TABLE)
+describe table emp empno;
+!ok
+
 # End misc.iq

@@ -45,6 +45,7 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDelete;
+import org.apache.calcite.sql.SqlDescribeTable;
 import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlFunction;
@@ -2536,6 +2537,13 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       }
       break;
 
+    case DESCRIBE_TABLE:
+      final SqlDescribeTable describe = (SqlDescribeTable) node;
+      DescribeNamespace describeNs =
+          new DescribeNamespace(this, describe, enclosingNode, parentScope);
+      registerNamespace(usingScope, null, describeNs, forceNullable);
+      break;
+
     case UNNEST:
       call = (SqlCall) node;
       final UnnestNamespace unnestNs =
@@ -4143,6 +4151,12 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
   }
 
+  public void validateDescribe(SqlDescribeTable describe) {
+    final SqlValidatorNamespace targetNamespace = getNamespace(describe);
+    validateNamespace(targetNamespace, unknownType);
+    final SqlValidatorTable table = targetNamespace.getTable();
+  }
+
   public void validateDelete(SqlDelete call) {
     final SqlSelect sqlSelect = call.getSourceSelect();
     validateSelect(sqlSelect, unknownType);
@@ -4970,6 +4984,23 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
 
     public SqlMerge getNode() {
+      return node;
+    }
+  }
+
+  /**
+   * Namespace for a DESCRIBE statement.
+   */
+  private static class DescribeNamespace extends DmlNamespace {
+    private final SqlDescribeTable node;
+
+    public DescribeNamespace(SqlValidatorImpl validator, SqlDescribeTable node,
+        SqlNode enclosingNode, SqlValidatorScope parentScope) {
+      super(validator, node.getTable(), enclosingNode, parentScope);
+      this.node = Preconditions.checkNotNull(node);
+    }
+
+    public SqlDescribeTable getNode() {
       return node;
     }
   }
