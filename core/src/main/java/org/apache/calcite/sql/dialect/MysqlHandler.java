@@ -14,33 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.sql.unparse;
+package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlWriter;
 
 /**
- * <code>DialectMysql</code> defines how a <code>SqlOperator</code> should be unparsed
- * for execution against a Mysql database. It reverts to the unparse method of the operator
+ * Defines how a SQL parse tree should be unparsed to SQL
+ * for execution against a MySQL database.
+ *
+ * <p>It reverts to the unparse method of the operator
  * if this database's implementation is standard.
  */
-public class DialectMysql extends SqlDialect.DefaultDialectUnparser {
-  public static final DialectMysql INSTANCE = new DialectMysql();
+public class MysqlHandler extends SqlDialect.BaseHandler {
+  public static final MysqlHandler INSTANCE = new MysqlHandler();
 
-  public void unparseCall(
-      SqlOperator operator,
-      SqlWriter writer,
-      SqlCall call,
-      int leftPrec,
-      int rightPrec) {
-    switch (operator.getKind()) {
+  @Override public void unparseCall(SqlWriter writer, SqlCall call,
+      int leftPrec, int rightPrec) {
+    switch (call.getKind()) {
     case FLOOR:
       if (call.operandCount() != 2) {
-        super.unparseCall(operator, writer, call, leftPrec, rightPrec);
+        super.unparseCall(writer, call, leftPrec, rightPrec);
         return;
       }
 
@@ -48,16 +45,16 @@ public class DialectMysql extends SqlDialect.DefaultDialectUnparser {
       break;
 
     default:
-      super.unparseCall(operator, writer, call, leftPrec, rightPrec);
+      super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
 
   /**
-   * Unparse datetime floor for MySQL. There is no TRUNC function, so simulate this
-   * using calls to DATE_FORMAT.
+   * Unparses datetime floor for MySQL. There is no TRUNC function, so simulate
+   * this using calls to DATE_FORMAT.
    *
-   * @param writer SqlWriter
-   * @param call SqlCall
+   * @param writer Writer
+   * @param call Call
    */
   private void unparseFloor(SqlWriter writer, SqlCall call) {
     SqlLiteral node = call.operand(1);
@@ -108,4 +105,4 @@ public class DialectMysql extends SqlDialect.DefaultDialectUnparser {
   }
 }
 
-// End DialectMysql.java
+// End MysqlHandler.java

@@ -19,11 +19,11 @@ package org.apache.calcite.sql;
 import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.RelFieldCollation;
-import org.apache.calcite.sql.unparse.DialectHsqldb;
-import org.apache.calcite.sql.unparse.DialectMssql;
-import org.apache.calcite.sql.unparse.DialectMysql;
-import org.apache.calcite.sql.unparse.DialectOracle;
-import org.apache.calcite.sql.unparse.DialectPostgresql;
+import org.apache.calcite.sql.dialect.HsqldbHandler;
+import org.apache.calcite.sql.dialect.MssqlHandler;
+import org.apache.calcite.sql.dialect.MysqlHandler;
+import org.apache.calcite.sql.dialect.OracleHandler;
+import org.apache.calcite.sql.dialect.PostgresqlHandler;
 
 import com.google.common.base.Preconditions;
 
@@ -43,6 +43,8 @@ import java.util.regex.Pattern;
  */
 public class SqlDialect {
   //~ Static fields/initializers ---------------------------------------------
+
+  private static final Handler DEFAULT_HANDLER = new BaseHandler();
 
   /**
    * A dialect useful for generating generic SQL. If you need to do something
@@ -68,6 +70,7 @@ public class SqlDialect {
   private final String identifierEscapedQuote;
   private final DatabaseProduct databaseProduct;
   private final NullCollation nullCollation;
+  private final Handler handler;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -118,26 +121,23 @@ public class SqlDialect {
     } catch (SQLException e) {
       throw new IllegalArgumentException("cannot deduce null collation", e);
     }
+    Handler handler = chooseHandler(databaseProduct);
     return new SqlDialect(databaseProduct, databaseProductName,
-        identifierQuoteString, nullCollation);
+        identifierQuoteString, nullCollation, handler);
   }
 
-  /**
-   * Creates a SqlDialect.
-   *
-   * @param databaseProduct       Database product; may be UNKNOWN, never null
-   * @param databaseProductName   Database product name from JDBC driver
-   * @param identifierQuoteString String to quote identifiers. Null if quoting
-   *                              is not supported. If "[", close quote is
-   *                              deemed to be "]".
-   */
   @Deprecated // to be removed before 2.0
-  public SqlDialect(
-      DatabaseProduct databaseProduct,
-      String databaseProductName,
+  public SqlDialect(DatabaseProduct databaseProduct, String databaseProductName,
       String identifierQuoteString) {
     this(databaseProduct, databaseProductName, identifierQuoteString,
-        NullCollation.HIGH);
+        NullCollation.HIGH, DEFAULT_HANDLER);
+  }
+
+  @Deprecated // to be removed before 2.0
+  public SqlDialect(DatabaseProduct databaseProduct, String databaseProductName,
+      String identifierQuoteString, NullCollation nullCollation) {
+    this(databaseProduct, databaseProductName, identifierQuoteString,
+        nullCollation, DEFAULT_HANDLER);
   }
 
   /**
@@ -149,14 +149,15 @@ public class SqlDialect {
    *                              is not supported. If "[", close quote is
    *                              deemed to be "]".
    * @param nullCollation         Whether NULL values appear first or last
+   * @param handler               Handler for un-parsing
    */
-  public SqlDialect(
-      DatabaseProduct databaseProduct,
-      String databaseProductName,
-      String identifierQuoteString, NullCollation nullCollation) {
-    Preconditions.checkNotNull(this.nullCollation = nullCollation);
+  public SqlDialect(DatabaseProduct databaseProduct, String databaseProductName,
+      String identifierQuoteString, NullCollation nullCollation,
+      Handler handler) {
+    this.nullCollation = Preconditions.checkNotNull(nullCollation);
     Preconditions.checkNotNull(databaseProductName);
     this.databaseProduct = Preconditions.checkNotNull(databaseProduct);
+    this.handler = Preconditions.checkNotNull(handler);
     if (identifierQuoteString != null) {
       identifierQuoteString = identifierQuoteString.trim();
       if (identifierQuoteString.equals("")) {
@@ -177,10 +178,6 @@ public class SqlDialect {
   }
 
   //~ Methods ----------------------------------------------------------------
-
-  public DialectUnparser getDialectUnparser() {
-    return databaseProduct.getDialectUnparser();
-  }
 
   /**
    * Converts a product name and version (per the JDBC driver) into a product
@@ -253,7 +250,23 @@ public class SqlDialect {
     }
   }
 
-  // -- detect various databases --
+  /** Chooses the best handler for a given database product. */
+  private static Handler chooseHandler(DatabaseProduct databaseProduct) {
+    switch (databaseProduct) {
+    case HSQLDB:
+      return HsqldbHandler.INSTANCE;
+    case MSSQL:
+      return MssqlHandler.INSTANCE;
+    case MYSQL:
+      return MysqlHandler.INSTANCE;
+    case ORACLE:
+      return OracleHandler.INSTANCE;
+    case POSTGRESQL:
+      return PostgresqlHandler.INSTANCE;
+    default:
+      return DEFAULT_HANDLER;
+    }
+  }
 
   /**
    * Encloses an identifier in quotation marks appropriate for the current SQL
@@ -348,13 +361,9 @@ public class SqlDialect {
     }
   }
 
-  public void unparseCall(
-      SqlOperator operator,
-      SqlWriter writer,
-      SqlCall call,
-      int leftPrec,
+  public void unparseCall(SqlWriter writer, SqlCall call, int leftPrec,
       int rightPrec) {
-    getDialectUnparser().unparseCall(operator, writer, call, leftPrec, rightPrec);
+    handler.unparseCall(writer, call, leftPrec, rightPrec);
   }
 
   /**
@@ -630,9 +639,9 @@ public class SqlDialect {
   public enum DatabaseProduct {
     ACCESS("Access", "\"", NullCollation.HIGH),
     CALCITE("Apache Calcite", "\"", NullCollation.HIGH),
-    MSSQL("Microsoft SQL Server", "[", NullCollation.HIGH, DialectMssql.INSTANCE),
-    MYSQL("MySQL", "`", NullCollation.HIGH, DialectMysql.INSTANCE),
-    ORACLE("Oracle", "\"", NullCollation.HIGH, DialectOracle.INSTANCE),
+    MSSQL("Microsoft SQL Server", "[", NullCollation.HIGH),
+    MYSQL("MySQL", "`", NullCollation.HIGH),
+    ORACLE("Oracle", "\"", NullCollation.HIGH),
     DERBY("Apache Derby", null, NullCollation.HIGH),
     DB2("IBM DB2", null, NullCollation.HIGH),
     FIREBIRD("Firebird", null, NullCollation.HIGH),
@@ -643,13 +652,13 @@ public class SqlDialect {
     LUCIDDB("LucidDB", "\"", NullCollation.HIGH),
     INTERBASE("Interbase", null, NullCollation.HIGH),
     PHOENIX("Phoenix", "\"", NullCollation.HIGH),
-    POSTGRESQL("PostgreSQL", "\"", NullCollation.HIGH, DialectPostgresql.INSTANCE),
+    POSTGRESQL("PostgreSQL", "\"", NullCollation.HIGH),
     NETEZZA("Netezza", "\"", NullCollation.HIGH),
     INFOBRIGHT("Infobright", "`", NullCollation.HIGH),
     NEOVIEW("Neoview", null, NullCollation.HIGH),
     SYBASE("Sybase", null, NullCollation.HIGH),
     TERADATA("Teradata", "\"", NullCollation.HIGH),
-    HSQLDB("Hsqldb", null, NullCollation.HIGH, DialectHsqldb.INSTANCE),
+    HSQLDB("Hsqldb", null, NullCollation.HIGH),
     VERTICA("Vertica", "\"", NullCollation.HIGH),
     SQLSTREAM("SQLstream", "\"", NullCollation.HIGH),
 
@@ -671,22 +680,13 @@ public class SqlDialect {
     private String databaseProductName;
     private String quoteString;
     private final NullCollation nullCollation;
-    private final DialectUnparser dialectUnparser;
 
     DatabaseProduct(String databaseProductName, String quoteString,
         NullCollation nullCollation) {
-      this(databaseProductName, quoteString, nullCollation, null);
-    }
-
-    DatabaseProduct(String databaseProductName, String quoteString,
-                    NullCollation nullCollation, DialectUnparser dialectUnparser) {
-      this.databaseProductName = databaseProductName;
+      this.databaseProductName =
+          Preconditions.checkNotNull(databaseProductName);
       this.quoteString = quoteString;
-      this.nullCollation = nullCollation;
-      this.dialectUnparser =
-          dialectUnparser == null
-              ? DefaultDialectUnparser.INSTANCE
-              : dialectUnparser;
+      this.nullCollation = Preconditions.checkNotNull(nullCollation);
     }
 
     /**
@@ -697,50 +697,36 @@ public class SqlDialect {
      * use a dialect created from an actual connection's metadata
      * (see {@link SqlDialect#create(java.sql.DatabaseMetaData)}).
      *
-     * @return Dialect representing lowest-common-demoninator behavior for
+     * @return Dialect representing lowest-common-denominator behavior for
      * all versions of this database
      */
     public SqlDialect getDialect() {
       if (dialect == null) {
+        final Handler handler = chooseHandler(this);
         dialect =
             new SqlDialect(this, databaseProductName, quoteString,
-                nullCollation);
+                nullCollation, handler);
       }
       return dialect;
     }
-
-    public DialectUnparser getDialectUnparser() {
-      return dialectUnparser;
-    }
   }
 
   /**
-   * A dialect specific unparser for operator calls.
+   * A handler for converting {@link SqlNode} into SQL text of a particular
+   * dialect.
    *
-   * Unparsers are stateless and therefore immutable.
+   * <p>Instances are stateless and therefore immutable.
    */
-  public interface DialectUnparser {
-    void unparseCall(
-      SqlOperator operator,
-      SqlWriter writer,
-      SqlCall call,
-      int leftPrec,
-      int rightPrec);
+  public interface Handler {
+    void unparseCall(SqlWriter writer, SqlCall call, int leftPrec,
+        int rightPrec);
   }
 
-  /**
-   * The default dialect unparser if none is specified.
-   */
-  public static class DefaultDialectUnparser implements DialectUnparser {
-    public static final DefaultDialectUnparser INSTANCE = new DefaultDialectUnparser();
-
-    public void unparseCall(
-        SqlOperator operator,
-        SqlWriter writer,
-        SqlCall call,
-        int leftPrec,
-        int rightPrec) {
-      operator.unparse(writer, call, leftPrec, rightPrec);
+  /** Base class for dialect handlers. */
+  public static class BaseHandler implements Handler {
+    public void unparseCall(SqlWriter writer, SqlCall call,
+        int leftPrec, int rightPrec) {
+      call.getOperator().unparse(writer, call, leftPrec, rightPrec);
     }
   }
 }

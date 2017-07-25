@@ -14,33 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.sql.unparse;
+package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlWriter;
 
 /**
- * <code>DialectMssql</code> defines how a <code>SqlOperator</code> should be unparsed
- * for execution against a Mssql database. It reverts to the unparse method of the operator
+ * Defines how a SQL parse tree should be unparsed to SQL
+ * for execution against a Microsoft SQL Server database.
+ *
+ * <p>It reverts to the unparse method of the operator
  * if this database's implementation is standard.
  */
-public class DialectMssql extends SqlDialect.DefaultDialectUnparser {
-  public static final DialectMssql INSTANCE = new DialectMssql();
+public class MssqlHandler extends SqlDialect.BaseHandler {
+  public static final MssqlHandler INSTANCE = new MssqlHandler();
 
-  public void unparseCall(
-      SqlOperator operator,
-      SqlWriter writer,
-      SqlCall call,
-      int leftPrec,
-      int rightPrec) {
-    switch (operator.getKind()) {
+  @Override public void unparseCall(SqlWriter writer, SqlCall call,
+      int leftPrec, int rightPrec) {
+    switch (call.getKind()) {
     case FLOOR:
       if (call.operandCount() != 2) {
-        super.unparseCall(operator, writer, call, leftPrec, rightPrec);
+        super.unparseCall(writer, call, leftPrec, rightPrec);
         return;
       }
 
@@ -48,16 +45,16 @@ public class DialectMssql extends SqlDialect.DefaultDialectUnparser {
       break;
 
     default:
-      super.unparseCall(operator, writer, call, leftPrec, rightPrec);
+      super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
 
   /**
-   * Unparse datetime floor for MS SQL. There is no TRUNC function, so simulate this
-   * using calls to CONVERT.
+   * Unparses datetime floor for Microsoft SQL Server.
+   * There is no TRUNC function, so simulate this using calls to CONVERT.
    *
-   * @param writer SqlWriter
-   * @param call SqlCall
+   * @param writer Writer
+   * @param call Call
    */
   private void unparseFloor(SqlWriter writer, SqlCall call) {
     SqlLiteral node = call.operand(1);
@@ -96,11 +93,11 @@ public class DialectMssql extends SqlDialect.DefaultDialectUnparser {
     }
   }
 
-  private void unparseFloorWithUnit(SqlWriter writer, SqlCall call, Integer charLen,
+  private void unparseFloorWithUnit(SqlWriter writer, SqlCall call, int charLen,
       String offset) {
     writer.print("CONVERT");
     SqlWriter.Frame frame = writer.startList("(", ")");
-    writer.print("DATETIME, CONVERT(VARCHAR(" + charLen.toString() + "), ");
+    writer.print("DATETIME, CONVERT(VARCHAR(" + charLen + "), ");
     call.operand(0).unparse(writer, 0, 0);
     writer.print(", 126)");
 
@@ -111,4 +108,4 @@ public class DialectMssql extends SqlDialect.DefaultDialectUnparser {
   }
 }
 
-// End DialectMssql.java
+// End MssqlHandler.java

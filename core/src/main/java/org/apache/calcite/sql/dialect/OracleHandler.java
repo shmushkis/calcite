@@ -14,48 +14,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.sql.unparse;
+package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.fun.OracleSqlOperatorTable;
 import org.apache.calcite.sql.fun.SqlFloorFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.type.ReturnTypes;
 
 /**
- * <code>DialectOracle</code> defines how a <code>SqlOperator</code> should be unparsed
- * for execution against a Oracle database. It reverts to the unparse method of the operator
+ * Defines how a SQL parse tree should be unparsed to SQL
+ * for execution against an Oracle database.
+ *
+ * <p>It reverts to the unparse method of the operator
  * if this database's implementation is standard.
  */
-public class DialectOracle extends SqlDialect.DefaultDialectUnparser {
-  public static final DialectOracle INSTANCE = new DialectOracle();
+public class OracleHandler extends SqlDialect.BaseHandler {
+  public static final OracleHandler INSTANCE = new OracleHandler();
 
-  public static final SqlFunction ORACLE_SUBSTR =
-      new SqlFunction("SUBSTR", SqlKind.OTHER_FUNCTION,
-          ReturnTypes.ARG0_NULLABLE_VARYING, null, null,
-          SqlFunctionCategory.STRING);
-  public void unparseCall(
-      SqlOperator operator,
-      SqlWriter writer,
-      SqlCall call,
-      int leftPrec,
-      int rightPrec) {
-    if (operator == SqlStdOperatorTable.SUBSTRING) {
-      SqlUtil.unparseFunctionSyntax(ORACLE_SUBSTR, writer, call);
+  @Override public void unparseCall(SqlWriter writer, SqlCall call,
+      int leftPrec, int rightPrec) {
+    if (call.getOperator() == SqlStdOperatorTable.SUBSTRING) {
+      SqlUtil.unparseFunctionSyntax(OracleSqlOperatorTable.SUBSTR, writer, call);
 
     } else {
-      switch (operator.getKind()) {
+      switch (call.getKind()) {
       case FLOOR:
         if (call.operandCount() != 2) {
-          super.unparseCall(operator, writer, call, leftPrec, rightPrec);
+          super.unparseCall(writer, call, leftPrec, rightPrec);
           return;
         }
 
@@ -68,10 +58,10 @@ public class DialectOracle extends SqlDialect.DefaultDialectUnparser {
         break;
 
       default:
-        super.unparseCall(operator, writer, call, leftPrec, rightPrec);
+        super.unparseCall(writer, call, leftPrec, rightPrec);
       }
     }
   }
 }
 
-// End DialectOracle.java
+// End OracleHandler.java

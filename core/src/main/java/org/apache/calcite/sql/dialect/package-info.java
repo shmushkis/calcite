@@ -16,10 +16,10 @@
  */
 
 /**
- * SQL unparsers for jdbc dialects.
+ * SQL unparsers for JDBC dialects.
  */
 @PackageMarker
-package org.apache.calcite.sql.unparse;
+package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.PackageMarker;
 
