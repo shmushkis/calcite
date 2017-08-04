@@ -21,8 +21,10 @@ import org.apache.calcite.util.graph.DefaultEdge;
 import org.apache.calcite.util.mapping.IntPair;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /** Edge in the join graph.
@@ -35,6 +37,56 @@ import java.util.Objects;
  * {@link LatticeSpace#addEdge(LatticeTable, LatticeTable, List)}
  * it is unique within the {@link LatticeSpace}. */
 class Step extends DefaultEdge {
+  private static final Map<String, Double> CARDINALITY_MAP =
+      ImmutableMap.<String, Double>builder()
+          .put("[foodmart, agg_c_14_sales_fact_1997]", 86_805d)
+          .put("[foodmart, customer]", 10_281d)
+          .put("[foodmart, employee]", 1_155d)
+          .put("[foodmart, employee_closure]", 7_179d)
+          .put("[foodmart, department]", 10_281d)
+          .put("[foodmart, inventory_fact_1997]", 4_070d)
+          .put("[foodmart, position]", 18d)
+          .put("[foodmart, product]", 1560d)
+          .put("[foodmart, product_class]", 110d)
+          .put("[foodmart, promotion]", 1_864d)
+          // region really has 110 rows; made it smaller than store to trick FK
+          .put("[foodmart, region]", 24d)
+          .put("[foodmart, salary]", 21_252d)
+          .put("[foodmart, sales_fact_1997]", 86_837d)
+          .put("[foodmart, store]", 25d)
+          .put("[foodmart, store_ragged]", 25d)
+          .put("[foodmart, time_by_day]", 730d)
+          .put("[foodmart, warehouse]", 24d)
+          .put("[foodmart, warehouse_class]", 6d)
+          .put("[scott, EMP]", 10d)
+          .put("[scott, DEPT]", 4d)
+          .put("[tpcds, CALL_CENTER]", 8d)
+          .put("[tpcds, CATALOG_PAGE]", 11_718d)
+          .put("[tpcds, CATALOG_RETURNS]", 144_067d)
+          .put("[tpcds, CATALOG_SALES]", 1_441_548d)
+          .put("[tpcds, CUSTOMER]", 100_000d)
+          .put("[tpcds, CUSTOMER_ADDRESS]", 50_000d)
+          .put("[tpcds, CUSTOMER_DEMOGRAPHICS]", 1_920_800d)
+          .put("[tpcds, DATE_DIM]", 73049d)
+          .put("[tpcds, DBGEN_VERSION]", 1d)
+          .put("[tpcds, HOUSEHOLD_DEMOGRAPHICS]", 7200d)
+          .put("[tpcds, INCOME_BAND]", 20d)
+          .put("[tpcds, INVENTORY]", 11_745_000d)
+          .put("[tpcds, ITEM]", 18_000d)
+          .put("[tpcds, PROMOTION]", 300d)
+          .put("[tpcds, REASON]", 35d)
+          .put("[tpcds, SHIP_MODE]", 20d)
+          .put("[tpcds, STORE]", 12d)
+          .put("[tpcds, STORE_RETURNS]", 287_514d)
+          .put("[tpcds, STORE_SALES]", 2_880_404d)
+          .put("[tpcds, TIME_DIM]", 86_400d)
+          .put("[tpcds, WAREHOUSE]", 5d)
+          .put("[tpcds, WEB_PAGE]", 60d)
+          .put("[tpcds, WEB_RETURNS]", 71_763d)
+          .put("[tpcds, WEB_SALES]", 719_384d)
+          .put("[tpcds, WEB_SITE]", 1d)
+          .build();
+
   final List<IntPair> keys;
 
   Step(LatticeTable source, LatticeTable target, List<IntPair> keys) {
@@ -89,50 +141,7 @@ class Step extends DefaultEdge {
   /** Temporary method. We should use (inferred) primary keys to figure out
    * the direction of steps. */
   private double cardinality(LatticeTable table) {
-    switch (table.t.getQualifiedName().toString()) {
-    case "[foodmart, agg_c_14_sales_fact_1997]":
-      return 86_805;
-    case "[foodmart, customer]":
-      return 10_281;
-    case "[foodmart, employee]":
-      return 1_155;
-    case "[foodmart, employee_closure]":
-      return 7_179;
-    case "[foodmart, department]":
-      return 10_281;
-    case "[foodmart, inventory_fact_1997]":
-      return 4_070;
-    case "[foodmart, position]":
-      return 18;
-    case "[foodmart, product]":
-      return 1560;
-    case "[foodmart, product_class]":
-      return 110;
-    case "[foodmart, promotion]":
-      return 1_864;
-    case "[foodmart, region]":
-      return 24; // should be 110; made it smaller than store to trick FK
-    case "[foodmart, salary]":
-      return 21_252;
-    case "[foodmart, sales_fact_1997]":
-      return 86_837;
-    case "[foodmart, store]":
-      return 25;
-    case "[foodmart, store_ragged]":
-      return 25;
-    case "[foodmart, time_by_day]":
-      return 730;
-    case "[foodmart, warehouse]":
-      return 24;
-    case "[foodmart, warehouse_class]":
-      return 6;
-    case "[scott, EMP]":
-      return 10;
-    case "[scott, DEPT]":
-      return 4;
-    default:
-      throw new AssertionError(table.t.getQualifiedName());
-    }
+    return CARDINALITY_MAP.get(table.t.getQualifiedName().toString());
   }
 
   /** Creates {@link Step} instances. */
