@@ -37,6 +37,7 @@ import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.runtime.Feature;
 import org.apache.calcite.runtime.Resources;
+import org.apache.calcite.schema.Sequence;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.ModifiableViewTable;
 import org.apache.calcite.sql.JoinConditionType;
@@ -3674,7 +3675,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
   }
 
-  public void validateSequenceValue(SqlValidatorScope scope, SqlIdentifier id) {
+  public SqlTypeName validateSequenceValue(SqlValidatorScope scope, SqlIdentifier id) {
     // Resolve identifier as a table.
     final SqlValidatorScope.ResolvedImpl resolved =
         new SqlValidatorScope.ResolvedImpl();
@@ -3690,7 +3691,10 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       switch (table.getJdbcTableType()) {
       case SEQUENCE:
       case TEMPORARY_SEQUENCE:
-        return;
+        if (table instanceof Sequence) {
+          return ((Sequence) table).getSequenceType();
+        }
+        return SqlTypeName.BIGINT;
       }
     }
     throw newValidationError(id, RESOURCE.notASequence(id.toString()));
