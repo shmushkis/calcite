@@ -1582,13 +1582,15 @@ In the following, *geom* is a GEOMETRY;
 
 In the "C" (for "compatibility") column, "o" indicates that the function
 implements the OpenGIS Simple Features Implementation Specification for SQL,
-[version 1.2.1](http://www.opengeospatial.org/standards/sfs).
+[version 1.2.1](http://www.opengeospatial.org/standards/sfs);
+"p" indicates that the function is present in
+[PostGIS](http://www.postgis.net/docs/reference.html).
 
 #### Geometry conversion functions (2D)
 
 | C | Operator syntax      | Description
 |:- |:-------------------- |:-----------
-|   | ST_AsText(geom) | Alias for `ST_AsWKT`
+| p | ST_AsText(geom) | Alias for `ST_AsWKT`
 | o | ST_AsWKT(geom) | Converts *geom* → Well-Known Text
 | o | ST_GeomFromText(wkt [, srid ]) | Returns a specified GEOMETRY value from Well-Known Text representation
 | o | ST_LineFromText(wkt [, srid ]) | Converts Well-Known Text → LINESTRING
@@ -1605,7 +1607,6 @@ Not implemented:
 * ST_Force2D(geom) 3D GEOMETRY → 2D GEOMETRY
 * ST_GeomFromGML(gml [, srid ]) GML → GEOMETRY
 * ST_GeomFromWKB(wkb [, srid ]) Well Known Binary → GEOMETRY
-* ST_GeometryTypeCode(geom) Returns the OGC SFS type code of a GEOMETRY
 * ST_GoogleMapLink(geom [, layerType [, zoom ]]) GEOMETRY → Google map link
 * ST_LineFromWKB(wkb [, srid ]) Well Known Binary → LINESTRING
 * ST_OSMMapLink(geom [, marker ]) GEOMETRY → OSM map link
@@ -1625,7 +1626,9 @@ Not implemented:
 
 | C | Operator syntax      | Description
 |:- |:-------------------- |:-----------
-| o | ST_MakePoint(x, y [, z ]) | Constructs a point from two or three coordinates
+| o | ST_MakeLine(point1 [, point ]*) | Creates a line-string from the given POINTs (or MULTIPOINTs)
+| p | ST_MakePoint(x, y [, z ]) | Alias for `ST_Point`
+| o | ST_Point(x, y [, z ]) | Constructs a point from two or three coordinates
 
 Not implemented:
 
@@ -1636,8 +1639,6 @@ Not implemented:
 * ST_MakeEnvelope(xMin, yMin, xMax, yMax  [, srid ]) Creates a rectangular POLYGON
 * ST_MakeGrid(geom, deltaX, deltaY) Calculates a regular grid of POLYGONs based on *geom*
 * ST_MakeGridPoints(geom, deltaX, deltaY) Calculates a regular grid of points based on *geom*
-* ST_MakeLine(point1 [, point ]*) Creates a line-string from the given POINTs (or MULTIPOINTs)
-* ST_MakePoint(x, y [, z ]) Constructs a point from two or three coordinates
 * ST_MakePolygon(lineString [, hole ]*) Creates a POLYGON from *lineString* with the given holes (which are required to be closed LINESTRINGs)
 * ST_MinimumDiameter(geom) Returns the minimum diameter of *geom*
 * ST_MinimumRectangle(geom) Returns the minimum rectangle enclosing *geom*
@@ -1656,11 +1657,14 @@ Not implemented:
 
 | C | Operator syntax      | Description
 |:- |:-------------------- |:-----------
+| o | ST_Boundary(geom [, srid ]) | Returns the boundary of *geom*
 | o | ST_Distance(geom1, geom2) | Returns the distance between *geom1* and *geom2*
+| o | ST_GeometryType(geom) | Returns the type of *geom*
+| o | ST_GeometryTypeCode(geom) | Returns the OGC SFS type code of *geom*
+| o | ST_Envelope(geom [, srid ]) | Returns the envelope of *geom* (which may be a GEOMETRYCOLLECTION) as a GEOMETRY
 
 Not implemented:
 
-* ST_Boundary(geom [, srid ]) Returns the boundary of *geom*
 * ST_Centroid(geom) Returns the centroid of *geom* (which may be a GEOMETRYCOLLECTION)
 * ST_CompactnessRatio(polygon) Returns the square root of *polygon*'s area divided by the area of the circle with circumference equal to its perimeter
 * ST_CoordDim(geom) Returns the dimension of the coordinates of *geom*
@@ -1671,7 +1675,6 @@ Not implemented:
 * ST_Extent(geom) Returns the minimum bounding box of *geom* (which may be a GEOMETRYCOLLECTION)
 * ST_ExteriorRing(polygon) Returns the exterior ring of *polygon* as a linear-ring
 * ST_GeometryN(geomCollection, n) Returns the *n*th GEOMETRY of *geomCollection*
-* ST_GeometryType(geom) Returns the type of *geom*
 * ST_InteriorRingN(polygon, n) Returns the *n*th interior ring of *polygon*
 * ST_IsClosed(geom) Returns whether *geom* is a closed LINESTRING or MULTILINESTRING
 * ST_IsEmpty(geom) Returns whether *geom* is empty
@@ -1701,7 +1704,7 @@ Not implemented:
 
 | C | Operator syntax      | Description
 |:- |:-------------------- |:-----------
-| o | ST_Is3D(s) | Returns whether *geom* has at least one z-coordinate
+| p | ST_Is3D(s) | Returns whether *geom* has at least one z-coordinate
 | o | ST_Z(geom) | Returns the z-value of the first coordinate of *geom*
 
 Not implemented:
@@ -1713,23 +1716,24 @@ Not implemented:
 
 | C | Operator syntax      | Description
 |:- |:-------------------- |:-----------
-| o | ST_DWithin(geom1, geom2, distance) | Returns whether *geom1* and *geom* are within *distance* of one another
+| o | ST_Contains(geom1, geom2) | Returns whether *geom1* contains *geom2*
+| p | ST_ContainsProperly(geom1, geom2) | Returns whether *geom1* contains *geom2* but does not intersect its boundary
+| o | ST_Crosses(geom1, geom2) | Returns whether *geom1* crosses *geom2*
+| o | ST_Disjoint(geom1, geom2) | Returns whether *geom1* and *geom2* are disjoint
+| p | ST_DWithin(geom1, geom2, distance) | Returns whether *geom1* and *geom* are within *distance* of one another
+| o | ST_EnvelopesIntersect(geom1, geom2) | Returns whether the envelope of *geom1* intersects the envelope of *geom2*
+| o | ST_Equals(geom1, geom2) | Returns whether *geom1* equals *geom2*
+| o | ST_Intersects(geom1, geom2) | Returns whether *geom1* intersects *geom2*
+| o | ST_Overlaps(geom1, geom2) | Returns whether *geom1* overlaps *geom2*
+| o | ST_Touches(geom1, geom2) | Returns whether *geom1* touches *geom2*
+| o | ST_Within(geom1, geom2) | Returns whether *geom1* is within *geom2*
 
 Not implemented:
 
-* ST_Contains(geom1, geom2) Returns whether *geom1* contains *geom2*
 * ST_Covers(geom1, geom2) Returns whether no point in *geom2* is outside *geom1*
-* ST_Crosses(geom1, geom2) Returns whether *geom1* crosses *geom2*
-* ST_Disjoint(geom1, geom2) Returns whether *geom1* and *geom2* are disjoint
-* ST_EnvelopesIntersect(geom1, geom2) Returns whether the envelope of *geom1* intersects the envelope of *geom2*
-* ST_Equals(geom1, geom2) Returns whether *geom1* equals *geom2*
-* ST_Intersects(geom1, geom2) Returns whether *geom1* intersects *geom2*
 * ST_OrderingEquals(geom1, geom2) Returns whether *geom1* equals *geom2* and their coordinates and component Geometries are listed in the same order
-* ST_Overlaps(geom1, geom2) Returns whether *geom1* overlaps *geom2*
 * ST_Relate(geom1, geom2) Returns the DE-9IM intersection matrix of *geom1* and *geom2*
 * ST_Relate(geom1, geom2, iMatrix) Returns whether *geom1* and *geom2* are related by the given intersection matrix *iMatrix*
-* ST_Touches(geom1, geom2) Returns whether *geom1* touches *geom2*
-* ST_Within(geom1, geom2) Returns whether *geom1* is within *geom2*
 
 #### Geometry operators (2D)
 
