@@ -180,6 +180,73 @@ public class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
+  @Test public void testSelectFilterSubQueryProject() {
+    // Even though specified as a sub-query, a single-level query can be sent
+    // to JDBC
+    String query = "select \"product_class_id\" * 2 as p\n"
+        + "from (\n"
+        + "  select *\n"
+        + "  from \"foodmart\".\"product\"\n"
+        + "  where \"product_id\" > 100)";
+    final String expected = "SELECT \"product_class_id\" * 2 AS \"P\"\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "WHERE \"product_id\" > 100";
+    final String expectedMysql = expected.replace('"', '`');
+    sql(query).ok(expected)
+        .dialect(DatabaseProduct.POSTGRESQL.getDialect())
+        .ok(expected)
+        .dialect(DatabaseProduct.MYSQL.getDialect())
+        .ok(expectedMysql);
+
+    // Do not split a single-level query into a sub-query
+    String query2 = "select \"product_class_id\" * 2 as p\n"
+        + "from \"foodmart\".\"product\"\n"
+        + "  where \"product_id\" > 100";
+    sql(query2).ok(expected)
+        .dialect(DatabaseProduct.POSTGRESQL.getDialect())
+        .ok(expected)
+        .dialect(DatabaseProduct.MYSQL.getDialect())
+        .ok(expectedMysql);
+  }
+
+  @Test public void testUseSubSelectIfDialectDoesNotSupportNestedAggregations() {
+    final String query = "select\n"
+        + "    SUM(\"net_weight1\") as \"net_weight_converted\"\n"
+        + "  from ("
+        + "    select\n"
+        + "       SUM(\"net_weight\") as \"net_weight1\"\n"
+        + "    from \"foodmart\".\"product\"\n"
+        + "    group by \"product_id\")";
+    final String expectedOracle = "SELECT"
+        + " SUM(SUM(\"net_weight\")) \"net_weight_converted\"\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "GROUP BY \"product_id\"";
+    final String expectedMySQL = "SELECT"
+        + " SUM(`net_weight1`) AS `net_weight_converted`\n"
+        + "FROM (SELECT `product_id`, SUM(`net_weight`) AS `net_weight1`\n"
+        + "FROM `foodmart`.`product`\n"
+        + "GROUP BY `product_id`) AS `t0`";
+    final String expectedVertica = "SELECT"
+        + " SUM(\"net_weight1\") AS \"net_weight_converted\"\n"
+        + "FROM (SELECT \"product_id\", SUM(\"net_weight\") AS \"net_weight1\"\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "GROUP BY \"product_id\") AS \"t0\"";
+    final String expectedPostgresql = "SELECT"
+        + " SUM(\"net_weight1\") AS \"net_weight_converted\"\n"
+        + "FROM (SELECT \"product_id\", SUM(\"net_weight\") AS \"net_weight1\"\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "GROUP BY \"product_id\") AS \"t0\"";
+    sql(query)
+        .dialect(DatabaseProduct.ORACLE.getDialect())
+        .ok(expectedOracle)
+        .dialect(DatabaseProduct.MYSQL.getDialect())
+        .ok(expectedMySQL)
+        .dialect(DatabaseProduct.VERTICA.getDialect())
+        .ok(expectedVertica)
+        .dialect(DatabaseProduct.POSTGRESQL.getDialect())
+        .ok(expectedPostgresql);
+  }
+
   @Test public void testSelectQueryWithGroupByAndProjectList() {
     String query = "select \"product_class_id\", \"product_id\", count(*) "
         + "from \"product\" group by \"product_class_id\", \"product_id\"  ";
@@ -1969,44 +2036,6 @@ public class RelToSqlConverterTest {
         + "\"UP\" AS PREV(\"UP\".\"salary\", 0) > "
         + "PREV(\"UP\".\"salary\", 1))";
     sql(sql).ok(expected);
-  }
-
-  @Test public void testUseSubSelectIfDialectDoesNotSupportNestedAggregations() {
-    final String query = "select\n"
-        + "    SUM(\"net_weight1\") as \"net_weight_converted\"\n"
-        + "  from ("
-        + "    select\n"
-        + "       SUM(\"net_weight\") as \"net_weight1\"\n"
-        + "    from \"foodmart\".\"product\"\n"
-        + "    group by \"product_id\")";
-    final String expectedOracle = "SELECT"
-        + " SUM(SUM(\"net_weight\")) \"net_weight_converted\"\n"
-        + "FROM \"foodmart\".\"product\"\n"
-        + "GROUP BY \"product_id\"";
-    final String expectedMySQL = "SELECT"
-        + " SUM(`net_weight1`) AS `net_weight_converted`\n"
-        + "FROM (SELECT `product_id`, SUM(`net_weight`) AS `net_weight1`\n"
-        + "FROM `foodmart`.`product`\n"
-        + "GROUP BY `product_id`) AS `t0`";
-    final String expectedVertica = "SELECT"
-        + " SUM(\"net_weight1\") AS \"net_weight_converted\"\n"
-        + "FROM (SELECT \"product_id\", SUM(\"net_weight\") AS \"net_weight1\"\n"
-        + "FROM \"foodmart\".\"product\"\n"
-        + "GROUP BY \"product_id\") AS \"t0\"";
-    final String expectedPostgresql = "SELECT"
-        + " SUM(\"net_weight1\") AS \"net_weight_converted\"\n"
-        + "FROM (SELECT \"product_id\", SUM(\"net_weight\") AS \"net_weight1\"\n"
-        + "FROM \"foodmart\".\"product\"\n"
-        + "GROUP BY \"product_id\") AS \"t0\"";
-    sql(query)
-        .dialect(DatabaseProduct.ORACLE.getDialect())
-        .ok(expectedOracle)
-        .dialect(DatabaseProduct.MYSQL.getDialect())
-        .ok(expectedMySQL)
-        .dialect(DatabaseProduct.VERTICA.getDialect())
-        .ok(expectedVertica)
-        .dialect(DatabaseProduct.POSTGRESQL.getDialect())
-        .ok(expectedPostgresql);
   }
 
   /** Fluid interface to run tests. */
