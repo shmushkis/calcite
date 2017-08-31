@@ -121,6 +121,7 @@ limitations under the License.
     <slf4j.version>1.7.13</slf4j.version>
     <spark.version>1.6.1</spark.version>
     <sqlline.version>1.3.0</sqlline.version>
+    <uzaygezen.version>0.2</uzaygezen.version>
     <xalan.version>2.7.1</xalan.version>
     <xerces.version>2.9.1</xerces.version>
   </properties>
@@ -250,6 +251,11 @@ limitations under the License.
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>${guava.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.uzaygezen</groupId>
+        <artifactId>uzaygezen-core</artifactId>
+        <version>${uzaygezen.version}</version>
       </dependency>
       <dependency>
         <groupId>com.joestelmach</groupId>
