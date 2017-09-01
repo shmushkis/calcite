@@ -938,6 +938,11 @@ public enum SqlKind {
    * the {@link #SESSION} group function. */
   SESSION_END,
 
+  // Spatial functions. They are registered as "user-defined functions" but it
+  // is convenient to have a "kind" so that we can quickly match them in planner
+  // rules.
+  ST_DWITHIN,
+
   // DDL and session control statements follow. The list is not exhaustive: feel
   // free to add more.
 

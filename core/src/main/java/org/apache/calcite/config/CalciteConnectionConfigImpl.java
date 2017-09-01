@@ -23,6 +23,7 @@ import org.apache.calcite.model.JsonSchema;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.fun.OracleSqlOperatorTable;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.fun.SqlStdOperatorTables;
 import org.apache.calcite.sql.util.ChainedSqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
@@ -102,6 +103,8 @@ public class CalciteConnectionConfigImpl extends ConnectionConfigImpl
     case "oracle":
       return ChainedSqlOperatorTable.of(OracleSqlOperatorTable.instance(),
           SqlStdOperatorTable.instance());
+    case "spatial":
+      return SqlStdOperatorTables.spatialInstance();
     default:
       throw new IllegalArgumentException("Unknown operator table: " + s);
     }

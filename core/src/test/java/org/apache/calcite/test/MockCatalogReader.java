@@ -618,6 +618,18 @@ public class MockCatalogReader extends CalciteCatalogReader {
     }
     registerTable(structExtendedTypeTable);
 
+    MockSchema geoSchema = new MockSchema("GEO");
+    registerSchema(geoSchema);
+    final MockTable restaurantTable =
+        MockTable.create(this, geoSchema, "RESTAURANTS", false, 100);
+    restaurantTable.addColumn("NAME", f.varchar20Type, true);
+    restaurantTable.addColumn("LATITUDE", f.intType);
+    restaurantTable.addColumn("LONGITUDE", f.intType);
+    restaurantTable.addColumn("TYPE", f.varchar10Type);
+    restaurantTable.addColumn("HILBERT", f.bigintType);
+    restaurantTable.addMonotonic("HILBERT");
+    registerTable(restaurantTable);
+
     return this;
   }
 
@@ -1571,6 +1583,8 @@ public class MockCatalogReader extends CalciteCatalogReader {
 
   /** Types used during initialization. */
   private class Fixture {
+    final RelDataType bigintType =
+        typeFactory.createSqlType(SqlTypeName.BIGINT);
     final RelDataType intType =
         typeFactory.createSqlType(SqlTypeName.INTEGER);
     final RelDataType intTypeNull =

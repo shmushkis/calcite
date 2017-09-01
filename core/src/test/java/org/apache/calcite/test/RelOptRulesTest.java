@@ -84,6 +84,7 @@ import org.apache.calcite.rel.rules.SemiJoinRule;
 import org.apache.calcite.rel.rules.SortJoinTransposeRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
 import org.apache.calcite.rel.rules.SortUnionTransposeRule;
+import org.apache.calcite.rel.rules.SpatialRules;
 import org.apache.calcite.rel.rules.SubQueryRemoveRule;
 import org.apache.calcite.rel.rules.TableScanRule;
 import org.apache.calcite.rel.rules.UnionMergeRule;
@@ -96,6 +97,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.RelBuilder;
@@ -3520,6 +3522,31 @@ public class RelOptRulesTest extends RelOptTestBase {
         .addRuleInstance(DateRangeRules.FILTER_INSTANCE)
         .build();
     sql(sql).with(program).check();
+  }
+
+  /** Tests that a call to {@code ST_DWithin}
+   * is rewritten with an additional range predicate. */
+  @Test public void testSpatialDWithinToHilbert() throws Exception {
+    final String sql = "select *\n"
+        + "from GEO.Restaurants as r\n"
+        + "where ST_DWithin(ST_Point(10.0, 20.0),\n"
+        + "                 ST_Point(r.latitude, r.longitude), 10)";
+    HepProgram program = new HepProgramBuilder()
+        .addRuleInstance(SpatialRules.INSTANCE)
+        .build();
+    sql(sql)
+        .withCatalogReaderFactory(
+            new Function<RelDataTypeFactory, Prepare.CatalogReader>() {
+              public Prepare.CatalogReader apply(
+                  RelDataTypeFactory typeFactory) {
+                return new MockCatalogReader(typeFactory, true)
+                    .init()
+                    .init2();
+              }
+            })
+        .withConformance(SqlConformanceEnum.LENIENT)
+        .with(program)
+        .check();
   }
 
 }
