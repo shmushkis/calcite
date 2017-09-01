@@ -529,7 +529,10 @@ public final class Schemas {
       return PathImpl.EMPTY;
     }
     if (!rootSchema.name.isEmpty()) {
-      assert rootSchema.name.equals(iterator.next());
+      // If path starts with the name of the root schema, ignore the first step
+      // in the path.
+      final String next = iterator.next();
+      assert rootSchema.name.equals(next);
     }
     for (;;) {
       final String name = iterator.next();
