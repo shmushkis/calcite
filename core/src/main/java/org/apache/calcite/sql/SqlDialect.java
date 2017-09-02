@@ -22,9 +22,9 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.dialect.AnsiSqlDialect;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
-import org.apache.calcite.sql.dialect.DB2SequenceSupport;
+import org.apache.calcite.sql.dialect.Db2SequenceSupport;
 import org.apache.calcite.sql.dialect.HsqldbSequenceSupport;
-import org.apache.calcite.sql.dialect.MSSQLSequenceSupportResolver;
+import org.apache.calcite.sql.dialect.MssqlSequenceSupportResolver;
 import org.apache.calcite.sql.dialect.OracleSequenceSupport;
 import org.apache.calcite.sql.dialect.PhoenixSequenceSupport;
 import org.apache.calcite.sql.dialect.PostgresqlSequenceSupport;
@@ -83,6 +83,7 @@ public class SqlDialect {
   private final String identifierQuoteString;
   private final String identifierEndQuoteString;
   private final String identifierEscapedQuote;
+  @Deprecated // to be removed before 2.0
   private final DatabaseProduct databaseProduct;
   private final NullCollation nullCollation;
   private final SequenceSupport sequenceSupport;
@@ -338,7 +339,17 @@ public class SqlDialect {
 
   public void unparseCall(SqlWriter writer, SqlCall call, int leftPrec,
       int rightPrec) {
-    call.getOperator().unparse(writer, call, leftPrec, rightPrec);
+    switch (call.getKind()) {
+    case NEXT_VALUE:
+    case CURRENT_VALUE:
+      if (sequenceSupport == null) {
+        throw new IllegalStateException("Sequences not supported on target database platform!");
+      }
+      sequenceSupport.unparseSequenceVal(writer, call.getKind(), call.operand(0));
+      break;
+    default:
+      call.getOperator().unparse(writer, call, leftPrec, rightPrec);
+    }
   }
 
   public void unparseDateTimeLiteral(SqlWriter writer,
@@ -606,13 +617,6 @@ public class SqlDialect {
     }
   }
 
-  public void unparseSequenceVal(SqlWriter writer, SqlKind kind, SqlNode sequenceNode) {
-    if (sequenceSupport == null) {
-      throw new IllegalStateException("Sequences not supported on target database platform!");
-    }
-    sequenceSupport.unparseSequenceVal(writer, kind, sequenceNode);
-  }
-
   /**
    * A few utility functions copied from org.apache.calcite.util.Util. We have
    * copied them because we wish to keep SqlDialect's dependencies to a
@@ -682,15 +686,16 @@ public class SqlDialect {
    * extend the dialect to describe the particular capability, for example,
    * whether the database allows expressions to appear in the GROUP BY clause.
    */
+  @Deprecated // to be removed before 2.0
   public enum DatabaseProduct {
     ACCESS("Access", "\"", null, NullCollation.HIGH),
     CALCITE("Apache Calcite", "\"", null, NullCollation.HIGH),
     MSSQL("Microsoft SQL Server", "[",
-      MSSQLSequenceSupportResolver.INSTANCE, NullCollation.HIGH),
+      MssqlSequenceSupportResolver.INSTANCE, NullCollation.HIGH),
     MYSQL("MySQL", "`", null, NullCollation.HIGH),
     ORACLE("Oracle", "\"", OracleSequenceSupport.INSTANCE, NullCollation.HIGH),
     DERBY("Apache Derby", null, null, NullCollation.HIGH),
-    DB2("IBM DB2", null, DB2SequenceSupport.INSTANCE, NullCollation.HIGH),
+    DB2("IBM DB2", null, Db2SequenceSupport.INSTANCE, NullCollation.HIGH),
     FIREBIRD("Firebird", null, null, NullCollation.HIGH),
     // H2 uses the same nextval and currval functions as Postgresql
     H2("H2", "\"", PostgresqlSequenceSupport.INSTANCE, NullCollation.HIGH),

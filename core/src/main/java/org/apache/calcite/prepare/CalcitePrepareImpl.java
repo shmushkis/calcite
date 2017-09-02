@@ -786,27 +786,8 @@ public class CalcitePrepareImpl implements CalcitePrepare {
       validator.setIdentifierExpansion(true);
       validator.setDefaultNullCollation(config.defaultNullCollation());
 
-      // Find out the target schema to determine the SqlDialect
-      Schema targetSchema = null;
-      for (List<String> schemaPath : catalogReader.getSchemaPaths()) {
-        CalciteSchema schema = catalogReader.rootSchema;
-        for (String schemaName : schemaPath) {
-          schema = schema.getSubSchema(schemaName, true);
-        }
-        if (schema != null && schema.schema != null) {
-          targetSchema = schema.schema;
-          break;
-        }
-      }
-
-      // If this is a JdbcSchema we grab it's dialect
-      SqlDialect sqlDialect = null;
-      if (targetSchema != null && targetSchema instanceof JdbcSchema) {
-        sqlDialect = ((JdbcSchema) targetSchema).dialect;
-      }
-
       preparedResult = preparingStmt.prepareSql(
-          sqlDialect, sqlNode, Object.class, validator, true);
+          sqlNode, Object.class, validator, true);
       switch (sqlNode.getKind()) {
       case INSERT:
       case DELETE:

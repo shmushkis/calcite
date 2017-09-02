@@ -25,43 +25,34 @@ import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 
 /**
- * Implementation using the SQL Server sys sequences view from version 2012 onwards.
+ * Implementation using the DB2 system catalog.
+ * See the following for reference: https://www.ibm.com/
+ * support/knowledgecenter/en/SSEPGG_10.5.0/com.ibm.db2.luw.sql.ref.doc/doc/r0004203.html
  */
-public class MSSQLSequenceSupportResolver extends SequenceSupportImpl
+public class Db2SequenceSupport extends SequenceSupportImpl
         implements SqlDialect.SequenceSupportResolver {
   public static final SqlDialect.SequenceSupportResolver INSTANCE =
-          new MSSQLSequenceSupportResolver();
+          new Db2SequenceSupport();
 
-  private MSSQLSequenceSupportResolver() {
-    super("select NULL, schema_name(seq.schema_id), seq.name, "
-        + "CASE WHEN PRECISION = 19 THEN 'BIGINT' ELSE 'INT', seq.increment from "
-        + "sys.sequences AS seq where 1=1",
-        null,
-        " and schema_name(seq.schema_id) = ?");
+  private Db2SequenceSupport() {
+    super(
+      "select NULL, SEQSCHEMA, SEQNAME, CASE WHEN PRECISION = 19 THEN 'BIGINT' ELSE 'INT' END, "
+          + "INCREMENT from SYSCAT.SEQUENCES where 1=1",
+      null,
+      " and SEQSCHEMA = ?");
   }
 
   @Override public SqlDialect.SequenceSupport resolveExtractor(
       DatabaseMetaData metaData) throws SQLException {
-    int databaseMajorVersion = metaData.getDatabaseMajorVersion();
-    // SQL Server 2012 supports sequences which has the major version number 11
-    if (databaseMajorVersion >= 11) {
-      return this;
-    }
-    return null;
+    return this;
   }
 
   @Override public void unparseSequenceVal(SqlWriter writer, SqlKind kind, SqlNode sequenceNode) {
-    if (kind == SqlKind.NEXT_VALUE) {
-      writer.sep("NEXT VALUE FOR");
-      sequenceNode.unparse(writer, 0, 0);
-    } else {
-      // Apparently there is no builtin syntax to do this
-      // https://stackoverflow.com/questions/13702471/get-current-value-from-a-sql-server-sequence
-      writer.sep("select current_value from sys.sequences where name = '");
-      sequenceNode.unparse(writer, 0, 0);
-      writer.sep("'");
-    }
+    // SFor reference also see: https://www.ibm.com
+    // /support/knowledgecenter/en/SSEPEK_10.0.0/sqlref/src/tpc/db2z_sequencereference.html
+    writer.sep(kind == SqlKind.NEXT_VALUE ? "NEXT VALUE FOR" : "PREVIOUS VALUE FOR");
+    sequenceNode.unparse(writer, 0, 0);
   }
 }
 
-// End MSSQLSequenceSupportResolver.java
+// End Db2SequenceSupport.java
