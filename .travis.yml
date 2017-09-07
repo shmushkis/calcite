@@ -19,7 +19,7 @@
 language: java
 jdk:
   # Only enable one JDK on coverity_scan branch
-  - oraclejdk7
+  - oraclejdk8
 branches:
   only:
     - coverity_scan
