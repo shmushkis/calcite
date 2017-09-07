@@ -941,7 +941,19 @@ public enum SqlKind {
   // Spatial functions. They are registered as "user-defined functions" but it
   // is convenient to have a "kind" so that we can quickly match them in planner
   // rules.
+
+  /** The {@code ST_DWithin} function. */
   ST_DWITHIN,
+
+  /** The {@code ST_Point} function. */
+  ST_POINT,
+
+  /** The {@code ST_Point} function that makes a 3D point. */
+  ST_POINT3,
+
+  /** The {@code Hilbert} function that converts (x, y) to a position on a
+   * Hilbert space-filling curve. */
+  HILBERT,
 
   // DDL and session control statements follow. The list is not exhaustive: feel
   // free to add more.

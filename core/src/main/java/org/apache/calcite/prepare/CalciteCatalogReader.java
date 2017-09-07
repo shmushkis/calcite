@@ -41,6 +41,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.SqlSyntax;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.FamilyOperandTypeChecker;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
@@ -416,7 +417,20 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   }
 
   public List<SqlOperator> getOperatorList() {
-    return null;
+    final ImmutableList.Builder<SqlOperator> b = ImmutableList.builder();
+    for (List<String> schemaPath : schemaPaths) {
+      CalciteSchema schema = getSchema(schemaPath, nameMatcher);
+      if (schema != null) {
+        for (String name : schema.getFunctionNames()) {
+          for (Function function : schema.getFunctions(name, true)) {
+            b.add(
+                toOp(new SqlIdentifier(name, SqlParserPos.ZERO),
+                    function));
+          }
+        }
+      }
+    }
+    return b.build();
   }
 
   public CalciteSchema getRootSchema() {

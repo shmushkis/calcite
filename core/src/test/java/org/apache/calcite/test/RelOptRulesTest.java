@@ -3524,17 +3524,11 @@ public class RelOptRulesTest extends RelOptTestBase {
     sql(sql).with(program).check();
   }
 
-  /** Tests that a call to {@code ST_DWithin}
-   * is rewritten with an additional range predicate. */
-  @Test public void testSpatialDWithinToHilbert() throws Exception {
-    final String sql = "select *\n"
-        + "from GEO.Restaurants as r\n"
-        + "where ST_DWithin(ST_Point(10.0, 20.0),\n"
-        + "                 ST_Point(r.latitude, r.longitude), 10)";
+  private Sql spatial(String sql) {
     HepProgram program = new HepProgramBuilder()
         .addRuleInstance(SpatialRules.INSTANCE)
         .build();
-    sql(sql)
+    return sql(sql)
         .withCatalogReaderFactory(
             new Function<RelDataTypeFactory, Prepare.CatalogReader>() {
               public Prepare.CatalogReader apply(
@@ -3545,8 +3539,35 @@ public class RelOptRulesTest extends RelOptTestBase {
               }
             })
         .withConformance(SqlConformanceEnum.LENIENT)
-        .with(program)
-        .check();
+        .with(program);
+  }
+
+  /** Tests that a call to {@code ST_DWithin}
+   * is rewritten with an additional range predicate. */
+  @Test public void testSpatialDWithinToHilbert() throws Exception {
+    final String sql = "select *\n"
+        + "from GEO.Restaurants as r\n"
+        + "where ST_DWithin(ST_Point(10.0, 20.0),\n"
+        + "                 ST_Point(r.longitude, r.latitude), 6)";
+    spatial(sql).check();
+  }
+
+  /** Tests that a call to {@code ST_DWithin}
+   * is rewritten with an additional range predicate. */
+  @Test public void testSpatialDWithinToHilbertZero() throws Exception {
+    final String sql = "select *\n"
+        + "from GEO.Restaurants as r\n"
+        + "where ST_DWithin(ST_Point(10.0, 20.0),\n"
+        + "                 ST_Point(r.longitude, r.latitude), 0)";
+    spatial(sql).check();
+  }
+
+  @Test public void testSpatialDWithinToHilbertNegative() throws Exception {
+    final String sql = "select *\n"
+        + "from GEO.Restaurants as r\n"
+        + "where ST_DWithin(ST_Point(10.0, 20.0),\n"
+        + "                 ST_Point(r.longitude, r.latitude), -2)";
+    spatial(sql).check();
   }
 
 }

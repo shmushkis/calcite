@@ -33,7 +33,6 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.runtime.FlatLists;
-import org.apache.calcite.runtime.GeoFunctions;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
@@ -761,8 +760,6 @@ public class CalciteAssert {
       }
       return rootSchema.add("foodmart2", new CloneSchema(foodmart));
     case GEO:
-      ModelHandler.addFunctions(rootSchema, null, ImmutableList.<String>of(),
-          GeoFunctions.class.getName(), "*", true);
       final SchemaPlus s = rootSchema.add("GEO", new AbstractSchema());
       ModelHandler.addFunctions(s, "countries", ImmutableList.<String>of(),
           CountriesTableFunction.class.getName(), null, false);
