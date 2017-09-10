@@ -1,0 +1,15 @@
+
+# JDBC driver
+curl -o jethro-jdbc-2.2-standalone.jar https://jethro.io/latest-jdbc
+jar xvf jethro-jdbc-2.2-standalone.jar META-INF/maven/com.jethrodata/jethro-jdbc/pom.xml
+mvn install:install-file -Dfile=jethro-jdbc-2.2-standalone.jar -DgroupId=com.jethrodata -DartifactId=jethro-jdbc -Dversion=2.2 -DpomFile=META-INF/maven/com.jethrodata/jethro-jdbc/pom.xml
+
+# Docker
+
+docker load --input jethro_docker-sanity_tpcds-3.0.5-16389.tar
+
+docker run -d --privileged --name jethroDocker -p 9100-9200:9100-9200 -p 9322:22  jethrodata/jethro:sanity_tpcds-3.0.5-16389
+
+# Jethro JDBC classname: com.jethrodata.JethroDriver
+# Connection string: JethroData://<docker-ip>:9111/sanity_tpcds
+

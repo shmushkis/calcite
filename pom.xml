@@ -91,6 +91,7 @@ limitations under the License.
     <java-diff.version>1.1</java-diff.version>
     <javacc-maven-plugin.version>2.4</javacc-maven-plugin.version>
     <jcip-annotations.version>1.0-1</jcip-annotations.version>
+    <jethro-jdbc.version>2.2</jethro-jdbc.version>
     <jetty.version>9.2.15.v20160210</jetty.version>
     <jmh.version>1.12</jmh.version>
     <jsoup.version>1.10.2</jsoup.version>
@@ -250,6 +251,11 @@ limitations under the License.
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>${guava.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.jethrodata</groupId>
+        <artifactId>jethro-jdbc</artifactId>
+        <version>${jethro-jdbc.version}</version>
       </dependency>
       <dependency>
         <groupId>com.joestelmach</groupId>

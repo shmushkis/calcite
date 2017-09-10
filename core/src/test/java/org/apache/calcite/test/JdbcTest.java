@@ -163,47 +163,55 @@ import static org.junit.Assert.fail;
  */
 public class JdbcTest {
 
-  public static final String FOODMART_SCHEMA = "     {\n"
-      + "       type: 'jdbc',\n"
-      + "       name: 'foodmart',\n"
-      + "       jdbcDriver: " + q(CalciteAssert.DB.foodmart.driver) + ",\n"
-      + "       jdbcUser: " + q(CalciteAssert.DB.foodmart.username) + ",\n"
-      + "       jdbcPassword: " + q(CalciteAssert.DB.foodmart.password) + ",\n"
-      + "       jdbcUrl: " + q(CalciteAssert.DB.foodmart.url) + ",\n"
-      + "       jdbcCatalog: " + q(CalciteAssert.DB.foodmart.catalog) + ",\n"
-      + "       jdbcSchema: " + q(CalciteAssert.DB.foodmart.schema) + "\n"
-      + "     }\n";
+  public static final String FOODMART_SCHEMA =
+      schema(CalciteAssert.DB.foodmart, "foodmart");
 
-  public static final String FOODMART_MODEL = "{\n"
-      + "  version: '1.0',\n"
-      + "  defaultSchema: 'foodmart',\n"
-      + "   schemas: [\n"
-      + FOODMART_SCHEMA
-      + "   ]\n"
-      + "}";
+  public static String schema(ConnectionSpec c, String name) {
+    if (c == null) {
+      return "{}";
+    }
+    return "     {\n"
+        + "       type: 'jdbc',\n"
+        + "       name: '" + name + "',\n"
+        + "       jdbcDriver: " + q(c.driver) + ",\n"
+        + "       jdbcUser: " + q(c.username) + ",\n"
+        + "       jdbcPassword: " + q(c.password) + ",\n"
+        + "       jdbcUrl: " + q(c.url) + ",\n"
+        + "       jdbcCatalog: " + q(c.catalog) + ",\n"
+        + "       jdbcSchema: " + q(c.schema) + "\n"
+        + "     }\n";    
+  }
+  
+  public static final String FOODMART_MODEL =
+      model(CalciteAssert.DB.foodmart, "foodmart");
+
+  public static String model(ConnectionSpec c, String name) {
+    return "{\n"
+        + "  version: '1.0',\n"
+        + "  defaultSchema: '" + name + "',\n"
+        + "   schemas: [\n"
+        + schema(c, name)
+        + "   ]\n"
+        + "}";
+  }
 
   public static final ConnectionSpec SCOTT =
       Util.first(CalciteAssert.DB.scott,
           CalciteAssert.DatabaseInstance.HSQLDB.scott);
 
-  public static final String SCOTT_SCHEMA = "     {\n"
-      + "       type: 'jdbc',\n"
-      + "       name: 'SCOTT',\n"
-      + "       jdbcDriver: " + q(SCOTT.driver) + ",\n"
-      + "       jdbcUser: " + q(SCOTT.username) + ",\n"
-      + "       jdbcPassword: " + q(SCOTT.password) + ",\n"
-      + "       jdbcUrl: " + q(SCOTT.url) + ",\n"
-      + "       jdbcCatalog: " + q(SCOTT.catalog) + ",\n"
-      + "       jdbcSchema: " + q(SCOTT.schema) + "\n"
-      + "     }\n";
+  public static final String SCOTT_SCHEMA = schema(SCOTT, "SCOTT");
 
-  public static final String SCOTT_MODEL = "{\n"
-      + "  version: '1.0',\n"
-      + "  defaultSchema: 'SCOTT',\n"
-      + "   schemas: [\n"
-      + SCOTT_SCHEMA
-      + "   ]\n"
-      + "}";
+  public static final String SCOTT_MODEL = model(SCOTT, "SCOTT");
+
+  public static final String TPCDS_SCHEMA =
+      schema(CalciteAssert.DB.tpcDs, "TPCDS");
+
+  public static String tpcdsModel() {
+    return model(CalciteAssert.DB.tpcDs, "TPCDS");
+  }
+
+  public static final String TPCDS_MODEL =
+      model(CalciteAssert.DB.tpcDs, "TPCDS");
 
   public static final String HR_SCHEMA = "     {\n"
       + "       type: 'custom',\n"

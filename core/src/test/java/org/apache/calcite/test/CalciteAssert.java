@@ -1738,24 +1738,30 @@ public class CalciteAssert {
         new ConnectionSpec(FoodmartHsqldb.URI, "FOODMART", "FOODMART",
             "org.hsqldb.jdbcDriver", "foodmart"),
         new ConnectionSpec(ScottHsqldb.URI, ScottHsqldb.USER,
-            ScottHsqldb.PASSWORD, "org.hsqldb.jdbcDriver", "SCOTT")),
+            ScottHsqldb.PASSWORD, "org.hsqldb.jdbcDriver", "SCOTT"),
+        null),
     H2(
         new ConnectionSpec("jdbc:h2:" + getDataSetPath()
             + "/h2/target/foodmart;user=foodmart;password=foodmart",
-            "foodmart", "foodmart", "org.h2.Driver", "foodmart"), null),
+            "foodmart", "foodmart", "org.h2.Driver", "foodmart"), null, null),
+    JETHRO(null, null,
+        new ConnectionSpec("jdbc:JethroData://localhost:9111/sanity_tpcds",
+            "jethro", "jethro", "com.jethrodata.JethroDriver", "def_schema")),
     MYSQL(
         new ConnectionSpec("jdbc:mysql://localhost/foodmart", "foodmart",
-            "foodmart", "com.mysql.jdbc.Driver", "foodmart"), null),
+            "foodmart", "com.mysql.jdbc.Driver", "foodmart"), null, null),
     ORACLE(
         new ConnectionSpec("jdbc:oracle:thin:@localhost:1521:XE", "foodmart",
-            "foodmart", "oracle.jdbc.OracleDriver", "FOODMART"), null),
+            "foodmart", "oracle.jdbc.OracleDriver", "FOODMART"), null, null),
     POSTGRESQL(
         new ConnectionSpec(
             "jdbc:postgresql://localhost/foodmart?user=foodmart&password=foodmart&searchpath=foodmart",
-            "foodmart", "foodmart", "org.postgresql.Driver", "foodmart"), null);
+            "foodmart", "foodmart", "org.postgresql.Driver", "foodmart"),
+        null, null);
 
     public final ConnectionSpec foodmart;
     public final ConnectionSpec scott;
+    public final ConnectionSpec tpcDs;
 
     private static String getDataSetPath() {
       String path = System.getProperty("calcite.test.dataset");
@@ -1774,9 +1780,11 @@ public class CalciteAssert {
       return ".";
     }
 
-    DatabaseInstance(ConnectionSpec foodmart, ConnectionSpec scott) {
+    DatabaseInstance(ConnectionSpec foodmart, ConnectionSpec scott,
+        ConnectionSpec tpcDs) {
       this.foodmart = foodmart;
       this.scott = scott;
+      this.tpcDs = tpcDs;
     }
   }
 

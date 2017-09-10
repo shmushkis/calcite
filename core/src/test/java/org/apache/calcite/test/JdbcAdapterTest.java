@@ -25,6 +25,7 @@ import com.google.common.base.Function;
 
 import org.hsqldb.jdbcDriver;
 
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -838,6 +839,22 @@ public class JdbcAdapterTest {
         .runs()
         .returnsCount(10)
         .typeIs("[employee_id INTEGER NOT NULL, position_id INTEGER]");
+  }
+
+  @Test public void testJethroSelect() {
+    Assume.assumeThat(CalciteAssert.DB, is(DatabaseInstance.JETHRO));
+    final AssertThat with = CalciteAssert.model(JdbcTest.tpcdsModel());
+
+    final String sql1 = "select count(*) as c from TPCDS.\"call_center\"";
+    with.query(sql1)
+        .returnsUnordered("C=6");
+
+    final String sql2 = ""
+        + "select \"cc_manager\", count(*) as c from TPCDS.\"call_center\"\n"
+        + "group by \"cc_manager\""
+        + "having count(distinct \"cc_call_center_sk\") > 2";
+    with.query(sql2)
+        .returnsUnordered("cc_manager=, C=3");
   }
 
   /** Acquires a lock, and releases it when closed. */
