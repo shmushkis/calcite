@@ -151,6 +151,7 @@ import org.junit.runners.Suite;
     RexImplicationCheckerTest.class,
     MaterializationTest.class,
     JdbcAdapterTest.class,
+    JdbcAdapterTpcdsTest.class,
     LinqFrontJdbcBackTest.class,
     JdbcFrontJdbcBackLinqMiddleTest.class,
     CalciteSqlOperatorTest.class,

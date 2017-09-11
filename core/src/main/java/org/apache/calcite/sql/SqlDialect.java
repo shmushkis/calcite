@@ -207,6 +207,8 @@ public class SqlDialect {
       return DatabaseProduct.INGRES;
     case "INTERBASE":
       return DatabaseProduct.INTERBASE;
+    case "JETHRODATA":
+      return DatabaseProduct.JETHRO;
     case "LUCIDDB":
       return DatabaseProduct.LUCIDDB;
     case "ORACLE":
@@ -651,6 +653,7 @@ public class SqlDialect {
     HIVE("Apache Hive", null, NullCollation.HIGH),
     INFORMIX("Informix", null, NullCollation.HIGH),
     INGRES("Ingres", null, NullCollation.HIGH),
+    JETHRO("JethroData", null, NullCollation.HIGH),
     LUCIDDB("LucidDB", "\"", NullCollation.HIGH),
     INTERBASE("Interbase", null, NullCollation.HIGH),
     PHOENIX("Phoenix", "\"", NullCollation.HIGH),
