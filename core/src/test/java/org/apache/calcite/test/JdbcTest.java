@@ -179,9 +179,9 @@ public class JdbcTest {
         + "       jdbcUrl: " + q(c.url) + ",\n"
         + "       jdbcCatalog: " + q(c.catalog) + ",\n"
         + "       jdbcSchema: " + q(c.schema) + "\n"
-        + "     }\n";    
+        + "     }\n";
   }
-  
+
   public static final String FOODMART_MODEL =
       model(CalciteAssert.DB.foodmart, "foodmart");
 
