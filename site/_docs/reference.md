@@ -1631,6 +1631,7 @@ Not implemented:
 
 | C | Operator syntax      | Description
 |:- |:-------------------- |:-----------
+| p | ST_MakeEnvelope(xMin, yMin, xMax, yMax  [, srid ]) | Creates a rectangular POLYGON
 | o | ST_MakeLine(point1 [, point ]*) | Creates a line-string from the given POINTs (or MULTIPOINTs)
 | p | ST_MakePoint(x, y [, z ]) | Alias for `ST_Point`
 | o | ST_Point(x, y [, z ]) | Constructs a point from two or three coordinates
@@ -1641,7 +1642,6 @@ Not implemented:
 * ST_Expand(geom, distance) Expands *geom*'s envelope
 * ST_Expand(geom, deltaX, deltaY) Expands *geom*'s envelope
 * ST_MakeEllipse(point, width, height) Constructs an ellipse
-* ST_MakeEnvelope(xMin, yMin, xMax, yMax  [, srid ]) Creates a rectangular POLYGON
 * ST_MakeGrid(geom, deltaX, deltaY) Calculates a regular grid of POLYGONs based on *geom*
 * ST_MakeGridPoints(geom, deltaX, deltaY) Calculates a regular grid of points based on *geom*
 * ST_MakePolygon(lineString [, hole ]*) Creates a POLYGON from *lineString* with the given holes (which are required to be closed LINESTRINGs)
