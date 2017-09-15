@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.test;
 
+import org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl;
+
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -33,7 +35,7 @@ import static org.hamcrest.core.Is.is;
 public class ServerTest {
 
   private static final String URL = "jdbc:calcite:"
-      + "ParserFactory=org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl#FACTORY";
+      + "ParserFactory=" + SqlDdlParserImpl.class.getName() + "#FACTORY";
 
   @Test public void testStatement() throws Exception {
     try (Connection c = DriverManager.getConnection(URL);
