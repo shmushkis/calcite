@@ -150,6 +150,7 @@ limitations under the License.
     <module>pig</module>
     <module>piglet</module>
     <module>plus</module>
+    <module>server</module>
     <module>spark</module>
     <module>splunk</module>
     <module>ubenchmark</module>
