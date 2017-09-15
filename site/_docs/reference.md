@@ -2065,3 +2065,19 @@ intervalLiteral:
 
 In *patternQuantifier*, *repeat* is a positive integer,
 and *minRepeat* and *maxRepeat* are non-negative integers.
+
+### Extensions
+
+DDL extensions are only available in the calcite-server module.
+
+{% highlight sql %}
+ddlStatement:
+      createTableStatement
+  |   createViewStatement
+
+createTableStatement:
+      CREATE TABLE name '(' columnDecl [, columnDecl ]* ')'
+
+createViewStatement:
+      CREATE VIEW name '(' columnDecl [, columnDecl ]* ')' AS query
+{% endhighlight %}
