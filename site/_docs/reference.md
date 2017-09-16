@@ -2069,6 +2069,9 @@ and *minRepeat* and *maxRepeat* are non-negative integers.
 ### Extensions
 
 DDL extensions are only available in the calcite-server module.
+To enable, include `calcite-server.jar` in your class path, and add
+`ParserFactory=org.apache.calcite.sql.parser.ddl.SqlDdlParserImpl#FACTORY`
+to the JDBC connect string.
 
 {% highlight sql %}
 ddlStatement:
@@ -2076,8 +2079,38 @@ ddlStatement:
   |   createViewStatement
 
 createTableStatement:
-      CREATE TABLE name '(' columnDecl [, columnDecl ]* ')'
+      CREATE TABLE name
+      [ '(' tableElement [, tableElement ]* ')' ]
+      [ AS query ]
+
+tableElement:
+      column type [ columnGenerator ] [ columnConstraint ]
+  |   columnName
+  |   tableConstraint
+
+columnGenerator:
+      DEFAULT expression
+  |   [ GENERATED ALWAYS ] AS '(' expression ')'
+      { VIRTUAL | STORED }
+
+columnConstraint:
+      [ CONSTRAINT name ]
+      [ NOT ] NULL
+
+tableConstraint:
+      [ CONSTRAINT name ]
+      {
+          CHECK '(' expression ')'
+      |   PRIMARY KEY '(' column [, column ]* ')'
+      |   UNIQUE '(' column [, column ]* ')'
+      }
 
 createViewStatement:
-      CREATE VIEW name '(' columnDecl [, columnDecl ]* ')' AS query
+      CREATE [ OR REPLACE ] VIEW name
+      [ '(' column [, column ]* ')' ]
+      AS query
+
+In *createTableStatement*, if you specify *AS query*, you may omit the list of
+columns, or you may specify column names without data types.
+
 {% endhighlight %}

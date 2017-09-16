@@ -42,6 +42,7 @@ import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.schema.impl.AbstractTableQueryable;
 import org.apache.calcite.sql.SqlCreate;
+import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlExecutableStatement;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
@@ -52,6 +53,10 @@ import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.ImmutableNullableList;
+import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.Util;
+
+import com.google.common.base.Preconditions;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -61,22 +66,24 @@ import java.util.List;
 /**
  * Parse tree for {@code CREATE TABLE} statement.
  */
-public class SqlCreateTable extends SqlCreate
+public class SqlCreateView extends SqlCreate
     implements SqlExecutableStatement {
+  private final boolean materialized;
   private final SqlIdentifier name;
   private final SqlNodeList columnList;
   private final SqlNode query;
 
   private static final SqlOperator OPERATOR =
-      new SqlSpecialOperator("CREATE TABLE", SqlKind.OTHER_DDL);
+      new SqlSpecialOperator("CREATE VIEW", SqlKind.CREATE_VIEW);
 
-  /** Creates a SqlCreateTable. */
-  SqlCreateTable(SqlParserPos pos, SqlIdentifier name,
-      SqlNodeList columnList, SqlNode query) {
-    super(pos, false);
+  /** Creates a SqlCreateView. */
+  SqlCreateView(SqlParserPos pos, boolean materialized, boolean replace,
+      SqlIdentifier name, SqlNodeList columnList, SqlNode query) {
+    super(pos, replace);
+    this.materialized = materialized;
     this.name = name;
     this.columnList = columnList; // may be null
-    this.query = query; // for "CREATE TABLE ... AS query"; may be nul
+    this.query = Preconditions.checkNotNull(query);
   }
 
   @Override public SqlOperator getOperator() {
@@ -88,8 +95,16 @@ public class SqlCreateTable extends SqlCreate
   }
 
   @Override public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
-    writer.keyword("CREATE");
-    writer.keyword("TABLE");
+    if (getReplace()) {
+      writer.keyword("CREATE OR REPLACE");
+    } else {
+      writer.keyword("CREATE");
+    }
+    if (materialized) {
+      writer.keyword("MATERIALIZED VIEW");
+    } else {
+      writer.keyword("VIEW");
+    }
     name.unparse(writer, leftPrec, rightPrec);
     if (columnList != null) {
       SqlWriter.Frame frame = writer.startList("(", ")");
@@ -99,11 +114,18 @@ public class SqlCreateTable extends SqlCreate
       }
       writer.endList(frame);
     }
-    if (query != null) {
-      writer.keyword("AS");
-      writer.newlineAndIndent();
-      query.unparse(writer, 0, 0);
-    }
+    writer.keyword("AS");
+    writer.newlineAndIndent();
+    query.unparse(writer, 0, 0);
+  }
+
+  /** Creates a list of (name, type) pairs from {@link #columnList}, in which
+   * they alternate. */
+  private List<Pair<SqlIdentifier, SqlDataTypeSpec>> nameTypes() {
+    final List list = columnList.getList();
+    //noinspection unchecked
+    return Pair.zip((List<SqlIdentifier>) Util.quotientList(list, 2, 0),
+        Util.quotientList((List<SqlDataTypeSpec>) list, 2, 1));
   }
 
   public void execute(CalcitePrepare.Context context) {
@@ -114,14 +136,9 @@ public class SqlCreateTable extends SqlCreate
     }
     final JavaTypeFactory typeFactory = new JavaTypeFactoryImpl();
     final RelDataTypeFactory.Builder builder = typeFactory.builder();
-    for (SqlNode c : columnList) {
-      if (c instanceof SqlColumnDeclaration) {
-        final SqlColumnDeclaration pair = (SqlColumnDeclaration) c;
-        builder.add(pair.name.getSimple(),
-            pair.dataType.deriveType(typeFactory, true));
-      } else {
-        throw new AssertionError(); // TODO:
-      }
+    for (Pair<SqlIdentifier, SqlDataTypeSpec> pair : nameTypes()) {
+      builder.add(pair.left.getSimple(),
+          pair.right.deriveType(typeFactory, true));
     }
     final RelDataType rowType = builder.build();
     schema.add(name.getSimple(),
@@ -191,4 +208,4 @@ public class SqlCreateTable extends SqlCreate
   }
 }
 
-// End SqlCreateTable.java
+// End SqlCreateView.java

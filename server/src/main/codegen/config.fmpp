@@ -22,15 +22,21 @@ data: {
       # List of import statements.
       imports: [
         "org.apache.calcite.sql.SqlCreate",
-        "org.apache.calcite.sql.ddl.SqlCreateTable"
+        "org.apache.calcite.sql.ddl.SqlDdlNodes"
       ]
 
       # List of keywords.
       keywords: [
+        "MATERIALIZED"
+        "STORED"
+        "VIRTUAL"
       ]
 
       # List of keywords from "keywords" section that are not reserved.
       nonReservedKeywords: [
+        "MATERIALIZED"
+        "STORED"
+        "VIRTUAL"
       ]
 
       # List of methods for parsing custom SQL statements.
@@ -55,6 +61,7 @@ data: {
       # Each must accept arguments "(SqlParserPos pos, boolean replace)".
       createStatementParserMethods: [
         "SqlCreateTable"
+        "SqlCreateView"
       ]
 
       # List of methods for parsing extensions to "DROP" calls.

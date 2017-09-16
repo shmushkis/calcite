@@ -64,6 +64,25 @@ public class ServerTest {
       }
     }
   }
+
+  @Test public void testCreateTable2() throws Exception {
+    try (Connection c = DriverManager.getConnection(URL);
+         Statement s = c.createStatement()) {
+      boolean b = s.execute("create table foo (\n"
+          + " i int not null,\n"
+          + " j int as (i + 1))");
+      assertThat(b, is(true));
+      int x = s.executeUpdate("insert into foo values (1, 2)");
+      assertThat(x, is(1));
+      x = s.executeUpdate("insert into foo values (3, 4)");
+      assertThat(x, is(1));
+      try (ResultSet r = s.executeQuery("select sum(i) from foo")) {
+        assertThat(r.next(), is(true));
+        assertThat(r.getInt(1), is(4));
+        assertThat(r.next(), is(false));
+      }
+    }
+  }
 }
 
 // End ServerTest.java

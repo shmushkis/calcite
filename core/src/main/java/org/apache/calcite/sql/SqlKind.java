@@ -938,6 +938,21 @@ public enum SqlKind {
    * the {@link #SESSION} group function. */
   SESSION_END,
 
+  /** Column declaration. */
+  COLUMN_DECL,
+
+  /** {@code CHECK} constraint. */
+  CHECK,
+
+  /** {@code UNIQUE} constraint. */
+  UNIQUE,
+
+  /** {@code PRIMARY KEY} constraint. */
+  PRIMARY_KEY,
+
+  /** {@code FOREIGN KEY} constraint. */
+  FOREIGN_KEY,
+
   // DDL and session control statements follow. The list is not exhaustive: feel
   // free to add more.
 
