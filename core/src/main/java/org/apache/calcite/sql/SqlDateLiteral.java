@@ -43,7 +43,7 @@ public class SqlDateLiteral extends SqlAbstractDateTimeLiteral {
 
   //~ Methods ----------------------------------------------------------------
 
-  public SqlNode clone(SqlParserPos pos) {
+  @Override public SqlDateLiteral clone(SqlParserPos pos) {
     return new SqlDateLiteral((Calendar) value, pos);
   }
 

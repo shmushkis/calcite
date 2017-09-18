@@ -62,11 +62,8 @@ public class SqlIntervalLiteral extends SqlLiteral {
 
   //~ Methods ----------------------------------------------------------------
 
-  public SqlNode clone(SqlParserPos pos) {
-    return new SqlIntervalLiteral(
-        (IntervalValue) value,
-        getTypeName(),
-        pos);
+  public SqlIntervalLiteral clone(SqlParserPos pos) {
+    return new SqlIntervalLiteral((IntervalValue) value, getTypeName(), pos);
   }
 
   public void unparse(

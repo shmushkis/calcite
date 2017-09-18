@@ -215,7 +215,7 @@ public class SqlLiteral extends SqlNode {
     }
   }
 
-  public SqlNode clone(SqlParserPos pos) {
+  @Override public SqlLiteral clone(SqlParserPos pos) {
     return new SqlLiteral(value, typeName, pos);
   }
 

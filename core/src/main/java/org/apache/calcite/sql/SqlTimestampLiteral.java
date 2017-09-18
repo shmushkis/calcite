@@ -54,13 +54,9 @@ public class SqlTimestampLiteral extends SqlAbstractDateTimeLiteral {
 
   //~ Methods ----------------------------------------------------------------
 
-  public SqlNode clone(SqlParserPos pos) {
-    return new SqlTimestampLiteral(
-        (Calendar) value,
-        precision,
-        hasTimeZone,
-        formatString,
-        pos);
+  @Override public SqlTimestampLiteral clone(SqlParserPos pos) {
+    return new SqlTimestampLiteral((Calendar) value, precision,
+        hasTimeZone, formatString, pos);
   }
 
   public String toString() {
