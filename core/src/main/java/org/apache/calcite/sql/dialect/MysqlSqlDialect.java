@@ -87,6 +87,10 @@ public class MysqlSqlDialect extends SqlDialect {
     return false;
   }
 
+  @Override public boolean supportsNestedAggregations() {
+    return false;
+  }
+
   @Override public CalendarPolicy getCalendarPolicy() {
     return CalendarPolicy.SHIFT;
   }
