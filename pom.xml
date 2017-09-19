@@ -51,6 +51,9 @@ limitations under the License.
     <version.major>1</version.major>
     <version.minor>13</version.minor>
 
+    <!-- Don't fail the build for vulnerabilities below this threshold. -->
+    <failBuildOnCVSS>8</failBuildOnCVSS>
+
     <!-- This list is in alphabetical order. -->
     <airlift-tpch.version>0.1</airlift-tpch.version>
     <avatica.version>1.10.0</avatica.version>
@@ -1061,7 +1064,7 @@ limitations under the License.
             <groupId>org.owasp</groupId>
             <artifactId>dependency-check-maven</artifactId>
             <configuration>
-              <!--<failBuildOnCVSS>8</failBuildOnCVSS>-->
+              <failBuildOnCVSS>${failBuildOnCVSS}</failBuildOnCVSS>
             </configuration>
             <executions>
               <execution>
