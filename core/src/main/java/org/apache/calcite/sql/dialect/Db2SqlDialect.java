@@ -16,31 +16,19 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
- * A <code>SqlDialect</code> implementation for the Db2 database.
+ * A <code>SqlDialect</code> implementation for the IBM DB2 database.
  */
 public class Db2SqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new Db2SqlDialect();
+  public static final SqlDialect DEFAULT =
+      new Db2SqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.DB2));
 
-  @SuppressWarnings("deprecation") public Db2SqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(
-        DatabaseProduct.DB2,
-        identifierQuoteString,
-        nullCollation
-    );
-  }
-
-  @SuppressWarnings("deprecation") private Db2SqlDialect() {
-    super(
-        DatabaseProduct.DB2,
-        null,
-        NullCollation.HIGH
-    );
+  /** Creates a Db2SqlDialect. */
+  public Db2SqlDialect(Context context) {
+    super(context);
   }
 
   @Override public boolean supportsCharSet() {

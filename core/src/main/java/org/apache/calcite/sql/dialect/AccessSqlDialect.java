@@ -16,24 +16,20 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
  * A <code>SqlDialect</code> implementation for the Access database.
  */
 public class AccessSqlDialect extends SqlDialect {
+  public static final SqlDialect DEFAULT =
+      new AccessSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.ACCESS)
+          .withIdentifierQuoteString("\""));
 
-  public static final SqlDialect DEFAULT = new AccessSqlDialect();
-
-  @SuppressWarnings("deprecation") public AccessSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.ACCESS, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private AccessSqlDialect() {
-    super(DatabaseProduct.ACCESS, "\"", NullCollation.HIGH);
+  /** Creates an AccessSqlDialect. */
+  public AccessSqlDialect(Context context) {
+    super(context);
   }
 }
 

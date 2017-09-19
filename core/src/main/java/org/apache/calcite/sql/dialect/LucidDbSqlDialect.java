@@ -16,24 +16,21 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
- * A <code>SqlDialect</code> implementation for the Lucidb database.
+ * A <code>SqlDialect</code> implementation for the LucidDB database.
  */
-public class LucidbSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new LucidbSqlDialect();
+public class LucidDbSqlDialect extends SqlDialect {
+  public static final SqlDialect DEFAULT =
+      new LucidDbSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.LUCIDDB)
+          .withIdentifierQuoteString("\""));
 
-  @SuppressWarnings("deprecation") public LucidbSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.LUCIDDB, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private LucidbSqlDialect() {
-    super(DatabaseProduct.LUCIDDB, "\"", NullCollation.HIGH);
+  /** Creates a LucidDbSqlDialect. */
+  public LucidDbSqlDialect(Context context) {
+    super(context);
   }
 }
 
-// End LucidbSqlDialect.java
+// End LucidDbSqlDialect.java

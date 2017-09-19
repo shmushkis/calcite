@@ -100,7 +100,8 @@ public class JdbcToEnumerableConverter
     final ParameterExpression resultSet_ =
         Expressions.parameter(Modifier.FINAL, ResultSet.class,
             builder.newName("resultSet"));
-    SqlDialect.CalendarPolicy calendarPolicy = jdbcConvention.dialect.getCalendarPolicy();
+    final SqlDialect.CalendarPolicy calendarPolicy =
+        jdbcConvention.dialect.getCalendarPolicy();
     final Expression calendar_;
     switch (calendarPolicy) {
     case LOCAL:

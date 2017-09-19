@@ -16,31 +16,20 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
- * A <code>SqlDialect</code> implementation for the Phoenix database.
+ * A <code>SqlDialect</code> implementation for the Apache Phoenix database.
  */
 public class PhoenixSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new PhoenixSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new PhoenixSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.PHOENIX)
+          .withIdentifierQuoteString("\""));
 
-  @SuppressWarnings("deprecation") public PhoenixSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(
-        DatabaseProduct.PHOENIX,
-        identifierQuoteString,
-        nullCollation
-    );
-  }
-
-  @SuppressWarnings("deprecation") private PhoenixSqlDialect() {
-    super(
-        DatabaseProduct.PHOENIX,
-        "\"",
-        NullCollation.HIGH
-    );
+  /** Creates a PhoenixSqlDialect. */
+  public PhoenixSqlDialect(Context context) {
+    super(context);
   }
 
   @Override public boolean supportsCharSet() {

@@ -16,21 +16,27 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
- * A <code>SqlDialect</code> implementation that produces SQL that is parseable by Calcite.
+ * A <code>SqlDialect</code> implementation that produces SQL that can be parsed
+ * by Apache Calcite.
  */
 public class CalciteSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new CalciteSqlDialect();
+  /**
+   * A dialect useful for generating SQL which can be parsed by the Apache
+   * Calcite parser, in particular quoting literals and identifiers. If you
+   * want a dialect that knows the full capabilities of the database, create
+   * one from a connection.
+   */
+  public static final SqlDialect DEFAULT =
+      new CalciteSqlDialect(emptyContext()
+          .withDatabaseProduct(DatabaseProduct.CALCITE)
+          .withIdentifierQuoteString("\""));
 
-  @SuppressWarnings("deprecation") private CalciteSqlDialect() {
-    super(
-        DatabaseProduct.CALCITE,
-        "\"",
-        NullCollation.HIGH
-    );
+  /** Creates a CalciteSqlDialect. */
+  public CalciteSqlDialect(Context context) {
+    super(context);
   }
 }
 

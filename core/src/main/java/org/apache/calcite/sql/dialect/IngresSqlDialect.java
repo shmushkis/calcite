@@ -16,24 +16,20 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
- * A <code>SqlDialect</code> implementation for the Ingress database.
+ * A <code>SqlDialect</code> implementation for the Ingres database.
  */
-public class IngressSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new IngressSqlDialect();
+public class IngresSqlDialect extends SqlDialect {
+  public static final SqlDialect DEFAULT =
+      new IngresSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.INGRES));
 
-  @SuppressWarnings("deprecation") public IngressSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.INGRES, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private IngressSqlDialect() {
-    super(DatabaseProduct.INGRES, null, NullCollation.HIGH);
+  /** Creates an IngresSqlDialect. */
+  public IngresSqlDialect(Context context) {
+    super(context);
   }
 }
 
-// End IngressSqlDialect.java
+// End IngresSqlDialect.java

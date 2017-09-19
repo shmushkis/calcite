@@ -16,23 +16,20 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
  * A <code>SqlDialect</code> implementation for the Teradata database.
  */
 public class TeradataSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new TeradataSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new TeradataSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.TERADATA)
+          .withIdentifierQuoteString("\""));
 
-  @SuppressWarnings("deprecation") public TeradataSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.TERADATA, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private TeradataSqlDialect() {
-    super(DatabaseProduct.TERADATA, "\"", NullCollation.HIGH);
+  /** Creates a TeradataSqlDialect. */
+  public TeradataSqlDialect(Context context) {
+    super(context);
   }
 }
 

@@ -17,7 +17,6 @@
 package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.TimeUnitRange;
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlLiteral;
@@ -31,20 +30,14 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
  * A <code>SqlDialect</code> implementation for the Oracle database.
  */
 public class OracleSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new OracleSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new OracleSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.ORACLE)
+          .withIdentifierQuoteString("\""));
 
-  @SuppressWarnings("deprecation") public OracleSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.ORACLE, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private OracleSqlDialect() {
-    super(
-        DatabaseProduct.ORACLE,
-        "\"",
-        NullCollation.HIGH
-    );
+  /** Creates an OracleSqlDialect. */
+  public OracleSqlDialect(Context context) {
+    super(context);
   }
 
   @Override public boolean supportsCharSet() {
@@ -55,7 +48,8 @@ public class OracleSqlDialect extends SqlDialect {
     return false;
   }
 
-  @Override public void unparseCall(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+  @Override public void unparseCall(SqlWriter writer, SqlCall call,
+      int leftPrec, int rightPrec) {
     if (call.getOperator() == SqlStdOperatorTable.SUBSTRING) {
       SqlUtil.unparseFunctionSyntax(OracleSqlOperatorTable.SUBSTR, writer, call);
     } else {

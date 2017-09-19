@@ -17,7 +17,6 @@
 package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.TimeUnitRange;
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
@@ -34,31 +33,21 @@ import org.apache.calcite.sql.parser.SqlParserPos;
  * A <code>SqlDialect</code> implementation for the Hsqldb database.
  */
 public class HsqldbSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new HsqldbSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new HsqldbSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.HSQLDB));
 
-  @SuppressWarnings("deprecation") public HsqldbSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(
-        DatabaseProduct.HSQLDB,
-        identifierQuoteString,
-        nullCollation
-    );
-  }
-
-  @SuppressWarnings("deprecation") private HsqldbSqlDialect() {
-    super(
-        DatabaseProduct.HSQLDB,
-        null,
-        NullCollation.HIGH
-    );
+  /** Creates an HsqldbSqlDialect. */
+  public HsqldbSqlDialect(Context context) {
+    super(context);
   }
 
   @Override public boolean supportsCharSet() {
     return false;
   }
 
-  @Override public void unparseCall(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+  @Override public void unparseCall(SqlWriter writer, SqlCall call,
+      int leftPrec, int rightPrec) {
     switch (call.getKind()) {
     case FLOOR:
       if (call.operandCount() != 2) {

@@ -17,7 +17,6 @@
 package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.TimeUnitRange;
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlLiteral;
@@ -25,27 +24,17 @@ import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.SqlFloorFunction;
 
 /**
- * A <code>SqlDialect</code> implementation for the Postgresql database.
+ * A <code>SqlDialect</code> implementation for the PostgreSQL database.
  */
 public class PostgresqlSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new PostgresqlSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new PostgresqlSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.POSTGRESQL)
+          .withIdentifierQuoteString("\""));
 
-  @SuppressWarnings("deprecation") public PostgresqlSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(
-        DatabaseProduct.POSTGRESQL,
-        identifierQuoteString,
-        nullCollation
-    );
-  }
-
-  @SuppressWarnings("deprecation") private PostgresqlSqlDialect() {
-    super(
-        DatabaseProduct.POSTGRESQL,
-        "\"",
-        NullCollation.HIGH
-    );
+  /** Creates a PostgresqlSqlDialect. */
+  public PostgresqlSqlDialect(Context context) {
+    super(context);
   }
 
   @Override public boolean supportsCharSet() {
@@ -56,7 +45,8 @@ public class PostgresqlSqlDialect extends SqlDialect {
     return true;
   }
 
-  @Override public void unparseCall(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+  @Override public void unparseCall(SqlWriter writer, SqlCall call,
+      int leftPrec, int rightPrec) {
     switch (call.getKind()) {
     case FLOOR:
       if (call.operandCount() != 2) {

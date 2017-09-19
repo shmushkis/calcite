@@ -16,23 +16,20 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
  * A <code>SqlDialect</code> implementation for the Paraccel database.
  */
 public class ParaccelSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new ParaccelSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new ParaccelSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.PARACCEL)
+          .withIdentifierQuoteString("\""));
 
-  @SuppressWarnings("deprecation") public ParaccelSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.PARACCEL, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private ParaccelSqlDialect() {
-    super(DatabaseProduct.PARACCEL, "\"", NullCollation.HIGH);
+  /** Creates a ParaccelSqlDialect. */
+  public ParaccelSqlDialect(Context context) {
+    super(context);
   }
 }
 
