@@ -18,7 +18,6 @@ package org.apache.calcite.sql;
 
 import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.config.NullCollation;
-import org.apache.calcite.linq4j.function.Experimental;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.dialect.AnsiSqlDialect;
@@ -28,6 +27,8 @@ import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
+import javax.annotation.Nonnull;
 
 /**
  * <code>SqlDialect</code> encapsulates the differences between dialects of SQL.
@@ -52,21 +54,15 @@ public class SqlDialect {
   protected static final Logger LOGGER =
       LoggerFactory.getLogger(SqlDialect.class);
 
-  /**
-   * A dialect useful for generating generic SQL. If you need to do something
-   * database-specific like quoting identifiers, don't rely on this dialect to
-   * do what you want.
-   */
+  /** Empty context. */
+  public static final Context EMPTY_CONTEXT = emptyContext();
+
+  /** @deprecated Use {@link AnsiSqlDialect#DEFAULT} instead. */
   @Deprecated // to be removed before 2.0
   public static final SqlDialect DUMMY =
       AnsiSqlDialect.DEFAULT;
 
-  /**
-   * A dialect useful for generating SQL which can be parsed by the
-   * Calcite parser, in particular quoting literals and identifiers. If you
-   * want a dialect that knows the full capabilities of the database, create
-   * one from a connection.
-   */
+  /** @deprecated Use {@link CalciteSqlDialect#DEFAULT} instead. */
   @Deprecated // to be removed before 2.0
   public static final SqlDialect CALCITE =
       CalciteSqlDialect.DEFAULT;
@@ -76,7 +72,6 @@ public class SqlDialect {
   private final String identifierQuoteString;
   private final String identifierEndQuoteString;
   private final String identifierEscapedQuote;
-  @Deprecated // to be removed before 2.0
   private final DatabaseProduct databaseProduct;
   private final NullCollation nullCollation;
 
@@ -89,8 +84,8 @@ public class SqlDialect {
    * importantly, to its {@link java.sql.Connection} -- after this call has
    * returned.
    *
-   * @param databaseMetaData used to determine which dialect of SQL to
-   *                         generate
+   * @param databaseMetaData used to determine which dialect of SQL to generate
+   *
    * @deprecated Replaced by {@link SqlDialectFactory}
    */
   @Deprecated // to be removed before 2.0
@@ -101,39 +96,10 @@ public class SqlDialect {
   @Deprecated // to be removed before 2.0
   public SqlDialect(DatabaseProduct databaseProduct, String databaseProductName,
       String identifierQuoteString) {
-    this(databaseProduct, databaseProductName, identifierQuoteString,
-        NullCollation.HIGH);
-  }
-
-  /** Creates a SqlDialect with the default handler. */
-  @Deprecated // to be removed before 2.0, replace with constructor without DatabaseProduct
-  protected SqlDialect(DatabaseProduct databaseProduct, String identifierQuoteString,
-                    NullCollation nullCollation) {
-    this.nullCollation = Preconditions.checkNotNull(nullCollation);
-    this.databaseProduct = Preconditions.checkNotNull(databaseProduct);
-    if (identifierQuoteString != null) {
-      identifierQuoteString = identifierQuoteString.trim();
-      if (identifierQuoteString.equals("")) {
-        identifierQuoteString = null;
-      }
-    }
-    this.identifierQuoteString = identifierQuoteString;
-    this.identifierEndQuoteString =
-            identifierQuoteString == null
-                    ? null
-                    : identifierQuoteString.equals("[")
-                    ? "]"
-                    : identifierQuoteString;
-    this.identifierEscapedQuote =
-            identifierQuoteString == null
-                    ? null
-                    : this.identifierEndQuoteString + this.identifierEndQuoteString;
-  }
-
-  // This will be our new constructor in 2.0
-  @SuppressWarnings("deprecation") public SqlDialect(String databaseProductName,
-      String identifierQuoteString, NullCollation nullCollation) {
-    this(null, databaseProductName, identifierQuoteString, nullCollation);
+    this(EMPTY_CONTEXT
+        .withDatabaseProduct(databaseProduct)
+        .withDatabaseProductName(databaseProductName)
+        .withIdentifierQuoteString(identifierQuoteString));
   }
 
   /**
@@ -145,14 +111,29 @@ public class SqlDialect {
    *                              is not supported. If "[", close quote is
    *                              deemed to be "]".
    * @param nullCollation         Whether NULL values appear first or last
+   *
+   * @deprecated Use {@link #SqlDialect(Context)}
    */
   @Deprecated // to be removed before 2.0
-  @Experimental // Keep around until we remove DatabaseProduct
   public SqlDialect(DatabaseProduct databaseProduct, String databaseProductName,
       String identifierQuoteString, NullCollation nullCollation) {
-    this.nullCollation = Preconditions.checkNotNull(nullCollation);
-    Preconditions.checkNotNull(databaseProductName);
-    this.databaseProduct = Preconditions.checkNotNull(databaseProduct);
+    this(EMPTY_CONTEXT
+        .withDatabaseProduct(databaseProduct)
+        .withDatabaseProductName(databaseProductName)
+        .withIdentifierQuoteString(identifierQuoteString)
+        .withNullCollation(nullCollation));
+  }
+
+  /**
+   * Creates a SqlDialect.
+   *
+   * @param context All the information necessary to create a dialect
+   */
+  public SqlDialect(Context context) {
+    this.nullCollation = Preconditions.checkNotNull(context.nullCollation());
+    this.databaseProduct =
+        Preconditions.checkNotNull(context.databaseProduct());
+    String identifierQuoteString = context.identifierQuoteString();
     if (identifierQuoteString != null) {
       identifierQuoteString = identifierQuoteString.trim();
       if (identifierQuoteString.equals("")) {
@@ -161,18 +142,21 @@ public class SqlDialect {
     }
     this.identifierQuoteString = identifierQuoteString;
     this.identifierEndQuoteString =
-        identifierQuoteString == null
-            ? null
-            : identifierQuoteString.equals("[")
-                ? "]"
-                : identifierQuoteString;
+        identifierQuoteString == null ? null
+            : identifierQuoteString.equals("[") ? "]"
+            : identifierQuoteString;
     this.identifierEscapedQuote =
-        identifierQuoteString == null
-            ? null
+        identifierQuoteString == null ? null
             : this.identifierEndQuoteString + this.identifierEndQuoteString;
   }
 
   //~ Methods ----------------------------------------------------------------
+
+  /** Creates an empty context. Use {@link #EMPTY_CONTEXT} if possible. */
+  protected static Context emptyContext() {
+    return new ContextImpl(DatabaseProduct.UNKNOWN, null, null, null,
+        NullCollation.HIGH);
+  }
 
   /**
    * Converts a product name and version (per the JDBC driver) into a product
@@ -339,12 +323,13 @@ public class SqlDialect {
     }
   }
 
-  public void unparseCall(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+  public void unparseCall(SqlWriter writer, SqlCall call, int leftPrec,
+      int rightPrec) {
     call.getOperator().unparse(writer, call, leftPrec, rightPrec);
   }
 
-  public void unparseDateTimeLiteral(SqlWriter writer, SqlAbstractDateTimeLiteral literal,
-      int leftPrec, int rightPrec) {
+  public void unparseDateTimeLiteral(SqlWriter writer,
+      SqlAbstractDateTimeLiteral literal, int leftPrec, int rightPrec) {
     writer.literal(literal.toString());
   }
 
@@ -480,8 +465,13 @@ public class SqlDialect {
    * Returns the database this dialect belongs to,
    * {@link SqlDialect.DatabaseProduct#UNKNOWN} if not known, never null.
    *
+   * <p>Please be judicious in how you use this method. If you wish to determine
+   * whether a dialect has a particular capability or behavior, it is usually
+   * better to add a method to SqlDialect and override that method in particular
+   * sub-classes of SqlDialect.
+   *
    * @return Database product
-   * @deprecated Going to be removed without replacement
+   * @deprecated To be removed without replacement
    */
   @Deprecated // to be removed before 2.0
   public DatabaseProduct getDatabaseProduct() {
@@ -669,7 +659,6 @@ public class SqlDialect {
    * extend the dialect to describe the particular capability, for example,
    * whether the database allows expressions to appear in the GROUP BY clause.
    */
-  @Deprecated // to be removed before 2.0
   public enum DatabaseProduct {
     ACCESS("Access", "\"", NullCollation.HIGH),
     CALCITE("Apache Calcite", "\"", NullCollation.HIGH),
@@ -710,7 +699,22 @@ public class SqlDialect {
      */
     UNKNOWN("Unknown", "`", NullCollation.HIGH);
 
-    private SqlDialect dialect = null;
+    private final Supplier<SqlDialect> dialect =
+        Suppliers.memoize(new Supplier<SqlDialect>() {
+          public SqlDialect get() {
+            final SqlDialect dialect =
+                SqlDialectFactoryImpl.simple(DatabaseProduct.this);
+            if (dialect != null) {
+              return dialect;
+            }
+            return new SqlDialect(SqlDialect.EMPTY_CONTEXT
+                .withDatabaseProduct(DatabaseProduct.this)
+                .withDatabaseProductName(databaseProductName)
+                .withIdentifierQuoteString(quoteString)
+                .withNullCollation(nullCollation));
+          }
+        });
+
     private String databaseProductName;
     private String quoteString;
     private final NullCollation nullCollation;
@@ -735,12 +739,89 @@ public class SqlDialect {
      * all versions of this database
      */
     public SqlDialect getDialect() {
-      if (dialect == null) {
-        dialect =
-            new SqlDialect(this, databaseProductName, quoteString,
-                nullCollation);
-      }
-      return dialect;
+      return dialect.get();
+    }
+  }
+
+  /** Information for creating a dialect.
+   *
+   * <p>It is immutable; to "set" a property, call one of the "with" methods,
+   * which returns a new context with the desired property value. */
+  public interface Context {
+    @Nonnull DatabaseProduct databaseProduct();
+    Context withDatabaseProduct(@Nonnull DatabaseProduct databaseProduct);
+    String databaseProductName();
+    Context withDatabaseProductName(String databaseProductName);
+    String databaseVersion();
+    Context withDatabaseVersion(String databaseVersion);
+    String identifierQuoteString();
+    Context withIdentifierQuoteString(String identifierQuoteString);
+    @Nonnull NullCollation nullCollation();
+    Context withNullCollation(@Nonnull NullCollation nullCollation);
+  }
+
+  /** Implementation of Context. */
+  private static class ContextImpl implements Context {
+    private final DatabaseProduct databaseProduct;
+    private final String databaseProductName;
+    private final String databaseVersion;
+    private final String identifierQuoteString;
+    private final NullCollation nullCollation;
+
+    private ContextImpl(DatabaseProduct databaseProduct,
+        String databaseProductName, String databaseVersion,
+        String identifierQuoteString, NullCollation nullCollation) {
+      this.databaseProduct = Preconditions.checkNotNull(databaseProduct);
+      this.databaseProductName = databaseProductName;
+      this.databaseVersion = databaseVersion;
+      this.identifierQuoteString = identifierQuoteString;
+      this.nullCollation = Preconditions.checkNotNull(nullCollation);
+    }
+
+    @Nonnull public DatabaseProduct databaseProduct() {
+      return databaseProduct;
+    }
+
+    public Context withDatabaseProduct(
+        @Nonnull DatabaseProduct databaseProduct) {
+      return new ContextImpl(databaseProduct, databaseProductName,
+          databaseVersion, identifierQuoteString, nullCollation);
+    }
+
+    public String databaseProductName() {
+      return databaseProductName;
+    }
+
+    public Context withDatabaseProductName(String databaseProductName) {
+      return new ContextImpl(databaseProduct, databaseProductName,
+          databaseVersion, identifierQuoteString, nullCollation);
+    }
+
+    public String databaseVersion() {
+      return databaseVersion;
+    }
+
+    public Context withDatabaseVersion(String databaseVersion) {
+      return new ContextImpl(databaseProduct, databaseProductName,
+          databaseVersion, identifierQuoteString, nullCollation);
+    }
+
+    public String identifierQuoteString() {
+      return identifierQuoteString;
+    }
+
+    public Context withIdentifierQuoteString(String identifierQuoteString) {
+      return new ContextImpl(databaseProduct, databaseProductName,
+          databaseVersion, identifierQuoteString, nullCollation);
+    }
+
+    @Nonnull public NullCollation nullCollation() {
+      return nullCollation;
+    }
+
+    public Context withNullCollation(@Nonnull NullCollation nullCollation) {
+      return new ContextImpl(databaseProduct, databaseProductName,
+          databaseVersion, identifierQuoteString, nullCollation);
     }
   }
 }

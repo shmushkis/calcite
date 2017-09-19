@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
@@ -28,24 +27,14 @@ public class AnsiSqlDialect extends SqlDialect {
    * database-specific like quoting identifiers, don't rely on this dialect to
    * do what you want.
    */
-  public static final SqlDialect DEFAULT = new AnsiSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new AnsiSqlDialect(emptyContext()
+          .withDatabaseProduct(DatabaseProduct.UNKNOWN)
+          .withIdentifierQuoteString("`"));
 
-  @SuppressWarnings("deprecation") public AnsiSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(
-        DatabaseProduct.UNKNOWN,
-        identifierQuoteString,
-        nullCollation
-    );
-  }
-
-  @SuppressWarnings("deprecation") private AnsiSqlDialect() {
-    super(
-        DatabaseProduct.UNKNOWN,
-        "`",
-        NullCollation.HIGH
-    );
+  /** Creates an AnsiSqlDialect. */
+  public AnsiSqlDialect(Context context) {
+    super(context);
   }
 }
 

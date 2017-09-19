@@ -16,31 +16,20 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
  * A <code>SqlDialect</code> implementation for the Redshift database.
  */
 public class RedshiftSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new RedshiftSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new RedshiftSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.REDSHIFT)
+          .withIdentifierQuoteString("\""));
 
-  @SuppressWarnings("deprecation") public RedshiftSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(
-        DatabaseProduct.REDSHIFT,
-        identifierQuoteString,
-        nullCollation
-    );
-  }
-
-  @SuppressWarnings("deprecation") private RedshiftSqlDialect() {
-    super(
-        DatabaseProduct.REDSHIFT,
-        "\"",
-        NullCollation.HIGH
-    );
+  /** Creates a RedshiftSqlDialect. */
+  public RedshiftSqlDialect(Context context) {
+    super(context);
   }
 
   @Override public boolean supportsOffsetFetch() {

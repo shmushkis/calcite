@@ -16,23 +16,20 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
  * A <code>SqlDialect</code> implementation for the Vertica database.
  */
 public class VerticaSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new VerticaSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new VerticaSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.VERTICA)
+          .withIdentifierQuoteString("\""));
 
-  @SuppressWarnings("deprecation") public VerticaSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.VERTICA, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private VerticaSqlDialect() {
-    super(DatabaseProduct.VERTICA, "\"", NullCollation.HIGH);
+  /** Creates a VerticaSqlDialect. */
+  public VerticaSqlDialect(Context context) {
+    super(context);
   }
 }
 

@@ -16,23 +16,19 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
- * A <code>SqlDialect</code> implementation for the Hive database.
+ * A <code>SqlDialect</code> implementation for the Apache Hive database.
  */
 public class HiveSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new HiveSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new HiveSqlDialect(
+          EMPTY_CONTEXT.withDatabaseProduct(DatabaseProduct.HIVE));
 
-  @SuppressWarnings("deprecation") public HiveSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.HIVE, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private HiveSqlDialect() {
-    super(DatabaseProduct.HIVE, null, NullCollation.HIGH);
+  /** Creates a HiveSqlDialect. */
+  public HiveSqlDialect(Context context) {
+    super(context);
   }
 
   @Override protected boolean allowsAs() {

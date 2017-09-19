@@ -17,7 +17,6 @@
 package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.TimeUnitRange;
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
@@ -40,10 +39,13 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 
 /**
- * A <code>SqlDialect</code> implementation for the Mysql database.
+ * A <code>SqlDialect</code> implementation for the MySQL database.
  */
 public class MysqlSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new MysqlSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new MysqlSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.MYSQL)
+          .withIdentifierQuoteString("`"));
 
   /** MySQL specific function. */
   public static final SqlFunction ISNULL_FUNCTION =
@@ -51,14 +53,9 @@ public class MysqlSqlDialect extends SqlDialect {
           ReturnTypes.BOOLEAN, InferTypes.FIRST_KNOWN,
           OperandTypes.ANY, SqlFunctionCategory.SYSTEM);
 
-  @SuppressWarnings("deprecation") public MysqlSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.MYSQL, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private MysqlSqlDialect() {
-    super(DatabaseProduct.MYSQL, "`", NullCollation.HIGH);
+  /** Creates a MysqlSqlDialect. */
+  public MysqlSqlDialect(Context context) {
+    super(context);
   }
 
   @Override public boolean supportsCharSet() {
@@ -138,7 +135,8 @@ public class MysqlSqlDialect extends SqlDialect {
     return caseExpr;
   }
 
-  @Override public void unparseCall(SqlWriter writer, SqlCall call, int leftPrec, int rightPrec) {
+  @Override public void unparseCall(SqlWriter writer, SqlCall call,
+      int leftPrec, int rightPrec) {
     switch (call.getKind()) {
     case FLOOR:
       if (call.operandCount() != 2) {

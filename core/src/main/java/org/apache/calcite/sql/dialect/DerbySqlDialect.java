@@ -16,24 +16,19 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
- * A <code>SqlDialect</code> implementation for the Derby database.
+ * A <code>SqlDialect</code> implementation for the Apache Derby database.
  */
 public class DerbySqlDialect extends SqlDialect {
+  public static final SqlDialect DEFAULT =
+      new DerbySqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.DERBY));
 
-  public static final SqlDialect DEFAULT = new DerbySqlDialect();
-
-  @SuppressWarnings("deprecation") public DerbySqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.DERBY, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private DerbySqlDialect() {
-    super(DatabaseProduct.DERBY, null, NullCollation.HIGH);
+  /** Creates a DerbySqlDialect. */
+  public DerbySqlDialect(Context context) {
+    super(context);
   }
 }
 

@@ -16,23 +16,19 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
  * A <code>SqlDialect</code> implementation for the Informix database.
  */
 public class InformixSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new InformixSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new InformixSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.INFORMIX));
 
-  @SuppressWarnings("deprecation") public InformixSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.INFORMIX, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private InformixSqlDialect() {
-    super(DatabaseProduct.INFORMIX, null, NullCollation.HIGH);
+  /** Creates an InformixSqlDialect. */
+  public InformixSqlDialect(Context context) {
+    super(context);
   }
 }
 

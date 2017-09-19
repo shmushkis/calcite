@@ -19,6 +19,7 @@ package org.apache.calcite.sql;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.dialect.AccessSqlDialect;
 import org.apache.calcite.sql.dialect.AnsiSqlDialect;
+import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.dialect.Db2SqlDialect;
 import org.apache.calcite.sql.dialect.DerbySqlDialect;
 import org.apache.calcite.sql.dialect.FirebirdSqlDialect;
@@ -27,9 +28,9 @@ import org.apache.calcite.sql.dialect.HiveSqlDialect;
 import org.apache.calcite.sql.dialect.HsqldbSqlDialect;
 import org.apache.calcite.sql.dialect.InfobrightSqlDialect;
 import org.apache.calcite.sql.dialect.InformixSqlDialect;
-import org.apache.calcite.sql.dialect.IngressSqlDialect;
+import org.apache.calcite.sql.dialect.IngresSqlDialect;
 import org.apache.calcite.sql.dialect.InterbaseSqlDialect;
-import org.apache.calcite.sql.dialect.LucidbSqlDialect;
+import org.apache.calcite.sql.dialect.LucidDbSqlDialect;
 import org.apache.calcite.sql.dialect.MssqlSqlDialect;
 import org.apache.calcite.sql.dialect.MysqlSqlDialect;
 import org.apache.calcite.sql.dialect.NeoviewSqlDialect;
@@ -51,10 +52,6 @@ import java.util.Locale;
  * The default implementation of a <code>SqlDialectFactory</code>.
  */
 public class SqlDialectFactoryImpl implements SqlDialectFactory {
-
-  /**
-   * {@inheritDoc}
-   */
   public SqlDialect create(DatabaseMetaData databaseMetaData) {
     String databaseProductName;
     String databaseVersion;
@@ -66,94 +63,72 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
     }
     final String upperProductName =
         databaseProductName.toUpperCase(Locale.ROOT).trim();
-    String quoteString = getIdentifierQuoteString(databaseMetaData);
-    NullCollation nullCollation = getNullCollation(databaseMetaData);
+    final String quoteString = getIdentifierQuoteString(databaseMetaData);
+    final NullCollation nullCollation = getNullCollation(databaseMetaData);
+    final SqlDialect.Context c = SqlDialect.EMPTY_CONTEXT
+        .withDatabaseProductName(databaseProductName)
+        .withDatabaseVersion(databaseVersion)
+        .withIdentifierQuoteString(quoteString)
+        .withNullCollation(nullCollation);
     switch (upperProductName) {
     case "ACCESS":
-      return new AccessSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new AccessSqlDialect(c);
     case "APACHE DERBY":
-      return new DerbySqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new DerbySqlDialect(c);
     case "DBMS:CLOUDSCAPE":
-      return new DerbySqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new DerbySqlDialect(c);
     case "HIVE":
-      return new HiveSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new HiveSqlDialect(c);
     case "INGRES":
-      return new IngressSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new IngresSqlDialect(c);
     case "INTERBASE":
-      return new InterbaseSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new InterbaseSqlDialect(c);
     case "LUCIDDB":
-      return new LucidbSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new LucidDbSqlDialect(c);
     case "ORACLE":
-      return new OracleSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new OracleSqlDialect(c);
     case "PHOENIX":
-      return new PhoenixSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new PhoenixSqlDialect(c);
     case "MYSQL (INFOBRIGHT)":
-      return new InfobrightSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new InfobrightSqlDialect(c);
     case "MYSQL":
-      return new MysqlSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new MysqlSqlDialect(c);
     case "REDSHIFT":
-      return new RedshiftSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new RedshiftSqlDialect(c);
     }
     // Now the fuzzy matches.
     if (databaseProductName.startsWith("DB2")) {
-      return new Db2SqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new Db2SqlDialect(c);
     } else if (upperProductName.contains("FIREBIRD")) {
-      return new FirebirdSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new FirebirdSqlDialect(c);
     } else if (databaseProductName.startsWith("Informix")) {
-      return new InformixSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new InformixSqlDialect(c);
     } else if (upperProductName.contains("NETEZZA")) {
-      return new NetezzaSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new NetezzaSqlDialect(c);
     } else if (upperProductName.contains("PARACCEL")) {
-      return new ParaccelSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new ParaccelSqlDialect(c);
     } else if (databaseProductName.startsWith("HP Neoview")) {
-      return new NeoviewSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new NeoviewSqlDialect(c);
     } else if (upperProductName.contains("POSTGRE")) {
-      return new PostgresqlSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new PostgresqlSqlDialect(c);
     } else if (upperProductName.contains("SQL SERVER")) {
-      return new MssqlSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new MssqlSqlDialect(c);
     } else if (upperProductName.contains("SYBASE")) {
-      return new SybaseSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new SybaseSqlDialect(c);
     } else if (upperProductName.contains("TERADATA")) {
-      return new TeradataSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new TeradataSqlDialect(c);
     } else if (upperProductName.contains("HSQL")) {
-      return new HsqldbSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new HsqldbSqlDialect(c);
     } else if (upperProductName.contains("H2")) {
-      return new H2SqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new H2SqlDialect(c);
     } else if (upperProductName.contains("VERTICA")) {
-      return new VerticaSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new VerticaSqlDialect(c);
     } else {
-      return new AnsiSqlDialect(databaseProductName, databaseVersion,
-          quoteString, nullCollation);
+      return new AnsiSqlDialect(c);
     }
-
   }
 
-  protected static NullCollation getNullCollation(DatabaseMetaData databaseMetaData) {
+  private NullCollation getNullCollation(DatabaseMetaData databaseMetaData) {
     try {
       if (databaseMetaData.nullsAreSortedAtEnd()) {
         return NullCollation.LAST;
@@ -171,7 +146,7 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
     }
   }
 
-  protected static String getIdentifierQuoteString(DatabaseMetaData databaseMetaData) {
+  private String getIdentifierQuoteString(DatabaseMetaData databaseMetaData) {
     try {
       return databaseMetaData.getIdentifierQuoteString();
     } catch (SQLException e) {
@@ -179,6 +154,65 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
     }
   }
 
+  /** Returns a basic dialect for a given product, or null if none is known. */
+  static SqlDialect simple(SqlDialect.DatabaseProduct databaseProduct) {
+    switch (databaseProduct) {
+    case ACCESS:
+      return AccessSqlDialect.DEFAULT;
+    case CALCITE:
+      return CalciteSqlDialect.DEFAULT;
+    case DB2:
+      return Db2SqlDialect.DEFAULT;
+    case DERBY:
+      return DerbySqlDialect.DEFAULT;
+    case FIREBIRD:
+      return FirebirdSqlDialect.DEFAULT;
+    case H2:
+      return H2SqlDialect.DEFAULT;
+    case HIVE:
+      return HiveSqlDialect.DEFAULT;
+    case HSQLDB:
+      return HsqldbSqlDialect.DEFAULT;
+    case INFOBRIGHT:
+      return InfobrightSqlDialect.DEFAULT;
+    case INFORMIX:
+      return InformixSqlDialect.DEFAULT;
+    case INGRES:
+      return IngresSqlDialect.DEFAULT;
+    case INTERBASE:
+      return InterbaseSqlDialect.DEFAULT;
+    case LUCIDDB:
+      return LucidDbSqlDialect.DEFAULT;
+    case MSSQL:
+      return MssqlSqlDialect.DEFAULT;
+    case MYSQL:
+      return MysqlSqlDialect.DEFAULT;
+    case NEOVIEW:
+      return NeoviewSqlDialect.DEFAULT;
+    case NETEZZA:
+      return NetezzaSqlDialect.DEFAULT;
+    case ORACLE:
+      return OracleSqlDialect.DEFAULT;
+    case PARACCEL:
+      return ParaccelSqlDialect.DEFAULT;
+    case PHOENIX:
+      return PhoenixSqlDialect.DEFAULT;
+    case POSTGRESQL:
+      return PostgresqlSqlDialect.DEFAULT;
+    case REDSHIFT:
+      return RedshiftSqlDialect.DEFAULT;
+    case SYBASE:
+      return SybaseSqlDialect.DEFAULT;
+    case TERADATA:
+      return TeradataSqlDialect.DEFAULT;
+    case VERTICA:
+      return VerticaSqlDialect.DEFAULT;
+    case SQLSTREAM:
+    case UNKNOWN:
+    default:
+      return null;
+    }
+  }
 }
 
 // End SqlDialectFactoryImpl.java

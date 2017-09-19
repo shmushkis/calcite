@@ -16,23 +16,20 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
  * A <code>SqlDialect</code> implementation for the Netezza database.
  */
 public class NetezzaSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new NetezzaSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new NetezzaSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.NETEZZA)
+          .withIdentifierQuoteString("\""));
 
-  @SuppressWarnings("deprecation") public NetezzaSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.NETEZZA, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private NetezzaSqlDialect() {
-    super(DatabaseProduct.NETEZZA, "\"", NullCollation.HIGH);
+  /** Creates a NetezzaSqlDialect. */
+  public NetezzaSqlDialect(Context context) {
+    super(context);
   }
 }
 

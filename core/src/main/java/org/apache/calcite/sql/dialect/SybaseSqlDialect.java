@@ -16,23 +16,19 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
  * A <code>SqlDialect</code> implementation for the Sybase database.
  */
 public class SybaseSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new SybaseSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new SybaseSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.SYBASE));
 
-  @SuppressWarnings("deprecation") public SybaseSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.SYBASE, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private SybaseSqlDialect() {
-    super(DatabaseProduct.SYBASE, null, NullCollation.HIGH);
+  /** Creates a SybaseSqlDialect. */
+  public SybaseSqlDialect(Context context) {
+    super(context);
   }
 }
 

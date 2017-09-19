@@ -16,23 +16,20 @@
  */
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
  * A <code>SqlDialect</code> implementation for the Infobright database.
  */
 public class InfobrightSqlDialect extends SqlDialect {
-  public static final SqlDialect DEFAULT = new InfobrightSqlDialect();
+  public static final SqlDialect DEFAULT =
+      new InfobrightSqlDialect(EMPTY_CONTEXT
+          .withDatabaseProduct(DatabaseProduct.INFOBRIGHT)
+          .withIdentifierQuoteString("`"));
 
-  @SuppressWarnings("deprecation") public InfobrightSqlDialect(
-      String databaseProduct, String databaseVersion,
-      String identifierQuoteString, NullCollation nullCollation) {
-    super(DatabaseProduct.INFOBRIGHT, identifierQuoteString, nullCollation);
-  }
-
-  @SuppressWarnings("deprecation") private InfobrightSqlDialect() {
-    super(DatabaseProduct.INFOBRIGHT, "`", NullCollation.HIGH);
+  /** Creates an InfobrightSqlDialect. */
+  public InfobrightSqlDialect(Context context) {
+    super(context);
   }
 }
 
