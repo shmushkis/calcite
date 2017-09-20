@@ -22,6 +22,7 @@ import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
+import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.linq4j.Queryable;
 import org.apache.calcite.linq4j.tree.Expression;
@@ -35,14 +36,17 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeImpl;
 import org.apache.calcite.rel.type.RelProtoDataType;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.ModifiableTable;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Schemas;
+import org.apache.calcite.schema.Wrapper;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.schema.impl.AbstractTableQueryable;
 import org.apache.calcite.sql.SqlCreate;
 import org.apache.calcite.sql.SqlExecutableStatement;
+import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
@@ -50,13 +54,22 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql2rel.InitializerContext;
+import org.apache.calcite.sql2rel.InitializerExpressionFactory;
+import org.apache.calcite.sql2rel.NullInitializerExpressionFactory;
 import org.apache.calcite.util.ImmutableNullableList;
 
+import com.google.common.collect.ImmutableMap;
+
 import java.lang.reflect.Type;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Parse tree for {@code CREATE TABLE} statement.
@@ -76,7 +89,7 @@ public class SqlCreateTable extends SqlCreate
     super(pos, false);
     this.name = name;
     this.columnList = columnList; // may be null
-    this.query = query; // for "CREATE TABLE ... AS query"; may be nul
+    this.query = query; // for "CREATE TABLE ... AS query"; may be null
   }
 
   @Override public SqlOperator getOperator() {
@@ -114,19 +127,39 @@ public class SqlCreateTable extends SqlCreate
     }
     final JavaTypeFactory typeFactory = new JavaTypeFactoryImpl();
     final RelDataTypeFactory.Builder builder = typeFactory.builder();
-    for (SqlNode c : columnList) {
-      if (c instanceof SqlColumnDeclaration) {
-        final SqlColumnDeclaration pair = (SqlColumnDeclaration) c;
-        builder.add(pair.name.getSimple(),
-            pair.dataType.deriveType(typeFactory, true));
+    final Map<Integer, SqlNode> columnExprs = new HashMap<>();
+    for (Ord<SqlNode> c : Ord.zip(columnList)) {
+      if (c.e instanceof SqlColumnDeclaration) {
+        final SqlColumnDeclaration d = (SqlColumnDeclaration) c.e;
+        builder.add(d.name.getSimple(),
+            d.dataType.deriveType(typeFactory, true));
+        if (d.expression != null) {
+          columnExprs.put(c.i, d.expression);
+        }
       } else {
         throw new AssertionError(); // TODO:
       }
     }
+    final InitializerExpressionFactory ief;
+    if (columnExprs.isEmpty()) {
+      ief = null;
+    } else {
+      ief = new NullInitializerExpressionFactory() {
+        @Override public boolean isGeneratedAlways(RelOptTable table,
+            int iColumn) {
+          return columnExprs.containsKey(iColumn);
+        }
+
+        @Override public RexNode newColumnDefaultValue(RelOptTable table,
+            int iColumn, InitializerContext context) {
+          return context.convertExpression(columnExprs.get(iColumn));
+        }
+      };
+    }
     final RelDataType rowType = builder.build();
     schema.add(name.getSimple(),
         new MutableArrayTable(name.getSimple(),
-            RelDataTypeImpl.proto(rowType)));
+            RelDataTypeImpl.proto(rowType), ief));
   }
 
   /** Abstract base class for implementations of {@link ModifiableTable}. */
@@ -151,13 +184,17 @@ public class SqlCreateTable extends SqlCreate
   }
 
   /** Table backed by a Java list. */
-  static class MutableArrayTable extends AbstractModifiableTable {
+  static class MutableArrayTable extends AbstractModifiableTable
+      implements Wrapper {
     final List list = new ArrayList();
     private final RelProtoDataType protoRowType;
+    private final InitializerExpressionFactory initializerExpressionFactory;
 
-    MutableArrayTable(String name, RelProtoDataType protoRowType) {
+    MutableArrayTable(String name, RelProtoDataType protoRowType,
+        InitializerExpressionFactory initializerExpressionFactory) {
       super(name);
       this.protoRowType = protoRowType;
+      this.initializerExpressionFactory = initializerExpressionFactory;
     }
 
     public Collection getModifiableCollection() {
@@ -188,6 +225,63 @@ public class SqlCreateTable extends SqlCreate
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
       return protoRowType.apply(typeFactory);
     }
+
+    public <C> C unwrap(Class<C> aClass) {
+      if (aClass.isInstance(this)) {
+        return aClass.cast(this);
+      }
+      if (aClass.isInstance(initializerExpressionFactory)) {
+        return aClass.cast(initializerExpressionFactory);
+      }
+      return null;
+    }
+
+    /**
+     * Initializes columns based on the view constraint.
+     */
+    private class MyInitializerExpressionFactory
+        extends NullInitializerExpressionFactory {
+      private final ImmutableMap<Integer, RexSupplier> projectMap;
+
+      private MyInitializerExpressionFactory() {
+        final Map<Integer, RexSupplier> projectMap = new HashMap<>();
+        projectMap.put(1, new RexSupplier() {
+          public RexNode apply(RexBuilder rexBuilder, RelDataType rowType) {
+            return rexBuilder.makeCall(SqlStdOperatorTable.PLUS,
+                rexBuilder.makeInputRef(rowType.getFieldList().get(0).getType(),
+                    0),
+                rexBuilder.makeExactLiteral(BigDecimal.ONE));
+          }
+        });
+        this.projectMap = ImmutableMap.copyOf(projectMap);
+      }
+
+      @Override public boolean isGeneratedAlways(RelOptTable table,
+          int iColumn) {
+        return projectMap.containsKey(iColumn);
+      }
+
+      @Override public RexNode newColumnDefaultValue(RelOptTable table,
+          int iColumn, InitializerContext context) {
+        final RexSupplier supplier = projectMap.get(iColumn);
+        if (supplier != null) {
+          return supplier.apply(context.getRexBuilder(), table.getRowType());
+        }
+
+        // Otherwise Sql type of NULL.
+        return super.newColumnDefaultValue(table, iColumn, context);
+      }
+
+      @Override public RexNode newAttributeInitializer(RelDataType type,
+          SqlFunction constructor, int iAttribute, List<RexNode> constructorArgs,
+          InitializerContext context) {
+        throw new UnsupportedOperationException();
+      }
+    }
+  }
+
+  private interface RexSupplier {
+    RexNode apply(RexBuilder rexBuilder, RelDataType rowType);
   }
 }
 

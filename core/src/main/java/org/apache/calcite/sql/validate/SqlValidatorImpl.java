@@ -88,6 +88,7 @@ import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.calcite.sql2rel.InitializerContext;
+import org.apache.calcite.sql2rel.InitializerExpressionFactory;
 import org.apache.calcite.util.BitString;
 import org.apache.calcite.util.Bug;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -4078,6 +4079,23 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       SqlNodeList targetColumnList,
       boolean append) {
     RelDataType baseRowType = table.getRowType();
+    final RelOptTable relOptTable = table instanceof RelOptTable
+        ? ((RelOptTable) table) : null;
+    if (relOptTable != null) {
+      final InitializerExpressionFactory initializerExpressionFactory =
+          relOptTable.unwrap(InitializerExpressionFactory.class);
+      if (initializerExpressionFactory != null) {
+        final RelDataTypeFactory.Builder builder = typeFactory.builder();
+        for (RelDataTypeField field : baseRowType.getFieldList()) {
+          if (initializerExpressionFactory.isGeneratedAlways(relOptTable,
+              field.getIndex())) {
+            continue;
+          }
+          builder.add(field);
+        }
+        baseRowType = builder.build();
+      }
+    }
     if (targetColumnList == null) {
       return baseRowType;
     }
@@ -4091,8 +4109,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       }
     }
     final Set<Integer> assignedFields = new HashSet<>();
-    final RelOptTable relOptTable = table instanceof RelOptTable
-        ? ((RelOptTable) table) : null;
     for (SqlNode node : targetColumnList) {
       SqlIdentifier id = (SqlIdentifier) node;
       RelDataTypeField targetField =
@@ -4272,6 +4288,10 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
         new InitializerContext() {
           public RexBuilder getRexBuilder() {
             return new RexBuilder(typeFactory);
+          }
+
+          public RexNode convertExpression(SqlNode e) {
+            throw new UnsupportedOperationException();
           }
         };
     for (final RelDataTypeField field : table.getRowType().getFieldList()) {

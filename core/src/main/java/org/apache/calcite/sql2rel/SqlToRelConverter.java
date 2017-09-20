@@ -197,7 +197,6 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import static org.apache.calcite.sql.SqlUtil.stripAs;
-import static org.apache.calcite.util.Static.RESOURCE;
 
 /**
  * Converts a SQL parse tree (consisting of
@@ -3249,6 +3248,9 @@ public class SqlToRelConverter {
       sourceExps.set(field.getIndex(), p.right);
     }
 
+    final SqlValidatorScope scope = validator.getWithScope(call.getTargetTable());
+    Blackboard bb = createBlackboard(scope, null, false);
+
     // Walk the expression list and get default values for any columns
     // that were not supplied in the statement. Get field names too.
     for (int i = 0; i < targetFields.size(); ++i) {
@@ -3257,17 +3259,12 @@ public class SqlToRelConverter {
       fieldNames.set(i, fieldName);
       if (sourceExps.get(i) != null) {
         if (initializerFactory.isGeneratedAlways(targetTable, i)) {
-          throw RESOURCE.insertIntoAlwaysGenerated(fieldName).ex();
+//          throw RESOURCE.insertIntoAlwaysGenerated(fieldName).ex();
         }
         continue;
       }
       sourceExps.set(i,
-          initializerFactory.newColumnDefaultValue(targetTable, i,
-              new InitializerContext() {
-                public RexBuilder getRexBuilder() {
-                  return rexBuilder;
-                }
-              }));
+          initializerFactory.newColumnDefaultValue(targetTable, i, bb));
 
       // bare nulls are dangerous in the wrong hands
       sourceExps.set(i,
@@ -3275,6 +3272,21 @@ public class SqlToRelConverter {
     }
 
     return RelOptUtil.createProject(sourceRel, sourceExps, fieldNames, true);
+  }
+
+  private InitializerContext ic(final SqlValidatorScope scope) {
+    if (false)
+    return new InitializerContext() {
+      public RexBuilder getRexBuilder() {
+        return rexBuilder;
+      }
+
+      @Override public RexNode convertExpression(SqlNode e) {
+        final Blackboard bb = createBlackboard(scope, null, false);
+        return bb.convertExpression(e);
+      }
+    };
+    return createBlackboard(scope, null, false);
   }
 
   private InitializerExpressionFactory getInitializerFactory(
@@ -3344,8 +3356,19 @@ public class SqlToRelConverter {
       }
     }
 
+    final SqlValidatorScope scope = validator.getWithScope(call);
+    final InitializerContext bb = createBlackboard(scope, null, false);
+    final InitializerExpressionFactory f =
+        targetTable.unwrap(InitializerExpressionFactory.class);
+    int j = 0;
     for (int i = 0; i < targetColumnNames.size(); i++) {
-      final RexNode expr = rexBuilder.makeFieldAccess(sourceRef, i);
+      final RexNode expr;
+      if (f != null
+          && f.isGeneratedAlways(targetTable, i)) {
+        expr = f.newColumnDefaultValue(targetTable, i, bb);
+      } else {
+        expr = rexBuilder.makeFieldAccess(sourceRef, j++);
+      }
       columnExprs.add(expr);
     }
   }
@@ -3875,7 +3898,8 @@ public class SqlToRelConverter {
   /**
    * Workspace for translating an individual SELECT statement (or sub-SELECT).
    */
-  protected class Blackboard implements SqlRexContext, SqlVisitor<RexNode> {
+  protected class Blackboard implements SqlRexContext, SqlVisitor<RexNode>,
+      InitializerContext {
     /**
      * Collection of {@link RelNode} objects which correspond to a SELECT
      * statement.

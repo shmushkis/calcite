@@ -46,6 +46,7 @@ import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.schema.StreamableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TranslatableTable;
+import org.apache.calcite.schema.Wrapper;
 import org.apache.calcite.sql.SqlAccessType;
 import org.apache.calcite.sql.validate.SqlModality;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
@@ -182,8 +183,15 @@ public class RelOptTableImpl extends Prepare.AbstractPreparingTable {
     if (clazz.isInstance(this)) {
       return clazz.cast(this);
     }
-    if (clazz.isInstance(table)) {
-      return clazz.cast(table);
+    if (table instanceof Wrapper) {
+      final T t = ((Wrapper) table).unwrap(clazz);
+      if (t != null) {
+        return t;
+      }
+    } else {
+      if (clazz.isInstance(table)) {
+        return clazz.cast(table);
+      }
     }
     if (clazz == CalciteSchema.class) {
       return clazz.cast(
