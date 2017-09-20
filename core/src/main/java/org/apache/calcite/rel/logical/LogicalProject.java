@@ -131,8 +131,7 @@ public final class LogicalProject extends Project {
     return shuttle.visit(this);
   }
 
-  @Override
-  public RelNode onRegister(RelOptPlanner planner) {
+  @Override public RelNode onRegister(RelOptPlanner planner) {
     RelNode r = super.onRegister(planner);
     // TODO: Is there an extracting visitor maybe that goes deep into expressions?
     for (RexNode exp : exps) {

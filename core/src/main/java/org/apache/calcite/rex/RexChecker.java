@@ -145,7 +145,7 @@ public class RexChecker extends RexVisitorImpl<Boolean> {
     return litmus.succeed();
   }
 
-  @Override public Boolean visitSeqCall(RexSeqCall seqCll) {
+  @Override public Boolean visitSeqCall(RexSeqCall seqCall) {
     return litmus.succeed();
   }
 

@@ -230,8 +230,7 @@ public class MongoRules {
           + " is not supported by MongoProject");
     }
 
-    @Override
-    public String visitSeqCall(RexSeqCall seqCall) {
+    @Override public String visitSeqCall(RexSeqCall seqCall) {
       throw new IllegalArgumentException("Translation of " + seqCall.toString()
           + " is not supported by MongoProject");
     }

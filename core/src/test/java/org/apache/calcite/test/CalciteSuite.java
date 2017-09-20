@@ -160,6 +160,7 @@ import org.junit.runners.Suite;
     QuidemTest.class,
     CalciteRemoteDriverTest.class,
     StreamTest.class,
+    SequenceTest.class,
 
     // test cases
     TableInRootSchemaTest.class,

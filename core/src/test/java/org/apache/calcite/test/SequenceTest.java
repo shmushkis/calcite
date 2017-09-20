@@ -37,116 +37,118 @@ public class SequenceTest {
 
   @Test public void testBigint() throws Exception {
     String hsqldbMemUrl = "jdbc:hsqldb:mem:.";
-    Connection baseConnection = DriverManager.getConnection(hsqldbMemUrl);
-    Statement baseStmt = baseConnection.createStatement();
-    baseStmt.execute("CREATE SEQUENCE S1 AS BIGINT;");
+    try (Connection baseConnection = DriverManager.getConnection(hsqldbMemUrl);
+         Statement baseStmt = baseConnection.createStatement()) {
+      baseStmt.execute("CREATE SEQUENCE S1 AS BIGINT");
 
-    baseStmt.close();
-    baseConnection.commit();
+      baseStmt.close();
+      baseConnection.commit();
+    }
 
-    Connection calciteConnection = sequenceModelConnection(hsqldbMemUrl);
-    PreparedStatement nextValuePs =
-            calciteConnection.prepareStatement("select next value for s1");
-    PreparedStatement currentValuePs =
-            calciteConnection.prepareStatement("select current value for s1");
-    ResultSet rs;
+    final String sql1 = "select current value for s1";
+    final String sql2 = "select next value for s1";
+    try (Connection calciteConnection = sequenceModelConnection(hsqldbMemUrl);
+         PreparedStatement currentPs = calciteConnection.prepareStatement(sql1);
+         PreparedStatement nextPs = calciteConnection.prepareStatement(sql2)) {
+      ResultSet rs;
 
-    rs = currentValuePs.executeQuery();
+      rs = currentPs.executeQuery();
 
-    assertThat(rs.next(), is(true));
-    assertThat((Long) rs.getObject(1), equalTo(0L));
+      assertThat(rs.next(), is(true));
+      assertThat((Long) rs.getObject(1), equalTo(0L));
 
-    rs = nextValuePs.executeQuery();
+      rs = nextPs.executeQuery();
 
-    assertThat(rs.next(), is(true));
-    assertThat((Long) rs.getObject(1), equalTo(1L));
+      assertThat(rs.next(), is(true));
+      assertThat((Long) rs.getObject(1), equalTo(1L));
 
-    rs = currentValuePs.executeQuery();
+      rs = currentPs.executeQuery();
 
-    assertThat(rs.next(), is(true));
-    assertThat((Long) rs.getObject(1), equalTo(1L));
+      assertThat(rs.next(), is(true));
+      assertThat((Long) rs.getObject(1), equalTo(1L));
 
-    rs = nextValuePs.executeQuery();
+      rs = nextPs.executeQuery();
 
-    assertThat(rs.next(), is(true));
-    assertThat((Long) rs.getObject(1), equalTo(2L));
+      assertThat(rs.next(), is(true));
+      assertThat((Long) rs.getObject(1), equalTo(2L));
 
-    rs = currentValuePs.executeQuery();
+      rs = currentPs.executeQuery();
 
-    assertThat(rs.next(), is(true));
-    assertThat((Long) rs.getObject(1), equalTo(2L));
+      assertThat(rs.next(), is(true));
+      assertThat((Long) rs.getObject(1), equalTo(2L));
 
-    rs.close();
-    calciteConnection.close();
+      rs.close();
+      calciteConnection.close();
+    }
   }
 
   @Test public void testInt() throws Exception {
     String hsqldbMemUrl = "jdbc:hsqldb:mem:.";
-    Connection baseConnection = DriverManager.getConnection(hsqldbMemUrl);
-    Statement baseStmt = baseConnection.createStatement();
-    baseStmt.execute("CREATE SEQUENCE S2;");
+    try (Connection baseConnection = DriverManager.getConnection(hsqldbMemUrl);
+         Statement baseStmt = baseConnection.createStatement()) {
+      baseStmt.execute("CREATE SEQUENCE S2");
 
-    baseStmt.close();
-    baseConnection.commit();
+      baseStmt.close();
+      baseConnection.commit();
+    }
 
-    Connection calciteConnection = sequenceModelConnection(hsqldbMemUrl);
-    PreparedStatement nextValuePs =
-            calciteConnection.prepareStatement("select next value for s2");
-    PreparedStatement currentValuePs =
-            calciteConnection.prepareStatement("select current value for s2");
-    ResultSet rs;
+    final String sql1 = "select current value for s2";
+    final String sql2 = "select next value for s2";
+    try (Connection calciteConnection = sequenceModelConnection(hsqldbMemUrl);
+         PreparedStatement currentPs = calciteConnection.prepareStatement(sql2);
+         PreparedStatement nextPs = calciteConnection.prepareStatement(sql1)) {
+      ResultSet rs;
 
-    rs = currentValuePs.executeQuery();
+      rs = currentPs.executeQuery();
 
-    assertThat(rs.next(), is(true));
-    assertThat((Integer) rs.getObject(1), equalTo(0));
+      assertThat(rs.next(), is(true));
+      assertThat((Integer) rs.getObject(1), equalTo(0));
 
-    rs = nextValuePs.executeQuery();
+      rs = nextPs.executeQuery();
 
-    assertThat(rs.next(), is(true));
-    assertThat((Integer) rs.getObject(1), equalTo(1));
+      assertThat(rs.next(), is(true));
+      assertThat((Integer) rs.getObject(1), equalTo(1));
 
-    rs = currentValuePs.executeQuery();
+      rs = currentPs.executeQuery();
 
-    assertThat(rs.next(), is(true));
-    assertThat((Integer) rs.getObject(1), equalTo(1));
+      assertThat(rs.next(), is(true));
+      assertThat((Integer) rs.getObject(1), equalTo(1));
 
-    rs = nextValuePs.executeQuery();
+      rs = nextPs.executeQuery();
 
-    assertThat(rs.next(), is(true));
-    assertThat((Integer) rs.getObject(1), equalTo(2));
+      assertThat(rs.next(), is(true));
+      assertThat((Integer) rs.getObject(1), equalTo(2));
 
-    rs = currentValuePs.executeQuery();
+      rs = currentPs.executeQuery();
 
-    assertThat(rs.next(), is(true));
-    assertThat((Integer) rs.getObject(1), equalTo(2));
+      assertThat(rs.next(), is(true));
+      assertThat((Integer) rs.getObject(1), equalTo(2));
 
-    rs.close();
-    calciteConnection.close();
+      rs.close();
+      calciteConnection.close();
+    }
   }
 
   private Connection sequenceModelConnection(String hsqldbMemUrl) throws Exception {
     Properties info = new Properties();
-    info.put("model",
-            "inline:"
-                    + "{\n"
-                    + "  version: '1.0',\n"
-                    + "  defaultSchema: 'BASEJDBC',\n"
-                    + "  schemas: [\n"
-                    + "     {\n"
-                    + "       type: 'jdbc',\n"
-                    + "       name: 'BASEJDBC',\n"
-                    + "       jdbcDriver: '" + jdbcDriver.class.getName() + "',\n"
-                    + "       jdbcUrl: '" + hsqldbMemUrl + "',\n"
-                    + "       jdbcCatalog: null,\n"
-                    + "       jdbcSchema: null\n"
-                    + "     }\n"
-                    + "  ]\n"
-                    + "}");
+    final String model = "inline:"
+        + "{\n"
+        + "  version: '1.0',\n"
+        + "  defaultSchema: 'BASEJDBC',\n"
+        + "  schemas: [\n"
+        + "     {\n"
+        + "       type: 'jdbc',\n"
+        + "       name: 'BASEJDBC',\n"
+        + "       jdbcDriver: '" + jdbcDriver.class.getName() + "',\n"
+        + "       jdbcUrl: '" + hsqldbMemUrl + "',\n"
+        + "       jdbcCatalog: null,\n"
+        + "       jdbcSchema: null\n"
+        + "     }\n"
+        + "  ]\n"
+        + "}";
+    info.put("model", model);
 
-    return DriverManager.getConnection(
-            "jdbc:calcite:", info);
-
+    return DriverManager.getConnection("jdbc:calcite:", info);
   }
 
 }

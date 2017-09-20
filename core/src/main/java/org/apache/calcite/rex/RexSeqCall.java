@@ -16,11 +16,12 @@
  */
 package org.apache.calcite.rex;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlOperator;
+
+import com.google.common.collect.ImmutableList;
 
 import java.util.List;
 
@@ -31,7 +32,7 @@ public class RexSeqCall extends RexCall {
   public final RelNode rel;
 
   public RexSeqCall(RelDataType type, SqlOperator op,
-                     List<RexNode> operands, RelNode rel) {
+      List<RexNode> operands, RelNode rel) {
     super(type, op, operands);
     this.rel = rel;
     this.digest = computeDigest(false);
@@ -46,11 +47,7 @@ public class RexSeqCall extends RexCall {
   }
 
   @Override protected String computeDigest(boolean withType) {
-    StringBuilder sb = new StringBuilder(op.getName());
-    sb.append("(");
-    sb.append(RelOptUtil.toString(rel));
-    sb.append(")");
-    return sb.toString();
+    return op.getName() + "(" + RelOptUtil.toString(rel) + ")";
   }
 
   @Override public RexSeqCall clone(RelDataType type, List<RexNode> operands) {
@@ -63,4 +60,4 @@ public class RexSeqCall extends RexCall {
   }
 }
 
-// End RexSubQuery.java
+// End RexSeqCall.java

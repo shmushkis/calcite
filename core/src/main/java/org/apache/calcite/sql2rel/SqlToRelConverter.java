@@ -4480,12 +4480,8 @@ public class SqlToRelConverter {
       } else {
         rel = LogicalTableScan.create(cluster, table);
       }
-      return new RexSeqCall(
-          returnType,
-          op,
-          ImmutableList.<RexNode>of(rexBuilder.makeLiteral(key)),
-          rel
-      );
+      return new RexSeqCall(returnType, op,
+          ImmutableList.<RexNode>of(rexBuilder.makeLiteral(key)), rel);
     }
 
     /**
