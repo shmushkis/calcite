@@ -19,12 +19,11 @@ package org.apache.calcite.sql.dialect;
 import org.apache.calcite.sql.SqlDialect;
 
 /**
- * Implementation for the Hsqldb dialect.
+ * Sequence support for the Hsqldb dialect.
  */
-public class HsqldbSequenceSupport extends InformationSchemaSequenceSupport
-        implements SqlDialect.SequenceSupportResolver {
-  public static final SqlDialect.SequenceSupportResolver INSTANCE =
-          new HsqldbSequenceSupport();
+public class HsqldbSequenceSupport extends InformationSchemaSequenceSupport {
+  public static final SqlDialect.SequenceSupport INSTANCE =
+      new HsqldbSequenceSupport();
 }
 
 // End HsqldbSequenceSupport.java

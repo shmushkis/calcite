@@ -21,42 +21,45 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
 
-import java.sql.DatabaseMetaData;
-import java.sql.SQLException;
-
 /**
- * Implementation using the SQL Server sys sequences view from version 2012 onwards.
+ * Sequence support that retrieves sequence definitions using the SQL Server sys
+ * sequences view.
+ *
+ * <p>That view is only available from version 2012 onwards, and therefore
+ * this class implements {@link OracleSequenceSupport}.
  */
-public class MssqlSequenceSupportResolver extends SequenceSupportImpl
-    implements SqlDialect.SequenceSupportResolver {
-  public static final SqlDialect.SequenceSupportResolver INSTANCE =
-      new MssqlSequenceSupportResolver();
+public class MssqlSequenceSupport extends SequenceSupportImpl
+    implements SqlDialect.OptionalSequenceSupport {
+  public static final SqlDialect.OptionalSequenceSupport INSTANCE =
+      new MssqlSequenceSupport();
 
-  private MssqlSequenceSupportResolver() {
-    super("select NULL, schema_name(seq.schema_id), seq.name, "
-        + "CASE WHEN PRECISION = 19 THEN 'BIGINT' ELSE 'INT', seq.increment from "
-        + "sys.sequences AS seq where 1=1",
+  private MssqlSequenceSupport() {
+    super("select NULL, schema_name(seq.schema_id), seq.name,\n"
+            + " CASE WHEN PRECISION = 19 THEN 'BIGINT' ELSE 'INT',\n"
+            + " seq.increment\n"
+            + "from sys.sequences AS seq where 1=1",
         null,
         " and schema_name(seq.schema_id) = ?");
   }
 
-  @Override public SqlDialect.SequenceSupport resolveExtractor(
-      DatabaseMetaData metaData) throws SQLException {
-    int databaseMajorVersion = metaData.getDatabaseMajorVersion();
+  public SqlDialect.SequenceSupport resolveExtractor(
+      SqlDialect.Context context) {
     // SQL Server 2012 supports sequences which has the major version number 11
-    if (databaseMajorVersion >= 11) {
+    if (context.databaseMajorVersion() >= 11) {
       return this;
     }
     return null;
   }
 
-  @Override public void unparseSequenceVal(SqlWriter writer, SqlKind kind, SqlNode sequenceNode) {
+  @Override public void unparseSequenceVal(SqlWriter writer, SqlKind kind,
+      SqlNode sequenceNode) {
     if (kind == SqlKind.NEXT_VALUE) {
       writer.sep("NEXT VALUE FOR");
       sequenceNode.unparse(writer, 0, 0);
     } else {
-      // Apparently there is no builtin syntax to do this
-      // https://stackoverflow.com/questions/13702471/get-current-value-from-a-sql-server-sequence
+      // Apparently there is no builtin syntax to do this; see
+      // https://stackoverflow.com/questions/13702471/
+      // get-current-value-from-a-sql-server-sequence
       writer.sep("select current_value from sys.sequences where name = '");
       sequenceNode.unparse(writer, 0, 0);
       writer.sep("'");
@@ -64,4 +67,4 @@ public class MssqlSequenceSupportResolver extends SequenceSupportImpl
   }
 }
 
-// End MssqlSequenceSupportResolver.java
+// End MssqlSequenceSupport.java

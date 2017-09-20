@@ -95,8 +95,8 @@ public class SequenceTest {
     final String sql1 = "select current value for s2";
     final String sql2 = "select next value for s2";
     try (Connection calciteConnection = sequenceModelConnection(hsqldbMemUrl);
-         PreparedStatement currentPs = calciteConnection.prepareStatement(sql2);
-         PreparedStatement nextPs = calciteConnection.prepareStatement(sql1)) {
+         PreparedStatement currentPs = calciteConnection.prepareStatement(sql1);
+         PreparedStatement nextPs = calciteConnection.prepareStatement(sql2)) {
       ResultSet rs;
 
       rs = currentPs.executeQuery();

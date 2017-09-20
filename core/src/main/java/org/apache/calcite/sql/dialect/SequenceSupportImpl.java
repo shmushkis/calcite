@@ -40,9 +40,7 @@ public class SequenceSupportImpl implements SqlDialect.SequenceSupport {
   private final String catalogFilter;
   private final String schemaFilter;
 
-  public SequenceSupportImpl(
-      String sequencesQuery,
-      String catalogFilter,
+  public SequenceSupportImpl(String sequencesQuery, String catalogFilter,
       String schemaFilter) {
     this.sequencesQuery = sequencesQuery;
     this.catalogFilter = catalogFilter;
@@ -116,7 +114,8 @@ public class SequenceSupportImpl implements SqlDialect.SequenceSupport {
     }
   }
 
-  @Override public void unparseSequenceVal(SqlWriter writer, SqlKind kind, SqlNode sequenceNode) {
+  public void unparseSequenceVal(SqlWriter writer, SqlKind kind,
+      SqlNode sequenceNode) {
     writer.sep(kind == SqlKind.NEXT_VALUE ? "NEXT VALUE FOR" : "CURRENT VALUE FOR");
     sequenceNode.unparse(writer, 0, 0);
   }

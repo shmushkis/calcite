@@ -46,7 +46,8 @@ public class MssqlSqlDialect extends SqlDialect {
 
   /** Creates a MssqlSqlDialect. */
   public MssqlSqlDialect(Context context) {
-    super(context);
+    super(context
+        .withSequenceSupport(MssqlSequenceSupport.INSTANCE));
   }
 
   @Override public void unparseDateTimeLiteral(SqlWriter writer,

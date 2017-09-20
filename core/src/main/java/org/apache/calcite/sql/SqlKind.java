@@ -702,6 +702,12 @@ public enum SqlKind {
   RTRIM,
 
   /**
+   * The "SUBSTRING" function in the SQL standard,
+   * and also Oracle's similar "SUBSTR" function.
+   */
+  SUBSTRING,
+
+  /**
    * The "EXTRACT" function.
    */
   EXTRACT,

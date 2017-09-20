@@ -24,7 +24,6 @@ import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.fun.OracleSqlOperatorTable;
 import org.apache.calcite.sql.fun.SqlFloorFunction;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
 /**
  * A <code>SqlDialect</code> implementation for the Oracle database.
@@ -37,7 +36,8 @@ public class OracleSqlDialect extends SqlDialect {
 
   /** Creates an OracleSqlDialect. */
   public OracleSqlDialect(Context context) {
-    super(context);
+    super(context
+        .withSequenceSupport(OracleSequenceSupport.INSTANCE));
   }
 
   @Override public boolean supportsCharSet() {
@@ -50,27 +50,28 @@ public class OracleSqlDialect extends SqlDialect {
 
   @Override public void unparseCall(SqlWriter writer, SqlCall call,
       int leftPrec, int rightPrec) {
-    if (call.getOperator() == SqlStdOperatorTable.SUBSTRING) {
-      SqlUtil.unparseFunctionSyntax(OracleSqlOperatorTable.SUBSTR, writer, call);
-    } else {
-      switch (call.getKind()) {
-      case FLOOR:
-        if (call.operandCount() != 2) {
-          super.unparseCall(writer, call, leftPrec, rightPrec);
-          return;
-        }
-
-        final SqlLiteral timeUnitNode = call.operand(1);
-        final TimeUnitRange timeUnit = timeUnitNode.getValueAs(TimeUnitRange.class);
-
-        SqlCall call2 = SqlFloorFunction.replaceTimeUnitOperand(call, timeUnit.name(),
-            timeUnitNode.getParserPosition());
-        SqlFloorFunction.unparseDatetimeFunction(writer, call2, "TRUNC", true);
-        break;
-
-      default:
+    switch (call.getKind()) {
+    case SUBSTRING:
+      SqlUtil.unparseFunctionSyntax(OracleSqlOperatorTable.SUBSTR, writer,
+          call);
+      break;
+    case FLOOR:
+      if (call.operandCount() != 2) {
         super.unparseCall(writer, call, leftPrec, rightPrec);
+        return;
       }
+
+      final SqlLiteral timeUnitNode = call.operand(1);
+      final TimeUnitRange timeUnit =
+          timeUnitNode.getValueAs(TimeUnitRange.class);
+
+      SqlCall call2 = SqlFloorFunction.replaceTimeUnitOperand(call,
+          timeUnit.name(), timeUnitNode.getParserPosition());
+      SqlFloorFunction.unparseDatetimeFunction(writer, call2, "TRUNC", true);
+      break;
+
+    default:
+      super.unparseCall(writer, call, leftPrec, rightPrec);
     }
   }
 }

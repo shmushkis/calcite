@@ -29,7 +29,8 @@ public class RedshiftSqlDialect extends SqlDialect {
 
   /** Creates a RedshiftSqlDialect. */
   public RedshiftSqlDialect(Context context) {
-    super(context);
+    super(context
+        .withSequenceSupport(PostgresqlSequenceSupport.INSTANCE));
   }
 
   @Override public boolean supportsOffsetFetch() {

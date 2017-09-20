@@ -39,7 +39,8 @@ public class HsqldbSqlDialect extends SqlDialect {
 
   /** Creates an HsqldbSqlDialect. */
   public HsqldbSqlDialect(Context context) {
-    super(context);
+    super(context
+        .withSequenceSupport(HsqldbSequenceSupport.INSTANCE));
   }
 
   @Override public boolean supportsCharSet() {

@@ -21,35 +21,30 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
 
-import java.sql.DatabaseMetaData;
-import java.sql.SQLException;
-
 /**
- * Implementation using the DB2 system catalog.
- * See the following for reference: https://www.ibm.com/
- * support/knowledgecenter/en/SSEPGG_10.5.0/com.ibm.db2.luw.sql.ref.doc/doc/r0004203.html
+ * Sequence support that retrieves sequence definitions from the IBM DB2 system
+ * catalog.
+ *
+ * <p>See
+ * <a href="https://www.ibm.com/support/knowledgecenter/en/SSEPGG_10.5.0/com.ibm.db2.luw.sql.ref.doc/doc/r0004203.html">documentation</a>.
  */
-public class Db2SequenceSupport extends SequenceSupportImpl
-        implements SqlDialect.SequenceSupportResolver {
-  public static final SqlDialect.SequenceSupportResolver INSTANCE =
-          new Db2SequenceSupport();
+public class Db2SequenceSupport extends SequenceSupportImpl {
+  public static final SqlDialect.SequenceSupport INSTANCE =
+      new Db2SequenceSupport();
 
   private Db2SequenceSupport() {
-    super(
-      "select NULL, SEQSCHEMA, SEQNAME, CASE WHEN PRECISION = 19 THEN 'BIGINT' ELSE 'INT' END, "
-          + "INCREMENT from SYSCAT.SEQUENCES where 1=1",
-      null,
-      " and SEQSCHEMA = ?");
+    super("select NULL, SEQSCHEMA, SEQNAME,\n"
+            + " CASE WHEN PRECISION = 19 THEN 'BIGINT' ELSE 'INT' END,\n"
+            + "INCREMENT from SYSCAT.SEQUENCES where 1=1",
+        null,
+        " and SEQSCHEMA = ?");
   }
 
-  @Override public SqlDialect.SequenceSupport resolveExtractor(
-      DatabaseMetaData metaData) throws SQLException {
-    return this;
-  }
-
-  @Override public void unparseSequenceVal(SqlWriter writer, SqlKind kind, SqlNode sequenceNode) {
-    // SFor reference also see: https://www.ibm.com
-    // /support/knowledgecenter/en/SSEPEK_10.0.0/sqlref/src/tpc/db2z_sequencereference.html
+  @Override public void unparseSequenceVal(SqlWriter writer, SqlKind kind,
+      SqlNode sequenceNode) {
+    // For reference also see:
+    // https://www.ibm.com/support/knowledgecenter/en/SSEPEK_10.0.0/sqlref/
+    // src/tpc/db2z_sequencereference.html
     writer.sep(kind == SqlKind.NEXT_VALUE ? "NEXT VALUE FOR" : "PREVIOUS VALUE FOR");
     sequenceNode.unparse(writer, 0, 0);
   }

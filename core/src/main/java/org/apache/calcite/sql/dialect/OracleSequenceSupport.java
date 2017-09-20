@@ -21,35 +21,31 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
 
-import java.sql.DatabaseMetaData;
-import java.sql.SQLException;
-
 /**
- * Implementation using the Oracle all_objects view.
+ * Sequence support that retrieves sequence definitions using Oracle's
+ * {@code all_objects} view.
  */
-public class OracleSequenceSupport extends SequenceSupportImpl
-        implements SqlDialect.SequenceSupportResolver {
-  public static final SqlDialect.SequenceSupportResolver INSTANCE =
-          new OracleSequenceSupport();
+public class OracleSequenceSupport extends SequenceSupportImpl {
+  public static final SqlDialect.SequenceSupport INSTANCE =
+      new OracleSequenceSupport();
 
   private OracleSequenceSupport() {
-    super(
-      "select NULL, o.sequence_owner, o.sequence_name, 'DECIMAL', o.increment_by "
-          + "from all_sequences o where 1=1",
-      null,
-      " and o.sequence_owner = ?");
+    super("select NULL, o.sequence_owner, o.sequence_name, 'DECIMAL',"
+        + " o.increment_by from all_sequences o where 1=1",
+        null,
+        " and o.sequence_owner = ?");
   }
 
-  @Override public SqlDialect.SequenceSupport resolveExtractor(
-      DatabaseMetaData metaData) throws SQLException {
-    return this;
-  }
-
-  @Override public void unparseSequenceVal(SqlWriter writer, SqlKind kind, SqlNode sequenceNode) {
-    // Pseudocolumns: https://docs.oracle.com/cd/B19306_01/server.102/b14200/pseudocolumns002.htm
+  /** {@inheritDoc}
+   *
+   * <p>Uses
+   * <a href="https://docs.oracle.com/cd/B19306_01/server.102/b14200/pseudocolumns002.htm">
+   * pseudo-columns</a>.
+   */
+  @Override public void unparseSequenceVal(SqlWriter writer, SqlKind kind,
+      SqlNode sequenceNode) {
     sequenceNode.unparse(writer, 0, 0);
-    writer.sep(kind == SqlKind.NEXT_VALUE
-            ? ".NEXTVAL" : ".CURRVAL");
+    writer.sep(kind == SqlKind.NEXT_VALUE ? ".NEXTVAL" : ".CURRVAL");
   }
 }
 

@@ -28,7 +28,8 @@ public class Db2SqlDialect extends SqlDialect {
 
   /** Creates a Db2SqlDialect. */
   public Db2SqlDialect(Context context) {
-    super(context);
+    super(context
+        .withSequenceSupport(Db2SequenceSupport.INSTANCE));
   }
 
   @Override public boolean supportsCharSet() {

@@ -21,40 +21,36 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
 
-import java.sql.DatabaseMetaData;
-import java.sql.SQLException;
-
 /**
- * Implementation for the Phoenix dialect.
+ * Sequence support for the Phoenix dialect.
  */
-public class PhoenixSequenceSupport extends SequenceSupportImpl
-        implements SqlDialect.SequenceSupportResolver {
-  public static final SqlDialect.SequenceSupportResolver INSTANCE =
-          new PhoenixSequenceSupport();
+public class PhoenixSequenceSupport extends SequenceSupportImpl {
+  public static final SqlDialect.SequenceSupport INSTANCE =
+      new PhoenixSequenceSupport();
 
   protected PhoenixSequenceSupport() {
-    super(
-      "select NULL, sequence_schema, sequence_name, 'BIGINT', increment_by from "
-              + "information_schema.sequences where 1=1",
-      null,
-      " and sequence_schema = ?");
+    super("select NULL, sequence_schema, sequence_name, 'BIGINT',\n"
+        + " increment_by\n"
+        + "from information_schema.sequences where 1=1",
+        null,
+        " and sequence_schema = ?");
   }
 
-  @Override public SqlDialect.SequenceSupport resolveExtractor(
-          DatabaseMetaData metaData) throws SQLException {
-    return this;
-  }
-
-  @Override public void unparseSequenceVal(SqlWriter writer, SqlKind kind, SqlNode sequenceNode) {
-    if (kind == SqlKind.NEXT_VALUE) {
+  @Override public void unparseSequenceVal(SqlWriter writer, SqlKind kind,
+      SqlNode sequenceNode) {
+    switch (kind) {
+    case NEXT_VALUE:
       writer.sep("NEXT VALUE FOR");
       sequenceNode.unparse(writer, 0, 0);
-    } else {
+      break;
+    default:
       // Apparently there is no builtin syntax to do this
       // https://phoenix.apache.org/sequences.html
-      writer.sep("select current_value from system.sequence where sequence_name = '");
+      writer.sep("select current_value from system.sequence where "
+          + "sequence_name = '");
       sequenceNode.unparse(writer, 0, 0);
       writer.sep("'");
+      break;
     }
   }
 }

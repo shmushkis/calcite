@@ -53,11 +53,15 @@ import java.util.Locale;
  */
 public class SqlDialectFactoryImpl implements SqlDialectFactory {
   public SqlDialect create(DatabaseMetaData databaseMetaData) {
-    String databaseProductName;
-    String databaseVersion;
+    final String databaseProductName;
+    final String databaseVersion;
+    final int databaseMajorVersion;
+    final int databaseMinorVersion;
     try {
       databaseProductName = databaseMetaData.getDatabaseProductName();
       databaseVersion = databaseMetaData.getDatabaseProductVersion();
+      databaseMajorVersion = databaseMetaData.getDatabaseMajorVersion();
+      databaseMinorVersion = databaseMetaData.getDatabaseMinorVersion();
     } catch (SQLException e) {
       throw new RuntimeException("while detecting database product", e);
     }
@@ -68,6 +72,8 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
     final SqlDialect.Context c = SqlDialect.EMPTY_CONTEXT
         .withDatabaseProductName(databaseProductName)
         .withDatabaseVersion(databaseVersion)
+        .withDatabaseMajorVersion(databaseMajorVersion)
+        .withDatabaseMinorVersion(databaseMinorVersion)
         .withIdentifierQuoteString(quoteString)
         .withNullCollation(nullCollation);
     switch (upperProductName) {

@@ -29,7 +29,8 @@ public class PhoenixSqlDialect extends SqlDialect {
 
   /** Creates a PhoenixSqlDialect. */
   public PhoenixSqlDialect(Context context) {
-    super(context);
+    super(context
+        .withSequenceSupport(PhoenixSequenceSupport.INSTANCE));
   }
 
   @Override public boolean supportsCharSet() {

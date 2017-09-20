@@ -93,7 +93,7 @@ public class OracleSqlOperatorTable extends ReflectiveSqlOperatorTable {
    * <p>It has similar semantics to standard SQL's
    * {@link SqlStdOperatorTable#SUBSTRING} function but different syntax. */
   public static final SqlFunction SUBSTR =
-      new SqlFunction("SUBSTR", SqlKind.OTHER_FUNCTION,
+      new SqlFunction("SUBSTR", SqlKind.SUBSTRING,
           ReturnTypes.ARG0_NULLABLE_VARYING, null, null,
           SqlFunctionCategory.STRING);
 

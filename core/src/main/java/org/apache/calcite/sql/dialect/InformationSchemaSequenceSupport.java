@@ -18,28 +18,20 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.sql.SqlDialect;
 
-import java.sql.DatabaseMetaData;
-import java.sql.SQLException;
-
 /**
- * Implementation using the information schema sequences table.
+ * Sequence support that retrieves sequence definitions using the sequences
+ * table in the information schema.
  */
-public class InformationSchemaSequenceSupport extends SequenceSupportImpl
-        implements SqlDialect.SequenceSupportResolver {
-  public static final SqlDialect.SequenceSupportResolver INSTANCE =
-          new InformationSchemaSequenceSupport();
+public class InformationSchemaSequenceSupport extends SequenceSupportImpl {
+  public static final SqlDialect.SequenceSupport INSTANCE =
+      new InformationSchemaSequenceSupport();
 
   protected InformationSchemaSequenceSupport() {
     super(
-      "select SEQUENCE_CATALOG, SEQUENCE_SCHEMA, SEQUENCE_NAME, DATA_TYPE, INCREMENT from "
-        + "information_schema.sequences where 1=1",
-      " and SEQUENCE_CATALOG = ?",
-      " and SEQUENCE_SCHEMA = ?");
-  }
-
-  @Override public SqlDialect.SequenceSupport resolveExtractor(
-      DatabaseMetaData metaData) throws SQLException {
-    return this;
+        "select SEQUENCE_CATALOG, SEQUENCE_SCHEMA, SEQUENCE_NAME, DATA_TYPE,\n"
+            + " INCREMENT from information_schema.sequences where 1=1",
+        " and SEQUENCE_CATALOG = ?",
+        " and SEQUENCE_SCHEMA = ?");
   }
 }
 

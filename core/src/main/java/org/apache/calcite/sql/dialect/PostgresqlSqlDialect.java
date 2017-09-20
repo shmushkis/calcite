@@ -34,7 +34,8 @@ public class PostgresqlSqlDialect extends SqlDialect {
 
   /** Creates a PostgresqlSqlDialect. */
   public PostgresqlSqlDialect(Context context) {
-    super(context);
+    super(context
+        .withSequenceSupport(PostgresqlSequenceSupport.INSTANCE));
   }
 
   @Override public boolean supportsCharSet() {

@@ -29,7 +29,9 @@ public class H2SqlDialect extends SqlDialect {
 
   /** Creates an H2SqlDialect. */
   public H2SqlDialect(Context context) {
-    super(context);
+    super(context
+        // H2 uses the same nextval and currval functions as Postgresql
+        .withSequenceSupport(HsqldbSequenceSupport.INSTANCE));
   }
 
   @Override public boolean supportsCharSet() {

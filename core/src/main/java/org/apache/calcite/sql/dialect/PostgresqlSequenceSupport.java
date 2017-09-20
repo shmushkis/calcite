@@ -22,16 +22,17 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
 
 /**
- * Implementation for the Postgesql dialect.
+ * Sequence support for the PostgreSQL dialect.
  */
-public class PostgresqlSequenceSupport extends InformationSchemaSequenceSupport
-        implements SqlDialect.SequenceSupportResolver {
-  public static final SqlDialect.SequenceSupportResolver INSTANCE =
-          new PostgresqlSequenceSupport();
+public class PostgresqlSequenceSupport
+    extends InformationSchemaSequenceSupport {
+  public static final SqlDialect.SequenceSupport INSTANCE =
+      new PostgresqlSequenceSupport();
 
-  @Override public void unparseSequenceVal(SqlWriter writer, SqlKind kind, SqlNode sequenceNode) {
+  @Override public void unparseSequenceVal(SqlWriter writer, SqlKind kind,
+      SqlNode sequenceNode) {
     writer.sep(kind == SqlKind.NEXT_VALUE
-            ? "NEXTVAL('" : "CURRVAL('");
+        ? "NEXTVAL('" : "CURRVAL('");
     sequenceNode.unparse(writer, 0, 0);
     writer.sep("')");
   }

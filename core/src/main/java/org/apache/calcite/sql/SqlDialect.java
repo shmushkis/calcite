@@ -22,12 +22,6 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.dialect.AnsiSqlDialect;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
-import org.apache.calcite.sql.dialect.Db2SequenceSupport;
-import org.apache.calcite.sql.dialect.HsqldbSequenceSupport;
-import org.apache.calcite.sql.dialect.MssqlSequenceSupportResolver;
-import org.apache.calcite.sql.dialect.OracleSequenceSupport;
-import org.apache.calcite.sql.dialect.PhoenixSequenceSupport;
-import org.apache.calcite.sql.dialect.PostgresqlSequenceSupport;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -36,6 +30,7 @@ import org.apache.calcite.sql.type.SqlTypeUtil;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +42,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -83,7 +77,6 @@ public class SqlDialect {
   private final String identifierQuoteString;
   private final String identifierEndQuoteString;
   private final String identifierEscapedQuote;
-  @Deprecated // to be removed before 2.0
   private final DatabaseProduct databaseProduct;
   private final NullCollation nullCollation;
   private final SequenceSupport sequenceSupport;
@@ -161,14 +154,19 @@ public class SqlDialect {
     this.identifierEscapedQuote =
         identifierQuoteString == null ? null
             : this.identifierEndQuoteString + this.identifierEndQuoteString;
-    this.sequenceSupport = context.sequenceSupport();
+    SequenceSupport sequenceSupport = context.sequenceSupport();
+    if (sequenceSupport instanceof OptionalSequenceSupport) {
+      sequenceSupport =
+          ((OptionalSequenceSupport) sequenceSupport).resolveExtractor(context);
+    }
+    this.sequenceSupport = sequenceSupport;
   }
 
   //~ Methods ----------------------------------------------------------------
 
   /** Creates an empty context. Use {@link #EMPTY_CONTEXT} if possible. */
   protected static Context emptyContext() {
-    return new ContextImpl(DatabaseProduct.UNKNOWN, null, null, null,
+    return new ContextImpl(DatabaseProduct.UNKNOWN, null, null, 0, 0, null,
         NullCollation.HIGH, null);
   }
 
@@ -530,14 +528,14 @@ public class SqlDialect {
     if (type instanceof BasicSqlType) {
       return new SqlDataTypeSpec(
           new SqlIdentifier(type.getSqlTypeName().name(), SqlParserPos.ZERO),
-              type.getPrecision(),
-              type.getScale(),
-              type.getCharset() != null
-                  && supportsCharSet()
-                  ? type.getCharset().name()
-                  : null,
-              null,
-              SqlParserPos.ZERO);
+          type.getPrecision(),
+          type.getScale(),
+          type.getCharset() != null
+              && supportsCharSet()
+              ? type.getCharset().name()
+              : null,
+          null,
+          SqlParserPos.ZERO);
     }
     return SqlTypeUtil.convertTypeToSpec(type);
   }
@@ -582,11 +580,10 @@ public class SqlDialect {
   }
 
   public Collection<SequenceInformation> getSequenceInformation(
-          Connection connection,
-          String catalog,
-          String schema) throws SQLException {
+      Connection connection, String catalog, String schema)
+      throws SQLException {
     if (sequenceSupport == null) {
-      return Collections.emptyList();
+      return ImmutableList.of();
     }
     return sequenceSupport.extract(connection, catalog, schema);
   }
@@ -686,42 +683,36 @@ public class SqlDialect {
    * extend the dialect to describe the particular capability, for example,
    * whether the database allows expressions to appear in the GROUP BY clause.
    */
-  @Deprecated // to be removed before 2.0
   public enum DatabaseProduct {
-    ACCESS("Access", "\"", null, NullCollation.HIGH),
-    CALCITE("Apache Calcite", "\"", null, NullCollation.HIGH),
-    MSSQL("Microsoft SQL Server", "[",
-      MssqlSequenceSupportResolver.INSTANCE, NullCollation.HIGH),
-    MYSQL("MySQL", "`", null, NullCollation.HIGH),
-    ORACLE("Oracle", "\"", OracleSequenceSupport.INSTANCE, NullCollation.HIGH),
-    DERBY("Apache Derby", null, null, NullCollation.HIGH),
-    DB2("IBM DB2", null, Db2SequenceSupport.INSTANCE, NullCollation.HIGH),
-    FIREBIRD("Firebird", null, null, NullCollation.HIGH),
-    // H2 uses the same nextval and currval functions as Postgresql
-    H2("H2", "\"", PostgresqlSequenceSupport.INSTANCE, NullCollation.HIGH),
-    HIVE("Apache Hive", null, null, NullCollation.HIGH),
-    INFORMIX("Informix", null, null, NullCollation.HIGH),
-    INGRES("Ingres", null, null, NullCollation.HIGH),
-    LUCIDDB("LucidDB", "\"", null, NullCollation.HIGH),
-    INTERBASE("Interbase", null, null, NullCollation.HIGH),
-    PHOENIX("Phoenix", "\"", PhoenixSequenceSupport.INSTANCE, NullCollation.HIGH),
-    POSTGRESQL("PostgreSQL", "\"",
-      PostgresqlSequenceSupport.INSTANCE, NullCollation.HIGH),
-    NETEZZA("Netezza", "\"", null, NullCollation.HIGH),
-    INFOBRIGHT("Infobright", "`", null, NullCollation.HIGH),
-    NEOVIEW("Neoview", null, null, NullCollation.HIGH),
-    SYBASE("Sybase", null, null, NullCollation.HIGH),
-    TERADATA("Teradata", "\"", null, NullCollation.HIGH),
-    HSQLDB("Hsqldb", null,
-      HsqldbSequenceSupport.INSTANCE, NullCollation.HIGH),
-    VERTICA("Vertica", "\"", null, NullCollation.HIGH),
-    SQLSTREAM("SQLstream", "\"", null, NullCollation.HIGH),
+    ACCESS("Access", "\"", NullCollation.HIGH),
+    CALCITE("Apache Calcite", "\"", NullCollation.HIGH),
+    MSSQL("Microsoft SQL Server", "[", NullCollation.HIGH),
+    MYSQL("MySQL", "`", NullCollation.HIGH),
+    ORACLE("Oracle", "\"", NullCollation.HIGH),
+    DERBY("Apache Derby", null, NullCollation.HIGH),
+    DB2("IBM DB2", null, NullCollation.HIGH),
+    FIREBIRD("Firebird", null, NullCollation.HIGH),
+    H2("H2", "\"", NullCollation.HIGH),
+    HIVE("Apache Hive", null, NullCollation.HIGH),
+    INFORMIX("Informix", null, NullCollation.HIGH),
+    INGRES("Ingres", null, NullCollation.HIGH),
+    LUCIDDB("LucidDB", "\"", NullCollation.HIGH),
+    INTERBASE("Interbase", null, NullCollation.HIGH),
+    PHOENIX("Phoenix", "\"", NullCollation.HIGH),
+    POSTGRESQL("PostgreSQL", "\"", NullCollation.HIGH),
+    NETEZZA("Netezza", "\"", NullCollation.HIGH),
+    INFOBRIGHT("Infobright", "`", NullCollation.HIGH),
+    NEOVIEW("Neoview", null, NullCollation.HIGH),
+    SYBASE("Sybase", null, NullCollation.HIGH),
+    TERADATA("Teradata", "\"", NullCollation.HIGH),
+    HSQLDB("Hsqldb", null, NullCollation.HIGH),
+    VERTICA("Vertica", "\"", NullCollation.HIGH),
+    SQLSTREAM("SQLstream", "\"", NullCollation.HIGH),
 
     /** Paraccel, now called Actian Matrix. Redshift is based on this, so
      * presumably the dialect capabilities are similar. */
-    PARACCEL("Paraccel", "\"", null, NullCollation.HIGH),
-    REDSHIFT("Redshift", "\"",
-      PostgresqlSequenceSupport.INSTANCE, NullCollation.HIGH),
+    PARACCEL("Paraccel", "\"", NullCollation.HIGH),
+    REDSHIFT("Redshift", "\"", NullCollation.HIGH),
 
     /**
      * Placeholder for the unknown database.
@@ -730,7 +721,7 @@ public class SqlDialect {
      * do something database-specific like quoting identifiers, don't rely
      * on this dialect to do what you want.
      */
-    UNKNOWN("Unknown", "`", null, NullCollation.HIGH);
+    UNKNOWN("Unknown", "`", NullCollation.HIGH);
 
     private final Supplier<SqlDialect> dialect =
         Suppliers.memoize(new Supplier<SqlDialect>() {
@@ -750,16 +741,13 @@ public class SqlDialect {
 
     private String databaseProductName;
     private String quoteString;
-    private final SequenceSupportResolver sequenceSupportResolver;
     private final NullCollation nullCollation;
 
     DatabaseProduct(String databaseProductName, String quoteString,
-        SequenceSupportResolver sequenceSupportResolver,
         NullCollation nullCollation) {
       this.databaseProductName =
           Preconditions.checkNotNull(databaseProductName);
       this.quoteString = quoteString;
-      this.sequenceSupportResolver = sequenceSupportResolver;
       this.nullCollation = Preconditions.checkNotNull(nullCollation);
     }
 
@@ -796,6 +784,10 @@ public class SqlDialect {
     Context withNullCollation(@Nonnull NullCollation nullCollation);
     SequenceSupport sequenceSupport();
     Context withSequenceSupport(SequenceSupport sequenceSupport);
+    int databaseMajorVersion();
+    Context withDatabaseMajorVersion(int databaseMajorVersion);
+    int databaseMinorVersion();
+    Context withDatabaseMinorVersion(int databaseMinorVersion);
   }
 
   /** Implementation of Context. */
@@ -803,17 +795,22 @@ public class SqlDialect {
     private final DatabaseProduct databaseProduct;
     private final String databaseProductName;
     private final String databaseVersion;
+    private final int databaseMajorVersion;
+    private final int databaseMinorVersion;
     private final String identifierQuoteString;
     private final NullCollation nullCollation;
     private final SequenceSupport sequenceSupport;
 
     private ContextImpl(DatabaseProduct databaseProduct,
         String databaseProductName, String databaseVersion,
+        int databaseMajorVersion, int databaseMinorVersion,
         String identifierQuoteString, NullCollation nullCollation,
         SequenceSupport sequenceSupport) {
       this.databaseProduct = Preconditions.checkNotNull(databaseProduct);
       this.databaseProductName = databaseProductName;
       this.databaseVersion = databaseVersion;
+      this.databaseMajorVersion = databaseMajorVersion;
+      this.databaseMinorVersion = databaseMinorVersion;
       this.identifierQuoteString = identifierQuoteString;
       this.nullCollation = Preconditions.checkNotNull(nullCollation);
       this.sequenceSupport = sequenceSupport;
@@ -826,8 +823,8 @@ public class SqlDialect {
     public Context withDatabaseProduct(
         @Nonnull DatabaseProduct databaseProduct) {
       return new ContextImpl(databaseProduct, databaseProductName,
-          databaseVersion, identifierQuoteString, nullCollation,
-          sequenceSupport);
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation, sequenceSupport);
     }
 
     public String databaseProductName() {
@@ -836,8 +833,8 @@ public class SqlDialect {
 
     public Context withDatabaseProductName(String databaseProductName) {
       return new ContextImpl(databaseProduct, databaseProductName,
-          databaseVersion, identifierQuoteString, nullCollation,
-          sequenceSupport);
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation, sequenceSupport);
     }
 
     public String databaseVersion() {
@@ -846,8 +843,28 @@ public class SqlDialect {
 
     public Context withDatabaseVersion(String databaseVersion) {
       return new ContextImpl(databaseProduct, databaseProductName,
-          databaseVersion, identifierQuoteString, nullCollation,
-          sequenceSupport);
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation, sequenceSupport);
+    }
+
+    public int databaseMajorVersion() {
+      return databaseMajorVersion;
+    }
+
+    public Context withDatabaseMajorVersion(int databaseMajorVersion) {
+      return new ContextImpl(databaseProduct, databaseProductName,
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation, sequenceSupport);
+    }
+
+    public int databaseMinorVersion() {
+      return databaseMinorVersion;
+    }
+
+    public Context withDatabaseMinorVersion(int databaseMinorVersion) {
+      return new ContextImpl(databaseProduct, databaseProductName,
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation, sequenceSupport);
     }
 
     public String identifierQuoteString() {
@@ -856,8 +873,8 @@ public class SqlDialect {
 
     public Context withIdentifierQuoteString(String identifierQuoteString) {
       return new ContextImpl(databaseProduct, databaseProductName,
-          databaseVersion, identifierQuoteString, nullCollation,
-          sequenceSupport);
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation, sequenceSupport);
     }
 
     @Nonnull public NullCollation nullCollation() {
@@ -866,8 +883,8 @@ public class SqlDialect {
 
     public Context withNullCollation(@Nonnull NullCollation nullCollation) {
       return new ContextImpl(databaseProduct, databaseProductName,
-          databaseVersion, identifierQuoteString, nullCollation,
-          sequenceSupport);
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation, sequenceSupport);
     }
 
     public SequenceSupport sequenceSupport() {
@@ -876,8 +893,8 @@ public class SqlDialect {
 
     public Context withSequenceSupport(SequenceSupport sequenceSupport) {
       return new ContextImpl(databaseProduct, databaseProductName,
-          databaseVersion, identifierQuoteString, nullCollation,
-          sequenceSupport);
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation, sequenceSupport);
     }
   }
 
@@ -893,24 +910,24 @@ public class SqlDialect {
   }
 
   /**
-   * Resolver for a sequence information extractor.
+   * An extension to {@link SequenceSupport} is able to say that sequence
+   * support is disabled.
    */
-  public interface SequenceSupportResolver {
-    SequenceSupport resolveExtractor(DatabaseMetaData metaData) throws SQLException;
+  public interface OptionalSequenceSupport extends SequenceSupport {
+    SequenceSupport resolveExtractor(Context metaData);
   }
 
   /**
-   * An extractor for querying sequence information.
+   * Queries sequence metadata from the data dictionary, and unparses calls
+   * to CURRENT VALUE and NEXT VALUE.
    */
   public interface SequenceSupport {
-    Collection<SequenceInformation> extract(
-        Connection connection,
-        String catalog,
-        String schema) throws SQLException;
+    Collection<SequenceInformation> extract(Connection connection,
+        String catalog, String schema) throws SQLException;
 
-    void unparseSequenceVal(SqlWriter writer, SqlKind kind, SqlNode sequenceNode);
+    void unparseSequenceVal(SqlWriter writer, SqlKind kind,
+        SqlNode sequenceNode);
   }
-
 }
 
 // End SqlDialect.java
