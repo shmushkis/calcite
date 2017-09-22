@@ -27,6 +27,7 @@ import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.RelBuilder;
+import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Util;
 
 import com.google.common.base.Function;
@@ -1415,6 +1416,31 @@ public class DruidAdapterIT {
         .returnsCount(9);
   }
 
+  /** Large IN clause. */
+  @Test public void testWhereBigIn() {
+    sql(whereBigInQuery(20)).returnsCount(980);
+    sql(whereBigInQuery(21)).returnsCount(1_029);
+    sql(whereBigInQuery(23)).returnsCount(1_147);
+  }
+
+  private String whereBigInQuery(int upper) {
+    return "select \"product_id\"\n"
+        + "from \"foodmart\"\n"
+        + "where \"product_id\" in ("
+        + stringList(ImmutableIntList.range(1, upper))
+        + ")";
+  }
+
+  private <E> String stringList(Iterable<E> iterable) {
+    final StringBuilder b = new StringBuilder();
+    for (Object o : iterable) {
+      if (b.length() > 0) {
+        b.append(", ");
+      }
+      b.append("'").append(o).append("'");
+    }
+    return b.toString();
+  }
 
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1656">[CALCITE-1656]
