@@ -75,18 +75,26 @@ public class ServerTest {
           + " i int not null,\n"
           + " j int as (i + 1) stored)");
       assertThat(b, is(true));
-      int x = s.executeUpdate("insert into foo values (1)");
-      assertThat(x, is(1));
 
-      // No target column list;
-      // source count < target count because virtual omitted
+      int x;
+      // No target column list; too few values provided
+      try {
+        x = s.executeUpdate("insert into foo values (3)");
+        fail("expected error, got " + x);
+      } catch (SQLException e) {
+        assertThat(e.getMessage(),
+            containsString("Number of INSERT target columns (2) does not equal "
+                + "number of source items (1)"));
+      }
+
+      // No target column list; too many values provided
       try {
         x = s.executeUpdate("insert into foo values (3, 4, 5)");
         fail("expected error, got " + x);
       } catch (SQLException e) {
         assertThat(e.getMessage(),
             containsString("Number of INSERT target columns (2) does not equal "
-                + "number of source items (1)"));
+                + "number of source items (3)"));
       }
 
       // No target column list;
@@ -97,8 +105,21 @@ public class ServerTest {
         fail("expected error, got " + x);
       } catch (SQLException e) {
         assertThat(e.getMessage(),
-            containsString("Cannot INSERT virtual column 'J'"));
+            containsString("Cannot INSERT into generated column 'J'"));
       }
+
+      // Explicit target column list, omits virtual column
+      x = s.executeUpdate("insert into foo (i) values (1)");
+      assertThat(x, is(1));
+
+      // Explicit target column list, includes virtual column but assigns
+      // DEFAULT.
+      x = s.executeUpdate("insert into foo (i, j) values (2, DEFAULT)");
+      assertThat(x, is(1));
+
+      // As previous, re-order columns.
+      x = s.executeUpdate("insert into foo (j, i) values (DEFAULT, 3)");
+      assertThat(x, is(1));
 
       // Target column list exists,
       // target column count equals the number of non-virtual columns;

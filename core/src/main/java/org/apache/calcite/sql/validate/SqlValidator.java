@@ -762,6 +762,8 @@ public interface SqlValidator {
   void validateSequenceValue(SqlValidatorScope scope, SqlIdentifier id);
 
   SqlValidatorScope getWithScope(SqlNode withItem);
+
+  SqlValidatorScope getInsertScope(SqlNode insert); // TODO: needed?
 }
 
 // End SqlValidator.java

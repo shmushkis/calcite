@@ -2459,6 +2459,16 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
           enclosingNode,
           null,
           false);
+      registerFrom(
+          parentScope,
+          usingScope,
+          insertCall.getTargetTable(),
+          insertCall,
+          deriveAlias(insertCall.getTargetTable(), 0),
+          null,
+          false);
+      final InsertScope insertScope = new InsertScope(parentScope, insertCall);
+      scopes.put(insertCall, insertScope);
       break;
 
     case DELETE:
@@ -3118,6 +3128,20 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
   }
 
+  /** Throws if DEFAULT is inside an expression. */
+  private void validateNoDefault(SqlNode node) {
+    node.accept(
+        new SqlBasicVisitor<Void>() {
+          @Override public Void visit(SqlCall call) {
+            switch (call.getKind()) {
+            case DEFAULT:
+              throw newValidationError(call, RESOURCE.defaultNotAllowed());
+            }
+            return super.visit(call);
+          }
+        });
+  }
+
   private RelDataType validateUsingCol(SqlIdentifier id, SqlNode leftOrRight) {
     if (id.names.size() == 1) {
       String name = id.names.get(0);
@@ -3705,6 +3729,11 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     return scopes.get(withItem);
   }
 
+  public SqlValidatorScope getInsertScope(SqlNode insert) {
+//    assert insert.getKind() == SqlKind.INSERT;
+    return scopes.get(insert);
+  }
+
   /**
    * Validates the ORDER BY clause of a SELECT statement.
    *
@@ -3724,7 +3753,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       }
     }
     final SqlValidatorScope orderScope = getOrderScope(select);
-    Preconditions.checkNotNull(orderScope != null);
+    Preconditions.checkNotNull(orderScope);
 
     List<SqlNode> expandList = new ArrayList<>();
     for (SqlNode orderItem : orderList) {
@@ -3770,6 +3799,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
 
     final SqlValidatorScope orderScope = getOrderScope(select);
+    validateNoDefault(orderItem);
     validateExpr(orderItem, orderScope);
   }
 
@@ -3795,6 +3825,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       return;
     }
     final String clause = "GROUP BY";
+    validateNoDefault(groupList);
     validateNoAggs(aggOrOverFinder, groupList, clause);
     final SqlValidatorScope groupScope = getGroupScope(select);
     inferUnknownTypes(unknownType, groupScope, groupList);
@@ -3889,6 +3920,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       SqlValidatorScope scope,
       SqlNode condition,
       String clause) {
+    validateNoDefault(condition);
     validateNoAggs(aggOrOverOrGroupFinder, condition, clause);
     inferUnknownTypes(
         booleanType,
@@ -3911,6 +3943,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     if (having == null) {
       return;
     }
+    validateNoDefault(having);
     final AggregatingScope havingScope =
         (AggregatingScope) getSelectScope(select);
     if (getConformance().isHavingAlias()) {
@@ -3955,6 +3988,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
             aliases,
             fieldList);
       } else {
+        validateNoDefault(selectItem);
         expandSelectItem(
             selectItem,
             select,
@@ -4081,14 +4115,16 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     RelDataType baseRowType = table.getRowType();
     final RelOptTable relOptTable = table instanceof RelOptTable
         ? ((RelOptTable) table) : null;
-    if (relOptTable != null) {
+    if (relOptTable != null && false) { // TODO:
       final InitializerExpressionFactory initializerExpressionFactory =
           relOptTable.unwrap(InitializerExpressionFactory.class);
       if (initializerExpressionFactory != null) {
         final RelDataTypeFactory.Builder builder = typeFactory.builder();
         for (RelDataTypeField field : baseRowType.getFieldList()) {
-          if (initializerExpressionFactory.isGeneratedAlways(relOptTable,
+          switch (initializerExpressionFactory.generationStrategy(relOptTable,
               field.getIndex())) {
+          case STORED:
+          case VIRTUAL:
             continue;
           }
           builder.add(field);
@@ -4295,16 +4331,31 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
           }
         };
     for (final RelDataTypeField field : table.getRowType().getFieldList()) {
-      if (!field.getType().isNullable()) {
-        final RelDataTypeField targetField =
-            logicalTargetRowType.getField(field.getName(), true, false);
-        if (targetField == null
-            && !table.columnHasDefaultValue(table.getRowType(),
-                field.getIndex(), rexBuilder)) {
+//      if (!field.getType().isNullable()) { // TODO:
+      final RelDataTypeField targetField =
+          logicalTargetRowType.getField(field.getName(), true, false);
+      final InitializerExpressionFactory.Strategy strategy =
+          table.columnHasDefaultValue(table.getRowType(), field.getIndex(),
+              rexBuilder);
+      switch (strategy) {
+      case NOT_NULLABLE:
+        assert !field.getType().isNullable();
+        if (targetField == null) {
           throw newValidationError(node,
               RESOURCE.columnNotNullable(field.getName()));
         }
+        break;
+      case NULLABLE:
+        assert field.getType().isNullable();
+        break;
+      case VIRTUAL:
+      case STORED:
+        if (targetField != null) {
+          throw newValidationError(node,
+              RESOURCE.insertIntoAlwaysGenerated(field.getName()));
+        }
       }
+//      }
     }
   }
 
@@ -4578,6 +4629,22 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
 
     for (SqlNode operand : operands) {
+      // throw if DEFAULT occurs deeper than level 0 or 1
+      switch (operand.getKind()) {
+      case DEFAULT:
+        break; // "values default" is OK
+      case ROW:
+        final SqlCall call = (SqlCall) operand;
+        for (SqlNode operand2 : call.getOperandList()) {
+          switch (operand2.getKind()) {
+          case DEFAULT:
+            break; // "values (1, default)" is OK
+          default:
+            validateNoDefault(operand2); // "values (f(default))" is not OK
+          }
+        }
+      }
+
       operand.validate(this, scope);
     }
 

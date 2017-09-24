@@ -32,8 +32,26 @@ public interface InitializerExpressionFactory {
   /**
    * Whether a column is always generated. If a column is always generated,
    * then non-generated values cannot be inserted into the column.
+   *
+   * @see #generationStrategy(RelOptTable, int)
+   *
+   * @deprecated Use {@code c.generationStrategy(t, i) == VIRTUAL
+   * || c.generationStrategy(t, i) == STORED}
    */
+  @Deprecated // to be removed before 2.0
   boolean isGeneratedAlways(
+      RelOptTable table,
+      int iColumn);
+
+  /**
+   * Returns how a column is populated.
+   *
+   * @param table   the table containing the column
+   * @param iColumn the 0-based offset of the column in the table
+   *
+   * @return generation strategy, never null
+   */
+  Strategy generationStrategy(
       RelOptTable table,
       int iColumn);
 
@@ -70,6 +88,23 @@ public interface InitializerExpressionFactory {
       int iAttribute,
       List<RexNode> constructorArgs,
       InitializerContext context);
+
+  /** How a column gets populated. */
+  enum Strategy {
+    /** Column does not have a default value, but does allow null values.
+     * If you don't specify it in an INSERT, it will get a NULL value. */
+    NULLABLE,
+    /** Column does not have a default value, and does not allow nulls.
+     * You must specify it in an INSERT. */
+    NOT_NULLABLE,
+    /** Column has a default value.
+     * If you don't specify it in an INSERT, it will get a NULL value. */
+    DEFAULT,
+    /** Column is computed and stored. You cannot insert into it. */
+    STORED,
+    /** Column is computed and not stored. You cannot insert into it. */
+    VIRTUAL
+  }
 }
 
 // End InitializerExpressionFactory.java

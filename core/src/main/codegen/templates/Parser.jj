@@ -759,6 +759,61 @@ SqlNodeList ParenthesizedQueryOrCommaList(
     }
 }
 
+/** As ParenthesizedQueryOrCommaList, but allows DEFAULT
+  * in place of any of the expressions. For example,
+  * {@code (x, DEFAULT, null, DEFAULT)}. */
+SqlNodeList ParenthesizedQueryOrCommaListWithDefault(
+    ExprContext exprContext) :
+{
+    SqlNode e;
+    List<SqlNode> list;
+    ExprContext firstExprContext = exprContext;
+    final Span s;
+}
+{
+    <LPAREN>
+    {
+        // we've now seen left paren, so a query by itself should
+        // be interpreted as a sub-query
+        s = span();
+        switch (exprContext) {
+        case ACCEPT_SUB_QUERY:
+            firstExprContext = ExprContext.ACCEPT_NONCURSOR;
+            break;
+        case ACCEPT_CURSOR:
+            firstExprContext = ExprContext.ACCEPT_ALL;
+            break;
+        }
+    }
+    (
+        e = OrderedQueryOrExpr(firstExprContext)
+    |
+        e = Default()
+    )
+    {
+        list = startList(e);
+    }
+    (
+        <COMMA>
+        {
+            // a comma-list can't appear where only a query is expected
+            checkNonQueryExpression(exprContext);
+        }
+        (
+            e = Expression(exprContext)
+        |
+            e = Default()
+        )
+        {
+            list.add(e);
+        }
+    )*
+    <RPAREN>
+    {
+        return new SqlNodeList(list, s.end(this));
+    }
+}
+
 /**
  * Parses function parameter lists including DISTINCT keyword recognition,
  * DEFAULT, and named argument assignment.
@@ -823,9 +878,7 @@ void Arg0(List list, ExprContext exprContext) :
         name = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT>
     ]
     (
-        <DEFAULT_> {
-            e = SqlStdOperatorTable.DEFAULT.createCall(getPos());
-        }
+        e = Default()
     |
         e = OrderedQueryOrExpr(firstExprContext)
     )
@@ -850,9 +903,7 @@ void Arg(List list, ExprContext exprContext) :
         name = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT>
     ]
     (
-        <DEFAULT_> {
-            e = SqlStdOperatorTable.DEFAULT.createCall(getPos());
-        }
+        e = Default()
     |
         e = Expression(exprContext)
     )
@@ -864,6 +915,13 @@ void Arg(List list, ExprContext exprContext) :
             }
             list.add(e);
         }
+    }
+}
+
+SqlNode Default() : {}
+{
+    <DEFAULT_> {
+        return SqlStdOperatorTable.DEFAULT.createCall(getPos());
     }
 }
 
@@ -2088,7 +2146,7 @@ SqlNode RowConstructor() :
         LOOKAHEAD(3)
         <LPAREN> { s = span(); }
         <ROW>
-        valueList = ParenthesizedQueryOrCommaList(ExprContext.ACCEPT_NONCURSOR)
+        valueList = ParenthesizedQueryOrCommaListWithDefault(ExprContext.ACCEPT_NONCURSOR)
         <RPAREN> { s.add(this); }
     |
         LOOKAHEAD(3)
@@ -2097,7 +2155,7 @@ SqlNode RowConstructor() :
         |
             { s = Span.of(); }
         )
-        valueList = ParenthesizedQueryOrCommaList(ExprContext.ACCEPT_NONCURSOR)
+        valueList = ParenthesizedQueryOrCommaListWithDefault(ExprContext.ACCEPT_NONCURSOR)
     |
         value = Expression(ExprContext.ACCEPT_NONCURSOR)
         {

@@ -445,6 +445,9 @@ public interface CalciteResource {
   @BaseMessage("DEFAULT is only allowed for optional parameters")
   ExInst<SqlValidatorException> defaultForOptionalParameter();
 
+  @BaseMessage("DEFAULT not allowed here")
+  ExInst<SqlValidatorException> defaultNotAllowed();
+
   @BaseMessage("Not allowed to perform {0} on {1}")
   ExInst<SqlValidatorException> accessNotAllowed(String a0, String a1);
 
@@ -521,8 +524,8 @@ public interface CalciteResource {
   @BaseMessage("''{0}'' is not a valid datetime format")
   ExInst<CalciteException> invalidDatetimeFormat(String a0);
 
-  @BaseMessage("Cannot explicitly insert value into IDENTITY column ''{0}'' which is ALWAYS GENERATED")
-  ExInst<CalciteException> insertIntoAlwaysGenerated(String a0);
+  @BaseMessage("Cannot INSERT into generated column ''{0}''")
+  ExInst<SqlValidatorException> insertIntoAlwaysGenerated(String a0);
 
   @BaseMessage("Argument to function ''{0}'' must have a scale of 0")
   ExInst<CalciteException> argumentMustHaveScaleZero(String a0);

@@ -3248,7 +3248,8 @@ public class SqlToRelConverter {
       sourceExps.set(field.getIndex(), p.right);
     }
 
-    final SqlValidatorScope scope = validator.getWithScope(call.getTargetTable());
+    final SqlValidatorScope scope =
+        validator.getInsertScope(call.getTargetTable());
     Blackboard bb = createBlackboard(scope, null, false);
 
     // Walk the expression list and get default values for any columns
@@ -3258,8 +3259,10 @@ public class SqlToRelConverter {
       final String fieldName = field.getName();
       fieldNames.set(i, fieldName);
       if (sourceExps.get(i) != null) {
-        if (initializerFactory.isGeneratedAlways(targetTable, i)) {
-//          throw RESOURCE.insertIntoAlwaysGenerated(fieldName).ex();
+        switch (initializerFactory.generationStrategy(targetTable, i)) {
+        case VIRTUAL:
+        case STORED:
+//          throw RESOURCE.insertIntoAlwaysGenerated(fieldName).ex(); // TODO:
         }
         continue;
       }
@@ -3275,7 +3278,7 @@ public class SqlToRelConverter {
   }
 
   private InitializerContext ic(final SqlValidatorScope scope) {
-    if (false)
+    if (false) // TODO:
     return new InitializerContext() {
       public RexBuilder getRexBuilder() {
         return rexBuilder;
@@ -3300,7 +3303,7 @@ public class SqlToRelConverter {
         return f;
       }
     }
-    return new NullInitializerExpressionFactory();
+    return NullInitializerExpressionFactory.INSTANCE;
   }
 
   private static <T> T unwrap(Object o, Class<T> clazz) {
@@ -3356,18 +3359,36 @@ public class SqlToRelConverter {
       }
     }
 
-    final SqlValidatorScope scope = validator.getWithScope(call);
-    final InitializerContext bb = createBlackboard(scope, null, false);
+    final SqlValidatorScope scope = validator.getInsertScope(call);
     final InitializerExpressionFactory f =
-        targetTable.unwrap(InitializerExpressionFactory.class);
+        Util.first(targetTable.unwrap(InitializerExpressionFactory.class),
+            NullInitializerExpressionFactory.INSTANCE);
+    final Map<String, RexNode> nameToNodeMap = new HashMap<>();
     int j = 0;
+
+    // Assign expressions for non-generated columns.
+    for (int i = 0; i < targetColumnNames.size(); i++) {
+      switch (f.generationStrategy(targetTable, i)) {
+      case STORED:
+      case VIRTUAL:
+        break;
+      default:
+        nameToNodeMap.put(targetColumnNames.get(i),
+            rexBuilder.makeFieldAccess(sourceRef, j++));
+      }
+    }
+
+    // Next, assign expressions for generated columns.
+    final Blackboard bb = createBlackboard(null, nameToNodeMap, false);
     for (int i = 0; i < targetColumnNames.size(); i++) {
       final RexNode expr;
-      if (f != null
-          && f.isGeneratedAlways(targetTable, i)) {
+      switch (f.generationStrategy(targetTable, i)) {
+      case STORED:
+      case VIRTUAL:
         expr = f.newColumnDefaultValue(targetTable, i, bb);
-      } else {
-        expr = rexBuilder.makeFieldAccess(sourceRef, j++);
+        break;
+      default:
+        expr = nameToNodeMap.get(targetColumnNames.get(i));
       }
       columnExprs.add(expr);
     }
@@ -4240,6 +4261,9 @@ public class SqlToRelConverter {
     }
 
     RelDataTypeField getRootField(RexInputRef inputRef) {
+      if (inputs == null) {
+        return null;
+      }
       int fieldOffset = inputRef.getIndex();
       for (RelNode input : inputs) {
         RelDataType rowType = input.getRowType();

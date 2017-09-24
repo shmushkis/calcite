@@ -36,7 +36,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeImpl;
 import org.apache.calcite.rel.type.RelProtoDataType;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.ModifiableTable;
 import org.apache.calcite.schema.SchemaPlus;
@@ -46,7 +45,6 @@ import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.schema.impl.AbstractTableQueryable;
 import org.apache.calcite.sql.SqlCreate;
 import org.apache.calcite.sql.SqlExecutableStatement;
-import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
@@ -54,17 +52,12 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql2rel.InitializerContext;
 import org.apache.calcite.sql2rel.InitializerExpressionFactory;
 import org.apache.calcite.sql2rel.NullInitializerExpressionFactory;
 import org.apache.calcite.util.ImmutableNullableList;
 
-import com.google.common.collect.ImmutableMap;
-
 import java.lang.reflect.Type;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -145,14 +138,13 @@ public class SqlCreateTable extends SqlCreate
       ief = null;
     } else {
       ief = new NullInitializerExpressionFactory() {
-        @Override public boolean isGeneratedAlways(RelOptTable table,
+        @Override public Strategy generationStrategy(RelOptTable table,
             int iColumn) {
-          return columnExprs.containsKey(iColumn);
-        }
-
-        @Override public RexNode newColumnDefaultValue(RelOptTable table,
-            int iColumn, InitializerContext context) {
-          return context.convertExpression(columnExprs.get(iColumn));
+          final SqlNode c = columnExprs.get(iColumn);
+          if (c == null) {
+            return Strategy.NULLABLE;
+          }
+          return Strategy.STORED;
         }
       };
     }
@@ -235,53 +227,6 @@ public class SqlCreateTable extends SqlCreate
       }
       return null;
     }
-
-    /**
-     * Initializes columns based on the view constraint.
-     */
-    private class MyInitializerExpressionFactory
-        extends NullInitializerExpressionFactory {
-      private final ImmutableMap<Integer, RexSupplier> projectMap;
-
-      private MyInitializerExpressionFactory() {
-        final Map<Integer, RexSupplier> projectMap = new HashMap<>();
-        projectMap.put(1, new RexSupplier() {
-          public RexNode apply(RexBuilder rexBuilder, RelDataType rowType) {
-            return rexBuilder.makeCall(SqlStdOperatorTable.PLUS,
-                rexBuilder.makeInputRef(rowType.getFieldList().get(0).getType(),
-                    0),
-                rexBuilder.makeExactLiteral(BigDecimal.ONE));
-          }
-        });
-        this.projectMap = ImmutableMap.copyOf(projectMap);
-      }
-
-      @Override public boolean isGeneratedAlways(RelOptTable table,
-          int iColumn) {
-        return projectMap.containsKey(iColumn);
-      }
-
-      @Override public RexNode newColumnDefaultValue(RelOptTable table,
-          int iColumn, InitializerContext context) {
-        final RexSupplier supplier = projectMap.get(iColumn);
-        if (supplier != null) {
-          return supplier.apply(context.getRexBuilder(), table.getRowType());
-        }
-
-        // Otherwise Sql type of NULL.
-        return super.newColumnDefaultValue(table, iColumn, context);
-      }
-
-      @Override public RexNode newAttributeInitializer(RelDataType type,
-          SqlFunction constructor, int iAttribute, List<RexNode> constructorArgs,
-          InitializerContext context) {
-        throw new UnsupportedOperationException();
-      }
-    }
-  }
-
-  private interface RexSupplier {
-    RexNode apply(RexBuilder rexBuilder, RelDataType rowType);
   }
 }
 

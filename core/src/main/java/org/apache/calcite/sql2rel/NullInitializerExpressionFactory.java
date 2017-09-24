@@ -28,11 +28,26 @@ import java.util.List;
  */
 public class NullInitializerExpressionFactory implements InitializerExpressionFactory {
 
+  public static final InitializerExpressionFactory INSTANCE =
+      new NullInitializerExpressionFactory();
+
   public NullInitializerExpressionFactory() {
   }
 
   public boolean isGeneratedAlways(RelOptTable table, int iColumn) {
-    return false;
+    switch (generationStrategy(table, iColumn)) {
+    case VIRTUAL:
+    case STORED:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  public Strategy generationStrategy(RelOptTable table, int iColumn) {
+    return table.getRowType().getFieldList().get(iColumn).getType().isNullable()
+        ? Strategy.NULLABLE
+        : Strategy.NOT_NULLABLE;
   }
 
   public RexNode newColumnDefaultValue(RelOptTable table, int iColumn,

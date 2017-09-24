@@ -192,9 +192,10 @@ public class ModifiableViewTable extends ViewTable
       this.projectMap = ImmutableMap.copyOf(projectMap);
     }
 
-    @Override public boolean isGeneratedAlways(RelOptTable table, int iColumn) {
+    @Override public Strategy generationStrategy(RelOptTable table,
+        int iColumn) {
       assert table.unwrap(ModifiableViewTable.class) != null;
-      return false;
+      return super.generationStrategy(table, iColumn);
     }
 
     @Override public RexNode newColumnDefaultValue(RelOptTable table,
