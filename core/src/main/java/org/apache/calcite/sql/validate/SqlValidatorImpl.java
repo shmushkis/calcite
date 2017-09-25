@@ -3128,20 +3128,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
   }
 
-  /** Throws if DEFAULT is inside an expression. */
-  private void validateNoDefault(SqlNode node) {
-    node.accept(
-        new SqlBasicVisitor<Void>() {
-          @Override public Void visit(SqlCall call) {
-            switch (call.getKind()) {
-            case DEFAULT:
-              throw newValidationError(call, RESOURCE.defaultNotAllowed());
-            }
-            return super.visit(call);
-          }
-        });
-  }
-
   private RelDataType validateUsingCol(SqlIdentifier id, SqlNode leftOrRight) {
     if (id.names.size() == 1) {
       String name = id.names.get(0);
@@ -3799,7 +3785,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
 
     final SqlValidatorScope orderScope = getOrderScope(select);
-    validateNoDefault(orderItem);
     validateExpr(orderItem, orderScope);
   }
 
@@ -3825,7 +3810,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       return;
     }
     final String clause = "GROUP BY";
-    validateNoDefault(groupList);
     validateNoAggs(aggOrOverFinder, groupList, clause);
     final SqlValidatorScope groupScope = getGroupScope(select);
     inferUnknownTypes(unknownType, groupScope, groupList);
@@ -3920,7 +3904,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       SqlValidatorScope scope,
       SqlNode condition,
       String clause) {
-    validateNoDefault(condition);
     validateNoAggs(aggOrOverOrGroupFinder, condition, clause);
     inferUnknownTypes(
         booleanType,
@@ -3943,7 +3926,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     if (having == null) {
       return;
     }
-    validateNoDefault(having);
     final AggregatingScope havingScope =
         (AggregatingScope) getSelectScope(select);
     if (getConformance().isHavingAlias()) {
@@ -3988,7 +3970,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
             aliases,
             fieldList);
       } else {
-        validateNoDefault(selectItem);
         expandSelectItem(
             selectItem,
             select,
@@ -4629,22 +4610,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
 
     for (SqlNode operand : operands) {
-      // throw if DEFAULT occurs deeper than level 0 or 1
-      switch (operand.getKind()) {
-      case DEFAULT:
-        break; // "values default" is OK
-      case ROW:
-        final SqlCall call = (SqlCall) operand;
-        for (SqlNode operand2 : call.getOperandList()) {
-          switch (operand2.getKind()) {
-          case DEFAULT:
-            break; // "values (1, default)" is OK
-          default:
-            validateNoDefault(operand2); // "values (f(default))" is not OK
-          }
-        }
-      }
-
       operand.validate(this, scope);
     }
 

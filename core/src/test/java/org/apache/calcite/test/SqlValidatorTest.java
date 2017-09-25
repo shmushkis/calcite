@@ -7548,29 +7548,6 @@ public class SqlValidatorTest extends SqlValidatorTestCase {
     check("SELECT MAX(5) FROM emp");
   }
 
-  @Test public void testDefault() {
-    sql("select ^DEFAULT^ from emp")
-        .fails("(?s)Encountered \"DEFAULT\" at .*");
-    sql("select cast(empno + ^DEFAULT^ as double) from emp")
-        .fails("(?s)Encountered \"\\+ DEFAULT\" at .*");
-    sql("select empno + ^DEFAULT^ + deptno from emp")
-        .fails("(?s)Encountered \"DEFAULT\" at .*");
-    sql("select power(0, DEFAULT + empno) from emp")
-        .fails("(?s)Encountered \"DEFAULT\" at .*");
-    sql("select * from emp join dept on ^DEFAULT^")
-        .fails("(?s)Encountered \"DEFAULT\" at .*");
-    sql("select * from emp where empno > ^DEFAULT^ or deptno < 10")
-        .fails("(?s)Encountered \"DEFAULT\" at .*");
-    sql("select * from emp order by ^DEFAULT^ desc")
-        .fails("(?s)Encountered \"DEFAULT\" at .*");
-    sql("insert into dept (name, deptno) values ('a', DEFAULT)")
-        .ok();
-    sql("insert into dept (name, deptno) values ('a', 1 + ^DEFAULT^)")
-        .fails("(?s)Encountered \"DEFAULT\" at .*");
-    sql("insert into dept (name, deptno) select 'a', ^DEFAULT^ from (values 0)")
-        .fails("(?s)Encountered \"DEFAULT\" at .*");
-  }
-
   @Test public void testFunctionalDistinct() {
     check("select count(distinct sal) from emp");
     checkFails("select COALESCE(^distinct^ sal) from emp",

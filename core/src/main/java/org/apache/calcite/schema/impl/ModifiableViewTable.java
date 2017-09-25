@@ -87,7 +87,9 @@ public class ModifiableViewTable extends ViewTable
   }
 
   @Override public <C> C unwrap(Class<C> aClass) {
-    if (aClass.isInstance(initializerExpressionFactory)) {
+    if (aClass.isInstance(this)) {
+      return aClass.cast(this);
+    } else if (aClass.isInstance(initializerExpressionFactory)) {
       return aClass.cast(initializerExpressionFactory);
     } else if (aClass.isInstance(table)) {
       return aClass.cast(table);
