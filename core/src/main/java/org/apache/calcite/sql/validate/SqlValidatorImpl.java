@@ -4183,8 +4183,8 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     final RelDataType logicalSourceRowType =
         getLogicalSourceRowType(sourceRowType, insert);
 
-    checkFieldCount(insert.getTargetTable(), table, logicalSourceRowType,
-        logicalTargetRowType);
+    checkFieldCount(insert.getTargetTable(), table, source,
+        logicalSourceRowType, logicalTargetRowType);
 
     checkTypeAssignment(logicalSourceRowType, logicalTargetRowType, insert);
 
@@ -4289,10 +4289,8 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     }
   }
 
-  private void checkFieldCount(
-      SqlNode node,
-      SqlValidatorTable table,
-      RelDataType logicalSourceRowType,
+  private void checkFieldCount(SqlNode node, SqlValidatorTable table,
+      SqlNode source, RelDataType logicalSourceRowType,
       RelDataType logicalTargetRowType) {
     final int sourceFieldCount = logicalSourceRowType.getFieldCount();
     final int targetFieldCount = logicalTargetRowType.getFieldCount();
@@ -4312,7 +4310,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
           }
         };
     for (final RelDataTypeField field : table.getRowType().getFieldList()) {
-//      if (!field.getType().isNullable()) { // TODO:
       final RelDataTypeField targetField =
           logicalTargetRowType.getField(field.getName(), true, false);
       final InitializerExpressionFactory.Strategy strategy =
@@ -4331,13 +4328,38 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
         break;
       case VIRTUAL:
       case STORED:
-        if (targetField != null) {
+        if (targetField != null
+            && !isValuesWithDefault(source, targetField.getIndex())) {
           throw newValidationError(node,
               RESOURCE.insertIntoAlwaysGenerated(field.getName()));
         }
       }
-//      }
     }
+  }
+
+  /** Returns whether a query uses {@code DEFAULT} to populate a given
+   *  column. */
+  private boolean isValuesWithDefault(SqlNode source, int column) {
+    switch (source.getKind()) {
+    case VALUES:
+      for (SqlNode operand : ((SqlCall) source).getOperandList()) {
+        if (!isRowWithDefault(operand, column)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
+  private boolean isRowWithDefault(SqlNode operand, int column) {
+    switch (operand.getKind()) {
+    case ROW:
+      final SqlCall row = (SqlCall) operand;
+      return row.getOperandList().size() >= column
+          && row.getOperandList().get(column).getKind() == SqlKind.DEFAULT;
+    }
+    return false;
   }
 
   protected RelDataType getLogicalTargetRowType(

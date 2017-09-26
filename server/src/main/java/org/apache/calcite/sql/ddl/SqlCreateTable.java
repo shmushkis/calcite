@@ -53,6 +53,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql2rel.InitializerContext;
 import org.apache.calcite.sql2rel.InitializerExpressionFactory;
 import org.apache.calcite.sql2rel.NullInitializerExpressionFactory;
 import org.apache.calcite.util.ImmutableNullableList;
@@ -141,10 +142,19 @@ public class SqlCreateTable extends SqlCreate
         @Override public Strategy generationStrategy(RelOptTable table,
             int iColumn) {
           final SqlNode c = columnExprs.get(iColumn);
-          if (c == null) {
-            return Strategy.NULLABLE;
+          if (c != null) {
+            return Strategy.STORED;
           }
-          return Strategy.STORED;
+          return super.generationStrategy(table, iColumn);
+        }
+
+        @Override public RexNode newColumnDefaultValue(RelOptTable table,
+            int iColumn, InitializerContext context) {
+          final SqlNode c = columnExprs.get(iColumn);
+          if (c != null) {
+            return context.convertExpression(c);
+          }
+          return super.newColumnDefaultValue(table, iColumn, context);
         }
       };
     }

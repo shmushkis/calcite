@@ -169,6 +169,7 @@ import org.apache.calcite.util.trace.CalciteTrace;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
@@ -3214,7 +3215,7 @@ public class SqlToRelConverter {
    * @return Converted INSERT statement
    */
   protected RelNode convertColumnList(
-      SqlInsert call,
+      final SqlInsert call,
       RelNode sourceRel) {
     RelDataType sourceRowType = sourceRel.getRowType();
     final RexNode sourceRef =
@@ -3248,9 +3249,12 @@ public class SqlToRelConverter {
       sourceExps.set(field.getIndex(), p.right);
     }
 
-    final SqlValidatorScope scope =
-        validator.getInsertScope(call.getTargetTable());
-    Blackboard bb = createBlackboard(scope, null, false);
+    // Lazily create a blackboard that contains all non-generated columns.
+    final Supplier<Blackboard> bb = new Supplier<Blackboard>() {
+      public Blackboard get() {
+        return foo2(call, targetTable, initializerFactory, sourceRef, targetColumnNames);
+      }
+    };
 
     // Walk the expression list and get default values for any columns
     // that were not supplied in the statement. Get field names too.
@@ -3258,38 +3262,56 @@ public class SqlToRelConverter {
       final RelDataTypeField field = targetFields.get(i);
       final String fieldName = field.getName();
       fieldNames.set(i, fieldName);
-      if (sourceExps.get(i) != null) {
-        switch (initializerFactory.generationStrategy(targetTable, i)) {
-        case VIRTUAL:
-        case STORED:
-//          throw RESOURCE.insertIntoAlwaysGenerated(fieldName).ex(); // TODO:
-        }
-        continue;
-      }
-      sourceExps.set(i,
-          initializerFactory.newColumnDefaultValue(targetTable, i, bb));
+      if (sourceExps.get(i) == null
+          || sourceExps.get(i).getKind() == SqlKind.DEFAULT) {
+        sourceExps.set(i,
+            initializerFactory.newColumnDefaultValue(targetTable, i, bb.get()));
 
-      // bare nulls are dangerous in the wrong hands
-      sourceExps.set(i,
-          castNullLiteralIfNeeded(sourceExps.get(i), field.getType()));
+        // bare nulls are dangerous in the wrong hands
+        sourceExps.set(i,
+            castNullLiteralIfNeeded(sourceExps.get(i), field.getType()));
+      }
     }
 
     return RelOptUtil.createProject(sourceRel, sourceExps, fieldNames, true);
   }
 
-  private InitializerContext ic(final SqlValidatorScope scope) {
-    if (false) // TODO:
-    return new InitializerContext() {
-      public RexBuilder getRexBuilder() {
-        return rexBuilder;
+  private Blackboard foo1(SqlInsert call, RelOptTable targetTable,
+      InitializerExpressionFactory initializerFactory) {
+    final SqlValidatorScope scope =
+        validator.getInsertScope(call.getTargetTable());
+    final Map<String, RexNode> nameToNodeMap = new HashMap<>();
+    for (RelDataTypeField field : targetTable.getRowType().getFieldList()) {
+      switch (initializerFactory.generationStrategy(targetTable,
+          field.getIndex())) {
+      case NULLABLE:
+      case NOT_NULLABLE:
+        nameToNodeMap.put(field.getName(),
+            rexBuilder.makeInputRef(field.getType(), field.getIndex()));
       }
+    }
+    return createBlackboard(scope, nameToNodeMap, false);
+  }
 
-      @Override public RexNode convertExpression(SqlNode e) {
-        final Blackboard bb = createBlackboard(scope, null, false);
-        return bb.convertExpression(e);
+  private Blackboard foo2(SqlInsert call, RelOptTable targetTable,
+      InitializerExpressionFactory initializerFactory, RexNode sourceRef,
+      List<String> targetColumnNames) {
+    final SqlValidatorScope scope = validator.getInsertScope(call);
+    final Map<String, RexNode> nameToNodeMap = new HashMap<>();
+    int j = 0;
+
+    // Assign expressions for non-generated columns.
+    for (int i = 0; i < targetColumnNames.size(); i++) {
+      switch (initializerFactory.generationStrategy(targetTable, i)) {
+      case STORED:
+      case VIRTUAL:
+        break;
+      default:
+        nameToNodeMap.put(targetColumnNames.get(i),
+            rexBuilder.makeFieldAccess(sourceRef, j++));
       }
-    };
-    return createBlackboard(scope, null, false);
+    }
+    return createBlackboard(null, nameToNodeMap, false);
   }
 
   private InitializerExpressionFactory getInitializerFactory(
@@ -3359,27 +3381,14 @@ public class SqlToRelConverter {
       }
     }
 
-    final SqlValidatorScope scope = validator.getInsertScope(call);
     final InitializerExpressionFactory f =
         Util.first(targetTable.unwrap(InitializerExpressionFactory.class),
             NullInitializerExpressionFactory.INSTANCE);
-    final Map<String, RexNode> nameToNodeMap = new HashMap<>();
-    int j = 0;
-
-    // Assign expressions for non-generated columns.
-    for (int i = 0; i < targetColumnNames.size(); i++) {
-      switch (f.generationStrategy(targetTable, i)) {
-      case STORED:
-      case VIRTUAL:
-        break;
-      default:
-        nameToNodeMap.put(targetColumnNames.get(i),
-            rexBuilder.makeFieldAccess(sourceRef, j++));
-      }
-    }
+    final Blackboard bb =
+        true ? foo2(call, targetTable, f, sourceRef, targetColumnNames)
+            : foo1(call, targetTable, f);
 
     // Next, assign expressions for generated columns.
-    final Blackboard bb = createBlackboard(null, nameToNodeMap, false);
     for (int i = 0; i < targetColumnNames.size(); i++) {
       final RexNode expr;
       switch (f.generationStrategy(targetTable, i)) {
@@ -3388,7 +3397,7 @@ public class SqlToRelConverter {
         expr = f.newColumnDefaultValue(targetTable, i, bb);
         break;
       default:
-        expr = nameToNodeMap.get(targetColumnNames.get(i));
+        expr = bb.nameToNodeMap.get(targetColumnNames.get(i));
       }
       columnExprs.add(expr);
     }
