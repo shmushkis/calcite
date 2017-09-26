@@ -4094,25 +4094,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       SqlNodeList targetColumnList,
       boolean append) {
     RelDataType baseRowType = table.getRowType();
-    final RelOptTable relOptTable = table instanceof RelOptTable
-        ? ((RelOptTable) table) : null;
-    if (relOptTable != null && false) { // TODO:
-      final InitializerExpressionFactory initializerExpressionFactory =
-          relOptTable.unwrap(InitializerExpressionFactory.class);
-      if (initializerExpressionFactory != null) {
-        final RelDataTypeFactory.Builder builder = typeFactory.builder();
-        for (RelDataTypeField field : baseRowType.getFieldList()) {
-          switch (initializerExpressionFactory.generationStrategy(relOptTable,
-              field.getIndex())) {
-          case STORED:
-          case VIRTUAL:
-            continue;
-          }
-          builder.add(field);
-        }
-        baseRowType = builder.build();
-      }
-    }
     if (targetColumnList == null) {
       return baseRowType;
     }
@@ -4126,6 +4107,8 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       }
     }
     final Set<Integer> assignedFields = new HashSet<>();
+    final RelOptTable relOptTable = table instanceof RelOptTable
+        ? ((RelOptTable) table) : null;
     for (SqlNode node : targetColumnList) {
       SqlIdentifier id = (SqlIdentifier) node;
       RelDataTypeField targetField =

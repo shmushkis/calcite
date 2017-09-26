@@ -3301,13 +3301,15 @@ public class SqlToRelConverter {
     int j = 0;
 
     // Assign expressions for non-generated columns.
-    for (int i = 0; i < targetColumnNames.size(); i++) {
+    for (String targetColumnName : targetColumnNames) {
+      final int i =
+          targetTable.getRowType().getFieldNames().indexOf(targetColumnName);
       switch (initializerFactory.generationStrategy(targetTable, i)) {
       case STORED:
       case VIRTUAL:
         break;
       default:
-        nameToNodeMap.put(targetColumnNames.get(i),
+        nameToNodeMap.put(targetColumnName,
             rexBuilder.makeFieldAccess(sourceRef, j++));
       }
     }
@@ -3384,9 +3386,7 @@ public class SqlToRelConverter {
     final InitializerExpressionFactory f =
         Util.first(targetTable.unwrap(InitializerExpressionFactory.class),
             NullInitializerExpressionFactory.INSTANCE);
-    final Blackboard bb =
-        true ? foo2(call, targetTable, f, sourceRef, targetColumnNames)
-            : foo1(call, targetTable, f);
+    final Blackboard bb = foo2(call, targetTable, f, sourceRef, targetColumnNames);
 
     // Next, assign expressions for generated columns.
     for (int i = 0; i < targetColumnNames.size(); i++) {

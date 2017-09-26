@@ -54,13 +54,13 @@ public class ServerTest {
   @Test public void testCreateTable() throws Exception {
     try (Connection c = DriverManager.getConnection(URL);
          Statement s = c.createStatement()) {
-      boolean b = s.execute("create table foo (i int not null)");
+      boolean b = s.execute("create table t (i int not null)");
       assertThat(b, is(true));
-      int x = s.executeUpdate("insert into foo values 1");
+      int x = s.executeUpdate("insert into t values 1");
       assertThat(x, is(1));
-      x = s.executeUpdate("insert into foo values 3");
+      x = s.executeUpdate("insert into t values 3");
       assertThat(x, is(1));
-      try (ResultSet r = s.executeQuery("select sum(i) from foo")) {
+      try (ResultSet r = s.executeQuery("select sum(i) from t")) {
         assertThat(r.next(), is(true));
         assertThat(r.getInt(1), is(4));
         assertThat(r.next(), is(false));
@@ -68,10 +68,10 @@ public class ServerTest {
     }
   }
 
-  @Test public void testCreateTable2() throws Exception {
+  @Test public void testStoredGeneratedColumn() throws Exception {
     try (Connection c = DriverManager.getConnection(URL);
          Statement s = c.createStatement()) {
-      boolean b = s.execute("create table foo (\n"
+      boolean b = s.execute("create table t (\n"
           + " h int not null,\n"
           + " i int,\n"
           + " j int as (i + 1) stored)");
@@ -80,21 +80,21 @@ public class ServerTest {
       int x;
 
       // A successful row.
-      x = s.executeUpdate("insert into foo (h, i) values (3, 4)");
+      x = s.executeUpdate("insert into t (h, i) values (3, 4)");
       assertThat(x, is(1));
 
       try (ResultSet r = s.executeQuery("explain plan for\n"
-          + "insert into foo (h, i) values (3, 4)")) {
+          + "insert into t (h, i) values (3, 4)")) {
         assertThat(r.next(), is(true));
         final String plan = ""
-            + "EnumerableTableModify(table=[[FOO]], operation=[INSERT], flattened=[false])\n"
+            + "EnumerableTableModify(table=[[T]], operation=[INSERT], flattened=[false])\n"
             + "  EnumerableCalc(expr#0..1=[{inputs}], expr#2=[1], expr#3=[+($t1, $t2)], proj#0..1=[{exprs}], J=[$t3])\n"
             + "    EnumerableValues(tuples=[[{ 3, 4 }]])\n";
         assertThat(r.getString(1), is(plan));
         assertThat(r.next(), is(false));
       }
 
-      try (ResultSet r = s.executeQuery("select * from foo")) {
+      try (ResultSet r = s.executeQuery("select * from t")) {
         assertThat(r.next(), is(true));
         assertThat(r.getInt("H"), is(3));
         assertThat(r.wasNull(), is(false));
@@ -105,7 +105,7 @@ public class ServerTest {
 
       // No target column list; too few values provided
       try {
-        x = s.executeUpdate("insert into foo values (2, 3)");
+        x = s.executeUpdate("insert into t values (2, 3)");
         fail("expected error, got " + x);
       } catch (SQLException e) {
         assertThat(e.getMessage(),
@@ -115,7 +115,7 @@ public class ServerTest {
 
       // No target column list; too many values provided
       try {
-        x = s.executeUpdate("insert into foo values (3, 4, 5, 6)");
+        x = s.executeUpdate("insert into t values (3, 4, 5, 6)");
         fail("expected error, got " + x);
       } catch (SQLException e) {
         assertThat(e.getMessage(),
@@ -127,7 +127,7 @@ public class ServerTest {
       // source count = target count;
       // but one of the target columns is virtual.
       try {
-        x = s.executeUpdate("insert into foo values (3, 4, 5)");
+        x = s.executeUpdate("insert into t values (3, 4, 5)");
         fail("expected error, got " + x);
       } catch (SQLException e) {
         assertThat(e.getMessage(),
@@ -135,23 +135,23 @@ public class ServerTest {
       }
 
       // Explicit target column list, omits virtual column
-      x = s.executeUpdate("insert into foo (h, i) values (1, 2)");
+      x = s.executeUpdate("insert into t (h, i) values (1, 2)");
       assertThat(x, is(1));
 
       // Explicit target column list, includes virtual column but assigns
       // DEFAULT.
-      x = s.executeUpdate("insert into foo (h, i, j) values (1, 2, DEFAULT)");
+      x = s.executeUpdate("insert into t (h, i, j) values (1, 2, DEFAULT)");
       assertThat(x, is(1));
 
       // As previous, re-order columns.
-      x = s.executeUpdate("insert into foo (h, j, i) values (1, DEFAULT, 3)");
+      x = s.executeUpdate("insert into t (h, j, i) values (1, DEFAULT, 3)");
       assertThat(x, is(1));
 
       // Target column list exists,
       // target column count equals the number of non-virtual columns;
       // but one of the target columns is virtual.
       try {
-        x = s.executeUpdate("insert into foo (h, j) values (1, 3)");
+        x = s.executeUpdate("insert into t (h, j) values (1, 3)");
         fail("expected error, got " + x);
       } catch (SQLException e) {
         assertThat(e.getMessage(),
@@ -161,24 +161,24 @@ public class ServerTest {
       // Target column list exists and contains all columns,
       // expression for virtual column is not DEFAULT.
       try {
-        x = s.executeUpdate("insert into foo (h, i, j) values (2, 3, 3 + 1)");
+        x = s.executeUpdate("insert into t (h, i, j) values (2, 3, 3 + 1)");
         fail("expected error, got " + x);
       } catch (SQLException e) {
         assertThat(e.getMessage(),
             containsString("Cannot INSERT into generated column 'J'"));
       }
-      x = s.executeUpdate("insert into foo (h, i) values (0, 1)");
+      x = s.executeUpdate("insert into t (h, i) values (0, 1)");
       assertThat(x, is(1));
-      x = s.executeUpdate("insert into foo (h, i, j) values (0, 1, DEFAULT)");
+      x = s.executeUpdate("insert into t (h, i, j) values (0, 1, DEFAULT)");
       assertThat(x, is(1));
-      x = s.executeUpdate("insert into foo (j, i, h) values (DEFAULT, NULL, 7)");
+      x = s.executeUpdate("insert into t (j, i, h) values (DEFAULT, NULL, 7)");
       assertThat(x, is(1));
-      x = s.executeUpdate("insert into foo (h, i) values (6, 5), (7, 4)");
+      x = s.executeUpdate("insert into t (h, i) values (6, 5), (7, 4)");
       assertThat(x, is(2));
-      try (ResultSet r = s.executeQuery("select sum(i), count(*) from foo")) {
+      try (ResultSet r = s.executeQuery("select sum(i), count(*) from t")) {
         assertThat(r.next(), is(true));
-        assertThat(r.getInt(1), is(15));
-        assertThat(r.getInt(2), is(8));
+        assertThat(r.getInt(1), is(19));
+        assertThat(r.getInt(2), is(9));
         assertThat(r.next(), is(false));
       }
     }

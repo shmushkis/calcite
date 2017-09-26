@@ -205,41 +205,9 @@ public class MockCatalogReader extends CalciteCatalogReader {
     registerTable(empNullablesTable);
 
     // Register "EMPDEFAULTS" table with default values for some columns.
-    final InitializerExpressionFactory empInitializerExpressionFactory =
-        new NullInitializerExpressionFactory() {
-          @Override public Strategy generationStrategy(RelOptTable table,
-              int iColumn) {
-            switch (iColumn) {
-            case 0:
-            case 1:
-            case 5:
-              return Strategy.DEFAULT;
-            default:
-              return super.generationStrategy(table, iColumn);
-            }
-          }
-
-          @Override public RexNode newColumnDefaultValue(RelOptTable table,
-              int iColumn, InitializerContext context) {
-            final RexBuilder rexBuilder = context.getRexBuilder();
-            final RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
-            switch (iColumn) {
-            case 0:
-              return rexBuilder.makeExactLiteral(new BigDecimal(123),
-                  typeFactory.createSqlType(SqlTypeName.INTEGER));
-            case 1:
-              return rexBuilder.makeLiteral("Bob");
-            case 5:
-              return rexBuilder.makeExactLiteral(new BigDecimal(555),
-                  typeFactory.createSqlType(SqlTypeName.INTEGER));
-            default:
-              return rexBuilder.constantNull();
-            }
-          }
-        };
     final MockTable empDefaultsTable =
         MockTable.create(this, salesSchema, "EMPDEFAULTS", false, 14, null,
-            empInitializerExpressionFactory);
+            new EmpInitializerExpressionFactory());
     empDefaultsTable.addColumn("EMPNO", f.intType, true);
     empDefaultsTable.addColumn("ENAME", f.varchar20Type);
     empDefaultsTable.addColumn("JOB", f.varchar10TypeNull);
@@ -1577,6 +1545,40 @@ public class MockCatalogReader extends CalciteCatalogReader {
 
     public Table stream() {
       return this;
+    }
+  }
+
+  /** Default values for the "EMPDEFAULTS" table. */
+  private static class EmpInitializerExpressionFactory
+      extends NullInitializerExpressionFactory {
+    @Override public Strategy generationStrategy(RelOptTable table,
+        int iColumn) {
+      switch (iColumn) {
+      case 0:
+      case 1:
+      case 5:
+        return Strategy.DEFAULT;
+      default:
+        return super.generationStrategy(table, iColumn);
+      }
+    }
+
+    @Override public RexNode newColumnDefaultValue(RelOptTable table,
+        int iColumn, InitializerContext context) {
+      final RexBuilder rexBuilder = context.getRexBuilder();
+      final RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
+      switch (iColumn) {
+      case 0:
+        return rexBuilder.makeExactLiteral(new BigDecimal(123),
+            typeFactory.createSqlType(SqlTypeName.INTEGER));
+      case 1:
+        return rexBuilder.makeLiteral("Bob");
+      case 5:
+        return rexBuilder.makeExactLiteral(new BigDecimal(555),
+            typeFactory.createSqlType(SqlTypeName.INTEGER));
+      default:
+        return rexBuilder.constantNull();
+      }
     }
   }
 
