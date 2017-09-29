@@ -31,13 +31,13 @@ esac
 cd $(dirname $0)
 if [ ! -f target/fullclasspath.txt ]; then
     mvn dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
-    awk -v RS=: -v ORS=: '{if (!m[$0]) {m[$0]=1; print}}' \
+    awk -v RS=: -v ORS=: '{if (FILENAME !~ /elasticsearch2/ && !m[$0]) {m[$0]=1; print}}' \
         target/classpath.txt \
         */target/classpath.txt > target/fullclasspath.txt
 fi
 
 CP=
-for module in core cassandra druid elasticsearch2 elasticsearch5 file mongodb spark splunk example/csv example/function; do
+for module in core cassandra druid elasticsearch5 file mongodb spark splunk example/csv example/function; do
   CP=${CP}${module}/target/classes:
   CP=${CP}${module}/target/test-classes:
 done
