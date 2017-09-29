@@ -3276,27 +3276,9 @@ public class SqlToRelConverter {
     return RelOptUtil.createProject(sourceRel, sourceExps, fieldNames, true);
   }
 
-  private Blackboard foo1(SqlInsert call, RelOptTable targetTable,
-      InitializerExpressionFactory initializerFactory) {
-    final SqlValidatorScope scope =
-        validator.getInsertScope(call.getTargetTable());
-    final Map<String, RexNode> nameToNodeMap = new HashMap<>();
-    for (RelDataTypeField field : targetTable.getRowType().getFieldList()) {
-      switch (initializerFactory.generationStrategy(targetTable,
-          field.getIndex())) {
-      case NULLABLE:
-      case NOT_NULLABLE:
-        nameToNodeMap.put(field.getName(),
-            rexBuilder.makeInputRef(field.getType(), field.getIndex()));
-      }
-    }
-    return createBlackboard(scope, nameToNodeMap, false);
-  }
-
   private Blackboard foo2(SqlInsert call, RelOptTable targetTable,
       InitializerExpressionFactory initializerFactory, RexNode sourceRef,
       List<String> targetColumnNames) {
-    final SqlValidatorScope scope = validator.getInsertScope(call);
     final Map<String, RexNode> nameToNodeMap = new HashMap<>();
     int j = 0;
 

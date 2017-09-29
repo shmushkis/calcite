@@ -1462,17 +1462,6 @@ public class SqlParserTest {
         "(?s).*Encountered \"\\+ DEFAULT\" at .*");
     checkExpFails("foo(0, DEFAULT ^+^ y)",
         "(?s).*Encountered \"\\+\" at .*");
-
-    if (false) { // TODO: remove
-      // the following uses of DEFAULT are illegal;
-      // the parser allows them, but the validator will catch them
-      sql("foo(x + DEFAULT)").expression()
-          .ok("`FOO`((`X` + DEFAULT))");
-      sql("foo(0, x + DEFAULT + y)").expression()
-          .ok("`FOO`(0, ((`X` + DEFAULT) + `Y`))");
-      sql("foo(0, DEFAULT ^+^ y)").expression()
-          .fails("(?s).*Encountered \"\\+\" at .*");
-    }
   }
 
   @Test public void testDefault() {

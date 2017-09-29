@@ -54,6 +54,7 @@ import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
@@ -431,22 +432,23 @@ public abstract class Prepare {
    * for {@link #columnHasDefaultValue}. */
   public abstract static class AbstractPreparingTable
       implements PreparingTable {
-    public InitializerExpressionFactory.Strategy columnHasDefaultValue(
-        RelDataType rowType, int ordinal, InitializerContext initializerContext) {
+    public boolean columnHasDefaultValue(RelDataType rowType, int ordinal,
+        InitializerContext initializerContext) {
+      // This method is no longer used
       final Table table = this.unwrap(Table.class);
       if (table != null && table instanceof Wrapper) {
         final InitializerExpressionFactory initializerExpressionFactory =
             ((Wrapper) table).unwrap(InitializerExpressionFactory.class);
         if (initializerExpressionFactory != null) {
-          return initializerExpressionFactory.generationStrategy(this, ordinal);
+          return initializerExpressionFactory
+              .newColumnDefaultValue(this, ordinal, initializerContext)
+              .getType().getSqlTypeName() != SqlTypeName.NULL;
         }
       }
       if (ordinal >= rowType.getFieldList().size()) {
-        return InitializerExpressionFactory.Strategy.NULLABLE;
+        return true;
       }
-      return rowType.getFieldList().get(ordinal).getType().isNullable()
-          ? InitializerExpressionFactory.Strategy.NULLABLE
-          : InitializerExpressionFactory.Strategy.NOT_NULLABLE;
+      return !rowType.getFieldList().get(ordinal).getType().isNullable();
     }
 
     public final RelOptTable extend(List<RelDataTypeField> extendedFields) {

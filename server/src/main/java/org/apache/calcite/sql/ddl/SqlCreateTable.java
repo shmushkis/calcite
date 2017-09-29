@@ -123,15 +123,12 @@ public class SqlCreateTable extends SqlCreate
     final RelDataTypeFactory.Builder builder = typeFactory.builder();
     final Map<Integer, SqlNode> columnExprs = new HashMap<>();
     for (Ord<SqlNode> c : Ord.zip(columnList)) {
-      if (c.e instanceof SqlColumnDeclaration) {
-        final SqlColumnDeclaration d = (SqlColumnDeclaration) c.e;
-        builder.add(d.name.getSimple(),
-            d.dataType.deriveType(typeFactory, true));
-        if (d.expression != null) {
-          columnExprs.put(c.i, d.expression);
-        }
-      } else {
-        throw new AssertionError(); // TODO:
+      assert c.e instanceof SqlColumnDeclaration;
+      final SqlColumnDeclaration d = (SqlColumnDeclaration) c.e;
+      builder.add(d.name.getSimple(),
+          d.dataType.deriveType(typeFactory, true));
+      if (d.expression != null) {
+        columnExprs.put(c.i, d.expression);
       }
     }
     final InitializerExpressionFactory ief;

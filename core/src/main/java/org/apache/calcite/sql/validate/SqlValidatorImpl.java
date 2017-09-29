@@ -3715,11 +3715,6 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
     return scopes.get(withItem);
   }
 
-  public SqlValidatorScope getInsertScope(SqlNode insert) {
-//    assert insert.getKind() == SqlKind.INSERT;
-    return scopes.get(insert);
-  }
-
   /**
    * Validates the ORDER BY clause of a SELECT statement.
    *
@@ -4296,8 +4291,7 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
       final RelDataTypeField targetField =
           logicalTargetRowType.getField(field.getName(), true, false);
       final InitializerExpressionFactory.Strategy strategy =
-          table.columnHasDefaultValue(table.getRowType(), field.getIndex(),
-              rexBuilder);
+          columnStrategy(table, field.getIndex());
       switch (strategy) {
       case NOT_NULLABLE:
         assert !field.getType().isNullable();
@@ -4318,6 +4312,26 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
         }
       }
     }
+  }
+
+  /** Returns how a column is generated. */
+  private static InitializerExpressionFactory.Strategy columnStrategy(
+      SqlValidatorTable table, int ordinal) {
+    final RelDataType rowType = table.getRowType();
+    final InitializerExpressionFactory initializerExpressionFactory =
+        table.unwrap(InitializerExpressionFactory.class);
+    final RelOptTable relOptTable = table.unwrap(RelOptTable.class);
+    if (initializerExpressionFactory != null && relOptTable != null) {
+      return initializerExpressionFactory.generationStrategy(relOptTable,
+          ordinal);
+    }
+    final List<RelDataTypeField> fieldList = rowType.getFieldList();
+    if (ordinal >= fieldList.size()) {
+      return InitializerExpressionFactory.Strategy.NULLABLE;
+    }
+    return fieldList.get(ordinal).getType().isNullable()
+        ? InitializerExpressionFactory.Strategy.NULLABLE
+        : InitializerExpressionFactory.Strategy.NOT_NULLABLE;
   }
 
   /** Returns whether a query uses {@code DEFAULT} to populate a given
