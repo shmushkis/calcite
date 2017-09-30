@@ -181,6 +181,17 @@ public class ServerTest {
         assertThat(r.getInt(2), is(9));
         assertThat(r.next(), is(false));
       }
+    }
+  }
+
+  @Test public void testStoredGeneratedColumn2() throws Exception {
+    try (Connection c = DriverManager.getConnection(URL);
+         Statement s = c.createStatement()) {
+      boolean b = s.execute("create table t (\n"
+          + " h int not null,\n"
+          + " i int,\n"
+          + " j int as (i + 1) stored)");
+      assertThat(b, is(true));
 
       // Planner uses constraint to optimize away condition.
       final String sql = "explain plan for\n"
@@ -190,6 +201,36 @@ public class ServerTest {
         assertThat(r.next(), is(true));
         assertThat(r.getString(1), is(plan));
         assertThat(r.next(), is(false));
+      }
+    }
+  }
+
+  @Test public void testVirtualColumn() throws Exception {
+    try (Connection c = DriverManager.getConnection(URL);
+         Statement s = c.createStatement()) {
+      boolean b = s.execute("create table t (\n"
+          + " h int not null,\n"
+          + " i int,\n"
+          + " j int as (i + 1) virtual)");
+      assertThat(b, is(true));
+
+      int x = s.executeUpdate("insert into t (h, i) values (1, 2)");
+      assertThat(x, is(1));
+
+      // Planner uses constraint to optimize away condition.
+      final String sql = "select * from t";
+      try (ResultSet r = s.executeQuery(sql)) {
+        assertThat(r.next(), is(true));
+        assertThat(r.getInt(1), is(1));
+        assertThat(r.getInt(2), is(2));
+        assertThat(r.getInt(3), is(3));
+        assertThat(r.next(), is(false));
+      }
+
+      final String plan = "xxx";
+      try (ResultSet r = s.executeQuery("explain plan for " + sql)) {
+        assertThat(r.next(), is(true));
+        assertThat(r.getString(1), is(plan));
       }
     }
   }
