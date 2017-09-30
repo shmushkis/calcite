@@ -3095,7 +3095,8 @@ public class SqlToRelConverter {
   private RelNode createModify(RelOptTable targetTable, RelNode source) {
     final ModifiableTable modifiableTable =
         targetTable.unwrap(ModifiableTable.class);
-    if (modifiableTable != null) {
+    if (modifiableTable != null
+        && modifiableTable == targetTable.unwrap(Table.class)) {
       return modifiableTable.toModificationRel(cluster, targetTable,
           catalogReader, source, LogicalTableModify.Operation.INSERT, null,
           null, false);
@@ -3211,13 +3212,11 @@ public class SqlToRelConverter {
    * default values and the source expressions provided.
    *
    * @param call      Insert expression
-   * @param sourceRel Source relational expression
+   * @param source Source relational expression
    * @return Converted INSERT statement
    */
-  protected RelNode convertColumnList(
-      final SqlInsert call,
-      RelNode sourceRel) {
-    RelDataType sourceRowType = sourceRel.getRowType();
+  protected RelNode convertColumnList(final SqlInsert call, RelNode source) {
+    RelDataType sourceRowType = source.getRowType();
     final RexNode sourceRef =
         rexBuilder.makeRangeReference(sourceRowType, 0, false);
     final List<String> targetColumnNames = new ArrayList<>();
@@ -3252,7 +3251,8 @@ public class SqlToRelConverter {
     // Lazily create a blackboard that contains all non-generated columns.
     final Supplier<Blackboard> bb = new Supplier<Blackboard>() {
       public Blackboard get() {
-        return foo2(call, targetTable, initializerFactory, sourceRef, targetColumnNames);
+        return createInsertBlackboard(targetTable, initializerFactory,
+            sourceRef, targetColumnNames);
       }
     };
 
@@ -3273,10 +3273,12 @@ public class SqlToRelConverter {
       }
     }
 
-    return RelOptUtil.createProject(sourceRel, sourceExps, fieldNames, true);
+    return RelOptUtil.createProject(source, sourceExps, fieldNames, true);
   }
 
-  private Blackboard foo2(SqlInsert call, RelOptTable targetTable,
+  /** Creates a blackboard for translating the expressions of generated columns
+   * in an INSERT statement. */
+  private Blackboard createInsertBlackboard(RelOptTable targetTable,
       InitializerExpressionFactory initializerFactory, RexNode sourceRef,
       List<String> targetColumnNames) {
     final Map<String, RexNode> nameToNodeMap = new HashMap<>();
@@ -3368,7 +3370,8 @@ public class SqlToRelConverter {
     final InitializerExpressionFactory f =
         Util.first(targetTable.unwrap(InitializerExpressionFactory.class),
             NullInitializerExpressionFactory.INSTANCE);
-    final Blackboard bb = foo2(call, targetTable, f, sourceRef, targetColumnNames);
+    final Blackboard bb =
+        createInsertBlackboard(targetTable, f, sourceRef, targetColumnNames);
 
     // Next, assign expressions for generated columns.
     for (int i = 0; i < targetColumnNames.size(); i++) {

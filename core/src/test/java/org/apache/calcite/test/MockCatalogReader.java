@@ -794,7 +794,7 @@ public class MockCatalogReader extends CalciteCatalogReader {
         } else if (aClass.isInstance(MockTable.this)) {
           return aClass.cast(MockTable.this);
         }
-        return null;
+        return super.unwrap(aClass);
       }
 
       @Override public Table extend(final List<RelDataTypeField> fields) {
@@ -820,23 +820,6 @@ public class MockCatalogReader extends CalciteCatalogReader {
           return extendedTable.getRowType(catalogReader.typeFactory);
         }
       };
-    }
-
-    /**
-     * Subclass of ModifiableTable that also implements
-     * CustomColumnResolvingTable.
-     */
-    private class ModifiableTableWithCustomColumnResolving
-        extends ModifiableTable implements CustomColumnResolvingTable, Wrapper {
-
-      protected ModifiableTableWithCustomColumnResolving(String tableName) {
-        super(tableName);
-      }
-
-      @Override public List<Pair<RelDataTypeField, List<String>>> resolveColumn(
-          RelDataType rowType, RelDataTypeFactory typeFactory, List<String> names) {
-        return resolver.resolveColumn(rowType, typeFactory, names);
-      }
     }
 
     public static MockTable create(MockCatalogReader catalogReader,
@@ -865,6 +848,9 @@ public class MockCatalogReader extends CalciteCatalogReader {
     public <T> T unwrap(Class<T> clazz) {
       if (clazz.isInstance(this)) {
         return clazz.cast(this);
+      }
+      if (clazz.isInstance(initializerFactory)) {
+        return clazz.cast(initializerFactory);
       }
       if (clazz.isAssignableFrom(Table.class)) {
         final Table table = resolver == null
@@ -958,6 +944,24 @@ public class MockCatalogReader extends CalciteCatalogReader {
 
     public StructKind getKind() {
       return kind;
+    }
+
+    /**
+     * Subclass of {@link ModifiableTable} that also implements
+     * {@link CustomColumnResolvingTable}.
+     */
+    private class ModifiableTableWithCustomColumnResolving
+        extends ModifiableTable implements CustomColumnResolvingTable, Wrapper {
+
+      ModifiableTableWithCustomColumnResolving(String tableName) {
+        super(tableName);
+      }
+
+      @Override public List<Pair<RelDataTypeField, List<String>>> resolveColumn(
+          RelDataType rowType, RelDataTypeFactory typeFactory,
+          List<String> names) {
+        return resolver.resolveColumn(rowType, typeFactory, names);
+      }
     }
   }
 
@@ -1135,9 +1139,12 @@ public class MockCatalogReader extends CalciteCatalogReader {
 
       @Override public <C> C unwrap(Class<C> aClass) {
         if (table instanceof Wrapper) {
-          return ((Wrapper) table).unwrap(aClass);
+          final C c = ((Wrapper) table).unwrap(aClass);
+          if (c != null) {
+            return c;
+          }
         }
-        return null;
+        return super.unwrap(aClass);
       }
     }
 
@@ -1155,9 +1162,12 @@ public class MockCatalogReader extends CalciteCatalogReader {
 
       @Override public <C> C unwrap(Class<C> aClass) {
         if (table instanceof Wrapper) {
-          return ((Wrapper) table).unwrap(aClass);
+          final C c = ((Wrapper) table).unwrap(aClass);
+          if (c != null) {
+            return c;
+          }
         }
-        return null;
+        return super.unwrap(aClass);
       }
     }
 

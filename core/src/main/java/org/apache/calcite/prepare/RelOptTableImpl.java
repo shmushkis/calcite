@@ -183,14 +183,13 @@ public class RelOptTableImpl extends Prepare.AbstractPreparingTable {
     if (clazz.isInstance(this)) {
       return clazz.cast(this);
     }
+    if (clazz.isInstance(table)) {
+      return clazz.cast(table);
+    }
     if (table instanceof Wrapper) {
       final T t = ((Wrapper) table).unwrap(clazz);
       if (t != null) {
         return t;
-      }
-    } else {
-      if (clazz.isInstance(table)) {
-        return clazz.cast(table);
       }
     }
     if (clazz == CalciteSchema.class) {

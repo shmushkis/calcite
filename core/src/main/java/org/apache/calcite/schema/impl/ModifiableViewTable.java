@@ -87,14 +87,12 @@ public class ModifiableViewTable extends ViewTable
   }
 
   @Override public <C> C unwrap(Class<C> aClass) {
-    if (aClass.isInstance(this)) {
-      return aClass.cast(this);
-    } else if (aClass.isInstance(initializerExpressionFactory)) {
+    if (aClass.isInstance(initializerExpressionFactory)) {
       return aClass.cast(initializerExpressionFactory);
     } else if (aClass.isInstance(table)) {
       return aClass.cast(table);
     }
-    return null;
+    return super.unwrap(aClass);
   }
 
   /**
@@ -196,7 +194,28 @@ public class ModifiableViewTable extends ViewTable
 
     @Override public Strategy generationStrategy(RelOptTable table,
         int iColumn) {
-      assert table.unwrap(ModifiableViewTable.class) != null;
+      final ModifiableViewTable viewTable =
+          table.unwrap(ModifiableViewTable.class);
+      assert iColumn < viewTable.columnMapping.size();
+
+      // Use the view constraint to generate the default value if the column is
+      // constrained.
+      final int mappedOrdinal = viewTable.columnMapping.get(iColumn);
+      final RexNode viewConstraint = projectMap.get(mappedOrdinal);
+      if (viewConstraint != null) {
+        return Strategy.DEFAULT;
+      }
+
+      // Otherwise use the default value of the underlying table.
+      final Table schemaTable = viewTable.getTable();
+      if (schemaTable instanceof Wrapper) {
+        final InitializerExpressionFactory initializerExpressionFactory =
+            ((Wrapper) schemaTable).unwrap(InitializerExpressionFactory.class);
+        if (initializerExpressionFactory != null) {
+          return initializerExpressionFactory.generationStrategy(table,
+              iColumn);
+        }
+      }
       return super.generationStrategy(table, iColumn);
     }
 
@@ -217,7 +236,7 @@ public class ModifiableViewTable extends ViewTable
       }
 
       // Otherwise use the default value of the underlying table.
-      final Table schemaTable = viewTable.unwrap(Table.class);
+      final Table schemaTable = viewTable.getTable();
       if (schemaTable instanceof Wrapper) {
         final InitializerExpressionFactory initializerExpressionFactory =
             ((Wrapper) schemaTable).unwrap(InitializerExpressionFactory.class);

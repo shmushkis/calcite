@@ -17,6 +17,7 @@
 package org.apache.calcite.sql.validate;
 
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.schema.Wrapper;
 import org.apache.calcite.sql.SqlAccessType;
 import org.apache.calcite.sql2rel.InitializerContext;
 
@@ -27,7 +28,7 @@ import java.util.List;
  *
  * @see SqlValidatorCatalogReader
  */
-public interface SqlValidatorTable {
+public interface SqlValidatorTable extends Wrapper {
 
   //~ Methods ----------------------------------------------------------------
 
@@ -54,10 +55,6 @@ public interface SqlValidatorTable {
   boolean columnHasDefaultValue(RelDataType rowType, int ordinal,
       InitializerContext initializerContext);
 
-  /**
-   * Finds an interface implemented by this table.
-   */
-  <T> T unwrap(Class<T> clazz);
 }
 
 // End SqlValidatorTable.java

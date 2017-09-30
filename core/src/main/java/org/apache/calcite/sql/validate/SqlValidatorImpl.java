@@ -2459,16 +2459,17 @@ public class SqlValidatorImpl implements SqlValidatorWithHints {
           enclosingNode,
           null,
           false);
-      registerFrom(
-          parentScope,
-          usingScope,
-          insertCall.getTargetTable(),
-          insertCall,
-          deriveAlias(insertCall.getTargetTable(), 0),
-          null,
-          false);
-      final InsertScope insertScope = new InsertScope(parentScope, insertCall);
-      scopes.put(insertCall, insertScope);
+      if (false) {
+        registerFrom(parentScope,
+            usingScope,
+            insertCall.getTargetTable(),
+            insertCall,
+            deriveAlias(insertCall.getTargetTable(), 0),
+            null,
+            false);
+        final InsertScope insertScope = new InsertScope(parentScope, insertCall);
+        scopes.put(insertCall, insertScope);
+      }
       break;
 
     case DELETE:

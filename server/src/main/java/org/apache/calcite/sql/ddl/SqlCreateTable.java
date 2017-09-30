@@ -225,14 +225,11 @@ public class SqlCreateTable extends SqlCreate
       return protoRowType.apply(typeFactory);
     }
 
-    public <C> C unwrap(Class<C> aClass) {
-      if (aClass.isInstance(this)) {
-        return aClass.cast(this);
-      }
+    @Override public <C> C unwrap(Class<C> aClass) {
       if (aClass.isInstance(initializerExpressionFactory)) {
         return aClass.cast(initializerExpressionFactory);
       }
-      return null;
+      return super.unwrap(aClass);
     }
   }
 }
