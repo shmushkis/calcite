@@ -2618,6 +2618,10 @@ public class RelOptRulesTest extends RelOptTestBase {
     transitiveInference(ReduceExpressionsRule.FILTER_INSTANCE);
   }
 
+  @Test public void testSimplifyFilter() throws Exception {
+    transitiveInference(ReduceExpressionsRule.FILTER_INSTANCE);
+  }
+
   @Test public void testPullConstantIntoJoin() throws Exception {
     transitiveInference(ReduceExpressionsRule.JOIN_INSTANCE);
   }

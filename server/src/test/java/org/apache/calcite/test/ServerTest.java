@@ -181,6 +181,16 @@ public class ServerTest {
         assertThat(r.getInt(2), is(9));
         assertThat(r.next(), is(false));
       }
+
+      // Planner uses constraint to optimize away condition.
+      final String sql = "explain plan for\n"
+          + "select * from t where j = i + 1";
+      final String plan = "xx";
+      try (ResultSet r = s.executeQuery(sql)) {
+        assertThat(r.next(), is(true));
+        assertThat(r.getString(1), is(plan));
+        assertThat(r.next(), is(false));
+      }
     }
   }
 }
