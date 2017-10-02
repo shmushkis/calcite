@@ -217,7 +217,7 @@ public class ServerTest {
       int x = s.executeUpdate("insert into t (h, i) values (1, 2)");
       assertThat(x, is(1));
 
-      // Planner uses constraint to optimize away condition.
+      // In plan, "j" is replaced by "i + 1".
       final String sql = "select * from t";
       try (ResultSet r = s.executeQuery(sql)) {
         assertThat(r.next(), is(true));

@@ -58,12 +58,13 @@ import org.apache.calcite.sql2rel.InitializerExpressionFactory;
 import org.apache.calcite.sql2rel.NullInitializerExpressionFactory;
 import org.apache.calcite.util.ImmutableNullableList;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Parse tree for {@code CREATE TABLE} statement.
@@ -121,44 +122,69 @@ public class SqlCreateTable extends SqlCreate
     }
     final JavaTypeFactory typeFactory = new JavaTypeFactoryImpl();
     final RelDataTypeFactory.Builder builder = typeFactory.builder();
-    final Map<Integer, SqlNode> columnExprs = new HashMap<>();
+    final ImmutableList.Builder<ColumnDef> b = ImmutableList.builder();
     for (Ord<SqlNode> c : Ord.zip(columnList)) {
       assert c.e instanceof SqlColumnDeclaration;
       final SqlColumnDeclaration d = (SqlColumnDeclaration) c.e;
-      builder.add(d.name.getSimple(),
-          d.dataType.deriveType(typeFactory, true));
-      if (d.expression != null) {
-        columnExprs.put(c.i, d.expression);
+      final RelDataType type = d.dataType.deriveType(typeFactory, true);
+      builder.add(d.name.getSimple(), type);
+      final InitializerExpressionFactory.Strategy strategy;
+      if (d.expression == null) {
+        if (type.isNullable()) {
+          strategy = InitializerExpressionFactory.Strategy.NULLABLE;
+        } else {
+          strategy = InitializerExpressionFactory.Strategy.NOT_NULLABLE;
+        }
+      } else if (d.virtual) {
+        strategy = InitializerExpressionFactory.Strategy.VIRTUAL;
+      } else {
+        strategy = InitializerExpressionFactory.Strategy.STORED;
       }
+      b.add(ColumnDef.of(d.expression, type, strategy));
     }
-    final InitializerExpressionFactory ief;
-    if (columnExprs.isEmpty()) {
-      ief = null;
-    } else {
-      ief = new NullInitializerExpressionFactory() {
-        @Override public Strategy generationStrategy(RelOptTable table,
-            int iColumn) {
-          final SqlNode c = columnExprs.get(iColumn);
-          if (c != null) {
-            return Strategy.STORED;
+    final List<ColumnDef> columns = b.build();
+    final InitializerExpressionFactory ief =
+        new NullInitializerExpressionFactory() {
+          @Override public Strategy generationStrategy(RelOptTable table,
+              int iColumn) {
+            return columns.get(iColumn).strategy;
           }
-          return super.generationStrategy(table, iColumn);
-        }
 
-        @Override public RexNode newColumnDefaultValue(RelOptTable table,
-            int iColumn, InitializerContext context) {
-          final SqlNode c = columnExprs.get(iColumn);
-          if (c != null) {
-            return context.convertExpression(c);
+          @Override public RexNode newColumnDefaultValue(RelOptTable table,
+              int iColumn, InitializerContext context) {
+            final ColumnDef c = columns.get(iColumn);
+            if (c.expr != null) {
+              return context.convertExpression(c.expr);
+            }
+            return super.newColumnDefaultValue(table, iColumn, context);
           }
-          return super.newColumnDefaultValue(table, iColumn, context);
-        }
-      };
-    }
+        };
     final RelDataType rowType = builder.build();
     schema.add(name.getSimple(),
         new MutableArrayTable(name.getSimple(),
             RelDataTypeImpl.proto(rowType), ief));
+  }
+
+  private static class ColumnDef {
+    final SqlNode expr;
+    final RelDataType type;
+    final InitializerExpressionFactory.Strategy strategy;
+
+    private ColumnDef(SqlNode expr, RelDataType type,
+        InitializerExpressionFactory.Strategy strategy) {
+      this.expr = expr;
+      this.type = type;
+      this.strategy = Preconditions.checkNotNull(strategy);
+      Preconditions.checkArgument(
+          strategy == InitializerExpressionFactory.Strategy.NULLABLE
+              || strategy == InitializerExpressionFactory.Strategy.NOT_NULLABLE
+              || expr != null);
+    }
+
+    static ColumnDef of(SqlNode expr, RelDataType type,
+        InitializerExpressionFactory.Strategy strategy) {
+      return new ColumnDef(expr, type, strategy);
+    }
   }
 
   /** Abstract base class for implementations of {@link ModifiableTable}. */
