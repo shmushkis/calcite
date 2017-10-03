@@ -17,6 +17,7 @@
 package org.apache.calcite.rex;
 
 import org.apache.calcite.linq4j.Ord;
+import org.apache.calcite.plan.RelOptPredicateList;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.Strong;
 import org.apache.calcite.rel.core.Project;
@@ -50,6 +51,7 @@ import java.util.Set;
  */
 public class RexSimplify {
   public final RexBuilder rexBuilder;
+  final RelOptPredicateList predicates;
   final boolean unknownAsFalse;
   private final RexExecutor executor;
 
@@ -57,14 +59,22 @@ public class RexSimplify {
    * Creates a RexSimplify.
    *
    * @param rexBuilder Rex builder
+   * @param predicates Predicates known to hold on input fields
    * @param unknownAsFalse Whether to convert UNKNOWN values to FALSE
    * @param executor Executor for constant reduction, not null
    */
-  public RexSimplify(RexBuilder rexBuilder, boolean unknownAsFalse,
-      RexExecutor executor) {
+  public RexSimplify(RexBuilder rexBuilder, RelOptPredicateList predicates,
+      boolean unknownAsFalse, RexExecutor executor) {
     this.rexBuilder = Preconditions.checkNotNull(rexBuilder);
+    this.predicates = Preconditions.checkNotNull(predicates);
     this.unknownAsFalse = unknownAsFalse;
     this.executor = Preconditions.checkNotNull(executor);
+  }
+
+  @Deprecated // to be removed before 2.0
+  public RexSimplify(RexBuilder rexBuilder, boolean unknownAsFalse,
+      RexExecutor executor) {
+    this(rexBuilder, RelOptPredicateList.EMPTY, unknownAsFalse, executor);
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -74,7 +84,7 @@ public class RexSimplify {
   public RexSimplify withUnknownAsFalse(boolean unknownAsFalse) {
     return unknownAsFalse == this.unknownAsFalse
         ? this
-        : new RexSimplify(rexBuilder, unknownAsFalse, executor);
+        : new RexSimplify(rexBuilder, predicates, unknownAsFalse, executor);
   }
 
   /** Simplifies a boolean expression, always preserving its type and its
@@ -670,8 +680,8 @@ public class RexSimplify {
         }
         if (comparison != null
             && comparison != SqlKind.NOT_EQUALS) { // NOT_EQUALS not supported
-          final RexNode result = processRange(rexBuilder, terms, rangeTerms,
-                  term, ref, constant, comparison);
+          final RexNode result = processRange(rexBuilder, predicates, terms,
+              rangeTerms, term, ref, constant, comparison);
           if (result != null) {
             // Not satisfiable
             return result;
@@ -838,6 +848,7 @@ public class RexSimplify {
   }
 
   private static RexNode processRange(RexBuilder rexBuilder,
+      RelOptPredicateList predicates,
       List<RexNode> terms, Map<String, Pair<Range, List<RexNode>>> rangeTerms,
       RexNode term, RexNode ref, RexLiteral constant, SqlKind comparison) {
     final Comparable v0 = constant.getValueAs(Comparable.class);
