@@ -77,7 +77,7 @@ public class SqlColumnDeclaration extends SqlCall {
         expression.unparse(writer, 0, 0);
         writer.sep(")");
       }
-      writer.keyword(virtual ? "VIRTUAL": "STORED");
+      writer.keyword(virtual ? "VIRTUAL" : "STORED");
     }
   }
 }

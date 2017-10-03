@@ -165,6 +165,7 @@ public class SqlCreateTable extends SqlCreate
             RelDataTypeImpl.proto(rowType), ief));
   }
 
+  /** Column definition. */
   private static class ColumnDef {
     final SqlNode expr;
     final RelDataType type;
