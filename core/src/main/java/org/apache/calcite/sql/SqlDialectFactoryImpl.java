@@ -30,6 +30,7 @@ import org.apache.calcite.sql.dialect.InfobrightSqlDialect;
 import org.apache.calcite.sql.dialect.InformixSqlDialect;
 import org.apache.calcite.sql.dialect.IngresSqlDialect;
 import org.apache.calcite.sql.dialect.InterbaseSqlDialect;
+import org.apache.calcite.sql.dialect.JethrodataSqlDialect;
 import org.apache.calcite.sql.dialect.LucidDbSqlDialect;
 import org.apache.calcite.sql.dialect.MssqlSqlDialect;
 import org.apache.calcite.sql.dialect.MysqlSqlDialect;
@@ -83,6 +84,8 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
       return new IngresSqlDialect(c);
     case "INTERBASE":
       return new InterbaseSqlDialect(c);
+    case "JETHRODATA":
+      return new JethrodataSqlDialect(c);
     case "LUCIDDB":
       return new LucidDbSqlDialect(c);
     case "ORACLE":
@@ -181,6 +184,8 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
       return IngresSqlDialect.DEFAULT;
     case INTERBASE:
       return InterbaseSqlDialect.DEFAULT;
+    case JETHRO:
+      return JethrodataSqlDialect.DEFAULT;
     case LUCIDDB:
       return LucidDbSqlDialect.DEFAULT;
     case MSSQL:
