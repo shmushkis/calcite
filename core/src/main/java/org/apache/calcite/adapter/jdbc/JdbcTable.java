@@ -80,7 +80,7 @@ public class JdbcTable extends AbstractQueryableTable
   private final JdbcSchema jdbcSchema;
   private final String jdbcCatalogName;
   private final String jdbcSchemaName;
-  private final String jdbcTableName;
+  public final String jdbcTableName;
   private final Schema.TableType jdbcTableType;
 
   JdbcTable(JdbcSchema jdbcSchema, String jdbcCatalogName,
