@@ -1589,6 +1589,34 @@ public class JdbcTest {
             + "full_name=Terry Anderson\n");
   }
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-2029">[CALCITE-2029]
+   * Query with "is distinct from" condition in where or join clause fails
+   * with AssertionError: Cast for just nullability not allowed</a>. */
+  @Test public void testIsNotDistinctInFilter() {
+    CalciteAssert.that()
+      .with(CalciteAssert.Config.JDBC_FOODMART)
+      .query("select *\n"
+          + "  from \"foodmart\".\"employee\" as e1\n"
+          + "  where e1.\"last_name\" is distinct from e1.\"last_name\"")
+      .runs();
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-2029">[CALCITE-2029]
+   * Query with "is distinct from" condition in where or join clause fails
+   * with AssertionError: Cast for just nullability not allowed</a>. */
+  @Test public void testMixedEqualAndIsNotDistinctJoin() {
+    CalciteAssert.that()
+      .with(CalciteAssert.Config.JDBC_FOODMART)
+      .query("select *\n"
+          + "  from \"foodmart\".\"employee\" as e1\n"
+          + "  join \"foodmart\".\"employee\" as e2 on\n"
+          + "  e1.\"first_name\" = e1.\"first_name\"\n"
+          + "  and e1.\"last_name\" is distinct from e2.\"last_name\"")
+      .runs();
+  }
+
   /** A join that has both equi and non-equi conditions.
    *
    * <p>Test case for
@@ -2853,11 +2881,26 @@ public class JdbcTest {
             + "customer_id=1; postal_code=15057\n");
   }
 
+  /** Tests ORDER BY with all combinations of ASC, DESC, NULLS FIRST,
+   * NULLS LAST. */
+  @Test public void testOrderByNulls() {
+    checkOrderByNulls(CalciteAssert.Config.FOODMART_CLONE);
+    checkOrderByNulls(CalciteAssert.Config.JDBC_FOODMART);
+  }
+
+  private void checkOrderByNulls(CalciteAssert.Config clone) {
+    checkOrderByDescNullsFirst(clone);
+    checkOrderByNullsFirst(clone);
+    checkOrderByDescNullsLast(clone);
+    checkOrderByNullsLast(clone);
+  }
+
   /** Tests ORDER BY ... DESC NULLS FIRST. */
-  @Test public void testOrderByDescNullsFirst() {
+  private void checkOrderByDescNullsFirst(CalciteAssert.Config config) {
     CalciteAssert.that()
-        .with(CalciteAssert.Config.FOODMART_CLONE)
-        .query("select \"store_id\", \"grocery_sqft\" from \"store\"\n"
+        .with(config)
+        .query("select \"store_id\", \"grocery_sqft\"\n"
+            + "from \"foodmart\".\"store\"\n"
             + "where \"store_id\" < 3 order by 2 desc nulls first")
         .returns("store_id=0; grocery_sqft=null\n"
             + "store_id=2; grocery_sqft=22271\n"
@@ -2865,10 +2908,11 @@ public class JdbcTest {
   }
 
   /** Tests ORDER BY ... NULLS FIRST. */
-  @Test public void testOrderByNullsFirst() {
+  private void checkOrderByNullsFirst(CalciteAssert.Config config) {
     CalciteAssert.that()
-        .with(CalciteAssert.Config.FOODMART_CLONE)
-        .query("select \"store_id\", \"grocery_sqft\" from \"store\"\n"
+        .with(config)
+        .query("select \"store_id\", \"grocery_sqft\"\n"
+            + "from \"foodmart\".\"store\"\n"
             + "where \"store_id\" < 3 order by 2 nulls first")
         .returns("store_id=0; grocery_sqft=null\n"
             + "store_id=1; grocery_sqft=17475\n"
@@ -2876,10 +2920,11 @@ public class JdbcTest {
   }
 
   /** Tests ORDER BY ... DESC NULLS LAST. */
-  @Test public void testOrderByDescNullsLast() {
+  private void checkOrderByDescNullsLast(CalciteAssert.Config config) {
     CalciteAssert.that()
-        .with(CalciteAssert.Config.FOODMART_CLONE)
-        .query("select \"store_id\", \"grocery_sqft\" from \"store\"\n"
+        .with(config)
+        .query("select \"store_id\", \"grocery_sqft\"\n"
+            + "from \"foodmart\".\"store\"\n"
             + "where \"store_id\" < 3 order by 2 desc nulls last")
         .returns("store_id=2; grocery_sqft=22271\n"
             + "store_id=1; grocery_sqft=17475\n"
@@ -2887,10 +2932,11 @@ public class JdbcTest {
   }
 
   /** Tests ORDER BY ... NULLS LAST. */
-  @Test public void testOrderByNullsLast() {
+  private void checkOrderByNullsLast(CalciteAssert.Config config) {
     CalciteAssert.that()
-        .with(CalciteAssert.Config.FOODMART_CLONE)
-        .query("select \"store_id\", \"grocery_sqft\" from \"store\"\n"
+        .with(config)
+        .query("select \"store_id\", \"grocery_sqft\"\n"
+            + "from \"foodmart\".\"store\"\n"
             + "where \"store_id\" < 3 order by 2 nulls last")
         .returns("store_id=1; grocery_sqft=17475\n"
             + "store_id=2; grocery_sqft=22271\n"
@@ -4732,7 +4778,7 @@ public class JdbcTest {
         .query("select * from \"metadata\".TABLES")
         .returns(
             CalciteAssert.checkResultContains(
-                "tableSchem=metadata; tableName=COLUMNS; tableType=SYSTEM_TABLE; "));
+                "tableSchem=metadata; tableName=COLUMNS; tableType=SYSTEM TABLE; "));
 
     CalciteAssert.that()
         .with(CalciteAssert.Config.REGULAR_PLUS_METADATA)
@@ -5232,6 +5278,17 @@ public class JdbcTest {
                   CalciteAssert.toString(
                       metaData.getTables(null, "adhoc", null, null)));
 
+              // including system tables; note that table type is "SYSTEM TABLE"
+              // not "SYSTEM_TABLE"
+              assertEquals(
+                  "TABLE_CAT=null; TABLE_SCHEM=adhoc; TABLE_NAME=EMPLOYEES; TABLE_TYPE=TABLE; REMARKS=null; TYPE_CAT=null; TYPE_SCHEM=null; TYPE_NAME=null; SELF_REFERENCING_COL_NAME=null; REF_GENERATION=null\n"
+                      + "TABLE_CAT=null; TABLE_SCHEM=adhoc; TABLE_NAME=MUTABLE_EMPLOYEES; TABLE_TYPE=TABLE; REMARKS=null; TYPE_CAT=null; TYPE_SCHEM=null; TYPE_NAME=null; SELF_REFERENCING_COL_NAME=null; REF_GENERATION=null\n"
+                      + "TABLE_CAT=null; TABLE_SCHEM=adhoc; TABLE_NAME=V; TABLE_TYPE=VIEW; REMARKS=null; TYPE_CAT=null; TYPE_SCHEM=null; TYPE_NAME=null; SELF_REFERENCING_COL_NAME=null; REF_GENERATION=null\n"
+                      + "TABLE_CAT=null; TABLE_SCHEM=metadata; TABLE_NAME=COLUMNS; TABLE_TYPE=SYSTEM TABLE; REMARKS=null; TYPE_CAT=null; TYPE_SCHEM=null; TYPE_NAME=null; SELF_REFERENCING_COL_NAME=null; REF_GENERATION=null\n"
+                      + "TABLE_CAT=null; TABLE_SCHEM=metadata; TABLE_NAME=TABLES; TABLE_TYPE=SYSTEM TABLE; REMARKS=null; TYPE_CAT=null; TYPE_SCHEM=null; TYPE_NAME=null; SELF_REFERENCING_COL_NAME=null; REF_GENERATION=null\n",
+                  CalciteAssert.toString(
+                      metaData.getTables(null, null, null, null)));
+
               // views only
               assertEquals(
                   "TABLE_CAT=null; TABLE_SCHEM=adhoc; TABLE_NAME=V; TABLE_TYPE=VIEW; REMARKS=null; TYPE_CAT=null; TYPE_SCHEM=null; TYPE_NAME=null; SELF_REFERENCING_COL_NAME=null; REF_GENERATION=null\n",
@@ -5239,7 +5296,7 @@ public class JdbcTest {
                       metaData.getTables(
                           null, "adhoc", null,
                           new String[]{
-                              Schema.TableType.VIEW.name()
+                              Schema.TableType.VIEW.jdbcName
                           })));
 
               // columns

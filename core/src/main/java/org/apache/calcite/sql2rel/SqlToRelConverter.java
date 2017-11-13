@@ -46,6 +46,7 @@ import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.Sample;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Uncollect;
+import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.logical.LogicalFilter;
@@ -1100,9 +1101,9 @@ public class SqlToRelConverter {
             LogicalAggregate.create(seek, ImmutableBitSet.of(), null,
                 ImmutableList.of(
                     AggregateCall.create(SqlStdOperatorTable.COUNT, false,
-                        ImmutableList.<Integer>of(), -1, longType, null),
+                        false, ImmutableList.<Integer>of(), -1, longType, null),
                     AggregateCall.create(SqlStdOperatorTable.COUNT, false,
-                        args, -1, longType, null)));
+                        false, args, -1, longType, null)));
         LogicalJoin join =
             LogicalJoin.create(bb.root, aggregate, rexBuilder.makeLiteral(true),
                 ImmutableSet.<CorrelationId>of(), JoinRelType.INNER);
@@ -1931,7 +1932,16 @@ public class SqlToRelConverter {
       return;
 
     case AS:
-      convertFrom(bb, ((SqlCall) from).operand(0));
+      call = (SqlCall) from;
+      convertFrom(bb, call.operand(0));
+      if (call.operandCount() > 2
+          && bb.root instanceof Values) {
+        final List<String> fieldNames = new ArrayList<>();
+        for (SqlNode node : Util.skip(call.getOperandList(), 2)) {
+          fieldNames.add(((SqlIdentifier) node).getSimple());
+        }
+        bb.setRoot(relBuilder.push(bb.root).rename(fieldNames).build(), true);
+      }
       return;
 
     case WITH_ITEM:
@@ -2681,6 +2691,10 @@ public class SqlToRelConverter {
     // first replace the sub-queries inside the aggregates
     // because they will provide input rows to the aggregates.
     replaceSubQueries(bb, aggregateFinder.list,
+        RelOptUtil.Logic.TRUE_FALSE_UNKNOWN);
+
+    // also replace sub-queries inside filters in the aggregates
+    replaceSubQueries(bb, aggregateFinder.filterList,
         RelOptUtil.Logic.TRUE_FALSE_UNKNOWN);
 
     // If group-by clause is missing, pretend that it has zero elements.
@@ -4865,19 +4879,26 @@ public class SqlToRelConverter {
         bb.agg = this;
       }
 
-      final SqlAggFunction aggFunction =
+      SqlAggFunction aggFunction =
           (SqlAggFunction) call.getOperator();
-      RelDataType type = validator.deriveType(bb.scope, call);
+      final RelDataType type = validator.deriveType(bb.scope, call);
       boolean distinct = false;
       SqlLiteral quantifier = call.getFunctionQuantifier();
       if ((null != quantifier)
           && (quantifier.getValue() == SqlSelectKeyword.DISTINCT)) {
         distinct = true;
       }
+      boolean approximate = false;
+      if (aggFunction == SqlStdOperatorTable.APPROX_COUNT_DISTINCT) {
+        aggFunction = SqlStdOperatorTable.COUNT;
+        distinct = true;
+        approximate = true;
+      }
       final AggregateCall aggCall =
           AggregateCall.create(
               aggFunction,
               distinct,
+              approximate,
               args,
               filterArg,
               type,
@@ -5204,12 +5225,24 @@ public class SqlToRelConverter {
    */
   private static class AggregateFinder extends SqlBasicVisitor<Void> {
     final SqlNodeList list = new SqlNodeList(SqlParserPos.ZERO);
+    final SqlNodeList filterList = new SqlNodeList(SqlParserPos.ZERO);
 
     @Override public Void visit(SqlCall call) {
       // ignore window aggregates and ranking functions (associated with OVER operator)
       if (call.getOperator().getKind() == SqlKind.OVER) {
         return null;
       }
+
+      if (call.getOperator().getKind() == SqlKind.FILTER) {
+        // the WHERE in a FILTER must be tracked too so we can call replaceSubQueries on it.
+        // see https://issues.apache.org/jira/browse/CALCITE-1910
+        final SqlNode aggCall = call.getOperandList().get(0);
+        final SqlNode whereCall = call.getOperandList().get(1);
+        list.add(aggCall);
+        filterList.add(whereCall);
+        return null;
+      }
+
       if (call.getOperator().isAggregator()) {
         list.add(call);
         return null;

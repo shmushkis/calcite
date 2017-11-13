@@ -18,10 +18,12 @@ package org.apache.calcite.sql;
 
 import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.config.NullCollation;
+import org.apache.calcite.linq4j.function.Experimental;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.dialect.AnsiSqlDialect;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeUtil;
@@ -73,7 +75,7 @@ public class SqlDialect {
   private final String identifierEndQuoteString;
   private final String identifierEscapedQuote;
   private final DatabaseProduct databaseProduct;
-  private final NullCollation nullCollation;
+  protected final NullCollation nullCollation;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -154,7 +156,7 @@ public class SqlDialect {
 
   /** Creates an empty context. Use {@link #EMPTY_CONTEXT} if possible. */
   protected static Context emptyContext() {
-    return new ContextImpl(DatabaseProduct.UNKNOWN, null, null, null,
+    return new ContextImpl(DatabaseProduct.UNKNOWN, null, null, -1, -1, null,
         NullCollation.HIGH);
   }
 
@@ -225,6 +227,8 @@ public class SqlDialect {
       return DatabaseProduct.H2;
     } else if (upperProductName.contains("VERTICA")) {
       return DatabaseProduct.VERTICA;
+    } else if (upperProductName.contains("GOOGLE BIGQUERY")) {
+      return DatabaseProduct.BIG_QUERY;
     } else {
       return DatabaseProduct.UNKNOWN;
     }
@@ -531,11 +535,30 @@ public class SqlDialect {
    * or <code>null</code> if no emulation needs to be done.
    *
    * @param node The SqlNode representing the expression
-   * @param nullsFirst <code>true</code> if nulls should come first, <code>false</code> otherwise
+   * @param nullsFirst Whether nulls should come first
+   * @param desc Whether the sort direction is
+   * {@link org.apache.calcite.rel.RelFieldCollation.Direction#DESCENDING} or
+   * {@link org.apache.calcite.rel.RelFieldCollation.Direction#STRICTLY_DESCENDING}
    * @return A SqlNode for null direction emulation or <code>null</code> if not required
    */
-  public SqlNode emulateNullDirection(SqlNode node, boolean nullsFirst) {
+  public SqlNode emulateNullDirection(SqlNode node, boolean nullsFirst,
+      boolean desc) {
     return null;
+  }
+
+  protected SqlNode emulateNullDirectionWithIsNull(SqlNode node,
+      boolean nullsFirst, boolean desc) {
+    // No need for emulation if the nulls will anyways come out the way we want
+    // them based on "nullsFirst" and "desc".
+    if (nullCollation.isDefaultOrder(nullsFirst, desc)) {
+      return null;
+    }
+
+    node = SqlStdOperatorTable.IS_NULL.createCall(SqlParserPos.ZERO, node);
+    if (nullsFirst) {
+      node = SqlStdOperatorTable.DESC.createCall(SqlParserPos.ZERO, node);
+    }
+    return node;
   }
 
   /**
@@ -581,6 +604,18 @@ public class SqlDialect {
     default:
       return RelFieldCollation.NullDirection.UNSPECIFIED;
     }
+  }
+
+  /**
+   * Returns whether the dialect supports VALUES in a sub-query with
+   * and an "AS t(column, ...)" values to define column names.
+   *
+   * <p>Currently, only Oracle does not. For this, we generate "SELECT v0 AS c0,
+   * v1 AS c1 ... UNION ALL ...". We may need to refactor this method when we
+   * support VALUES for other dialects. */
+  @Experimental
+  public boolean supportsAliasedValues() {
+    return true;
   }
 
   /**
@@ -654,15 +689,16 @@ public class SqlDialect {
    */
   public enum DatabaseProduct {
     ACCESS("Access", "\"", NullCollation.HIGH),
+    BIG_QUERY("Google BigQuery", "`", NullCollation.LOW),
     CALCITE("Apache Calcite", "\"", NullCollation.HIGH),
     MSSQL("Microsoft SQL Server", "[", NullCollation.HIGH),
-    MYSQL("MySQL", "`", NullCollation.HIGH),
+    MYSQL("MySQL", "`", NullCollation.LOW),
     ORACLE("Oracle", "\"", NullCollation.HIGH),
     DERBY("Apache Derby", null, NullCollation.HIGH),
     DB2("IBM DB2", null, NullCollation.HIGH),
     FIREBIRD("Firebird", null, NullCollation.HIGH),
     H2("H2", "\"", NullCollation.HIGH),
-    HIVE("Apache Hive", null, NullCollation.HIGH),
+    HIVE("Apache Hive", null, NullCollation.LOW),
     INFORMIX("Informix", null, NullCollation.HIGH),
     INGRES("Ingres", null, NullCollation.HIGH),
     JETHRO("JethroData", null, NullCollation.HIGH),
@@ -748,6 +784,10 @@ public class SqlDialect {
     Context withDatabaseProductName(String databaseProductName);
     String databaseVersion();
     Context withDatabaseVersion(String databaseVersion);
+    int databaseMajorVersion();
+    Context withDatabaseMajorVersion(int databaseMajorVersion);
+    int databaseMinorVersion();
+    Context withDatabaseMinorVersion(int databaseMinorVersion);
     String identifierQuoteString();
     Context withIdentifierQuoteString(String identifierQuoteString);
     @Nonnull NullCollation nullCollation();
@@ -759,15 +799,20 @@ public class SqlDialect {
     private final DatabaseProduct databaseProduct;
     private final String databaseProductName;
     private final String databaseVersion;
+    private final int databaseMajorVersion;
+    private final int databaseMinorVersion;
     private final String identifierQuoteString;
     private final NullCollation nullCollation;
 
     private ContextImpl(DatabaseProduct databaseProduct,
         String databaseProductName, String databaseVersion,
+        int databaseMajorVersion, int databaseMinorVersion,
         String identifierQuoteString, NullCollation nullCollation) {
       this.databaseProduct = Preconditions.checkNotNull(databaseProduct);
       this.databaseProductName = databaseProductName;
       this.databaseVersion = databaseVersion;
+      this.databaseMajorVersion = databaseMajorVersion;
+      this.databaseMinorVersion = databaseMinorVersion;
       this.identifierQuoteString = identifierQuoteString;
       this.nullCollation = Preconditions.checkNotNull(nullCollation);
     }
@@ -779,7 +824,8 @@ public class SqlDialect {
     public Context withDatabaseProduct(
         @Nonnull DatabaseProduct databaseProduct) {
       return new ContextImpl(databaseProduct, databaseProductName,
-          databaseVersion, identifierQuoteString, nullCollation);
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation);
     }
 
     public String databaseProductName() {
@@ -788,7 +834,8 @@ public class SqlDialect {
 
     public Context withDatabaseProductName(String databaseProductName) {
       return new ContextImpl(databaseProduct, databaseProductName,
-          databaseVersion, identifierQuoteString, nullCollation);
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation);
     }
 
     public String databaseVersion() {
@@ -797,7 +844,28 @@ public class SqlDialect {
 
     public Context withDatabaseVersion(String databaseVersion) {
       return new ContextImpl(databaseProduct, databaseProductName,
-          databaseVersion, identifierQuoteString, nullCollation);
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation);
+    }
+
+    public int databaseMajorVersion() {
+      return databaseMajorVersion;
+    }
+
+    public Context withDatabaseMajorVersion(int databaseMajorVersion) {
+      return new ContextImpl(databaseProduct, databaseProductName,
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation);
+    }
+
+    public int databaseMinorVersion() {
+      return databaseMinorVersion;
+    }
+
+    public Context withDatabaseMinorVersion(int databaseMinorVersion) {
+      return new ContextImpl(databaseProduct, databaseProductName,
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation);
     }
 
     public String identifierQuoteString() {
@@ -806,7 +874,8 @@ public class SqlDialect {
 
     public Context withIdentifierQuoteString(String identifierQuoteString) {
       return new ContextImpl(databaseProduct, databaseProductName,
-          databaseVersion, identifierQuoteString, nullCollation);
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation);
     }
 
     @Nonnull public NullCollation nullCollation() {
@@ -815,7 +884,8 @@ public class SqlDialect {
 
     public Context withNullCollation(@Nonnull NullCollation nullCollation) {
       return new ContextImpl(databaseProduct, databaseProductName,
-          databaseVersion, identifierQuoteString, nullCollation);
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          identifierQuoteString, nullCollation);
     }
   }
 }

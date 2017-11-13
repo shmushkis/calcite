@@ -469,6 +469,14 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
     sql(sql).ok();
   }
 
+  @Test public void testAggFilterWithIn() {
+    final String sql = "select\n"
+        + "  deptno, sum(sal * 2) filter (where empno not in (1, 2)), count(*)\n"
+        + "from emp\n"
+        + "group by deptno";
+    sql(sql).ok();
+  }
+
   @Test public void testFakeStar() {
     sql("SELECT * FROM (VALUES (0, 0)) AS T(A, \"*\")").ok();
   }
@@ -1434,12 +1442,16 @@ public class SqlToRelConverterTest extends SqlToRelTestBase {
   }
 
   @Test public void testIsDistinctFrom() {
-    final String sql = "select 1 is distinct from 2 from (values(true))";
+    final String sql = "select empno is distinct from deptno\n"
+        + "from (values (cast(null as int), 1),\n"
+        + "             (2, cast(null as int))) as emp(empno, deptno)";
     sql(sql).ok();
   }
 
   @Test public void testIsNotDistinctFrom() {
-    final String sql = "select 1 is not distinct from 2 from (values(true))";
+    final String sql = "select empno is not distinct from deptno\n"
+        + "from (values (cast(null as int), 1),\n"
+        + "             (2, cast(null as int))) as emp(empno, deptno)";
     sql(sql).ok();
   }
 
