@@ -14,8 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.sql;
+package org.apache.calcite.sql.fun;
 
+import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.validate.SqlMonotonicity;
@@ -42,22 +46,20 @@ import java.util.List;
  * GROUP BY HOP(rowtime, INTERVAL '1' HOUR), productId
  * </pre></blockquote>
  */
-public class SqlGroupedWindowFunction extends SqlFunction {
+class SqlGroupFunction extends SqlFunction {
   /** The grouped function, if this an auxiliary function; null otherwise. */
-  public final SqlGroupedWindowFunction groupFunction;
+  final SqlGroupFunction groupFunction;
 
-  /** Creates a SqlGroupedWindowFunction.
+  /** Creates a SqlGroupFunction.
    *
-   * @param name Function name
-   * @param kind Kind
+   * @param kind Kind; also determines function name
    * @param groupFunction Group function, if this is an auxiliary;
    *                      null, if this is a group function
    * @param operandTypeChecker Operand type checker
    */
-  public SqlGroupedWindowFunction(String name, SqlKind kind,
-      SqlGroupedWindowFunction groupFunction,
+  SqlGroupFunction(SqlKind kind, SqlGroupFunction groupFunction,
       SqlOperandTypeChecker operandTypeChecker) {
-    super(name, kind, ReturnTypes.ARG0, null,
+    super(kind.name(), kind, ReturnTypes.ARG0, null,
         operandTypeChecker, SqlFunctionCategory.SYSTEM);
     this.groupFunction = groupFunction;
     if (groupFunction != null) {
@@ -65,38 +67,13 @@ public class SqlGroupedWindowFunction extends SqlFunction {
     }
   }
 
-  /** Creates a SqlGroupedWindowFunction.
-   *
-   * @param kind Kind; also determines function name
-   * @param groupFunction Group function, if this is an auxiliary;
-   *                      null, if this is a group function
-   * @param operandTypeChecker Operand type checker
-   */
-  public SqlGroupedWindowFunction(SqlKind kind,
-      SqlGroupedWindowFunction groupFunction,
-      SqlOperandTypeChecker operandTypeChecker) {
-    this(kind.name(), kind, groupFunction, operandTypeChecker);
-  }
-
-  /** Creates an auxiliary function from this grouped window function.
-   *
-   * @param kind Kind; also determines function name
-   */
-  public SqlGroupedWindowFunction auxiliary(SqlKind kind) {
-    return auxiliary(kind.name(), kind);
-  }
-
-  /** Creates an auxiliary function from this grouped window function.
-   *
-   * @param name Function name
-   * @param kind Kind
-   */
-  public SqlGroupedWindowFunction auxiliary(String name, SqlKind kind) {
-    return new SqlGroupedWindowFunction(name, kind, this, getOperandTypeChecker());
+  /** Creates an auxiliary function from this grouped window function. */
+  SqlGroupFunction auxiliary(SqlKind kind) {
+    return new SqlGroupFunction(kind, this, getOperandTypeChecker());
   }
 
   /** Returns a list of this grouped window function's auxiliary functions. */
-  public List<SqlGroupedWindowFunction> getAuxiliaryFunctions() {
+  List<SqlGroupFunction> getAuxiliaryFunctions() {
     return ImmutableList.of();
   }
 
@@ -119,4 +96,4 @@ public class SqlGroupedWindowFunction extends SqlFunction {
   }
 }
 
-// End SqlGroupedWindowFunction.java
+// End SqlGroupFunction.java

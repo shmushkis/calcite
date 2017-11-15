@@ -71,7 +71,6 @@ import java.lang.reflect.Type;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
@@ -442,12 +441,12 @@ public abstract class SparkRules {
     System.out.println(
         file.flatMap(
             new FlatMapFunction<String, Pair<String, Integer>>() {
-              public Iterator<Pair<String, Integer>> call(String x) {
+              public List<Pair<String, Integer>> call(String x) {
                 if (!x.startsWith("a")) {
-                  return Collections.emptyIterator();
+                  return Collections.emptyList();
                 }
                 return Collections.singletonList(
-                    Pair.of(x.toUpperCase(Locale.ROOT), x.length())).iterator();
+                    Pair.of(x.toUpperCase(Locale.ROOT), x.length()));
               }
             })
             .take(5)

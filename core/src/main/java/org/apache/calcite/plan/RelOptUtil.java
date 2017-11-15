@@ -500,7 +500,6 @@ public abstract class RelOptUtil {
       final AggregateCall aggCall =
           AggregateCall.create(SqlStdOperatorTable.MIN,
               false,
-              false,
               ImmutableList.of(0),
               -1,
               0,
@@ -578,7 +577,6 @@ public abstract class RelOptUtil {
 
     final AggregateCall aggCall =
         AggregateCall.create(SqlStdOperatorTable.MIN,
-            false,
             false,
             ImmutableList.of(projectedKeyCount),
             -1,
@@ -783,8 +781,8 @@ public abstract class RelOptUtil {
     for (int i = 0; i < aggCallCnt; i++) {
       aggCalls.add(
           AggregateCall.create(
-              SqlStdOperatorTable.SINGLE_VALUE, false, false,
-              ImmutableList.of(i), -1, 0, rel, null, null));
+              SqlStdOperatorTable.SINGLE_VALUE, false, ImmutableList.of(i), -1,
+              0, rel, null, null));
     }
 
     return LogicalAggregate.create(rel, ImmutableBitSet.of(), null, aggCalls);
@@ -1922,8 +1920,10 @@ public abstract class RelOptUtil {
 
     // The result of IS DISTINCT FROM is NOT NULL because it can
     // only return TRUE or FALSE.
-    assert ret != null;
-    assert !ret.getType().isNullable();
+    ret =
+        rexBuilder.makeCast(
+            rexBuilder.getTypeFactory().createSqlType(SqlTypeName.BOOLEAN),
+            ret);
 
     return ret;
   }
@@ -1942,8 +1942,6 @@ public abstract class RelOptUtil {
       nullOp = SqlStdOperatorTable.IS_NOT_NULL;
       eqOp = SqlStdOperatorTable.NOT_EQUALS;
     }
-    // By the time the ELSE is reached, x and y are known to be not null;
-    // therefore the whole CASE is not null.
     RexNode[] whenThenElse = {
         // when x is null
         rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, x),
@@ -1958,9 +1956,7 @@ public abstract class RelOptUtil {
         rexBuilder.makeCall(nullOp, x),
 
         // else return x compared to y
-        rexBuilder.makeCall(eqOp,
-            rexBuilder.makeNotNull(x),
-            rexBuilder.makeNotNull(y))
+        rexBuilder.makeCall(eqOp, x, y)
     };
     return rexBuilder.makeCall(
         SqlStdOperatorTable.CASE,

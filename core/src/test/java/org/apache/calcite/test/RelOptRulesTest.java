@@ -2618,14 +2618,6 @@ public class RelOptRulesTest extends RelOptTestBase {
     transitiveInference(ReduceExpressionsRule.FILTER_INSTANCE);
   }
 
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-1995">[CALCITE-1995]
-   * Remove predicates from Filter if they can be proved to be always true or
-   * false</a>. */
-  @Test public void testSimplifyFilter() throws Exception {
-    transitiveInference(ReduceExpressionsRule.FILTER_INSTANCE);
-  }
-
   @Test public void testPullConstantIntoJoin() throws Exception {
     transitiveInference(ReduceExpressionsRule.JOIN_INSTANCE);
   }
@@ -3338,19 +3330,6 @@ public class RelOptRulesTest extends RelOptTestBase {
         + "  select * from emp e where emp.deptno = e.deptno)\n"
         + "AND NOT EXISTS (\n"
         + "  select * from emp ee where ee.job = emp.job AND ee.sal=34)";
-    checkSubQuery(sql).withLateDecorrelation(true).check();
-  }
-
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-2028">[CALCITE-2028]
-   * Un-correlated IN sub-query should be converted into a Join,
-   * rather than a Correlate without correlation variables </a>. */
-  @Test public void testDecorrelateUncorrelatedInAndCorrelatedExists() throws Exception {
-    final String sql = "select * from sales.emp\n"
-        + "WHERE job in (\n"
-        + "  select job from emp ee where ee.sal=34)"
-        + "AND EXISTS (\n"
-        + "  select * from emp e where emp.deptno = e.deptno)\n";
     checkSubQuery(sql).withLateDecorrelation(true).check();
   }
 

@@ -179,9 +179,7 @@ public class SubstitutionVisitor {
     this.cluster = target_.getCluster();
     final RexExecutor executor =
         Util.first(cluster.getPlanner().getExecutor(), RexUtil.EXECUTOR);
-    final RelOptPredicateList predicates = RelOptPredicateList.EMPTY;
-    this.simplify =
-        new RexSimplify(cluster.getRexBuilder(), predicates, false, executor);
+    this.simplify = new RexSimplify(cluster.getRexBuilder(), false, executor);
     this.rules = rules;
     this.query = Holder.of(MutableRels.toMutable(query_));
     this.target = MutableRels.toMutable(target_);
@@ -1264,7 +1262,7 @@ public class SubstitutionVisitor {
         }
         aggregateCalls.add(
             AggregateCall.create(getRollup(aggregateCall.getAggregation()),
-                aggregateCall.isDistinct(), aggregateCall.isApproximate(),
+                aggregateCall.isDistinct(),
                 ImmutableList.of(target.groupSet.cardinality() + i), -1,
                 aggregateCall.type, aggregateCall.name));
       }

@@ -1480,7 +1480,6 @@ passed to the aggregate function.
 | COLLECT( [ ALL &#124; DISTINCT ] value)       | Returns a multiset of the values
 | COUNT( [ ALL &#124; DISTINCT ] value [, value ]*) | Returns the number of input rows for which *value* is not null (wholly not null if *value* is composite)
 | COUNT(*)                           | Returns the number of input rows
-| APPROX_COUNT_DISTINCT(value [, value ]*)      | Returns the approximate number of distinct values of *value*; the database is allowed to use an approximation but is not required to
 | AVG( [ ALL &#124; DISTINCT ] numeric)         | Returns the average (arithmetic mean) of *numeric* across all input values
 | SUM( [ ALL &#124; DISTINCT ] numeric)         | Returns the sum of *numeric* across all input values
 | MAX( [ ALL &#124; DISTINCT ] value)           | Returns the maximum value of *value* across all input values
@@ -1508,7 +1507,7 @@ Not implemented:
 
 | Operator syntax                           | Description
 |:----------------------------------------- |:-----------
-| COUNT(value [, value ]*) OVER window      | Returns the number of rows in *window* for which *value* is not null (wholly not null if *value* is composite)
+| COUNT(value [, value ]*) OVER window     | Returns the number of rows in *window* for which *value* is not null (wholly not null if *value* is composite)
 | COUNT(*) OVER window                      | Returns the number of rows in *window*
 | AVG(numeric) OVER window                  | Returns the average (arithmetic mean) of *numeric* across all values in *window*
 | SUM(numeric) OVER window                  | Returns the sum of *numeric* across all values in *window*
@@ -1525,8 +1524,7 @@ Not implemented:
 
 Not implemented:
 
-* COUNT(DISTINCT value [, value ]*) OVER window
-* APPROX_COUNT_DISTINCT(value [, value ]*) OVER window
+* COUNT(DISTINCT value) OVER window
 * FIRST_VALUE(value) IGNORE NULLS OVER window
 * LAST_VALUE(value) IGNORE NULLS OVER window
 * PERCENT_RANK(value) OVER window
@@ -1669,8 +1667,6 @@ Not implemented:
 | o | ST_GeometryType(geom) | Returns the type of *geom*
 | o | ST_GeometryTypeCode(geom) | Returns the OGC SFS type code of *geom*
 | o | ST_Envelope(geom [, srid ]) | Returns the envelope of *geom* (which may be a GEOMETRYCOLLECTION) as a GEOMETRY
-| o | ST_X(geom) | Returns the x-value of the first coordinate of *geom*
-| o | ST_Y(geom) | Returns the y-value of the first coordinate of *geom*
 
 Not implemented:
 
@@ -1702,8 +1698,10 @@ Not implemented:
 * ST_PointOnSurface(geom) Returns an interior or boundary point of *geom*
 * ST_SRID(geom) Returns SRID value of *geom* or 0 if it does not have one
 * ST_StartPoint(lineString) Returns the first coordinate of *lineString*
+* ST_X(geom) Returns the x-value of the first coordinate of *geom*
 * ST_XMax(geom) Returns the maximum x-value of *geom*
 * ST_XMin(geom) Returns the minimum x-value of *geom*
+* ST_Y(geom) Returns the y-value of the first coordinate of *geom*
 * ST_YMax(geom) Returns the maximum y-value of *geom*
 * ST_YMin(geom) Returns the minimum y-value of *geom*
 

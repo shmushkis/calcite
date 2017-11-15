@@ -17,7 +17,6 @@
 package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.avatica.util.TimeUnitRange;
-import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
@@ -46,8 +45,7 @@ public class MysqlSqlDialect extends SqlDialect {
   public static final SqlDialect DEFAULT =
       new MysqlSqlDialect(EMPTY_CONTEXT
           .withDatabaseProduct(DatabaseProduct.MYSQL)
-          .withIdentifierQuoteString("`")
-          .withNullCollation(NullCollation.LOW));
+          .withIdentifierQuoteString("`"));
 
   /** MySQL specific function. */
   public static final SqlFunction ISNULL_FUNCTION =
@@ -68,9 +66,12 @@ public class MysqlSqlDialect extends SqlDialect {
     return false;
   }
 
-  @Override public SqlNode emulateNullDirection(SqlNode node,
-      boolean nullsFirst, boolean desc) {
-    return emulateNullDirectionWithIsNull(node, nullsFirst, desc);
+  @Override public SqlNode emulateNullDirection(SqlNode node, boolean nullsFirst) {
+    node = ISNULL_FUNCTION.createCall(SqlParserPos.ZERO, node);
+    if (nullsFirst) {
+      node = SqlStdOperatorTable.DESC.createCall(SqlParserPos.ZERO, node);
+    }
+    return node;
   }
 
   @Override public boolean supportsAggregateFunction(SqlKind kind) {

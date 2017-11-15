@@ -890,11 +890,6 @@ SqlNode SqlStmt() :
 }
 {
     (
-<#-- Add methods to parse additional statements here -->
-<#list parser.statementParserMethods as method>
-        stmt = ${method}
-    |
-</#list>
         stmt = SqlSetOption(Span.of(), null)
     |
         stmt = SqlAlter()
@@ -918,6 +913,12 @@ SqlNode SqlStmt() :
         stmt = SqlMerge()
     |
         stmt = SqlProcedureCall()
+
+<#-- Add methods to parse additional statements here -->
+<#list parser.statementParserMethods as method>
+    |
+        stmt = ${method}
+</#list>
     )
     {
         return stmt;

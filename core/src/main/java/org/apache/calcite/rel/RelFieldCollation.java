@@ -139,18 +139,6 @@ public class RelFieldCollation {
         return NullDirection.UNSPECIFIED;
       }
     }
-
-    /** Returns whether this is {@link #DESCENDING} or
-     * {@link #STRICTLY_DESCENDING}. */
-    public boolean isDescending() {
-      switch (this) {
-      case DESCENDING:
-      case STRICTLY_DESCENDING:
-        return true;
-      default:
-        return false;
-      }
-    }
   }
 
   /**

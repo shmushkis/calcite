@@ -16,7 +16,6 @@
  */
 package org.apache.calcite.rex;
 
-import org.apache.calcite.plan.RelOptPredicateList;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
@@ -787,10 +786,8 @@ public class RexProgram {
 
   @Deprecated // to be removed before 2.0
   public RexProgram normalize(RexBuilder rexBuilder, boolean simplify) {
-    final RelOptPredicateList predicates = RelOptPredicateList.EMPTY;
-    return normalize(rexBuilder, simplify
-        ? new RexSimplify(rexBuilder, predicates, false, RexUtil.EXECUTOR)
-        : null);
+    return normalize(rexBuilder,
+        simplify ? new RexSimplify(rexBuilder, false, RexUtil.EXECUTOR) : null);
   }
 
   //~ Inner Classes ----------------------------------------------------------

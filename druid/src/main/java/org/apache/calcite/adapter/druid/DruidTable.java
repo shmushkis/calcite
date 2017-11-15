@@ -34,7 +34,6 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlSelectKeyword;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 import com.google.common.base.Preconditions;
@@ -137,14 +136,9 @@ public class DruidTable extends AbstractTable implements TranslatableTable {
                       Map<String, List<ComplexMetric>> complexMetrics) {
     final ImmutableMap<String, SqlTypeName> fields =
             ImmutableMap.copyOf(fieldMap);
-    return new DruidTable(druidSchema,
-        dataSourceName,
-        new MapRelProtoDataType(fields, timestampColumnName),
-        ImmutableSet.copyOf(metricNameSet),
-        timestampColumnName,
-        intervals,
-        complexMetrics,
-        fieldMap);
+    return new DruidTable(druidSchema, dataSourceName,
+            new MapRelProtoDataType(fields), ImmutableSet.copyOf(metricNameSet),
+            timestampColumnName, intervals, complexMetrics, fieldMap);
   }
 
   /**
@@ -179,12 +173,11 @@ public class DruidTable extends AbstractTable implements TranslatableTable {
     assert isRolledUp(column);
     // Our rolled up columns are only allowed in COUNT(DISTINCT ...) aggregate functions.
     // We only allow this when approximate results are acceptable.
-    return ((config != null
-                && config.approximateDistinctCount()
-                && isCountDistinct(call))
-            || call.getOperator() == SqlStdOperatorTable.APPROX_COUNT_DISTINCT)
-        && call.getOperandList().size() == 1 // for COUNT(a_1, a_2, ... a_n). n should be 1
-        && isValidParentKind(parent);
+    return config != null
+            && config.approximateDistinctCount()
+            && isCountDistinct(call)
+            && call.getOperandList().size() == 1 // for COUNT(a_1, a_2, ... a_n). n should be 1
+            && isValidParentKind(parent);
   }
 
   private boolean isValidParentKind(SqlNode node) {
@@ -251,25 +244,15 @@ public class DruidTable extends AbstractTable implements TranslatableTable {
    * field names and types. */
   private static class MapRelProtoDataType implements RelProtoDataType {
     private final ImmutableMap<String, SqlTypeName> fields;
-    private final String timestampColumn;
 
     MapRelProtoDataType(ImmutableMap<String, SqlTypeName> fields) {
       this.fields = fields;
-      this.timestampColumn = DruidTable.DEFAULT_TIMESTAMP_COLUMN;
-    }
-
-    MapRelProtoDataType(ImmutableMap<String, SqlTypeName> fields, String timestampColumn) {
-      this.fields = fields;
-      this.timestampColumn = timestampColumn;
     }
 
     public RelDataType apply(RelDataTypeFactory typeFactory) {
       final RelDataTypeFactory.Builder builder = typeFactory.builder();
       for (Map.Entry<String, SqlTypeName> field : fields.entrySet()) {
-        final String key = field.getKey();
-        builder.add(key, field.getValue())
-            // Druid's time column is always not null and the only column called __time.
-            .nullable(!timestampColumn.equals(key));
+        builder.add(field.getKey(), field.getValue()).nullable(true);
       }
       return builder.build();
     }

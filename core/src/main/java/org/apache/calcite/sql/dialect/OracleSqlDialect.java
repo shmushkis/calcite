@@ -48,10 +48,6 @@ public class OracleSqlDialect extends SqlDialect {
     return false;
   }
 
-  @Override public boolean supportsAliasedValues() {
-    return false;
-  }
-
   @Override public void unparseCall(SqlWriter writer, SqlCall call,
       int leftPrec, int rightPrec) {
     if (call.getOperator() == SqlStdOperatorTable.SUBSTRING) {

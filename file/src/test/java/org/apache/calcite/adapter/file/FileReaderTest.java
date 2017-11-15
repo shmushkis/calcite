@@ -64,10 +64,13 @@ public class FileReaderTest {
     }
   }
 
-  private static String resourcePath(String path) throws Exception {
+  private static String resourcePath(String path) {
     final URL url = FileReaderTest.class.getResource("/" + path);
-    final File file = new File(url.toURI());
-    return file.getAbsolutePath();
+    String s = url.toString();
+    if (s.startsWith("file:")) {
+      s = s.substring("file:".length());
+    }
+    return s;
   }
 
   /** Tests {@link FileReader} URL instantiation - no path. */

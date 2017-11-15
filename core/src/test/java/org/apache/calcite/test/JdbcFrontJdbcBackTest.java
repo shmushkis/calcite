@@ -20,7 +20,6 @@ import org.apache.calcite.jdbc.CalciteConnection;
 
 import com.google.common.base.Function;
 
-import org.hamcrest.Matcher;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -29,10 +28,8 @@ import java.sql.SQLException;
 
 import static org.apache.calcite.test.CalciteAssert.that;
 
-import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 
 /**
  * Tests for a JDBC front-end and JDBC back-end.
@@ -79,30 +76,27 @@ public class JdbcFrontJdbcBackTest {
   }
 
   @Test public void testTablesByType() throws Exception {
-    // check with the form recommended by JDBC
-    checkTablesByType("SYSTEM TABLE", is("COLUMNS;TABLES;"));
-    // the form we used until 1.14 no longer generates results
-    checkTablesByType("SYSTEM_TABLE", is(""));
-  }
-
-  private void checkTablesByType(final String tableType,
-      final Matcher<String> matcher) throws Exception {
     that()
         .with(CalciteAssert.Config.REGULAR_PLUS_METADATA)
         .doWithConnection(
             new Function<CalciteConnection, Object>() {
               public Object apply(CalciteConnection a0) {
-                try (ResultSet rset = a0.getMetaData().getTables(null, null,
-                    null, new String[] {tableType})) {
+                try {
+                  ResultSet rset =
+                      a0.getMetaData().getTables(
+                          null, null, null,
+                          new String[] {"SYSTEM_TABLE"});
                   StringBuilder buf = new StringBuilder();
                   while (rset.next()) {
                     buf.append(rset.getString(3)).append(';');
                   }
-                  assertThat(buf.toString(), matcher);
-                  return null;
+                  assertEquals(
+                      "COLUMNS;TABLES;",
+                      buf.toString());
                 } catch (SQLException e) {
                   throw new RuntimeException(e);
                 }
+                return null;
               }
             });
   }
