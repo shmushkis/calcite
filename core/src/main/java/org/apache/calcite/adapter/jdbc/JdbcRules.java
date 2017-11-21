@@ -390,13 +390,17 @@ public class JdbcRules {
    * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalFilter} to
    * an {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcFilter}.
    */
-  private static class JdbcFilterRule extends JdbcConverterRule {
-    private JdbcFilterRule(JdbcConvention out) {
+  public static class JdbcFilterRule extends JdbcConverterRule {
+    public JdbcFilterRule(JdbcConvention out) {
       super(LogicalFilter.class, Convention.NONE, out, "JdbcFilterRule");
     }
 
+    public JdbcFilterRule(JdbcConvention out, Convention conv, Class<? extends RelNode> clazz) {
+      super(clazz, conv, out, "JdbcFilterRule");
+    }
+
     public RelNode convert(RelNode rel) {
-      final LogicalFilter filter = (LogicalFilter) rel;
+      final Filter filter = (Filter) rel;
 
       return new JdbcFilter(
           rel.getCluster(),
@@ -433,8 +437,8 @@ public class JdbcRules {
    * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalAggregate}
    * to a {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcAggregate}.
    */
-  private static class JdbcAggregateRule extends JdbcConverterRule {
-    private JdbcAggregateRule(JdbcConvention out) {
+  public static class JdbcAggregateRule extends JdbcConverterRule {
+    public JdbcAggregateRule(JdbcConvention out) {
       super(LogicalAggregate.class, Convention.NONE, out, "JdbcAggregateRule");
     }
 
