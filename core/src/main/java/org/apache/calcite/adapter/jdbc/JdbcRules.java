@@ -46,7 +46,6 @@ import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
-import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalCalc;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalIntersect;
@@ -329,13 +328,13 @@ public class JdbcRules {
    * Rule to convert a {@link org.apache.calcite.rel.logical.LogicalProject} to
    * an {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcProject}.
    */
-  private static class JdbcProjectRule extends JdbcConverterRule {
-    private JdbcProjectRule(JdbcConvention out) {
+  public static class JdbcProjectRule extends JdbcConverterRule {
+    public JdbcProjectRule(JdbcConvention out) {
       super(LogicalProject.class, Convention.NONE, out, "JdbcProjectRule");
     }
 
     public RelNode convert(RelNode rel) {
-      final LogicalProject project = (LogicalProject) rel;
+      final Project project = (Project) rel;
 
       return new JdbcProject(
           rel.getCluster(),
@@ -439,11 +438,11 @@ public class JdbcRules {
    */
   public static class JdbcAggregateRule extends JdbcConverterRule {
     public JdbcAggregateRule(JdbcConvention out) {
-      super(LogicalAggregate.class, Convention.NONE, out, "JdbcAggregateRule");
+      super(Aggregate.class, Convention.NONE, out, "JdbcAggregateRule");
     }
 
     public RelNode convert(RelNode rel) {
-      final LogicalAggregate agg = (LogicalAggregate) rel;
+      final Aggregate agg = (Aggregate) rel;
       if (agg.getGroupSets().size() != 1) {
         // GROUPING SETS not supported; see
         // [CALCITE-734] Push GROUPING SETS to underlying SQL via JDBC adapter
