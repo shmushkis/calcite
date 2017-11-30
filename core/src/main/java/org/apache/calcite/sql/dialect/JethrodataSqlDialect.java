@@ -16,18 +16,68 @@
  */
 package org.apache.calcite.sql.dialect;
 
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.parser.SqlParserPos;
 
 /**
  * A <code>SqlDialect</code> implementation for the Jethrodata database.
  */
 public class JethrodataSqlDialect extends SqlDialect {
   public static final SqlDialect DEFAULT =
-      new JethrodataSqlDialect(EMPTY_CONTEXT.withDatabaseProduct(DatabaseProduct.JETHRO));
+      new JethrodataSqlDialect(EMPTY_CONTEXT.withDatabaseProduct(DatabaseProduct.JETHRO).
+                                             withIdentifierQuoteString("\""));
 
   /** Creates an InterbaseSqlDialect. */
   public JethrodataSqlDialect(Context context) {
     super(context);
+  }
+
+  @Override public boolean hasImplicitTableAlias() {
+    return false;
+  }
+
+  @Override public boolean supportsCharSet() {
+    return false;
+  }
+
+  @Override public boolean supportsAggregateFunction(SqlKind kind) {
+    //TODOY check if STDDEV_POP, STDDEV_SAMP, VAR_POP, VAR_SAMP are supported
+    switch (kind) {
+    case COUNT:
+    case SUM:
+    case AVG:
+    case MIN:
+    case MAX:
+      return true;
+    }
+    return false;
+  }
+
+  @Override public SqlNode getCastSpec(RelDataType type) {
+    //TODOY support all hive types
+    switch (type.getSqlTypeName()) {
+    case VARCHAR:
+      // MySQL doesn't have a VARCHAR type, only CHAR.
+      return new SqlDataTypeSpec(new SqlIdentifier("CHAR", SqlParserPos.ZERO),
+          type.getPrecision(), -1, null, null, SqlParserPos.ZERO);
+    //case INTEGER:
+    //  return new SqlDataTypeSpec(new SqlIdentifier("_UNSIGNED", SqlParserPos.ZERO),
+    //      type.getPrecision(), -1, null, null, SqlParserPos.ZERO);
+    }
+    return super.getCastSpec(type);
+  }
+
+  public boolean supportsOffsetFetch() {
+    return false;
+  }
+
+  public boolean supportsNestedAggregations() {
+    return false;
   }
 }
 
