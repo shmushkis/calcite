@@ -45,6 +45,10 @@ public class JethrodataSqlDialect extends SqlDialect {
     return false;
   }
 
+  @Override public SqlNode emulateNullDirection(SqlNode node, boolean nullsFirst) {
+    return node;
+  }
+
   @Override public boolean supportsAggregateFunction(SqlKind kind) {
     //TODOY check if STDDEV_POP, STDDEV_SAMP, VAR_POP, VAR_SAMP are supported
     switch (kind) {
