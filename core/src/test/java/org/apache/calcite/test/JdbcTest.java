@@ -725,6 +725,24 @@ public class JdbcTest {
     assertTrue(connection.isClosed());
   }
 
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-2071">[CALCITE-2071]
+   * Query with IN and OR in WHERE clause returns wrong result</a>.
+   * More cases in sub-query.iq. */
+  @Test public void testWhereInOr() {
+    final String sql = "select \"empid\"\n"
+        + "from \"hr\".\"emps\" t\n"
+        + "where (\"empid\" in (select \"empid\" from \"hr\".\"emps\")\n"
+        + "    or \"empid\" in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,\n"
+        + "        12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25))\n"
+        + "and \"empid\" in (100, 200, 150)";
+    CalciteAssert.hr()
+        .query(sql)
+        .returnsUnordered("empid=100",
+            "empid=200",
+            "empid=150");
+  }
+
   /** Tests that a driver can be extended with its own parser and can execute
    * its own flavor of DDL. */
   @Test public void testMockDdl() throws Exception {
@@ -1541,6 +1559,30 @@ public class JdbcTest {
         .query("select extract(month from interval '2-3' year to month) as c \n"
             + "from \"foodmart\".\"employee\" where \"employee_id\"=1")
         .returns("C=3\n");
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-1188">[CALCITE-1188]
+   * NullPointerException when EXTRACT is applied to NULL date field</a>.
+   * The problem occurs when EXTRACT appears in both SELECT and WHERE ... IN
+   * clauses, the latter with at least two values. */
+  @Test public void testExtractOnNullDateField() {
+    final String sql = "select\n"
+        + "  extract(year from \"end_date\"), \"hire_date\", \"birth_date\"\n"
+        + "from \"foodmart\".\"employee\"\n"
+        + "where extract(year from \"end_date\") in (1994, 1995, 1996)\n"
+        + "group by\n"
+        + "  extract(year from \"end_date\"), \"hire_date\", \"birth_date\"\n";
+    final String sql2 = sql + "\n"
+        + "limit 10000";
+    final String sql3 = "select *\n"
+        + "from \"foodmart\".\"employee\"\n"
+        + "where extract(year from \"end_date\") in (1994, 1995, 1996)";
+    final CalciteAssert.AssertThat with = CalciteAssert.that()
+        .with(CalciteAssert.Config.FOODMART_CLONE);
+    with.query(sql).returns("");
+    with.query(sql2).returns("");
+    with.query(sql3).returns("");
   }
 
   @Test public void testFloorDate() {
@@ -6152,6 +6194,24 @@ public class JdbcTest {
             "C=500");
 
     // NVL is not present in the default operator table
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+        .query("select nvl(\"commission\", -99) as c from \"hr\".\"emps\"")
+        .throws_("No match found for function signature NVL(<NUMERIC>, <NUMERIC>)");
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-2072">[CALCITE-2072]
+   * Enable spatial operator table by adding 'fun=spatial'to JDBC URL</a>. */
+  @Test public void testFunSpatial() {
+    final String sql = "select distinct\n"
+        + "  ST_PointFromText('POINT(-71.0642.28)') as c\n"
+        + "from \"hr\".\"emps\"";
+    CalciteAssert.that(CalciteAssert.Config.REGULAR)
+        .with("fun", "spatial")
+        .query(sql)
+        .returnsUnordered("C={\"x\":-71.0642,\"y\":0.28}");
+
+    // NVL is present in the Oracle operator table, but not spatial or core
     CalciteAssert.that(CalciteAssert.Config.REGULAR)
         .query("select nvl(\"commission\", -99) as c from \"hr\".\"emps\"")
         .throws_("No match found for function signature NVL(<NUMERIC>, <NUMERIC>)");

@@ -546,7 +546,7 @@ public abstract class RelOptUtil {
     switch (logic) {
     case TRUE_FALSE_UNKNOWN:
     case UNKNOWN_AS_TRUE:
-      if (!containsNullableFields(seekRel)) {
+      if (notIn && !containsNullableFields(seekRel)) {
         logic = Logic.TRUE_FALSE;
       }
     }
@@ -3293,12 +3293,7 @@ public abstract class RelOptUtil {
     return relBuilder.build();
   }
 
-  /**
-   * Pushes down expressions in "equal" join condition, using the default
-   * builder.
-   *
-   * @see #pushDownJoinConditions(Join, RelBuilder)
-   */
+  @Deprecated // to be removed before 2.0
   public static RelNode pushDownJoinConditions(Join originalJoin) {
     return pushDownJoinConditions(originalJoin, RelFactories.LOGICAL_BUILDER);
   }

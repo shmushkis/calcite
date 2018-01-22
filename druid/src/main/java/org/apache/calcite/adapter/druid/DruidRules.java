@@ -31,6 +31,7 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rel.rules.AggregateExtractProjectRule;
 import org.apache.calcite.rel.rules.AggregateFilterTransposeRule;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
@@ -110,15 +111,15 @@ public class DruidRules {
       new DruidFilterAggregateTransposeRule(RelFactories.LOGICAL_BUILDER);
   public static final DruidPostAggregationProjectRule POST_AGGREGATION_PROJECT =
       new DruidPostAggregationProjectRule(RelFactories.LOGICAL_BUILDER);
+  public static final DruidAggregateExtractProjectRule PROJECT_EXTRACT_RULE =
+      new DruidAggregateExtractProjectRule(RelFactories.LOGICAL_BUILDER);
 
   public static final List<RelOptRule> RULES =
       ImmutableList.of(FILTER,
           PROJECT_FILTER_TRANSPOSE,
-          // Disabled, per
-          //   [CALCITE-1706] DruidAggregateFilterTransposeRule
-          //   causes very fine-grained aggregations to be pushed to Druid
-          // AGGREGATE_FILTER_TRANSPOSE,
+          AGGREGATE_FILTER_TRANSPOSE,
           AGGREGATE_PROJECT,
+          PROJECT_EXTRACT_RULE,
           PROJECT,
           POST_AGGREGATION_PROJECT,
           AGGREGATE,
@@ -140,18 +141,29 @@ public class DruidRules {
           for (AggregateCall aggregateCall : aggregate.getAggCallList()) {
             switch (aggregateCall.getAggregation().getKind()) {
             case COUNT:
-              // Druid can handle 2 scenarios:
+              // Druid count aggregator can handle 3 scenarios:
               // 1. count(distinct col) when approximate results
-              //    are acceptable and col is not a metric
+              //    are acceptable and col is not a metric.
+              //    Note that exact count(distinct column) is handled
+              //    by being rewritten into group by followed by count
               // 2. count(*)
+              // 3. count(column)
+
               if (checkAggregateOnMetric(ImmutableBitSet.of(aggregateCall.getArgList()),
                       node, query)) {
                 return true;
               }
-              if ((aggregateCall.isDistinct()
-                      && (aggregateCall.isApproximate()
-                          || config.approximateDistinctCount()))
-                  || aggregateCall.getArgList().isEmpty()) {
+              // case count(*)
+              if (aggregateCall.getArgList().isEmpty()) {
+                continue;
+              }
+              // case count(column)
+              if (aggregateCall.getArgList().size() == 1 && !aggregateCall.isDistinct()) {
+                continue;
+              }
+              // case count(distinct and is approximate)
+              if (aggregateCall.isDistinct()
+                      && (aggregateCall.isApproximate() || config.approximateDistinctCount())) {
                 continue;
               }
               return true;
@@ -218,9 +230,6 @@ public class DruidRules {
       final RexSimplify simplify =
           new RexSimplify(rexBuilder, predicates, true, executor);
       final RexNode cond = simplify.simplify(filter.getCondition());
-      if (!canPush(cond)) {
-        return;
-      }
       for (RexNode e : RelOptUtil.conjunctions(cond)) {
         if (query.isValidFilter(e)) {
           validPreds.add(e);
@@ -248,9 +257,12 @@ public class DruidRules {
       final List<RexNode> residualPreds = new ArrayList<>(triple.getRight());
       List<Interval> intervals = null;
       if (!triple.getLeft().isEmpty()) {
+        final String timeZone = cluster.getPlanner().getContext()
+            .unwrap(CalciteConnectionConfig.class).timeZone();
+        assert timeZone != null;
         intervals = DruidDateTimeUtils.createInterval(
             RexUtil.composeConjunction(rexBuilder, triple.getLeft(), false),
-            cluster.getPlanner().getContext().unwrap(CalciteConnectionConfig.class).timeZone());
+            timeZone);
         if (intervals == null || intervals.isEmpty()) {
           // Case we have an filter with extract that can not be written as interval push down
           triple.getMiddle().addAll(triple.getLeft());
@@ -300,28 +312,10 @@ public class DruidRules {
             timeRangeNodes.add(conj);
           }
         } else {
-          boolean filterOnMetrics = false;
-          for (Integer i : visitor.inputPosReferenced) {
-            if (input.druidTable.isMetric(input.getRowType().getFieldList().get(i).getName())) {
-              // Filter on metrics, not supported in Druid
-              filterOnMetrics = true;
-              break;
-            }
-          }
-          if (filterOnMetrics) {
-            nonPushableNodes.add(conj);
-          } else {
-            pushableNodes.add(conj);
-          }
+          pushableNodes.add(conj);
         }
       }
       return ImmutableTriple.of(timeRangeNodes, pushableNodes, nonPushableNodes);
-    }
-
-    /** Returns whether we can push an expression to Druid. */
-    private static boolean canPush(RexNode cond) {
-      // Druid cannot implement "where false"
-      return !cond.isAlwaysFalse();
     }
   }
 
@@ -649,6 +643,7 @@ public class DruidRules {
       if (!DruidQuery.isValidSignature(query.signature() + 'a')) {
         return;
       }
+
       if (aggregate.indicator
               || aggregate.getGroupSets().size() != 1
               || BAD_AGG.apply(ImmutableTriple.of(aggregate, (RelNode) aggregate, query))
@@ -665,9 +660,6 @@ public class DruidRules {
       ImmutableBitSet.Builder builder = ImmutableBitSet.builder();
       for (AggregateCall aggCall : aggregate.getAggCallList()) {
         builder.addAll(aggCall.getArgList());
-      }
-      if (checkAggregateOnMetric(aggregate.getGroupSet(), aggregate, query)) {
-        return false;
       }
       return !checkTimestampRefOnQuery(builder.build(), query.getTopNode(), query);
     }
@@ -711,7 +703,7 @@ public class DruidRules {
       // into Druid
       for (Integer i : filterRefs) {
         RexNode filterNode = project.getProjects().get(i);
-        if (!query.isValidFilter(filterNode, project.getInput()) || filterNode.isAlwaysFalse()) {
+        if (!query.isValidFilter(filterNode) || filterNode.isAlwaysFalse()) {
           return;
         }
       }
@@ -720,9 +712,6 @@ public class DruidRules {
               || aggregate.getGroupSets().size() != 1
               || BAD_AGG.apply(ImmutableTriple.of(aggregate, (RelNode) project, query))
               || !validAggregate(aggregate, timestampIdx, filterRefs.size())) {
-        return;
-      }
-      if (checkAggregateOnMetric(aggregate.getGroupSet(), project, query)) {
         return;
       }
       final RelNode newProject = project.copy(project.getTraitSet(),
@@ -935,7 +924,10 @@ public class DruidRules {
         if (e instanceof RexCall) {
           // It is a call, check that it is EXTRACT and follow-up conditions
           final RexCall call = (RexCall) e;
-          if (DruidDateTimeUtils.extractGranularity(call) == null) {
+          final String timeZone = query.getCluster().getPlanner().getContext()
+              .unwrap(CalciteConnectionConfig.class).timeZone();
+          assert timeZone != null;
+          if (DruidDateTimeUtils.extractGranularity(call, timeZone) == null) {
             return -1;
           }
           if (idxTimestamp != -1 && hasFloor) {
@@ -1123,7 +1115,10 @@ public class DruidRules {
         RexNode node = project.getProjects().get(index);
         if (node instanceof RexCall) {
           RexCall call = (RexCall) node;
-          assert DruidDateTimeUtils.extractGranularity(call) != null;
+          final String timeZone = query.getCluster().getPlanner().getContext()
+              .unwrap(CalciteConnectionConfig.class).timeZone();
+          assert timeZone != null;
+          assert DruidDateTimeUtils.extractGranularity(call, timeZone) != null;
           if (call.getKind() == SqlKind.FLOOR) {
             newSet.addAll(RelOptUtil.InputFinder.bits(call));
           }
@@ -1155,8 +1150,12 @@ public class DruidRules {
           newSet.set(((RexInputRef) node).getIndex());
         } else if (node instanceof RexCall) {
           RexCall call = (RexCall) node;
-          assert DruidDateTimeUtils.extractGranularity(call) != null;
-          // when we have extract from time columnthe rexCall is in the form of /Reinterpret$0
+          final String timeZone = query.getCluster().getPlanner().getContext()
+              .unwrap(CalciteConnectionConfig.class).timeZone();
+          assert timeZone != null;
+          assert DruidDateTimeUtils.extractGranularity(call, timeZone) != null;
+          // when we have extract from time column the rexCall is of the form
+          // "/Reinterpret$0"
           newSet.addAll(RelOptUtil.InputFinder.bits(call));
         }
       }
@@ -1289,6 +1288,30 @@ public class DruidRules {
           relBuilderFactory);
     }
   }
+
+  /**
+   * Rule to extract a {@link org.apache.calcite.rel.core.Project} from
+   * {@link org.apache.calcite.rel.core.Aggregate} on top of
+   * {@link org.apache.calcite.adapter.druid.DruidQuery} based on the fields
+   * used in the aggregate.
+   */
+  public static class DruidAggregateExtractProjectRule
+      extends AggregateExtractProjectRule {
+
+    /**
+     * Creates a DruidAggregateExtractProjectRule.
+     *
+     * @param relBuilderFactory Builder for relational expressions
+     */
+    public DruidAggregateExtractProjectRule(
+        RelBuilderFactory relBuilderFactory) {
+      super(
+          operand(Aggregate.class,
+              operand(DruidQuery.class, none())),
+          relBuilderFactory);
+    }
+  }
+
 }
 
 // End DruidRules.java

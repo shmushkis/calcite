@@ -1477,13 +1477,8 @@ public class RelMetadataTest extends SqlToRelTestBase {
   @Test(timeout = 20_000) public void testPullUpPredicatesForExprsItr() {
     // If we're running Windows, we are probably in a VM and the test may
     // exceed timeout by a small margin.
-    Assume.assumeThat("Too slow on Windows", File.separatorChar, Is.is('/'));
-    testPullUpPredicatesForExprsItrNoTimeout();
-  }
-
-  /** As {@link #testPullUpPredicatesForExprsItr} but no timeout; can run on
-   * all platforms, even slow VMs. */
-  @Test public void testPullUpPredicatesForExprsItrNoTimeout() {
+    Assume.assumeThat("Too slow to run on Windows",
+        File.separatorChar, Is.is('/'));
     final String sql = "select a.EMPNO, a.ENAME\n"
         + "from (select * from sales.emp ) a\n"
         + "join (select * from sales.emp  ) b\n"

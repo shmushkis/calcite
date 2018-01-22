@@ -27,7 +27,7 @@ limitations under the License.
   <groupId>org.apache.calcite</groupId>
   <artifactId>calcite</artifactId>
   <packaging>pom</packaging>
-  <version>1.15.0-SNAPSHOT</version>
+  <version>1.16.0-SNAPSHOT</version>
 
   <!-- More project information. -->
   <name>Calcite</name>
@@ -100,7 +100,7 @@ limitations under the License.
     <jmh.version>1.12</jmh.version>
     <jsoup.version>1.10.2</jsoup.version>
     <junit.version>4.12</junit.version>
-    <maven-checkstyle-plugin.version>2.17</maven-checkstyle-plugin.version>
+    <maven-checkstyle-plugin.version>3.0.0</maven-checkstyle-plugin.version>
     <maven-dependency-plugin.version>2.10</maven-dependency-plugin.version>
     <!-- Apache 18 has 3.0.1, but need 3.0.2 for [MSOURCES-94]. -->
     <maven-jar-plugin.version>3.0.2</maven-jar-plugin.version>
@@ -111,7 +111,7 @@ limitations under the License.
     <!-- Apache 18 has 3.0.0, but need 3.0.1 for [MSOURCES-94]. -->
     <maven-source-plugin.version>3.0.1</maven-source-plugin.version>
     <mockito.version>2.5.5</mockito.version>
-    <mongo-java-driver.version>2.12.3</mongo-java-driver.version>
+    <mongo-java-driver.version>3.5.0</mongo-java-driver.version>
     <mysql-driver.version>5.1.20</mysql-driver.version>
     <natty.version>0.13</natty.version>
     <opencsv.version>2.3</opencsv.version>
@@ -599,8 +599,8 @@ limitations under the License.
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
+          <source>1.8</source>
+          <target>1.8</target>
           <compilerArgument>-Xlint:deprecation</compilerArgument>
         </configuration>
       </plugin>
